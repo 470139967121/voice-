@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "517834977595",
+    "project_id": "shytalk-7ba69",
+    "storage_bucket": "shytalk-7ba69.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:517834977595:android:2b734cdc0b8f640571871e",
+        "android_client_info": {
+          "package_name": "com.example.shytalk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "517834977595-cdu78p6q7vg57utpsvtik04c195lbh8b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuJ6or7WuLTzby9g-MaOrqDYcYCu_qSAo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "517834977595-cdu78p6q7vg57utpsvtik04c195lbh8b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

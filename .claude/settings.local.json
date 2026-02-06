@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:/Users/saste/AppData/Local/Programs/Android Studio/jbr/bin/java.exe\" -version)",
+      "Bash(JAVA_HOME=\"/c/Users/saste/AppData/Local/Programs/Android Studio/jbr\" ./gradlew.bat:*)",
+      "WebSearch",
+      "Bash(.\\\\gradlew.bat assembleDebug:*)",
+      "Bash(cmd /c \"gradlew.bat assembleDebug\")",
+      "Bash(cmd.exe /c \"gradlew.bat assembleDebug 2>&1\")",
+      "Bash(C:/Users/saste/AndroidStudioProjects/ShyTalk/gradlew.bat assembleDebug)",
+      "Bash(xargs:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:mvnrepository.com)",
+      "WebFetch(domain:central.sonatype.com)"
+    ]
+  }
+}

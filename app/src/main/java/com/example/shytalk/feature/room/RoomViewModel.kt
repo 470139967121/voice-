@@ -1,0 +1,429 @@
+package com.example.shytalk.feature.room
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.shytalk.core.model.ChatRoom
+import com.example.shytalk.core.model.Message
+import com.example.shytalk.core.model.RoomRole
+import com.example.shytalk.core.model.RoomState
+import com.example.shytalk.core.model.SeatState
+import com.example.shytalk.core.util.Constants
+import com.example.shytalk.core.util.Resource
+import com.example.shytalk.data.remote.AgoraVoiceService
+import com.example.shytalk.data.repository.AuthRepository
+import com.example.shytalk.data.repository.MessageRepository
+import com.example.shytalk.data.repository.RoomRepository
+import com.example.shytalk.data.repository.SeatRequestRepository
+import com.example.shytalk.data.repository.UserRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class RoomUiState(
+    val room: ChatRoom? = null,
+    val messages: List<Message> = emptyList(),
+    val currentUserId: String = "",
+    val currentUserName: String = "",
+    val currentRole: RoomRole = RoomRole.ATTENDEE,
+    val isLoading: Boolean = true,
+    val error: String? = null,
+    val roomClosed: Boolean = false,
+    val ownerAwayRemainingMs: Long = 0L,
+    val speakingUids: Set<Int> = emptySet(),
+    val isVoiceJoined: Boolean = false
+)
+
+@HiltViewModel
+class RoomViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val roomRepository: RoomRepository,
+    private val messageRepository: MessageRepository,
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
+    private val seatRequestRepository: SeatRequestRepository,
+    private val agoraVoiceService: AgoraVoiceService
+) : ViewModel() {
+
+    private val roomId: String = savedStateHandle["roomId"] ?: ""
+
+    private val _uiState = MutableStateFlow(RoomUiState())
+    val uiState: StateFlow<RoomUiState> = _uiState.asStateFlow()
+
+    private var ownerAwayCountdownJob: Job? = null
+    private var isSeated = false
+
+    init {
+        val userId = authRepository.currentUser?.uid ?: ""
+        _uiState.value = _uiState.value.copy(currentUserId = userId)
+        loadUserName()
+        observeRoom()
+        observeMessages()
+        observeVoiceState()
+        joinRoom()
+    }
+
+    private fun loadUserName() {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            when (val result = userRepository.getUser(userId)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        currentUserName = result.data.displayName
+                    )
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun observeRoom() {
+        viewModelScope.launch {
+            roomRepository.getRoomFlow(roomId)
+                .catch { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = e.message
+                    )
+                }
+                .collect { room ->
+                    if (room == null || room.state == RoomState.CLOSED) {
+                        agoraVoiceService.leaveChannel()
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            roomClosed = true
+                        )
+                        return@collect
+                    }
+
+                    val userId = _uiState.value.currentUserId
+
+                    // Detect if user was kicked (banned or no longer a participant)
+                    if (userId !in room.participantIds || userId in room.bannedUserIds) {
+                        agoraVoiceService.leaveChannel()
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            roomClosed = true
+                        )
+                        return@collect
+                    }
+
+                    val role = resolveRole(room, userId)
+
+                    // Check if user is currently seated
+                    val currentlySeated = room.seats.values.any {
+                        it.userId == userId && it.state == SeatState.OCCUPIED
+                    }
+
+                    // Join/leave Agora channel based on seat status
+                    if (currentlySeated && !isSeated) {
+                        joinVoiceChannel(room.agoraChannelName)
+                    } else if (!currentlySeated && isSeated) {
+                        agoraVoiceService.leaveChannel()
+                    }
+                    isSeated = currentlySeated
+
+                    // Sync mute state with Agora
+                    if (currentlySeated) {
+                        val mySeat = room.seats.values.find { it.userId == userId }
+                        mySeat?.let { agoraVoiceService.muteLocalAudio(it.isMuted) }
+                    }
+
+                    _uiState.value = _uiState.value.copy(
+                        room = room,
+                        currentRole = role,
+                        isLoading = false
+                    )
+
+                    handleOwnerAwayCountdown(room)
+                }
+        }
+    }
+
+    private fun observeMessages() {
+        viewModelScope.launch {
+            messageRepository.getMessages(roomId)
+                .catch { /* ignore message errors */ }
+                .collect { messages ->
+                    _uiState.value = _uiState.value.copy(messages = messages)
+                }
+        }
+    }
+
+    private fun observeVoiceState() {
+        viewModelScope.launch {
+            agoraVoiceService.speakingUsers.collect { speaking ->
+                _uiState.value = _uiState.value.copy(speakingUids = speaking)
+            }
+        }
+        viewModelScope.launch {
+            agoraVoiceService.isJoined.collect { joined ->
+                _uiState.value = _uiState.value.copy(isVoiceJoined = joined)
+            }
+        }
+    }
+
+    private fun joinRoom() {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            roomRepository.joinRoom(roomId, userId)
+            messageRepository.sendSystemMessage(
+                roomId,
+                "${_uiState.value.currentUserName.ifEmpty { "Someone" }} joined the room"
+            )
+        }
+    }
+
+    private fun joinVoiceChannel(channelName: String) {
+        viewModelScope.launch {
+            val uid = _uiState.value.currentUserId.hashCode() and 0x7FFFFFFF
+            agoraVoiceService.joinChannel(channelName, uid)
+        }
+    }
+
+    private fun resolveRole(room: ChatRoom, userId: String): RoomRole {
+        return when {
+            room.ownerId == userId -> RoomRole.OWNER
+            userId in room.hostIds -> RoomRole.HOST
+            else -> RoomRole.ATTENDEE
+        }
+    }
+
+    private fun handleOwnerAwayCountdown(room: ChatRoom) {
+        if (room.state == RoomState.OWNER_AWAY && room.ownerLeftAt != null) {
+            ownerAwayCountdownJob?.cancel()
+            ownerAwayCountdownJob = viewModelScope.launch {
+                while (true) {
+                    val elapsed = System.currentTimeMillis() - room.ownerLeftAt.toDate().time
+                    val remaining = Constants.OWNER_LEAVE_TIMEOUT_MS - elapsed
+                    if (remaining <= 0) {
+                        if (_uiState.value.currentRole == RoomRole.OWNER) {
+                            roomRepository.closeRoom(roomId)
+                        }
+                        break
+                    }
+                    _uiState.value = _uiState.value.copy(ownerAwayRemainingMs = remaining)
+                    delay(1000L)
+                }
+            }
+        } else {
+            ownerAwayCountdownJob?.cancel()
+            _uiState.value = _uiState.value.copy(ownerAwayRemainingMs = 0L)
+        }
+    }
+
+    fun takeSeat(seatIndex: Int) {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            val room = _uiState.value.room ?: return@launch
+            val role = _uiState.value.currentRole
+
+            // Owner is locked to seat 0
+            if (role == RoomRole.OWNER && seatIndex != Constants.OWNER_SEAT_INDEX) return@launch
+            // Non-owners cannot take the owner seat
+            if (seatIndex == Constants.OWNER_SEAT_INDEX && role != RoomRole.OWNER) return@launch
+
+            val seat = room.seats[seatIndex.toString()] ?: return@launch
+            if (seat.state == SeatState.OCCUPIED) return@launch
+
+            if (role == RoomRole.ATTENDEE && room.requireApproval) {
+                seatRequestRepository.createRequest(
+                    roomId = roomId,
+                    userId = userId,
+                    userName = _uiState.value.currentUserName,
+                    seatIndex = seatIndex
+                )
+                return@launch
+            }
+
+            // Vacate current seat first (one seat per user)
+            val currentSeatEntry = room.seats.entries.find {
+                it.value.userId == userId && it.value.state == SeatState.OCCUPIED
+            }
+            if (currentSeatEntry != null) {
+                roomRepository.leaveSeat(roomId, currentSeatEntry.key.toInt())
+            }
+
+            roomRepository.takeSeat(roomId, seatIndex, userId)
+        }
+    }
+
+    fun leaveSeat(seatIndex: Int) {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            val room = _uiState.value.room ?: return@launch
+
+            if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
+                roomRepository.leaveSeat(roomId, seatIndex)
+                roomRepository.setOwnerAway(roomId)
+                return@launch
+            }
+
+            roomRepository.leaveSeat(roomId, seatIndex)
+        }
+    }
+
+    fun removeFromSeat(seatIndex: Int) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            val role = _uiState.value.currentRole
+            if (role == RoomRole.ATTENDEE) return@launch
+
+            // Cannot remove from owner seat
+            if (seatIndex == Constants.OWNER_SEAT_INDEX) return@launch
+
+            val seat = room.seats[seatIndex.toString()] ?: return@launch
+            val targetUserId = seat.userId ?: return@launch
+
+            // Hosts cannot act on owner or other hosts
+            val isTargetOwner = targetUserId == room.ownerId
+            val isTargetHost = targetUserId in room.hostIds
+            if (role == RoomRole.HOST && (isTargetOwner || isTargetHost)) return@launch
+
+            roomRepository.removeFromSeat(roomId, seatIndex)
+        }
+    }
+
+    fun toggleSelfMute(seatIndex: Int) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            val seat = room.seats[seatIndex.toString()] ?: return@launch
+            val userId = _uiState.value.currentUserId
+            if (seat.userId != userId) return@launch
+
+            val newMuteState = !seat.isMuted
+            roomRepository.toggleMute(roomId, seatIndex, newMuteState)
+            agoraVoiceService.muteLocalAudio(newMuteState)
+        }
+    }
+
+    fun forceMuteUser(seatIndex: Int) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            val role = _uiState.value.currentRole
+            if (role == RoomRole.ATTENDEE) return@launch
+
+            val seat = room.seats[seatIndex.toString()] ?: return@launch
+            val targetUserId = seat.userId ?: return@launch
+
+            // Can only force-mute normal users (attendees)
+            val isTargetOwner = targetUserId == room.ownerId
+            val isTargetHost = targetUserId in room.hostIds
+            if (isTargetOwner || isTargetHost) return@launch
+
+            roomRepository.toggleMute(roomId, seatIndex, !seat.isMuted)
+        }
+    }
+
+    fun moveSeat(fromIndex: Int, toIndex: Int) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            val role = _uiState.value.currentRole
+            if (role == RoomRole.ATTENDEE) return@launch
+
+            // Cannot move from/to owner seat
+            if (fromIndex == Constants.OWNER_SEAT_INDEX || toIndex == Constants.OWNER_SEAT_INDEX) return@launch
+
+            val fromSeat = room.seats[fromIndex.toString()] ?: return@launch
+            val targetUserId = fromSeat.userId ?: return@launch
+
+            // Can only move normal users
+            val isTargetOwner = targetUserId == room.ownerId
+            val isTargetHost = targetUserId in room.hostIds
+            if (role == RoomRole.HOST && (isTargetOwner || isTargetHost)) return@launch
+
+            // Destination must be empty
+            val toSeat = room.seats[toIndex.toString()] ?: return@launch
+            if (toSeat.state == SeatState.OCCUPIED) return@launch
+
+            roomRepository.moveSeat(roomId, fromIndex, toIndex, targetUserId)
+        }
+    }
+
+    fun kickUser(seatIndex: Int) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            val role = _uiState.value.currentRole
+            if (role == RoomRole.ATTENDEE) return@launch
+
+            val seat = room.seats[seatIndex.toString()] ?: return@launch
+            val targetUserId = seat.userId ?: return@launch
+
+            // Cannot kick owner or hosts (hosts can't kick hosts either)
+            val isTargetOwner = targetUserId == room.ownerId
+            val isTargetHost = targetUserId in room.hostIds
+            if (isTargetOwner || isTargetHost) return@launch
+
+            roomRepository.kickUser(roomId, targetUserId, seatIndex)
+            messageRepository.sendSystemMessage(roomId, "A user was kicked from the room")
+        }
+    }
+
+    fun sendMessage(text: String) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            val userName = _uiState.value.currentUserName
+            messageRepository.sendMessage(roomId, userId, userName, text)
+        }
+    }
+
+    fun leaveRoom() {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            val room = _uiState.value.room ?: return@launch
+
+            room.seats.forEach { (index, seat) ->
+                if (seat.userId == userId) {
+                    if (index.toInt() == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
+                        roomRepository.leaveSeat(roomId, index.toInt())
+                        roomRepository.setOwnerAway(roomId)
+                    } else {
+                        roomRepository.leaveSeat(roomId, index.toInt())
+                    }
+                }
+            }
+
+            agoraVoiceService.leaveChannel()
+            roomRepository.leaveRoom(roomId, userId)
+            messageRepository.sendSystemMessage(
+                roomId,
+                "${_uiState.value.currentUserName.ifEmpty { "Someone" }} left the room"
+            )
+        }
+    }
+
+    fun ownerReturn() {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            val room = _uiState.value.room ?: return@launch
+            if (room.ownerId != userId) return@launch
+
+            roomRepository.setOwnerReturned(roomId, userId)
+        }
+    }
+
+    fun closeRoom() {
+        viewModelScope.launch {
+            agoraVoiceService.leaveChannel()
+            roomRepository.closeRoom(roomId)
+            messageRepository.sendSystemMessage(roomId, "Room has been closed")
+        }
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ownerAwayCountdownJob?.cancel()
+        agoraVoiceService.leaveChannel()
+    }
+}
