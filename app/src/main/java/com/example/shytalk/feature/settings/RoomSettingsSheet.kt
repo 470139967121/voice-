@@ -40,6 +40,7 @@ import com.example.shytalk.core.model.SeatState
 fun RoomSettingsSheet(
     roomId: String,
     onDismiss: () -> Unit,
+    onCloseRoom: () -> Unit,
     viewModel: RoomSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,19 +65,19 @@ fun RoomSettingsSheet(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            // Require Approval Toggle
+            // Lock Seating Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Require Seat Approval",
+                        text = "Lock Seating",
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Attendees must request to sit",
+                        text = "Only the owner can invite users to sit",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -95,7 +96,7 @@ fun RoomSettingsSheet(
             val room = uiState.room
             val isOwner = room != null && viewModel.currentUserId == room.ownerId
 
-            if (isOwner && room != null) {
+            if (isOwner) {
                 Text(
                     text = "Hosts",
                     style = MaterialTheme.typography.titleMedium,
@@ -172,56 +173,104 @@ fun RoomSettingsSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Invite to Seat section
+            // Owner can always invite; hosts can invite when requireApproval is OFF
+            val canInvite = room != null && (
+                isOwner || (viewModel.currentUserId in (room.hostIds) && !room.requireApproval)
+            )
+            if (canInvite) {
+                val nonSeatedParticipants = room.participantIds.filter { pid ->
+                    pid != room.ownerId &&
+                    pid !in room.pendingInvites &&
+                    room.seats.values.none { it.userId == pid && it.state == SeatState.OCCUPIED }
+                }
+                if (nonSeatedParticipants.isNotEmpty()) {
+                    Text(
+                        text = "Invite to Seat",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    nonSeatedParticipants.forEach { userId ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = userId,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(onClick = { viewModel.inviteUser(userId, userId) }) {
+                                Text("Invite")
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
             // Pending Seat Requests
-            Text(
-                text = "Pending Seat Requests (${uiState.pendingRequests.size})",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
+            // When requireApproval is ON, only owner can see approve/deny
+            // When OFF, owner + hosts can see approve/deny
+            val canApprove = room != null && (
+                isOwner || (viewModel.currentUserId in (room.hostIds) && !room.requireApproval)
             )
 
-            if (uiState.pendingRequests.isEmpty()) {
+            if (canApprove) {
                 Text(
-                    text = "No pending requests",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Pending Seat Requests (${uiState.pendingRequests.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.height(200.dp)
-                ) {
-                    items(uiState.pendingRequests, key = { it.requestId }) { request ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = request.userName,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Text(
-                                        text = "Seat ${request.seatIndex + 1}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                IconButton(onClick = { viewModel.approveRequest(request) }) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = "Approve",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                IconButton(onClick = { viewModel.denyRequest(request) }) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Deny",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
+
+                if (uiState.pendingRequests.isEmpty()) {
+                    Text(
+                        text = "No pending requests",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.height(200.dp)
+                    ) {
+                        items(uiState.pendingRequests, key = { it.requestId }) { request ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = request.userName,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = "Seat ${request.seatIndex + 1}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    IconButton(onClick = { viewModel.approveRequest(request) }) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = "Approve",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    IconButton(onClick = { viewModel.denyRequest(request) }) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Deny",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -233,7 +282,7 @@ fun RoomSettingsSheet(
 
             // Close Room Button
             Button(
-                onClick = { viewModel.closeRoom() },
+                onClick = onCloseRoom,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 ),

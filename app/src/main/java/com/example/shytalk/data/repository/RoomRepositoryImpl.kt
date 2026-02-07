@@ -234,6 +234,43 @@ class RoomRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun sendInvite(roomId: String, userId: String, invitedBy: String): Resource<Unit> {
+        return try {
+            roomsCollection.document(roomId).update(
+                "pendingInvites.$userId", invitedBy
+            ).await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to send invite", e)
+        }
+    }
+
+    override suspend fun cancelInvite(roomId: String, userId: String): Resource<Unit> {
+        return try {
+            roomsCollection.document(roomId).update(
+                "pendingInvites.$userId", FieldValue.delete()
+            ).await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to cancel invite", e)
+        }
+    }
+
+    override suspend fun acceptInvite(roomId: String, userId: String, seatIndex: Int): Resource<Unit> {
+        return try {
+            val seat = Seat(userId = userId, state = SeatState.OCCUPIED)
+            roomsCollection.document(roomId).update(
+                mapOf(
+                    "pendingInvites.$userId" to FieldValue.delete(),
+                    "seats.$seatIndex" to seat.toMap()
+                )
+            ).await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to accept invite", e)
+        }
+    }
+
     override suspend fun closeRoom(roomId: String): Resource<Unit> {
         return try {
             val emptySeats = (0 until Constants.MAX_SEATS).associate { i ->

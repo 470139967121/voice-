@@ -15,6 +15,7 @@ data class ChatRoom(
     val hostIds: List<String> = emptyList(),
     val requireApproval: Boolean = false,
     val bannedUserIds: List<String> = emptyList(),
+    val pendingInvites: Map<String, String> = emptyMap(),
     val seats: Map<String, Seat> = (0 until Constants.MAX_SEATS).associate { it.toString() to Seat() },
     val agoraChannelName: String = ""
 ) {
@@ -30,6 +31,7 @@ data class ChatRoom(
         "hostIds" to hostIds,
         "requireApproval" to requireApproval,
         "bannedUserIds" to bannedUserIds,
+        "pendingInvites" to pendingInvites,
         "seats" to seats.mapValues { it.value.toMap() },
         "agoraChannelName" to agoraChannelName
     )
@@ -59,6 +61,9 @@ data class ChatRoom(
                 hostIds = (map["hostIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 requireApproval = map["requireApproval"] as? Boolean ?: false,
                 bannedUserIds = (map["bannedUserIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                pendingInvites = (map["pendingInvites"] as? Map<*, *>)?.entries?.associate {
+                    it.key.toString() to (it.value as? String ?: "")
+                } ?: emptyMap(),
                 seats = seats,
                 agoraChannelName = map["agoraChannelName"] as? String ?: ""
             )

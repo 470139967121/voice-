@@ -37,7 +37,8 @@ data class RoomUiState(
     val roomClosed: Boolean = false,
     val ownerAwayRemainingMs: Long = 0L,
     val speakingUids: Set<Int> = emptySet(),
-    val isVoiceJoined: Boolean = false
+    val isVoiceJoined: Boolean = false,
+    val pendingInvite: String? = null
 )
 
 @HiltViewModel
@@ -135,10 +136,13 @@ class RoomViewModel @Inject constructor(
                         mySeat?.let { agoraVoiceService.muteLocalAudio(it.isMuted) }
                     }
 
+                    val pendingInvite = room.pendingInvites[userId]
+
                     _uiState.value = _uiState.value.copy(
                         room = room,
                         currentRole = role,
-                        isLoading = false
+                        isLoading = false,
+                        pendingInvite = pendingInvite
                     )
 
                     handleOwnerAwayCountdown(room)
@@ -232,7 +236,8 @@ class RoomViewModel @Inject constructor(
             val seat = room.seats[seatIndex.toString()] ?: return@launch
             if (seat.state == SeatState.OCCUPIED) return@launch
 
-            if (role == RoomRole.ATTENDEE && room.requireApproval) {
+            // Attendees ALWAYS need approval
+            if (role == RoomRole.ATTENDEE) {
                 seatRequestRepository.createRequest(
                     roomId = roomId,
                     userId = userId,
@@ -241,6 +246,9 @@ class RoomViewModel @Inject constructor(
                 )
                 return@launch
             }
+
+            // Hosts can only self-seat when requireApproval is OFF
+            if (role == RoomRole.HOST && room.requireApproval) return@launch
 
             // Vacate current seat first (one seat per user)
             val currentSeatEntry = room.seats.entries.find {
@@ -259,11 +267,8 @@ class RoomViewModel @Inject constructor(
             val userId = _uiState.value.currentUserId
             val room = _uiState.value.room ?: return@launch
 
-            if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
-                roomRepository.leaveSeat(roomId, seatIndex)
-                roomRepository.setOwnerAway(roomId)
-                return@launch
-            }
+            // Owner cannot leave seat 1
+            if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) return@launch
 
             roomRepository.leaveSeat(roomId, seatIndex)
         }
@@ -365,6 +370,46 @@ class RoomViewModel @Inject constructor(
         }
     }
 
+    fun inviteUser(userId: String, userName: String) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            val role = _uiState.value.currentRole
+
+            // Owner can always invite; hosts only when requireApproval is OFF
+            if (role == RoomRole.ATTENDEE) return@launch
+            if (role == RoomRole.HOST && room.requireApproval) return@launch
+
+            roomRepository.sendInvite(roomId, userId, _uiState.value.currentUserId)
+            messageRepository.sendSystemMessage(
+                roomId,
+                "${userName.ifEmpty { "Someone" }} was invited to sit"
+            )
+        }
+    }
+
+    fun acceptInvite() {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            val room = _uiState.value.room ?: return@launch
+            if (room.pendingInvites[userId] == null) return@launch
+
+            // Find first empty seat (skip owner seat)
+            val emptySeatIndex = (1 until Constants.MAX_SEATS).firstOrNull { i ->
+                val seat = room.seats[i.toString()]
+                seat != null && seat.state != SeatState.OCCUPIED
+            } ?: return@launch
+
+            roomRepository.acceptInvite(roomId, userId, emptySeatIndex)
+        }
+    }
+
+    fun declineInvite() {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            roomRepository.cancelInvite(roomId, userId)
+        }
+    }
+
     fun sendMessage(text: String) {
         if (text.isBlank()) return
         viewModelScope.launch {
@@ -414,6 +459,7 @@ class RoomViewModel @Inject constructor(
             agoraVoiceService.leaveChannel()
             roomRepository.closeRoom(roomId)
             messageRepository.sendSystemMessage(roomId, "Room has been closed")
+            _uiState.value = _uiState.value.copy(roomClosed = true)
         }
     }
 

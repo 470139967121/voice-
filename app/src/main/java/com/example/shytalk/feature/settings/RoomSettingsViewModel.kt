@@ -85,7 +85,25 @@ class RoomSettingsViewModel @Inject constructor(
         }
     }
 
+    fun inviteUser(userId: String, userName: String) {
+        val room = _uiState.value.room ?: return
+        // Owner can always invite; hosts only when requireApproval is OFF
+        if (currentUserId != room.ownerId && (currentUserId !in room.hostIds || room.requireApproval)) return
+        viewModelScope.launch {
+            roomRepository.sendInvite(currentRoomId, userId, currentUserId)
+            messageRepository.sendSystemMessage(
+                currentRoomId,
+                "${userName.ifEmpty { "Someone" }} was invited to sit"
+            )
+        }
+    }
+
     fun approveRequest(request: SeatRequest) {
+        val room = _uiState.value.room ?: return
+        // When requireApproval is ON, only owner can approve
+        if (room.requireApproval && currentUserId != room.ownerId) return
+        // When OFF, owner + hosts can approve (attendees never see this)
+        if (currentUserId != room.ownerId && currentUserId !in room.hostIds) return
         viewModelScope.launch {
             when (val result = seatRequestRepository.approveRequest(
                 currentRoomId, request.requestId, currentUserId

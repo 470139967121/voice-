@@ -1,13 +1,19 @@
 package com.example.shytalk.feature.room
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -43,7 +49,6 @@ fun RoomScreen(
 
     LaunchedEffect(uiState.roomClosed) {
         if (uiState.roomClosed) {
-            snackbarHostState.showSnackbar("Room has been closed")
             onNavigateBack()
         }
     }
@@ -92,6 +97,40 @@ fun RoomScreen(
                         isOwner = uiState.currentRole == RoomRole.OWNER,
                         onOwnerReturn = { viewModel.ownerReturn() }
                     )
+                }
+
+                // Invite Banner
+                if (uiState.pendingInvite != null) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "You've been invited to sit",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { viewModel.declineInvite() }) {
+                                    Text("Decline")
+                                }
+                                Button(onClick = { viewModel.acceptInvite() }) {
+                                    Text("Accept")
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Seat Grid (upper portion)
@@ -147,7 +186,11 @@ fun RoomScreen(
         if (showSettings && uiState.room != null) {
             RoomSettingsSheet(
                 roomId = roomId,
-                onDismiss = { showSettings = false }
+                onDismiss = { showSettings = false },
+                onCloseRoom = {
+                    showSettings = false
+                    viewModel.closeRoom()
+                }
             )
         }
     }
