@@ -55,6 +55,7 @@ fun SeatItem(
     seat: Seat,
     seatRole: RoomRole,
     isCurrentUser: Boolean,
+    canLeaveSeat: Boolean,
     canRemove: Boolean,
     canMute: Boolean,
     canKick: Boolean,
@@ -72,6 +73,7 @@ fun SeatItem(
     var showMenu by remember { mutableStateOf(false) }
     var showMoveDialog by remember { mutableStateOf(false) }
 
+    val hasSelfActions = canLeaveSeat || isCurrentUser
     val hasModActions = canRemove || canMute || canKick || canMove
 
     // Speaking animation
@@ -122,7 +124,7 @@ fun SeatItem(
                     .combinedClickable(
                         onClick = onClick,
                         onLongClick = {
-                            if (hasModActions || isCurrentUser) {
+                            if (hasModActions || hasSelfActions) {
                                 showMenu = true
                             }
                         }
@@ -197,7 +199,7 @@ fun SeatItem(
                 onDismissRequest = { showMenu = false }
             ) {
                 // Self actions
-                if (isCurrentUser) {
+                if (canLeaveSeat) {
                     DropdownMenuItem(
                         text = { Text("Leave seat") },
                         onClick = {
@@ -205,6 +207,8 @@ fun SeatItem(
                             onClick()
                         }
                     )
+                }
+                if (isCurrentUser) {
                     DropdownMenuItem(
                         text = { Text(if (seat.isMuted) "Unmute" else "Mute") },
                         onClick = {

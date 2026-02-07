@@ -68,11 +68,16 @@ fun SeatGrid(
                     val isSpeaking = seatUserId != null &&
                         (seatUserId.hashCode() and 0x7FFFFFFF) in speakingUids
 
+                    val isOwnerOnOwnSeat = seat.userId == currentUserId
+                        && seatIndex == Constants.OWNER_SEAT_INDEX
+                        && currentRole == RoomRole.OWNER
+
                     SeatItem(
                         seatIndex = seatIndex,
                         seat = seat,
                         seatRole = seatRole,
                         isCurrentUser = seat.userId == currentUserId,
+                        canLeaveSeat = seat.userId == currentUserId && !isOwnerOnOwnSeat,
                         canRemove = canModerate && seatIndex != Constants.OWNER_SEAT_INDEX,
                         canMute = canModerate,
                         canKick = canModerate,
