@@ -117,8 +117,6 @@ class ProfileViewModel @Inject constructor(
             )
             when (val result = userRepository.createOrUpdateUser(user)) {
                 is Resource.Success -> {
-                    // Generate unique ID for new user
-                    generateUniqueId(firebaseUser.uid)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         profileSaved = true,

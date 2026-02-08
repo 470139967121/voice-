@@ -256,14 +256,6 @@ class RoomViewModel @Inject constructor(
             // Hosts can only self-seat when requireApproval is OFF
             if (role == RoomRole.HOST && room.requireApproval) return@launch
 
-            // Vacate current seat first (one seat per user)
-            val currentSeatEntry = room.seats.entries.find {
-                it.value.userId == userId && it.value.state == SeatState.OCCUPIED
-            }
-            if (currentSeatEntry != null) {
-                roomRepository.leaveSeat(roomId, currentSeatEntry.key.toInt())
-            }
-
             roomRepository.takeSeat(roomId, seatIndex, userId)
         }
     }
@@ -462,6 +454,9 @@ class RoomViewModel @Inject constructor(
 
     fun closeRoom() {
         viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            if (_uiState.value.currentUserId != room.ownerId) return@launch
+
             agoraVoiceService.leaveChannel()
             roomRepository.closeRoom(roomId)
             messageRepository.sendSystemMessage(roomId, "Room has been closed")
