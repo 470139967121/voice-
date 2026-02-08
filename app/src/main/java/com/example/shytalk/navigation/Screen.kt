@@ -1,7 +1,6 @@
 package com.example.shytalk.navigation
 
 sealed class Screen(val route: String) {
-    data object PhoneAuth : Screen("phone_auth")
     data object GoogleSignIn : Screen("google_sign_in")
     data object ProfileSetup : Screen("profile_setup")
     data object Main : Screen("main")

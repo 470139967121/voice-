@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -38,7 +37,6 @@ private const val WEB_CLIENT_ID =
 
 @Composable
 fun GoogleSignInScreen(
-    onNavigateToPhoneAuth: () -> Unit,
     onAuthSuccess: (hasProfile: Boolean) -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
@@ -127,14 +125,6 @@ fun GoogleSignInScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedButton(
-                onClick = onNavigateToPhoneAuth,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Sign in with Phone instead")
-            }
         }
     }
 }

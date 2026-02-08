@@ -27,11 +27,12 @@ class MainActivity : ComponentActivity() {
                 val startDestination = if (authRepository.isAuthenticated) {
                     Screen.Main.route
                 } else {
-                    Screen.PhoneAuth.route
+                    Screen.GoogleSignIn.route
                 }
                 NavGraph(
                     navController = navController,
-                    startDestination = startDestination
+                    startDestination = startDestination,
+                    onSignOut = { authRepository.signOut() }
                 )
             }
         }
