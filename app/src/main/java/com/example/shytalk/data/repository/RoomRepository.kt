@@ -27,4 +27,5 @@ interface RoomRepository {
     suspend fun cancelInvite(roomId: String, userId: String): Resource<Unit>
     suspend fun acceptInvite(roomId: String, userId: String, seatIndex: Int): Resource<Unit>
     suspend fun closeRoom(roomId: String): Resource<Unit>
+    suspend fun findActiveRoomByOwner(ownerId: String): String?
 }

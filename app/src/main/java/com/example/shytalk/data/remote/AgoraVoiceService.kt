@@ -25,6 +25,8 @@ class AgoraVoiceService @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val tokenService: AgoraTokenService
 ) {
+    enum class ConnectionState { CONNECTED, DISCONNECTED, RECONNECTING }
+
     companion object {
         // TODO: Replace with your Agora App ID
         const val AGORA_APP_ID = ""
@@ -38,14 +40,27 @@ class AgoraVoiceService @Inject constructor(
     private val _isJoined = MutableStateFlow(false)
     val isJoined: StateFlow<Boolean> = _isJoined.asStateFlow()
 
+    private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
     private val rtcEventHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
             _isJoined.value = true
+            _connectionState.value = ConnectionState.CONNECTED
         }
 
         override fun onLeaveChannel(stats: RtcStats?) {
             _isJoined.value = false
             _speakingUsers.value = emptySet()
+            _connectionState.value = ConnectionState.DISCONNECTED
+        }
+
+        override fun onConnectionStateChanged(state: Int, reason: Int) {
+            _connectionState.value = when (state) {
+                3 -> ConnectionState.CONNECTED      // CONNECTION_STATE_CONNECTED
+                1, 5 -> ConnectionState.DISCONNECTED // DISCONNECTED or FAILED
+                else -> ConnectionState.RECONNECTING // CONNECTING or RECONNECTING
+            }
         }
 
         override fun onAudioVolumeIndication(
@@ -123,5 +138,6 @@ class AgoraVoiceService @Inject constructor(
         rtcEngine = null
         _isJoined.value = false
         _speakingUsers.value = emptySet()
+        _connectionState.value = ConnectionState.DISCONNECTED
     }
 }

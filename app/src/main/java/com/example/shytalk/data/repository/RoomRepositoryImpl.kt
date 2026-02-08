@@ -271,6 +271,19 @@ class RoomRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun findActiveRoomByOwner(ownerId: String): String? {
+        return try {
+            val snapshot = roomsCollection
+                .whereEqualTo("ownerId", ownerId)
+                .whereIn("state", listOf(RoomState.ACTIVE.name, RoomState.OWNER_AWAY.name))
+                .get()
+                .await()
+            snapshot.documents.firstOrNull()?.id
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override suspend fun closeRoom(roomId: String): Resource<Unit> {
         return try {
             val emptySeats = (0 until Constants.MAX_SEATS).associate { i ->
