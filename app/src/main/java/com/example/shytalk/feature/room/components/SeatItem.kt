@@ -41,12 +41,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.shytalk.core.model.RoomRole
 import com.example.shytalk.core.model.Seat
 import com.example.shytalk.core.model.SeatState
+import com.example.shytalk.core.model.User
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -62,12 +65,14 @@ fun SeatItem(
     canMove: Boolean,
     emptySeats: List<Int>,
     isSpeaking: Boolean,
+    user: User? = null,
     onClick: () -> Unit,
     onRemove: () -> Unit,
     onToggleSelfMute: () -> Unit,
     onForceMute: () -> Unit,
     onKick: () -> Unit,
     onMoveTo: (toIndex: Int) -> Unit,
+    onTapUser: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -122,7 +127,13 @@ fun SeatItem(
                         }
                     )
                     .combinedClickable(
-                        onClick = onClick,
+                        onClick = {
+                            if (seat.state == SeatState.OCCUPIED && !isCurrentUser && onTapUser != null) {
+                                onTapUser()
+                            } else {
+                                onClick()
+                            }
+                        },
                         onLongClick = {
                             if (hasModActions || hasSelfActions) {
                                 showMenu = true
@@ -136,20 +147,32 @@ fun SeatItem(
                     MaterialTheme.colorScheme.surfaceVariant
                 }
             ) {
-                Icon(
-                    imageVector = if (seat.state == SeatState.OCCUPIED) {
-                        Icons.Default.Person
-                    } else {
-                        Icons.Default.PersonAdd
-                    },
-                    contentDescription = if (seat.state == SeatState.OCCUPIED) "Occupied" else "Empty seat",
-                    modifier = Modifier.padding(14.dp),
-                    tint = if (seat.state == SeatState.OCCUPIED) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
+                val photoUrl = user?.profilePhotoUrl ?: user?.avatarUrl
+                if (seat.state == SeatState.OCCUPIED && photoUrl != null) {
+                    AsyncImage(
+                        model = photoUrl,
+                        contentDescription = user?.displayName ?: "User",
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = if (seat.state == SeatState.OCCUPIED) {
+                            Icons.Default.Person
+                        } else {
+                            Icons.Default.PersonAdd
+                        },
+                        contentDescription = if (seat.state == SeatState.OCCUPIED) "Occupied" else "Empty seat",
+                        modifier = Modifier.padding(14.dp),
+                        tint = if (seat.state == SeatState.OCCUPIED) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
             }
 
             // Role indicator badge
@@ -260,7 +283,11 @@ fun SeatItem(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Seat ${seatIndex + 1}",
+            text = if (seat.state == SeatState.OCCUPIED && user != null) {
+                user.displayName.ifEmpty { "Seat ${seatIndex + 1}" }
+            } else {
+                "Seat ${seatIndex + 1}"
+            },
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
             maxLines = 1,

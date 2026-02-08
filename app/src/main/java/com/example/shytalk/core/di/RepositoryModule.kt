@@ -8,6 +8,8 @@ import com.example.shytalk.data.repository.RoomRepository
 import com.example.shytalk.data.repository.RoomRepositoryImpl
 import com.example.shytalk.data.repository.SeatRequestRepository
 import com.example.shytalk.data.repository.SeatRequestRepositoryImpl
+import com.example.shytalk.data.repository.StorageRepository
+import com.example.shytalk.data.repository.StorageRepositoryImpl
 import com.example.shytalk.data.repository.UserRepository
 import com.example.shytalk.data.repository.UserRepositoryImpl
 import dagger.Binds
@@ -39,4 +41,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSeatRequestRepository(impl: SeatRequestRepositoryImpl): SeatRequestRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindStorageRepository(impl: StorageRepositoryImpl): StorageRepository
 }

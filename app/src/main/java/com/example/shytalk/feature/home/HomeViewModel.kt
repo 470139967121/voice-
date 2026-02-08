@@ -3,9 +3,12 @@ package com.example.shytalk.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.shytalk.core.model.ChatRoom
+import com.example.shytalk.core.model.SeatState
+import com.example.shytalk.core.model.User
 import com.example.shytalk.core.util.Resource
 import com.example.shytalk.data.repository.AuthRepository
 import com.example.shytalk.data.repository.RoomRepository
+import com.example.shytalk.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +19,7 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val rooms: List<ChatRoom> = emptyList(),
+    val seatUsers: Map<String, User> = emptyMap(),
     val isLoading: Boolean = true,
     val error: String? = null,
     val createdRoomId: String? = null
@@ -24,11 +28,14 @@ data class HomeUiState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val roomRepository: RoomRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val userCache = mutableMapOf<String, User>()
 
     val currentUserId: String?
         get() = authRepository.currentUser?.uid
@@ -51,7 +58,36 @@ class HomeViewModel @Inject constructor(
                         rooms = rooms,
                         isLoading = false
                     )
+                    loadSeatUsers(rooms)
                 }
+        }
+    }
+
+    private fun loadSeatUsers(rooms: List<ChatRoom>) {
+        val seatedUserIds = rooms.flatMap { room ->
+            room.seats.values
+                .filter { it.state == SeatState.OCCUPIED && it.userId != null }
+                .mapNotNull { it.userId }
+        }.distinct()
+
+        val newUserIds = seatedUserIds.filter { it !in userCache }
+        if (newUserIds.isEmpty()) {
+            _uiState.value = _uiState.value.copy(
+                seatUsers = userCache.filterKeys { it in seatedUserIds }
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            for (uid in newUserIds) {
+                when (val result = userRepository.getUser(uid)) {
+                    is Resource.Success -> userCache[uid] = result.data
+                    else -> {}
+                }
+            }
+            _uiState.value = _uiState.value.copy(
+                seatUsers = userCache.filterKeys { it in seatedUserIds }
+            )
         }
     }
 

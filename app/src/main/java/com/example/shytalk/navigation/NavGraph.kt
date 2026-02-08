@@ -8,7 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.shytalk.feature.auth.GoogleSignInScreen
 import com.example.shytalk.feature.auth.PhoneAuthScreen
-import com.example.shytalk.feature.home.HomeScreen
+import com.example.shytalk.feature.main.MainScreen
 import com.example.shytalk.feature.profile.ProfileScreen
 import com.example.shytalk.feature.profile.ProfileSetupScreen
 import com.example.shytalk.feature.room.RoomScreen
@@ -29,7 +29,7 @@ fun NavGraph(
                 },
                 onAuthSuccess = { hasProfile ->
                     if (hasProfile) {
-                        navController.navigate(Screen.Home.route) {
+                        navController.navigate(Screen.Main.route) {
                             popUpTo(Screen.PhoneAuth.route) { inclusive = true }
                         }
                     } else {
@@ -48,7 +48,7 @@ fun NavGraph(
                 },
                 onAuthSuccess = { hasProfile ->
                     if (hasProfile) {
-                        navController.navigate(Screen.Home.route) {
+                        navController.navigate(Screen.Main.route) {
                             popUpTo(Screen.PhoneAuth.route) { inclusive = true }
                         }
                     } else {
@@ -63,24 +63,24 @@ fun NavGraph(
         composable(Screen.ProfileSetup.route) {
             ProfileSetupScreen(
                 onProfileComplete = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.ProfileSetup.route) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Screen.Home.route) {
-            HomeScreen(
+        composable(Screen.Main.route) {
+            MainScreen(
                 onNavigateToRoom = { roomId ->
                     navController.navigate(Screen.Room.createRoute(roomId))
                 },
-                onNavigateToProfile = {
-                    navController.navigate(Screen.Profile.route)
+                onNavigateToUserProfile = { userId ->
+                    navController.navigate(Screen.UserProfile.createRoute(userId))
                 },
                 onSignOut = {
                     navController.navigate(Screen.PhoneAuth.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
+                        popUpTo(Screen.Main.route) { inclusive = true }
                     }
                 }
             )
@@ -93,12 +93,20 @@ fun NavGraph(
             val roomId = backStackEntry.arguments?.getString("roomId") ?: return@composable
             RoomScreen(
                 roomId = roomId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToUserProfile = { userId ->
+                    navController.navigate(Screen.UserProfile.createRoute(userId))
+                }
             )
         }
 
-        composable(Screen.Profile.route) {
+        composable(
+            route = Screen.UserProfile.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
             ProfileScreen(
+                userId = userId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -8,6 +8,7 @@ import com.example.shytalk.core.model.Message
 import com.example.shytalk.core.model.RoomRole
 import com.example.shytalk.core.model.RoomState
 import com.example.shytalk.core.model.SeatState
+import com.example.shytalk.core.model.User
 import com.example.shytalk.core.util.Constants
 import com.example.shytalk.core.util.Resource
 import com.example.shytalk.data.remote.AgoraVoiceService
@@ -38,7 +39,9 @@ data class RoomUiState(
     val ownerAwayRemainingMs: Long = 0L,
     val speakingUids: Set<Int> = emptySet(),
     val isVoiceJoined: Boolean = false,
-    val pendingInvite: String? = null
+    val pendingInvite: String? = null,
+    val seatUsers: Map<String, User> = emptyMap(),
+    val blockedUserIds: Set<String> = emptySet()
 )
 
 @HiltViewModel
@@ -59,11 +62,13 @@ class RoomViewModel @Inject constructor(
 
     private var ownerAwayCountdownJob: Job? = null
     private var isSeated = false
+    private val userCache = mutableMapOf<String, User>()
 
     init {
         val userId = authRepository.currentUser?.uid ?: ""
         _uiState.value = _uiState.value.copy(currentUserId = userId)
         loadUserName()
+        loadBlockedUsers()
         observeRoom()
         observeMessages()
         observeVoiceState()
@@ -145,6 +150,7 @@ class RoomViewModel @Inject constructor(
                         pendingInvite = pendingInvite
                     )
 
+                    loadSeatUsers(room)
                     handleOwnerAwayCountdown(room)
                 }
         }
@@ -460,6 +466,81 @@ class RoomViewModel @Inject constructor(
             roomRepository.closeRoom(roomId)
             messageRepository.sendSystemMessage(roomId, "Room has been closed")
             _uiState.value = _uiState.value.copy(roomClosed = true)
+        }
+    }
+
+    private fun loadSeatUsers(room: ChatRoom) {
+        val seatedUserIds = room.seats.values
+            .filter { it.state == SeatState.OCCUPIED && it.userId != null }
+            .mapNotNull { it.userId }
+            .distinct()
+
+        val newUserIds = seatedUserIds.filter { it !in userCache }
+        if (newUserIds.isEmpty()) {
+            _uiState.value = _uiState.value.copy(
+                seatUsers = userCache.filterKeys { it in seatedUserIds }
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            for (uid in newUserIds) {
+                when (val result = userRepository.getUser(uid)) {
+                    is Resource.Success -> userCache[uid] = result.data
+                    else -> {}
+                }
+            }
+            _uiState.value = _uiState.value.copy(
+                seatUsers = userCache.filterKeys { it in seatedUserIds }
+            )
+        }
+    }
+
+    private fun loadBlockedUsers() {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            when (val result = userRepository.getBlockedUserIds(userId)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        blockedUserIds = result.data.toSet()
+                    )
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun blockUser(targetUserId: String) {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            when (userRepository.blockUser(userId, targetUserId)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        blockedUserIds = _uiState.value.blockedUserIds + targetUserId
+                    )
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(error = "Failed to block user")
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun unblockUser(targetUserId: String) {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            when (userRepository.unblockUser(userId, targetUserId)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        blockedUserIds = _uiState.value.blockedUserIds - targetUserId
+                    )
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(error = "Failed to unblock user")
+                }
+                is Resource.Loading -> {}
+            }
         }
     }
 

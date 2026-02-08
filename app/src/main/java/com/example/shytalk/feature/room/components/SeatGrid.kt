@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import com.example.shytalk.core.model.RoomRole
 import com.example.shytalk.core.model.Seat
 import com.example.shytalk.core.model.SeatState
+import com.example.shytalk.core.model.User
 import com.example.shytalk.core.util.Constants
 
 @Composable
@@ -20,12 +21,14 @@ fun SeatGrid(
     ownerId: String,
     hostIds: List<String>,
     speakingUids: Set<Int>,
+    seatUsers: Map<String, User> = emptyMap(),
     onSeatClick: (Int) -> Unit,
     onRemoveFromSeat: (Int) -> Unit,
     onToggleSelfMute: (Int) -> Unit,
     onForceMute: (Int) -> Unit,
     onKickUser: (Int) -> Unit,
     onMoveSeat: (fromIndex: Int, toIndex: Int) -> Unit,
+    onTapUser: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Collect empty seat indices for the move dialog
@@ -72,6 +75,8 @@ fun SeatGrid(
                         && seatIndex == Constants.OWNER_SEAT_INDEX
                         && currentRole == RoomRole.OWNER
 
+                    val seatUser = seatUserId?.let { seatUsers[it] }
+
                     SeatItem(
                         seatIndex = seatIndex,
                         seat = seat,
@@ -84,12 +89,14 @@ fun SeatGrid(
                         canMove = canModerate && emptySeats.isNotEmpty() && seatIndex != Constants.OWNER_SEAT_INDEX,
                         emptySeats = emptySeats,
                         isSpeaking = isSpeaking,
+                        user = seatUser,
                         onClick = { onSeatClick(seatIndex) },
                         onRemove = { onRemoveFromSeat(seatIndex) },
                         onToggleSelfMute = { onToggleSelfMute(seatIndex) },
                         onForceMute = { onForceMute(seatIndex) },
                         onKick = { onKickUser(seatIndex) },
                         onMoveTo = { toIndex -> onMoveSeat(seatIndex, toIndex) },
+                        onTapUser = seatUserId?.let { uid -> { onTapUser(uid) } },
                         modifier = Modifier.weight(1f)
                     )
                 }
