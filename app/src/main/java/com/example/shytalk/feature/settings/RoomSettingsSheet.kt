@@ -281,7 +281,7 @@ fun RoomSettingsSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Close Room Button (owner only)
-            if (viewModel.currentUserId == room.ownerId) {
+            if (isOwner) {
                 Button(
                     onClick = onCloseRoom,
                     colors = ButtonDefaults.buttonColors(
