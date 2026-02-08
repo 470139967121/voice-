@@ -35,17 +35,20 @@ import com.example.shytalk.feature.room.components.ChatPanel
 import com.example.shytalk.feature.room.components.OwnerAwayBanner
 import com.example.shytalk.feature.room.components.RoomToolbar
 import com.example.shytalk.feature.room.components.SeatGrid
+import com.example.shytalk.feature.room.components.UserCardPopup
 import com.example.shytalk.feature.settings.RoomSettingsSheet
 
 @Composable
 fun RoomScreen(
     roomId: String,
     onNavigateBack: () -> Unit,
+    onNavigateToUserProfile: (String) -> Unit = {},
     viewModel: RoomViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showSettings by remember { mutableStateOf(false) }
+    var showUserCardForId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(uiState.roomClosed) {
         if (uiState.roomClosed) {
@@ -141,6 +144,7 @@ fun RoomScreen(
                     ownerId = uiState.room?.ownerId ?: "",
                     hostIds = uiState.room?.hostIds ?: emptyList(),
                     speakingUids = uiState.speakingUids,
+                    seatUsers = uiState.seatUsers,
                     onSeatClick = { seatIndex ->
                         val seat = uiState.room?.seats?.get(seatIndex.toString())
                         if (seat?.userId == uiState.currentUserId) {
@@ -163,6 +167,9 @@ fun RoomScreen(
                     },
                     onMoveSeat = { fromIndex, toIndex ->
                         viewModel.moveSeat(fromIndex, toIndex)
+                    },
+                    onTapUser = { userId ->
+                        showUserCardForId = userId
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -192,6 +199,30 @@ fun RoomScreen(
                     viewModel.closeRoom()
                 }
             )
+        }
+
+        // User card popup when tapping a seated user
+        showUserCardForId?.let { userId ->
+            val user = uiState.seatUsers[userId]
+            if (user != null) {
+                UserCardPopup(
+                    user = user,
+                    isBlocked = userId in uiState.blockedUserIds,
+                    onViewProfile = {
+                        showUserCardForId = null
+                        onNavigateToUserProfile(userId)
+                    },
+                    onBlock = {
+                        viewModel.blockUser(userId)
+                        showUserCardForId = null
+                    },
+                    onUnblock = {
+                        viewModel.unblockUser(userId)
+                        showUserCardForId = null
+                    },
+                    onDismiss = { showUserCardForId = null }
+                )
+            }
         }
     }
 }

@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
             ShyTalkTheme {
                 val navController = rememberNavController()
                 val startDestination = if (authRepository.isAuthenticated) {
-                    Screen.Home.route
+                    Screen.Main.route
                 } else {
                     Screen.PhoneAuth.route
                 }
