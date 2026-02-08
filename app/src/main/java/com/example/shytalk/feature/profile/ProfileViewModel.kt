@@ -1,5 +1,6 @@
 package com.example.shytalk.feature.profile
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -11,6 +12,7 @@ import com.example.shytalk.data.repository.StorageRepository
 import com.example.shytalk.data.repository.UserRepository
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +35,7 @@ data class ProfileUiState(
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val storageRepository: StorageRepository
@@ -46,7 +49,6 @@ class ProfileViewModel @Inject constructor(
     init {
         val currentUid = authRepository.currentUser?.uid ?: ""
         _uiState.value = _uiState.value.copy(currentUserId = currentUid)
-        loadProfile(targetUserId)
     }
 
     fun loadProfile(userId: String?) {
@@ -142,7 +144,12 @@ class ProfileViewModel @Inject constructor(
                         user = _uiState.value.user?.copy(uniqueId = result.data)
                     )
                 }
-                else -> {}
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        error = result.message ?: "Failed to generate unique ID"
+                    )
+                }
+                is Resource.Loading -> {}
             }
         }
     }
@@ -207,14 +214,36 @@ class ProfileViewModel @Inject constructor(
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isUploadingPhoto = true)
-            when (val result = storageRepository.uploadImage(userId, "profile_photos", uri)) {
+            val imageData = try {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            } catch (e: Exception) {
+                null
+            }
+            if (imageData == null) {
+                _uiState.value = _uiState.value.copy(
+                    isUploadingPhoto = false,
+                    error = "Failed to read image"
+                )
+                return@launch
+            }
+            when (val result = storageRepository.uploadImage(userId, "profile_photos", imageData)) {
                 is Resource.Success -> {
                     val url = result.data
-                    userRepository.updateProfile(userId, mapOf("profilePhotoUrl" to url))
-                    _uiState.value = _uiState.value.copy(
-                        isUploadingPhoto = false,
-                        user = _uiState.value.user?.copy(profilePhotoUrl = url)
-                    )
+                    when (val saveResult = userRepository.updateProfile(userId, mapOf("profilePhotoUrl" to url))) {
+                        is Resource.Success -> {
+                            _uiState.value = _uiState.value.copy(
+                                isUploadingPhoto = false,
+                                user = _uiState.value.user?.copy(profilePhotoUrl = url)
+                            )
+                        }
+                        is Resource.Error -> {
+                            _uiState.value = _uiState.value.copy(
+                                isUploadingPhoto = false,
+                                error = saveResult.message ?: "Failed to save photo URL"
+                            )
+                        }
+                        is Resource.Loading -> {}
+                    }
                 }
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(
@@ -231,14 +260,36 @@ class ProfileViewModel @Inject constructor(
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isUploadingPhoto = true)
-            when (val result = storageRepository.uploadImage(userId, "cover_photos", uri)) {
+            val imageData = try {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            } catch (e: Exception) {
+                null
+            }
+            if (imageData == null) {
+                _uiState.value = _uiState.value.copy(
+                    isUploadingPhoto = false,
+                    error = "Failed to read image"
+                )
+                return@launch
+            }
+            when (val result = storageRepository.uploadImage(userId, "cover_photos", imageData)) {
                 is Resource.Success -> {
                     val url = result.data
-                    userRepository.updateProfile(userId, mapOf("coverPhotoUrl" to url))
-                    _uiState.value = _uiState.value.copy(
-                        isUploadingPhoto = false,
-                        user = _uiState.value.user?.copy(coverPhotoUrl = url)
-                    )
+                    when (val saveResult = userRepository.updateProfile(userId, mapOf("coverPhotoUrl" to url))) {
+                        is Resource.Success -> {
+                            _uiState.value = _uiState.value.copy(
+                                isUploadingPhoto = false,
+                                user = _uiState.value.user?.copy(coverPhotoUrl = url)
+                            )
+                        }
+                        is Resource.Error -> {
+                            _uiState.value = _uiState.value.copy(
+                                isUploadingPhoto = false,
+                                error = saveResult.message ?: "Failed to save photo URL"
+                            )
+                        }
+                        is Resource.Loading -> {}
+                    }
                 }
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(
