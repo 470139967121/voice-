@@ -28,7 +28,7 @@ class AgoraVoiceService @Inject constructor(
     enum class ConnectionState { CONNECTED, DISCONNECTED, RECONNECTING }
 
     companion object {
-        const val AGORA_APP_ID = "6110022552#1657840"
+        const val AGORA_APP_ID = "7bdf5596c88f49edba75568f529c4389"
     }
 
     private var rtcEngine: RtcEngine? = null
