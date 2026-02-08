@@ -109,11 +109,9 @@ fun ProfileScreen(
         }
     }
 
-    // Load profile for the specified userId when used as a navigated screen
+    // Load profile for the current or specified user
     LaunchedEffect(userId) {
-        if (userId != null) {
-            viewModel.loadProfile(userId)
-        }
+        viewModel.loadProfile(userId)
     }
 
     val user = uiState.user
@@ -121,26 +119,32 @@ fun ProfileScreen(
 
     // If this is embedded in a tab (no scaffold needed), just render the content
     if (!showBackButton) {
-        ProfileContent(
-            uiState = uiState,
-            isOwn = isOwn,
-            editDisplayName = editDisplayName,
-            onEditDisplayNameChange = { editDisplayName = it },
-            editDescription = editDescription,
-            onEditDescriptionChange = { editDescription = it },
-            editNationality = editNationality,
-            onShowCountryPicker = { showCountryPicker = true },
-            onToggleEditing = { viewModel.toggleEditing() },
-            onSaveEdits = {
-                viewModel.saveProfileEdits(editDisplayName, editDescription, editNationality)
-            },
-            onPickProfilePhoto = { profilePhotoPicker.launch("image/*") },
-            onPickCoverPhoto = { coverPhotoPicker.launch("image/*") },
-            onBlockToggle = { showBlockDialog = true },
-            onSignOut = onSignOut,
-            snackbarHostState = snackbarHostState,
-            modifier = modifier
-        )
+        Box(modifier = modifier) {
+            ProfileContent(
+                uiState = uiState,
+                isOwn = isOwn,
+                editDisplayName = editDisplayName,
+                onEditDisplayNameChange = { editDisplayName = it },
+                editDescription = editDescription,
+                onEditDescriptionChange = { editDescription = it },
+                editNationality = editNationality,
+                onShowCountryPicker = { showCountryPicker = true },
+                onToggleEditing = { viewModel.toggleEditing() },
+                onSaveEdits = {
+                    viewModel.saveProfileEdits(editDisplayName, editDescription, editNationality)
+                },
+                onPickProfilePhoto = { profilePhotoPicker.launch("image/*") },
+                onPickCoverPhoto = { coverPhotoPicker.launch("image/*") },
+                onBlockToggle = { showBlockDialog = true },
+                onSignOut = onSignOut,
+                snackbarHostState = snackbarHostState,
+                modifier = Modifier.fillMaxSize()
+            )
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
     } else {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
