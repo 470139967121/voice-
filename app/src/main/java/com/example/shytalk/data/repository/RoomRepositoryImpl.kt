@@ -102,10 +102,25 @@ class RoomRepositoryImpl @Inject constructor(
 
     override suspend fun takeSeat(roomId: String, seatIndex: Int, userId: String): Resource<Unit> {
         return try {
-            val seat = Seat(userId = userId, state = SeatState.OCCUPIED)
-            roomsCollection.document(roomId).update(
-                "seats.$seatIndex", seat.toMap()
-            ).await()
+            val docRef = roomsCollection.document(roomId)
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                val room = snapshot.data?.let { ChatRoom.fromMap(it, snapshot.id) }
+                    ?: throw Exception("Room not found")
+
+                val updates = mutableMapOf<String, Any?>()
+
+                // Clear any existing seat occupied by this user
+                for ((idx, seat) in room.seats) {
+                    if (seat.userId == userId && seat.state == SeatState.OCCUPIED) {
+                        updates["seats.$idx"] = Seat().toMap()
+                    }
+                }
+
+                // Take the new seat
+                updates["seats.$seatIndex"] = Seat(userId = userId, state = SeatState.OCCUPIED).toMap()
+                transaction.update(docRef, updates)
+            }.await()
             Resource.Success(Unit)
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to take seat", e)
@@ -258,13 +273,27 @@ class RoomRepositoryImpl @Inject constructor(
 
     override suspend fun acceptInvite(roomId: String, userId: String, seatIndex: Int): Resource<Unit> {
         return try {
-            val seat = Seat(userId = userId, state = SeatState.OCCUPIED)
-            roomsCollection.document(roomId).update(
-                mapOf(
-                    "pendingInvites.$userId" to FieldValue.delete(),
-                    "seats.$seatIndex" to seat.toMap()
+            val docRef = roomsCollection.document(roomId)
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                val room = snapshot.data?.let { ChatRoom.fromMap(it, snapshot.id) }
+                    ?: throw Exception("Room not found")
+
+                val updates = mutableMapOf<String, Any?>(
+                    "pendingInvites.$userId" to FieldValue.delete()
                 )
-            ).await()
+
+                // Clear any existing seat occupied by this user
+                for ((idx, seat) in room.seats) {
+                    if (seat.userId == userId && seat.state == SeatState.OCCUPIED) {
+                        updates["seats.$idx"] = Seat().toMap()
+                    }
+                }
+
+                // Take the new seat
+                updates["seats.$seatIndex"] = Seat(userId = userId, state = SeatState.OCCUPIED).toMap()
+                transaction.update(docRef, updates)
+            }.await()
             Resource.Success(Unit)
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to accept invite", e)

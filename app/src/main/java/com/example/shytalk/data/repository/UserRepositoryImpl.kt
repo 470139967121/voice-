@@ -5,7 +5,9 @@ import com.example.shytalk.core.util.Resource
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 class UserRepositoryImpl @Inject constructor(
@@ -16,8 +18,12 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun createOrUpdateUser(user: User): Resource<Unit> {
         return try {
-            usersCollection.document(user.uid).set(user.toMap()).await()
+            withTimeout(10_000L) {
+                usersCollection.document(user.uid).set(user.toMap()).await()
+            }
             Resource.Success(Unit)
+        } catch (e: TimeoutCancellationException) {
+            Resource.Error("Server not responding — please try again")
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to create/update user", e)
         }

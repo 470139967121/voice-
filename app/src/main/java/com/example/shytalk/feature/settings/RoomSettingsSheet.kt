@@ -280,15 +280,17 @@ fun RoomSettingsSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Close Room Button
-            Button(
-                onClick = onCloseRoom,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Close Room")
+            // Close Room Button (owner only)
+            if (viewModel.currentUserId == room.ownerId) {
+                Button(
+                    onClick = onCloseRoom,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Close Room")
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

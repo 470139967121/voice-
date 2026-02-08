@@ -131,6 +131,8 @@ class RoomSettingsViewModel @Inject constructor(
     }
 
     fun closeRoom() {
+        val room = _uiState.value.room ?: return
+        if (currentUserId != room.ownerId) return
         viewModelScope.launch {
             messageRepository.sendSystemMessage(currentRoomId, "Room has been closed by the owner")
             roomRepository.closeRoom(currentRoomId)
