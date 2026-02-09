@@ -23,7 +23,16 @@
       "Bash(find:*)",
       "Bash(./gradlew assembleDebug:*)",
       "Bash(git push:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(Restricted\" dialog with support contact info.\n\n- Add DeviceRepository interface and Firestore implementation\n- Provide @Named\\(\"deviceId\"\\) via ANDROID_ID in AppModule\n- Add device binding checks to AuthViewModel \\(checkAuthState + signInWithGoogle\\)\n- Add AlertDialog to GoogleSignInScreen for device-locked state\n- Always route through GoogleSignIn on app launch for binding verification\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh pr merge:*)",
+      "Bash(keytool:*)",
+      "Bash(./gradlew clean bundleRelease:*)",
+      "Bash(.gradlew assembleDebug:*)",
+      "Bash(Policy\" link on the user''s own profile screen.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh api:*)",
+      "WebFetch(domain:shydenmcm.github.io)"
     ]
   }
 }
