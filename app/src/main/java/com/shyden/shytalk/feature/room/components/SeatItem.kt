@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
@@ -197,21 +198,24 @@ fun SeatItem(
                 }
             }
 
-            // Mute indicator
-            if (seat.state == SeatState.OCCUPIED && seat.isMuted) {
+            // Mic status indicator
+            if (seat.state == SeatState.OCCUPIED) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .size(18.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.error),
+                        .background(
+                            if (seat.isMuted) MaterialTheme.colorScheme.error
+                            else Color(0xFF4CAF50)
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.MicOff,
-                        contentDescription = "Muted",
+                        if (seat.isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                        contentDescription = if (seat.isMuted) "Muted" else "Unmuted",
                         modifier = Modifier.size(12.dp),
-                        tint = MaterialTheme.colorScheme.onError
+                        tint = Color.White
                     )
                 }
             }

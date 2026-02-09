@@ -51,7 +51,8 @@ data class RoomUiState(
     val blockedUserIds: Set<String> = emptySet(),
     val blockWarning: BlockWarning? = null,
     val hasJoined: Boolean = false,
-    val shouldNavigateBack: Boolean = false
+    val shouldNavigateBack: Boolean = false,
+    val hasAudioPermission: Boolean = false
 )
 
 @HiltViewModel
@@ -167,7 +168,9 @@ class RoomViewModel @Inject constructor(
                     }
 
                     if (currentlySeated && !isSeated) {
-                        joinVoiceChannel(room.agoraChannelName)
+                        if (_uiState.value.hasAudioPermission) {
+                            joinVoiceChannel(room.agoraChannelName)
+                        }
                     } else if (!currentlySeated && isSeated) {
                         agoraVoiceService.leaveChannel()
                     }
@@ -687,6 +690,14 @@ class RoomViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    fun onAudioPermissionResult(granted: Boolean) {
+        _uiState.value = _uiState.value.copy(hasAudioPermission = granted)
+        if (granted && isSeated) {
+            val channelName = _uiState.value.room?.agoraChannelName ?: return
+            joinVoiceChannel(channelName)
+        }
     }
 
     override fun onCleared() {
