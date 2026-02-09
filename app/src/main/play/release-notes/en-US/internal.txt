@@ -1,13 +1,3 @@
-Room Management & UX Improvements
+Bug fix: photo cropping crash resolved
 
-- Room closed summary: see room duration, hosts, and visitor count when a room closes
-- Owner return auto-detected: no more "Return" button needed
-- Rooms close immediately when owner leaves and no one is on mic
-- Chat auto-scrolls to latest messages
-- Moderation actions (mute, kick, move) moved to user card popup
-- Blocked/kicked users are now fully denied room entry
-- Kicked users see a notification and the chat shows who kicked them
-- Profile and cover photo cropping before upload
-- Improved Agora token authentication
-
-WARNING: Voice chat is currently not working and will be fixed in a later version.
+WARNING: Voice chat not working, fix coming in a later version.
