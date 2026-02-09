@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "517834977595-3hp46p6ojk98spmt80b4mn41p9fs23ge.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shyden.shytalk",
+            "certificate_hash": "74ac2415c9ab90962833f088d0d0ef419e70e90b"
+          }
+        },
+        {
           "client_id": "517834977595-6jvn484hjclkekkahu7kv6s7a8mn8blg.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
