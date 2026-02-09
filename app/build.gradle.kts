@@ -9,7 +9,7 @@ plugins {
 
 play {
     serviceAccountCredentials.set(rootProject.file("play-service-account.json"))
-    track.set("production")
+    track.set("internal")
     defaultToAppBundles.set(true)
 }
 
@@ -23,8 +23,8 @@ android {
         applicationId = "com.shyden.shytalk"
         minSdk = 28
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.05"
+        versionCode = 6
+        versionName = "0.06"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "517834977595-6jvn484hjclkekkahu7kv6s7a8mn8blg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shyden.shytalk",
+            "certificate_hash": "e32a4d81df49201eaaabfe1fe0276a94c2b14026"
+          }
+        },
+        {
+          "client_id": "517834977595-d13aghl9h3vh7olo9dtb528oa0js18lq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shyden.shytalk",
+            "certificate_hash": "a8aae2bb8cbcd1cb9214456e218b596cb7167814"
+          }
+        },
+        {
           "client_id": "517834977595-cdu78p6q7vg57utpsvtik04c195lbh8b.apps.googleusercontent.com",
           "client_type": 3
         }
