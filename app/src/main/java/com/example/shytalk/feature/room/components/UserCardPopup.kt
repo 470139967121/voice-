@@ -40,6 +40,7 @@ import com.example.shytalk.core.util.flagEmojiForCode
 fun UserCardPopup(
     user: User,
     isBlocked: Boolean,
+    isSelf: Boolean,
     onViewProfile: () -> Unit,
     onBlock: () -> Unit,
     onUnblock: () -> Unit,
@@ -120,23 +121,25 @@ fun UserCardPopup(
                     ) {
                         Text("View Profile")
                     }
-                    OutlinedButton(
-                        onClick = {
-                            if (isBlocked) {
-                                onUnblock()
-                            } else {
-                                showBlockConfirm = true
-                            }
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            Icons.Default.Block,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isBlocked) "Unblock" else "Block")
+                    if (!isSelf) {
+                        OutlinedButton(
+                            onClick = {
+                                if (isBlocked) {
+                                    onUnblock()
+                                } else {
+                                    showBlockConfirm = true
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Default.Block,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (isBlocked) "Unblock" else "Block")
+                        }
                     }
                 }
             }

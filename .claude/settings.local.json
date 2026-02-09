@@ -21,7 +21,9 @@
       "Bash(powershell.exe:*)",
       "WebFetch(domain:developers.google.com)",
       "Bash(find:*)",
-      "Bash(./gradlew assembleDebug:*)"
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
