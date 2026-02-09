@@ -36,12 +36,28 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private val userCache = mutableMapOf<String, User>()
+    private var myBlockedUserIds: Set<String> = emptySet()
+    private var allRooms: List<ChatRoom> = emptyList()
 
     val currentUserId: String?
         get() = authRepository.currentUser?.uid
 
     init {
+        loadBlockedUsersAndFilter()
         observeRooms()
+    }
+
+    private fun loadBlockedUsersAndFilter() {
+        val userId = currentUserId ?: return
+        viewModelScope.launch {
+            when (val result = userRepository.getBlockedUserIds(userId)) {
+                is Resource.Success -> {
+                    myBlockedUserIds = result.data.toSet()
+                    filterAndEmitRooms()
+                }
+                else -> {}
+            }
+        }
     }
 
     private fun observeRooms() {
@@ -54,12 +70,35 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 .collect { rooms ->
-                    _uiState.value = _uiState.value.copy(
-                        rooms = rooms,
-                        isLoading = false
-                    )
-                    loadSeatUsers(rooms)
+                    allRooms = rooms
+                    filterAndEmitRooms()
                 }
+        }
+    }
+
+    private fun filterAndEmitRooms() {
+        viewModelScope.launch {
+            val userId = currentUserId ?: return@launch
+
+            val ownerIds = allRooms.map { it.ownerId }.distinct()
+            for (ownerId in ownerIds) {
+                if (ownerId !in userCache) {
+                    when (val result = userRepository.getUser(ownerId)) {
+                        is Resource.Success -> userCache[ownerId] = result.data
+                        else -> {}
+                    }
+                }
+            }
+
+            val filtered = allRooms.filter { room ->
+                if (room.ownerId in myBlockedUserIds) return@filter false
+                val ownerUser = userCache[room.ownerId]
+                if (ownerUser != null && userId in ownerUser.blockedUserIds) return@filter false
+                true
+            }
+
+            _uiState.value = _uiState.value.copy(rooms = filtered, isLoading = false)
+            loadSeatUsers(filtered)
         }
     }
 
