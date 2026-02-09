@@ -7,19 +7,28 @@ plugins {
 }
 
 android {
-    namespace = "com.example.shytalk"
+    namespace = "com.shyden.shytalk"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.shytalk"
+        applicationId = "com.shyden.shytalk"
         minSdk = 28
         targetSdk = 36
         versionCode = 1
         versionName = "0.01"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file("keystore.jks")
+            storePassword = "2gXnsQ2YVDNVlUr28kTRuW99"
+            keyAlias = "shytalk"
+            keyPassword = "2gXnsQ2YVDNVlUr28kTRuW99"
+        }
     }
 
     buildTypes {
@@ -29,6 +38,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

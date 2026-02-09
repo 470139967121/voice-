@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:517834977595:android:2b734cdc0b8f640571871e",
+        "mobilesdk_app_id": "1:517834977595:android:d8f33f166ff9461871871e",
         "android_client_info": {
-          "package_name": "com.example.shytalk"
+          "package_name": "com.shyden.shytalk"
         }
       },
       "oauth_client": [
