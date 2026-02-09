@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -572,6 +573,15 @@ private fun ProfileContent(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Sign Out")
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val uriHandler = LocalUriHandler.current
+                    TextButton(
+                        onClick = { uriHandler.openUri("https://shydenmcm.github.io/ShyTalk/privacy-policy.html") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Privacy Policy", style = MaterialTheme.typography.bodySmall)
                     }
                 } else {
                     // Block/Unblock button for other users
