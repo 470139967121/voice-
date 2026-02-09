@@ -17,6 +17,7 @@ import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
 import com.shyden.shytalk.data.repository.UserRepository
+import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,6 +27,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+sealed class BlockWarning {
+    data object BlockedUserInRoom : BlockWarning()
+    data object BlockedByUserInRoom : BlockWarning()
+}
 
 data class RoomUiState(
     val room: ChatRoom? = null,
@@ -42,7 +48,10 @@ data class RoomUiState(
     val pendingInvite: String? = null,
     val seatUsers: Map<String, User> = emptyMap(),
     val participantUsers: Map<String, User> = emptyMap(),
-    val blockedUserIds: Set<String> = emptySet()
+    val blockedUserIds: Set<String> = emptySet(),
+    val blockWarning: BlockWarning? = null,
+    val hasJoined: Boolean = false,
+    val shouldNavigateBack: Boolean = false
 )
 
 @HiltViewModel
@@ -64,6 +73,9 @@ class RoomViewModel @Inject constructor(
     private var ownerAwayCountdownJob: Job? = null
     private var isSeated = false
     private val userCache = mutableMapOf<String, User>()
+    private var blockCheckDone = false
+    private var firstJoinTimestamp: Timestamp? = null
+    private var allMessages: List<Message> = emptyList()
 
     init {
         val userId = authRepository.currentUser?.uid ?: ""
@@ -73,7 +85,6 @@ class RoomViewModel @Inject constructor(
         observeRoom()
         observeMessages()
         observeVoiceState()
-        joinRoom()
     }
 
     private fun loadUserName() {
@@ -111,24 +122,50 @@ class RoomViewModel @Inject constructor(
 
                     val userId = _uiState.value.currentUserId
 
-                    // Detect if user was kicked (banned or no longer a participant)
-                    if (userId !in room.participantIds || userId in room.bannedUserIds) {
-                        agoraVoiceService.leaveChannel()
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            roomClosed = true
-                        )
-                        return@collect
+                    // Only check kicked status after we've joined
+                    if (_uiState.value.hasJoined) {
+                        if (userId !in room.participantIds || userId in room.bannedUserIds) {
+                            agoraVoiceService.leaveChannel()
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                roomClosed = true
+                            )
+                            return@collect
+                        }
                     }
 
                     val role = resolveRole(room, userId)
 
-                    // Check if user is currently seated
+                    // Pre-entry block check (only once, before joining)
+                    if (!blockCheckDone && !_uiState.value.hasJoined) {
+                        blockCheckDone = true
+                        if (room.ownerId == userId) {
+                            // Owner skips block checks, joins immediately
+                            _uiState.value = _uiState.value.copy(
+                                room = room,
+                                currentRole = role,
+                                isLoading = false
+                            )
+                            joinRoom()
+                        } else {
+                            _uiState.value = _uiState.value.copy(
+                                room = room,
+                                currentRole = role,
+                                isLoading = false
+                            )
+                            checkBlockConflicts(room)
+                        }
+                        loadSeatUsers(room)
+                        loadParticipantUsers(room)
+                        handleOwnerAwayCountdown(room)
+                        return@collect
+                    }
+
+                    // Normal room updates after joining
                     val currentlySeated = room.seats.values.any {
                         it.userId == userId && it.state == SeatState.OCCUPIED
                     }
 
-                    // Join/leave Agora channel based on seat status
                     if (currentlySeated && !isSeated) {
                         joinVoiceChannel(room.agoraChannelName)
                     } else if (!currentlySeated && isSeated) {
@@ -136,13 +173,19 @@ class RoomViewModel @Inject constructor(
                     }
                     isSeated = currentlySeated
 
-                    // Sync mute state with Agora
                     if (currentlySeated) {
                         val mySeat = room.seats.values.find { it.userId == userId }
                         mySeat?.let { agoraVoiceService.muteLocalAudio(it.isMuted) }
                     }
 
                     val pendingInvite = room.pendingInvites[userId]
+
+                    // Update firstJoinTimestamp from room data
+                    val joinTs = room.firstJoinTimestamps[userId]
+                    if (joinTs != null && firstJoinTimestamp == null) {
+                        firstJoinTimestamp = joinTs
+                        updateFilteredMessages()
+                    }
 
                     _uiState.value = _uiState.value.copy(
                         room = room,
@@ -158,14 +201,76 @@ class RoomViewModel @Inject constructor(
         }
     }
 
+    private fun checkBlockConflicts(room: ChatRoom) {
+        viewModelScope.launch {
+            val userId = _uiState.value.currentUserId
+            val myBlockedIds = _uiState.value.blockedUserIds
+
+            // Check if any participant is blocked by me
+            val blockedInRoom = room.participantIds.any { it in myBlockedIds && it != userId }
+            if (blockedInRoom) {
+                _uiState.value = _uiState.value.copy(
+                    blockWarning = BlockWarning.BlockedUserInRoom
+                )
+                return@launch
+            }
+
+            // Check if any participant has blocked me
+            for (participantId in room.participantIds) {
+                if (participantId == userId) continue
+                val cached = userCache[participantId]
+                val participantUser = if (cached != null) {
+                    cached
+                } else {
+                    when (val result = userRepository.getUser(participantId)) {
+                        is Resource.Success -> {
+                            userCache[participantId] = result.data
+                            result.data
+                        }
+                        else -> continue
+                    }
+                }
+                if (userId in participantUser.blockedUserIds) {
+                    _uiState.value = _uiState.value.copy(
+                        blockWarning = BlockWarning.BlockedByUserInRoom
+                    )
+                    return@launch
+                }
+            }
+
+            // No conflicts, join directly
+            joinRoom()
+        }
+    }
+
+    fun confirmJoinDespiteBlock() {
+        _uiState.value = _uiState.value.copy(blockWarning = null)
+        joinRoom()
+    }
+
+    fun cancelJoin() {
+        _uiState.value = _uiState.value.copy(shouldNavigateBack = true)
+    }
+
     private fun observeMessages() {
         viewModelScope.launch {
             messageRepository.getMessages(roomId)
                 .catch { /* ignore message errors */ }
                 .collect { messages ->
-                    _uiState.value = _uiState.value.copy(messages = messages)
+                    allMessages = messages
+                    updateFilteredMessages()
                 }
         }
+    }
+
+    private fun updateFilteredMessages() {
+        val ts = firstJoinTimestamp
+        val filtered = if (ts != null) {
+            allMessages.filter { it.createdAt >= ts }
+        } else {
+            allMessages
+        }
+        _uiState.value = _uiState.value.copy(messages = filtered)
     }
 
     private fun observeVoiceState() {
@@ -184,10 +289,15 @@ class RoomViewModel @Inject constructor(
     private fun joinRoom() {
         viewModelScope.launch {
             val userId = _uiState.value.currentUserId
+            val userName = _uiState.value.currentUserName.ifEmpty { "Someone" }
+            roomRepository.recordFirstJoinTimestamp(roomId, userId)
             roomRepository.joinRoom(roomId, userId)
-            messageRepository.sendSystemMessage(
+            _uiState.value = _uiState.value.copy(hasJoined = true)
+            messageRepository.sendJoinMessage(
                 roomId,
-                "${_uiState.value.currentUserName.ifEmpty { "Someone" }} joined the room"
+                userId,
+                userName,
+                "$userName joined the room"
             )
         }
     }
@@ -385,6 +495,16 @@ class RoomViewModel @Inject constructor(
                 "${userName.ifEmpty { "Someone" }} was invited to sit"
             )
         }
+    }
+
+    fun inviteFromMessage(senderId: String, senderName: String) {
+        val room = _uiState.value.room ?: return
+        // Check the user isn't already seated
+        val alreadySeated = room.seats.values.any {
+            it.userId == senderId && it.state == SeatState.OCCUPIED
+        }
+        if (alreadySeated) return
+        inviteUser(senderId, senderName)
     }
 
     fun acceptInvite() {

@@ -4,7 +4,8 @@ import com.google.firebase.Timestamp
 
 enum class MessageType {
     TEXT,
-    SYSTEM
+    SYSTEM,
+    JOIN
 }
 
 data class Message(

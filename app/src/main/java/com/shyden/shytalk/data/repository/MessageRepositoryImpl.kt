@@ -76,4 +76,27 @@ class MessageRepositoryImpl @Inject constructor(
             Resource.Error(e.message ?: "Failed to send system message", e)
         }
     }
+
+    override suspend fun sendJoinMessage(
+        roomId: String,
+        senderId: String,
+        senderName: String,
+        text: String
+    ): Resource<Unit> {
+        return try {
+            val messageId = UUID.randomUUID().toString()
+            val message = Message(
+                messageId = messageId,
+                senderId = senderId,
+                senderName = senderName,
+                text = text,
+                createdAt = Timestamp.now(),
+                type = MessageType.JOIN
+            )
+            messagesCollection(roomId).document(messageId).set(message.toMap()).await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to send join message", e)
+        }
+    }
 }

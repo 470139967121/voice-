@@ -313,6 +313,22 @@ class RoomRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun recordFirstJoinTimestamp(roomId: String, userId: String): Resource<Unit> {
+        return try {
+            val docRef = roomsCollection.document(roomId)
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                val existing = (snapshot.get("firstJoinTimestamps") as? Map<*, *>)
+                if (existing == null || !existing.containsKey(userId)) {
+                    transaction.update(docRef, "firstJoinTimestamps.$userId", Timestamp.now())
+                }
+            }.await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to record first join timestamp", e)
+        }
+    }
+
     override suspend fun closeRoom(roomId: String): Resource<Unit> {
         return try {
             val emptySeats = (0 until Constants.MAX_SEATS).associate { i ->

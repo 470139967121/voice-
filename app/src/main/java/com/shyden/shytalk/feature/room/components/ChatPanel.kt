@@ -1,5 +1,6 @@
 package com.shyden.shytalk.feature.room.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,35 +24,55 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.shyden.shytalk.core.model.Message
+import com.shyden.shytalk.core.model.RoomRole
+import com.shyden.shytalk.core.model.Seat
+import com.shyden.shytalk.core.model.SeatState
+import com.shyden.shytalk.core.model.User
 
 @Composable
 fun ChatPanel(
     messages: List<Message>,
     currentUserId: String,
+    currentRole: RoomRole,
+    seats: Map<String, Seat>,
+    userMap: Map<String, User>,
     onSendMessage: (String) -> Unit,
+    onTapUser: (String) -> Unit,
+    onInviteUser: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
     var messageText by remember { mutableStateOf("") }
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
-        }
+    val seatedUserIds = remember(seats) {
+        seats.values
+            .filter { it.state == SeatState.OCCUPIED && it.userId != null }
+            .mapNotNull { it.userId }
+            .toSet()
     }
 
     Column(modifier = modifier) {
         LazyColumn(
             state = listState,
+            reverseLayout = true,
+            verticalArrangement = Arrangement.Bottom,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(horizontal = 8.dp)
         ) {
-            items(messages, key = { it.messageId }) { message ->
+            items(messages.reversed(), key = { it.messageId }) { message ->
+                val senderUser = userMap[message.senderId]
+                val isSelf = message.senderId == currentUserId
+                val isUserSeated = message.senderId in seatedUserIds
                 MessageBubble(
                     message = message,
-                    isCurrentUser = message.senderId == currentUserId
+                    user = senderUser,
+                    currentRole = currentRole,
+                    isUserSeated = isUserSeated,
+                    isSelf = isSelf,
+                    onTapUser = { onTapUser(message.senderId) },
+                    onInvite = { onInviteUser(message.senderId, message.senderName) }
                 )
             }
         }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -27,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,10 +76,60 @@ fun RoomScreen(
         }
     }
 
+    LaunchedEffect(uiState.shouldNavigateBack) {
+        if (uiState.shouldNavigateBack) {
+            onNavigateBack()
+        }
+    }
+
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+        }
+    }
+
+    // Block warning dialogs
+    uiState.blockWarning?.let { warning ->
+        when (warning) {
+            is BlockWarning.BlockedUserInRoom -> {
+                AlertDialog(
+                    onDismissRequest = {},
+                    title = { Text("Blocked User in Room") },
+                    text = {
+                        Text("A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.confirmJoinDespiteBlock() }) {
+                            Text("Enter")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { onNavigateBack() }) {
+                            Text("Choose Another Room")
+                        }
+                    }
+                )
+            }
+            is BlockWarning.BlockedByUserInRoom -> {
+                AlertDialog(
+                    onDismissRequest = {},
+                    title = { Text("Notice") },
+                    text = {
+                        Text("A user in this room has blocked you. You may have a limited experience. Enter anyway?")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.confirmJoinDespiteBlock() }) {
+                            Text("Enter")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { onNavigateBack() }) {
+                            Text("Choose Another Room")
+                        }
+                    }
+                )
+            }
         }
     }
 
@@ -130,6 +182,9 @@ fun RoomScreen(
         audienceUsers = emptyList()
     }
 
+    // Merged user map for ChatPanel
+    val userMap = uiState.seatUsers + uiState.participantUsers
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -158,7 +213,15 @@ fun RoomScreen(
                 ) {
                     CircularProgressIndicator()
                 }
-            } else {
+            } else if (!uiState.hasJoined && uiState.blockWarning == null) {
+                // Loading state while block check is in progress
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (uiState.hasJoined) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Owner Away Banner
                     if (uiState.room?.state == RoomState.OWNER_AWAY) {
@@ -249,7 +312,16 @@ fun RoomScreen(
                     ChatPanel(
                         messages = uiState.messages,
                         currentUserId = uiState.currentUserId,
+                        currentRole = uiState.currentRole,
+                        seats = uiState.room?.seats ?: emptyMap(),
+                        userMap = userMap,
                         onSendMessage = { viewModel.sendMessage(it) },
+                        onTapUser = { userId ->
+                            showUserCardForId = userId
+                        },
+                        onInviteUser = { senderId, senderName ->
+                            viewModel.inviteFromMessage(senderId, senderName)
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
@@ -313,6 +385,9 @@ fun RoomScreen(
         showUserCardForId?.let { userId ->
             val user = uiState.seatUsers[userId] ?: uiState.participantUsers[userId]
             if (user != null) {
+                val canInviteFromCard = (uiState.currentRole == RoomRole.OWNER || uiState.currentRole == RoomRole.HOST)
+                        && userId != uiState.currentUserId
+                        && uiState.room?.seats?.values?.none { it.userId == userId && it.state == SeatState.OCCUPIED } == true
                 UserCardPopup(
                     user = user,
                     isBlocked = userId in uiState.blockedUserIds,
@@ -329,6 +404,12 @@ fun RoomScreen(
                         viewModel.unblockUser(userId)
                         showUserCardForId = null
                     },
+                    onInvite = if (canInviteFromCard) {
+                        {
+                            viewModel.inviteFromMessage(userId, user.displayName)
+                            showUserCardForId = null
+                        }
+                    } else null,
                     onDismiss = { showUserCardForId = null }
                 )
             }

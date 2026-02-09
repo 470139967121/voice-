@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -44,7 +45,8 @@ fun UserCardPopup(
     onViewProfile: () -> Unit,
     onBlock: () -> Unit,
     onUnblock: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onInvite: (() -> Unit)? = null
 ) {
     var showBlockConfirm by remember { mutableStateOf(false) }
 
@@ -140,6 +142,22 @@ fun UserCardPopup(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(if (isBlocked) "Unblock" else "Block")
                         }
+                    }
+                }
+
+                if (onInvite != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onInvite,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.Mic,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Invite to Mic")
                     }
                 }
             }

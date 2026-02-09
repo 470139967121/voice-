@@ -17,7 +17,8 @@ data class ChatRoom(
     val bannedUserIds: List<String> = emptyList(),
     val pendingInvites: Map<String, String> = emptyMap(),
     val seats: Map<String, Seat> = (0 until Constants.MAX_SEATS).associate { it.toString() to Seat() },
-    val agoraChannelName: String = ""
+    val agoraChannelName: String = "",
+    val firstJoinTimestamps: Map<String, Timestamp> = emptyMap()
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "roomId" to roomId,
@@ -33,7 +34,8 @@ data class ChatRoom(
         "bannedUserIds" to bannedUserIds,
         "pendingInvites" to pendingInvites,
         "seats" to seats.mapValues { it.value.toMap() },
-        "agoraChannelName" to agoraChannelName
+        "agoraChannelName" to agoraChannelName,
+        "firstJoinTimestamps" to firstJoinTimestamps
     )
 
     companion object {
@@ -65,7 +67,10 @@ data class ChatRoom(
                     it.key.toString() to (it.value as? String ?: "")
                 } ?: emptyMap(),
                 seats = seats,
-                agoraChannelName = map["agoraChannelName"] as? String ?: ""
+                agoraChannelName = map["agoraChannelName"] as? String ?: "",
+                firstJoinTimestamps = (map["firstJoinTimestamps"] as? Map<*, *>)?.entries?.associate {
+                    it.key.toString() to (it.value as? Timestamp ?: Timestamp.now())
+                } ?: emptyMap()
             )
         }
     }
