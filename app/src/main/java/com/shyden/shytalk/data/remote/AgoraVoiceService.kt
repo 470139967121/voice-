@@ -1,6 +1,7 @@
 package com.shyden.shytalk.data.remote
 
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.agora.rtc2.ChannelMediaOptions
 import io.agora.rtc2.Constants
@@ -28,6 +29,7 @@ class AgoraVoiceService @Inject constructor(
     enum class ConnectionState { CONNECTED, DISCONNECTED, RECONNECTING }
 
     companion object {
+        private const val TAG = "AgoraVoiceService"
         const val AGORA_APP_ID = "7bdf5596c88f49edba75568f529c4389"
     }
 
@@ -44,17 +46,24 @@ class AgoraVoiceService @Inject constructor(
 
     private val rtcEventHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
+            Log.d(TAG, "onJoinChannelSuccess channel=$channel uid=$uid elapsed=${elapsed}ms")
             _isJoined.value = true
             _connectionState.value = ConnectionState.CONNECTED
         }
 
         override fun onLeaveChannel(stats: RtcStats?) {
+            Log.d(TAG, "onLeaveChannel")
             _isJoined.value = false
             _speakingUsers.value = emptySet()
             _connectionState.value = ConnectionState.DISCONNECTED
         }
 
+        override fun onError(err: Int) {
+            Log.e(TAG, "Agora onError code=$err")
+        }
+
         override fun onConnectionStateChanged(state: Int, reason: Int) {
+            Log.d(TAG, "onConnectionStateChanged state=$state reason=$reason")
             _connectionState.value = when (state) {
                 3 -> ConnectionState.CONNECTED      // CONNECTION_STATE_CONNECTED
                 1, 5 -> ConnectionState.DISCONNECTED // DISCONNECTED or FAILED
@@ -74,12 +83,20 @@ class AgoraVoiceService @Inject constructor(
         }
 
         override fun onUserOffline(uid: Int, reason: Int) {
+            Log.d(TAG, "onUserOffline uid=$uid reason=$reason")
             _speakingUsers.value = _speakingUsers.value - uid
+        }
+
+        override fun onUserJoined(uid: Int, elapsed: Int) {
+            Log.d(TAG, "onUserJoined uid=$uid elapsed=${elapsed}ms")
         }
     }
 
     fun initialize() {
-        if (AGORA_APP_ID.isEmpty()) return
+        if (AGORA_APP_ID.isEmpty()) {
+            Log.e(TAG, "AGORA_APP_ID is empty, cannot initialize")
+            return
+        }
         if (rtcEngine != null) return
 
         try {
@@ -89,6 +106,7 @@ class AgoraVoiceService @Inject constructor(
                 mEventHandler = rtcEventHandler
             }
             rtcEngine = RtcEngine.create(config)
+            Log.d(TAG, "RtcEngine created successfully")
             rtcEngine?.apply {
                 setChannelProfile(Constants.CHANNEL_PROFILE_LIVE_BROADCASTING)
                 setAudioProfile(
@@ -96,33 +114,48 @@ class AgoraVoiceService @Inject constructor(
                     Constants.AUDIO_SCENARIO_CHATROOM
                 )
                 enableAudioVolumeIndication(300, 3, true)
-                enableAudio()
                 setDefaultAudioRoutetoSpeakerphone(true)
             }
         } catch (e: Exception) {
-            // Log or handle initialization failure
+            Log.e(TAG, "Failed to initialize RtcEngine", e)
             rtcEngine = null
         }
     }
 
     suspend fun joinChannel(channelName: String, uid: Int) {
         initialize()
-        val engine = rtcEngine ?: return
+        val engine = rtcEngine ?: run {
+            Log.e(TAG, "RtcEngine is null, cannot join channel")
+            return
+        }
 
-        val token = try {
+        // Enable audio right before joining — this is when RECORD_AUDIO permission is guaranteed
+        engine.enableAudio()
+
+        val token: String? = try {
             tokenService.fetchToken(channelName, uid)
         } catch (e: Exception) {
-            // Fallback: join without token (for testing with App ID only, no certificate)
-            ""
+            Log.w(TAG, "Token fetch failed, joining without token (App Certificate must be disabled in Agora Console)", e)
+            null  // null = no token mode; empty string may cause auth errors
         }
 
         val options = ChannelMediaOptions().apply {
             clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
             channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             autoSubscribeAudio = true
+            publishMicrophoneTrack = true
+            autoSubscribeVideo = false
         }
 
-        engine.joinChannel(token, channelName, uid, options)
+        Log.d(TAG, "Joining channel=$channelName uid=$uid hasToken=${token != null}")
+        val result = engine.joinChannel(token, channelName, uid, options)
+        if (result != 0) {
+            Log.e(TAG, "joinChannel failed with error code $result")
+        } else {
+            Log.d(TAG, "joinChannel call succeeded (waiting for onJoinChannelSuccess callback)")
+            // Force speakerphone on after join for reliable audio routing
+            engine.setEnableSpeakerphone(true)
+        }
     }
 
     fun leaveChannel() {

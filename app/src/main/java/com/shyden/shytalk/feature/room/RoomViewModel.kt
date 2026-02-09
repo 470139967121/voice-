@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.Message
+import com.shyden.shytalk.core.model.MessageType
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.SeatState
@@ -12,6 +13,7 @@ import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.remote.AgoraVoiceService
+import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
@@ -20,7 +22,9 @@ import com.shyden.shytalk.data.repository.UserRepository
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,7 +67,8 @@ class RoomViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val seatRequestRepository: SeatRequestRepository,
-    private val agoraVoiceService: AgoraVoiceService
+    private val agoraVoiceService: AgoraVoiceService,
+    private val presenceService: PresenceService
 ) : ViewModel() {
 
     private val roomId: String = savedStateHandle["roomId"] ?: ""
@@ -269,9 +274,9 @@ class RoomViewModel @Inject constructor(
     private fun updateFilteredMessages() {
         val ts = firstJoinTimestamp
         val filtered = if (ts != null) {
-            allMessages.filter { it.createdAt >= ts }
+            allMessages.filter { it.createdAt >= ts && it.type != MessageType.SYSTEM }
         } else {
-            allMessages
+            allMessages.filter { it.type != MessageType.SYSTEM }
         }
         _uiState.value = _uiState.value.copy(messages = filtered)
     }
@@ -292,16 +297,32 @@ class RoomViewModel @Inject constructor(
     private fun joinRoom() {
         viewModelScope.launch {
             val userId = _uiState.value.currentUserId
-            val userName = _uiState.value.currentUserName.ifEmpty { "Someone" }
+            // Ensure user name is loaded before sending join message
+            if (_uiState.value.currentUserName.isEmpty()) {
+                when (val result = userRepository.getUser(userId)) {
+                    is Resource.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            currentUserName = result.data.displayName
+                        )
+                    }
+                    else -> {}
+                }
+            }
+            val userName = _uiState.value.currentUserName
+            agoraVoiceService.leaveChannel()
+            roomRepository.leaveAllRooms(userId, exceptRoomId = roomId)
             roomRepository.recordFirstJoinTimestamp(roomId, userId)
             roomRepository.joinRoom(roomId, userId)
+            presenceService.setPresence(roomId, userId)
             _uiState.value = _uiState.value.copy(hasJoined = true)
-            messageRepository.sendJoinMessage(
-                roomId,
-                userId,
-                userName,
-                "$userName joined the room"
-            )
+            if (userName.isNotEmpty()) {
+                messageRepository.sendJoinMessage(
+                    roomId,
+                    userId,
+                    userName,
+                    "$userName joined the room"
+                )
+            }
         }
     }
 
@@ -488,15 +509,23 @@ class RoomViewModel @Inject constructor(
             val room = _uiState.value.room ?: return@launch
             val role = _uiState.value.currentRole
 
+            // Don't invite someone who is already seated
+            val alreadySeated = room.seats.values.any {
+                it.userId == userId && it.state == SeatState.OCCUPIED
+            }
+            if (alreadySeated) return@launch
+
             // Owner can always invite; hosts only when requireApproval is OFF
             if (role == RoomRole.ATTENDEE) return@launch
             if (role == RoomRole.HOST && room.requireApproval) return@launch
 
             roomRepository.sendInvite(roomId, userId, _uiState.value.currentUserId)
-            messageRepository.sendSystemMessage(
-                roomId,
-                "${userName.ifEmpty { "Someone" }} was invited to sit"
-            )
+            if (userName.isNotEmpty()) {
+                messageRepository.sendSystemMessage(
+                    roomId,
+                    "$userName was invited to sit"
+                )
+            }
         }
     }
 
@@ -547,19 +576,24 @@ class RoomViewModel @Inject constructor(
             val userId = _uiState.value.currentUserId
             val room = _uiState.value.room ?: return@launch
 
-            room.seats.forEach { (index, seat) ->
-                if (seat.userId == userId) {
-                    if (index.toInt() == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
-                        roomRepository.leaveSeat(roomId, index.toInt())
-                        roomRepository.setOwnerAway(roomId)
-                    } else {
-                        roomRepository.leaveSeat(roomId, index.toInt())
+            presenceService.removePresence()
+            agoraVoiceService.leaveChannel()
+
+            // Use NonCancellable so Firestore cleanup completes even if ViewModel is destroyed
+            withContext(NonCancellable) {
+                room.seats.forEach { (index, seat) ->
+                    if (seat.userId == userId) {
+                        if (index.toInt() == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
+                            roomRepository.leaveSeat(roomId, index.toInt())
+                            roomRepository.setOwnerAway(roomId)
+                        } else {
+                            roomRepository.leaveSeat(roomId, index.toInt())
+                        }
                     }
                 }
-            }
 
-            agoraVoiceService.leaveChannel()
-            roomRepository.leaveRoom(roomId, userId)
+                roomRepository.leaveRoom(roomId, userId)
+            }
         }
     }
 
@@ -578,6 +612,7 @@ class RoomViewModel @Inject constructor(
             val room = _uiState.value.room ?: return@launch
             if (_uiState.value.currentUserId != room.ownerId) return@launch
 
+            presenceService.removePresence()
             agoraVoiceService.leaveChannel()
             roomRepository.closeRoom(roomId)
             messageRepository.sendSystemMessage(roomId, "Room has been closed")
@@ -699,6 +734,7 @@ class RoomViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         ownerAwayCountdownJob?.cancel()
+        presenceService.removePresence()
         agoraVoiceService.leaveChannel()
     }
 }

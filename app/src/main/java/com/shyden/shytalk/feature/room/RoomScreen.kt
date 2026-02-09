@@ -348,6 +348,7 @@ fun RoomScreen(
                         currentRole = uiState.currentRole,
                         seats = uiState.room?.seats ?: emptyMap(),
                         userMap = userMap,
+                        onToggleMic = { seatIndex -> viewModel.toggleSelfMute(seatIndex) },
                         onSendMessage = { viewModel.sendMessage(it) },
                         onTapUser = { userId ->
                             showUserCardForId = userId

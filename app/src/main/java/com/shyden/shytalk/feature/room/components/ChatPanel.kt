@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.shyden.shytalk.core.model.Message
 import com.shyden.shytalk.core.model.RoomRole
@@ -36,6 +39,7 @@ fun ChatPanel(
     currentRole: RoomRole,
     seats: Map<String, Seat>,
     userMap: Map<String, User>,
+    onToggleMic: (Int) -> Unit = {},
     onSendMessage: (String) -> Unit,
     onTapUser: (String) -> Unit,
     onInviteUser: (String, String) -> Unit,
@@ -50,6 +54,12 @@ fun ChatPanel(
             .mapNotNull { it.userId }
             .toSet()
     }
+
+    val currentSeatEntry = seats.entries.find {
+        it.value.userId == currentUserId && it.value.state == SeatState.OCCUPIED
+    }
+    val isSeated = currentSeatEntry != null
+    val isSelfMuted = currentSeatEntry?.value?.isMuted ?: false
 
     Column(modifier = modifier) {
         LazyColumn(
@@ -91,6 +101,18 @@ fun ChatPanel(
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
+
+            if (isSeated) {
+                IconButton(onClick = {
+                    currentSeatEntry?.key?.toIntOrNull()?.let { onToggleMic(it) }
+                }) {
+                    Icon(
+                        imageVector = if (isSelfMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                        contentDescription = if (isSelfMuted) "Unmute" else "Mute",
+                        tint = if (isSelfMuted) MaterialTheme.colorScheme.error else Color(0xFF4CAF50)
+                    )
+                }
+            }
 
             IconButton(
                 onClick = {
