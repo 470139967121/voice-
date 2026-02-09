@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -14,6 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +52,25 @@ fun GoogleSignInScreen(
         if (uiState.isAuthenticated) {
             onAuthSuccess(uiState.hasProfile)
         }
+    }
+
+    if (uiState.isDeviceLocked) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearDeviceLocked() },
+            title = { Text("Account Restricted") },
+            text = {
+                Text(
+                    "This device is already linked to another account.\n" +
+                        "Only one account is allowed per device.\n\n" +
+                        "For support, contact shytalk.help@gmail.com"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearDeviceLocked() }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     LaunchedEffect(uiState.error) {

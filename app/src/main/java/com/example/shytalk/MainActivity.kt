@@ -24,14 +24,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             ShyTalkTheme {
                 val navController = rememberNavController()
-                val startDestination = if (authRepository.isAuthenticated) {
-                    Screen.Main.route
-                } else {
-                    Screen.GoogleSignIn.route
-                }
                 NavGraph(
                     navController = navController,
-                    startDestination = startDestination,
+                    startDestination = Screen.GoogleSignIn.route,
                     onSignOut = { authRepository.signOut() }
                 )
             }

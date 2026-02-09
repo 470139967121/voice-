@@ -2,6 +2,8 @@ package com.example.shytalk.core.di
 
 import com.example.shytalk.data.repository.AuthRepository
 import com.example.shytalk.data.repository.AuthRepositoryImpl
+import com.example.shytalk.data.repository.DeviceRepository
+import com.example.shytalk.data.repository.DeviceRepositoryImpl
 import com.example.shytalk.data.repository.MessageRepository
 import com.example.shytalk.data.repository.MessageRepositoryImpl
 import com.example.shytalk.data.repository.RoomRepository
@@ -45,4 +47,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindStorageRepository(impl: StorageRepositoryImpl): StorageRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDeviceRepository(impl: DeviceRepositoryImpl): DeviceRepository
 }
