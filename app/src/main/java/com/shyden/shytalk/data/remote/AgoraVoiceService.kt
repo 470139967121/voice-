@@ -96,6 +96,8 @@ class AgoraVoiceService @Inject constructor(
                     Constants.AUDIO_SCENARIO_CHATROOM
                 )
                 enableAudioVolumeIndication(300, 3, true)
+                enableAudio()
+                setDefaultAudioRoutetoSpeakerphone(true)
             }
         } catch (e: Exception) {
             // Log or handle initialization failure

@@ -1,6 +1,10 @@
 package com.shyden.shytalk.feature.room
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
@@ -34,13 +38,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.SeatState
@@ -65,6 +73,31 @@ fun RoomScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showUserCardForId by remember { mutableStateOf<String?>(null) }
     var showParticipantPanel by remember { mutableStateOf(false) }
+
+    // Audio permission handling
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.onAudioPermissionResult(granted)
+        if (!granted) {
+            scope.launch {
+                snackbarHostState.showSnackbar("Microphone permission denied. You won't be able to use voice chat.")
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val already = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        if (already) {
+            viewModel.onAudioPermissionResult(true)
+        } else {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     BackHandler(enabled = showParticipantPanel) {
         showParticipantPanel = false
