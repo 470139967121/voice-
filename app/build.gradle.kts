@@ -4,6 +4,13 @@ plugins {
     alias(libs.plugins.google.services)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.play.publisher)
+}
+
+play {
+    serviceAccountCredentials.set(rootProject.file("play-service-account.json"))
+    track.set("production")
+    defaultToAppBundles.set(true)
 }
 
 android {
