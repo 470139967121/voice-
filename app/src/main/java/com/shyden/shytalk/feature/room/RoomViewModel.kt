@@ -560,10 +560,6 @@ class RoomViewModel @Inject constructor(
 
             agoraVoiceService.leaveChannel()
             roomRepository.leaveRoom(roomId, userId)
-            messageRepository.sendSystemMessage(
-                roomId,
-                "${_uiState.value.currentUserName.ifEmpty { "Someone" }} left the room"
-            )
         }
     }
 
