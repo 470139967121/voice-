@@ -316,6 +316,7 @@ fun RoomScreen(
                 UserCardPopup(
                     user = user,
                     isBlocked = userId in uiState.blockedUserIds,
+                    isSelf = userId == uiState.currentUserId,
                     onViewProfile = {
                         showUserCardForId = null
                         onNavigateToUserProfile(userId)
