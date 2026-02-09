@@ -41,6 +41,7 @@ data class RoomUiState(
     val isVoiceJoined: Boolean = false,
     val pendingInvite: String? = null,
     val seatUsers: Map<String, User> = emptyMap(),
+    val participantUsers: Map<String, User> = emptyMap(),
     val blockedUserIds: Set<String> = emptySet()
 )
 
@@ -151,6 +152,7 @@ class RoomViewModel @Inject constructor(
                     )
 
                     loadSeatUsers(room)
+                    loadParticipantUsers(room)
                     handleOwnerAwayCountdown(room)
                 }
         }
@@ -487,6 +489,30 @@ class RoomViewModel @Inject constructor(
             }
             _uiState.value = _uiState.value.copy(
                 seatUsers = userCache.filterKeys { it in seatedUserIds }
+            )
+        }
+    }
+
+    private fun loadParticipantUsers(room: ChatRoom) {
+        val allParticipantIds = room.participantIds
+
+        val newUserIds = allParticipantIds.filter { it !in userCache }
+        if (newUserIds.isEmpty()) {
+            _uiState.value = _uiState.value.copy(
+                participantUsers = userCache.filterKeys { it in allParticipantIds }
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            for (uid in newUserIds) {
+                when (val result = userRepository.getUser(uid)) {
+                    is Resource.Success -> userCache[uid] = result.data
+                    else -> {}
+                }
+            }
+            _uiState.value = _uiState.value.copy(
+                participantUsers = userCache.filterKeys { it in allParticipantIds }
             )
         }
     }

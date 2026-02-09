@@ -19,7 +19,9 @@
       "Bash(cmd /c \"gradlew.bat assembleDebug 2>&1\")",
       "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\saste\\\\AndroidStudioProjects\\\\ShyTalk\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\*.apk 2>&1\")",
       "Bash(powershell.exe:*)",
-      "WebFetch(domain:developers.google.com)"
+      "WebFetch(domain:developers.google.com)",
+      "Bash(find:*)",
+      "Bash(./gradlew assembleDebug:*)"
     ]
   }
 }

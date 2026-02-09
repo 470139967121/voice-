@@ -2,6 +2,7 @@ package com.example.shytalk.feature.room.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -18,7 +19,8 @@ fun RoomToolbar(
     participantCount: Int,
     isOwnerOrHost: Boolean,
     onBack: () -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onTogglePeople: () -> Unit
 ) {
     TopAppBar(
         title = {
@@ -33,6 +35,9 @@ fun RoomToolbar(
             }
         },
         actions = {
+            IconButton(onClick = onTogglePeople) {
+                Icon(Icons.Default.People, contentDescription = "Participants")
+            }
             if (isOwnerOrHost) {
                 IconButton(onClick = onSettings) {
                     Icon(Icons.Default.Settings, contentDescription = "Room settings")
