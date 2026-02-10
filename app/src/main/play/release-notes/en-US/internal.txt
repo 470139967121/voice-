@@ -1,10 +1,6 @@
-v0.14 - Performance, Refactoring & Tests
+v0.15 - Crop Toolbar Fix & Tests
 
-- Deduplicated Agora speaking state to reduce recompositions
-- Batch parallel loading for block checks and user fetching
-- Refactored MessageRepository, ProfileViewModel, RoomViewModel
-- Extracted observeRoom into 5 focused handler functions
-- 205 unit tests (28 new: User model, ActiveRoomManager)
-- Custom CropActivity, PiP support, room mini bar
-- Force update check, privacy policy screen
-- Bug fixes and stability improvements
+- Fixed crop photo toolbar hidden behind the status bar
+- Status bar now matches toolbar color for seamless look
+- Added 6 CropContract unit tests (211 total)
+- Performance and refactoring improvements from v0.14
