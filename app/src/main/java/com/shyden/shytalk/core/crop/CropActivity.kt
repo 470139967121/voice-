@@ -3,6 +3,7 @@ package com.shyden.shytalk.core.crop
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +19,7 @@ class CropActivity : AppCompatActivity(), CropImageView.OnCropImageCompleteListe
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.statusBarColor = Color.parseColor("#FF444444")
         setContentView(R.layout.activity_crop)
 
         cropImageView = findViewById(R.id.cropImageView)
