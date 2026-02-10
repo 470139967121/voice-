@@ -1,4 +1,4 @@
-v0.12 - Unit Tests, Custom Crop & Performance
+v0.13 - Unit Tests, Custom Crop & Performance
 
 - Replaced deprecated photo cropper with custom CropActivity
 - Removed unnecessary storage permission prompts (uses modern photo picker)

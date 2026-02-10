@@ -15,3 +15,5 @@
 local.properties
 /keystore.jks
 /play-service-account.json
+functions/node_modules/
+nul
