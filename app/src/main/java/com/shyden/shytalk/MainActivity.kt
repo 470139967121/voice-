@@ -1,6 +1,9 @@
 package com.shyden.shytalk
 
+import android.app.PictureInPictureParams
+import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -9,9 +12,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.firestore.FirebaseFirestore
+import com.shyden.shytalk.core.pip.PipContent
+import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
 import com.shyden.shytalk.feature.update.ForceUpdateScreen
 import com.shyden.shytalk.navigation.NavGraph
 import com.shyden.shytalk.navigation.Screen
@@ -26,13 +33,30 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var authRepository: AuthRepository
 
+    @Inject
+    lateinit var activeRoomManager: ActiveRoomManager
+
+    private val isInPipMode = mutableStateOf(false)
+
+    companion object {
+        private const val PREFS_NAME = "shytalk_prefs"
+        private const val KEY_PRIVACY_ACCEPTED = "privacy_policy_accepted"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+
         setContent {
             ShyTalkTheme {
+                var privacyAccepted by remember {
+                    mutableStateOf(prefs.getBoolean(KEY_PRIVACY_ACCEPTED, false))
+                }
                 var updateRequired by remember { mutableStateOf(false) }
                 var checkComplete by remember { mutableStateOf(false) }
+                val inPip by isInPipMode
 
                 LaunchedEffect(Unit) {
                     try {
@@ -44,25 +68,65 @@ class MainActivity : ComponentActivity() {
                         val minVersion = (doc.getLong("minVersionCode") ?: 0).toInt()
                         updateRequired = BuildConfig.VERSION_CODE < minVersion
                     } catch (_: Exception) {
-                        // If check fails, allow the user through
                         updateRequired = false
                     }
                     checkComplete = true
                 }
 
-                if (checkComplete) {
-                    if (updateRequired) {
-                        ForceUpdateScreen()
-                    } else {
-                        val navController = rememberNavController()
-                        NavGraph(
-                            navController = navController,
-                            startDestination = Screen.GoogleSignIn.route,
-                            onSignOut = { authRepository.signOut() }
+                when {
+                    // Privacy policy must be accepted first
+                    !privacyAccepted -> {
+                        PrivacyPolicyScreen(
+                            onAccept = {
+                                prefs.edit().putBoolean(KEY_PRIVACY_ACCEPTED, true).apply()
+                                privacyAccepted = true
+                            },
+                            onDecline = {
+                                finishAffinity()
+                            }
                         )
+                    }
+                    // PIP overlay
+                    inPip -> {
+                        val activeRoom by activeRoomManager.activeRoom.collectAsStateWithLifecycle()
+                        PipContent(
+                            roomName = activeRoom?.name ?: "Voice Room"
+                        )
+                    }
+                    // Normal app flow
+                    checkComplete -> {
+                        if (updateRequired) {
+                            ForceUpdateScreen()
+                        } else {
+                            val navController = rememberNavController()
+                            NavGraph(
+                                navController = navController,
+                                startDestination = Screen.GoogleSignIn.route,
+                                activeRoomManager = activeRoomManager,
+                                onSignOut = { authRepository.signOut() }
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (activeRoomManager.isInAnyRoom()) {
+            val params = PictureInPictureParams.Builder()
+                .setAspectRatio(Rational(9, 16))
+                .build()
+            enterPictureInPictureMode(params)
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        isInPipMode.value = isInPictureInPictureMode
     }
 }

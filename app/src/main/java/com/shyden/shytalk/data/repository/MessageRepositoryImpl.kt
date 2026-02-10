@@ -23,6 +23,7 @@ class MessageRepositoryImpl @Inject constructor(
     override fun getMessages(roomId: String): Flow<List<Message>> = callbackFlow {
         val listener = messagesCollection(roomId)
             .orderBy("createdAt", Query.Direction.ASCENDING)
+            .limitToLast(200)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)

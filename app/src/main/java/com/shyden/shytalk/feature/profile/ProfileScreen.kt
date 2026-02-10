@@ -1,20 +1,14 @@
 package com.shyden.shytalk.feature.profile
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.graphics.Color as AndroidColor
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.core.content.ContextCompat
-import com.canhub.cropper.CropImageContract
-import com.canhub.cropper.CropImageContractOptions
-import com.canhub.cropper.CropImageOptions
-import com.canhub.cropper.CropImageView
+import com.shyden.shytalk.core.crop.CropContract
+import com.shyden.shytalk.core.crop.CropInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,17 +55,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -87,6 +77,7 @@ fun ProfileScreen(
     showBackButton: Boolean = true,
     onNavigateBack: () -> Unit = {},
     onSignOut: (() -> Unit)? = null,
+    onNavigateToPrivacyPolicy: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -107,94 +98,31 @@ fun ProfileScreen(
     var showBlockDialog by remember { mutableStateOf(false) }
     var fullscreenPhotoUrl by remember { mutableStateOf<String?>(null) }
 
-    // Photo pickers with cropping
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    // Photo picking + cropping
+    var pendingCropType by remember { mutableStateOf<String?>(null) }
 
-    val profilePhotoCropper = rememberLauncherForActivityResult(
-        contract = CropImageContract()
-    ) { result ->
-        if (result.isSuccessful) {
-            result.uriContent?.let { viewModel.uploadProfilePhoto(it) }
-        }
-    }
-    val coverPhotoCropper = rememberLauncherForActivityResult(
-        contract = CropImageContract()
-    ) { result ->
-        if (result.isSuccessful) {
-            result.uriContent?.let { viewModel.uploadCoverPhoto(it) }
+    val cropLauncher = rememberLauncherForActivityResult(CropContract()) { uri ->
+        if (uri != null) {
+            when (pendingCropType) {
+                "profile" -> viewModel.uploadProfilePhoto(uri)
+                "cover" -> viewModel.uploadCoverPhoto(uri)
+            }
         }
     }
 
-    val profileCropOptions = CropImageContractOptions(
-        uri = null,
-        cropImageOptions = CropImageOptions(
-            guidelines = CropImageView.Guidelines.ON,
-            aspectRatioX = 1,
-            aspectRatioY = 1,
-            fixAspectRatio = true,
-            cropShape = CropImageView.CropShape.OVAL,
-            outputCompressQuality = 80,
-            activityBackgroundColor = AndroidColor.BLACK,
-            toolbarColor = AndroidColor.DKGRAY,
-            toolbarTintColor = AndroidColor.WHITE,
-            toolbarBackButtonColor = AndroidColor.WHITE,
-            activityTitle = "Crop Profile Photo"
-        )
-    )
-    val coverCropOptions = CropImageContractOptions(
-        uri = null,
-        cropImageOptions = CropImageOptions(
-            guidelines = CropImageView.Guidelines.ON,
-            aspectRatioX = 16,
-            aspectRatioY = 9,
-            fixAspectRatio = true,
-            cropShape = CropImageView.CropShape.RECTANGLE,
-            outputCompressQuality = 80,
-            activityBackgroundColor = AndroidColor.BLACK,
-            toolbarColor = AndroidColor.DKGRAY,
-            toolbarTintColor = AndroidColor.WHITE,
-            toolbarBackButtonColor = AndroidColor.WHITE,
-            activityTitle = "Crop Cover Photo"
-        )
-    )
-
-    // Track which photo type triggered the permission request
-    var pendingPhotoType by remember { mutableStateOf<String?>(null) }
-
-    val storagePermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            when (pendingPhotoType) {
-                "profile" -> profilePhotoCropper.launch(profileCropOptions)
-                "cover" -> coverPhotoCropper.launch(coverCropOptions)
+    val pickerLauncher = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->
+        if (uri != null) {
+            val input = when (pendingCropType) {
+                "profile" -> CropInput(uri, 1, 1, "oval", 80, "Crop Profile Photo")
+                else -> CropInput(uri, 16, 9, "rectangle", 80, "Crop Cover Photo")
             }
-        } else {
-            scope.launch {
-                snackbarHostState.showSnackbar("Storage permission is required to select a photo")
-            }
+            cropLauncher.launch(input)
         }
-        pendingPhotoType = null
     }
 
     fun launchPhotoPicker(type: String) {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        }
-        val alreadyGranted = ContextCompat.checkSelfPermission(context, permission) ==
-                PackageManager.PERMISSION_GRANTED
-        if (alreadyGranted) {
-            when (type) {
-                "profile" -> profilePhotoCropper.launch(profileCropOptions)
-                "cover" -> coverPhotoCropper.launch(coverCropOptions)
-            }
-        } else {
-            pendingPhotoType = type
-            storagePermissionLauncher.launch(permission)
-        }
+        pendingCropType = type
+        pickerLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
     }
 
     LaunchedEffect(uiState.error) {
@@ -233,6 +161,7 @@ fun ProfileScreen(
                 onTapPhoto = { fullscreenPhotoUrl = it },
                 onBlockToggle = { showBlockDialog = true },
                 onSignOut = onSignOut,
+                onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier.fillMaxSize()
             )
@@ -273,6 +202,7 @@ fun ProfileScreen(
                 onTapPhoto = { fullscreenPhotoUrl = it },
                 onBlockToggle = { showBlockDialog = true },
                 onSignOut = onSignOut,
+                onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxSize()
@@ -379,6 +309,7 @@ private fun ProfileContent(
     onTapPhoto: (String) -> Unit,
     onBlockToggle: () -> Unit,
     onSignOut: (() -> Unit)?,
+    onNavigateToPrivacyPolicy: (() -> Unit)? = null,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -719,9 +650,8 @@ private fun ProfileContent(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    val uriHandler = LocalUriHandler.current
                     TextButton(
-                        onClick = { uriHandler.openUri("https://shydenmcm.github.io/ShyTalk/privacy-policy.html") },
+                        onClick = { onNavigateToPrivacyPolicy?.invoke() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Privacy Policy", style = MaterialTheme.typography.bodySmall)

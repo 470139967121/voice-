@@ -10,6 +10,9 @@ import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +41,7 @@ class HomeViewModel @Inject constructor(
     private val userCache = mutableMapOf<String, User>()
     private var myBlockedUserIds: Set<String> = emptySet()
     private var allRooms: List<ChatRoom> = emptyList()
+    private var lastSeatUserIds: Set<String> = emptySet()
 
     val currentUserId: String?
         get() = authRepository.currentUser?.uid
@@ -81,11 +85,18 @@ class HomeViewModel @Inject constructor(
             val userId = currentUserId ?: return@launch
 
             val ownerIds = allRooms.map { it.ownerId }.distinct()
-            for (ownerId in ownerIds) {
-                if (ownerId !in userCache) {
-                    when (val result = userRepository.getUser(ownerId)) {
-                        is Resource.Success -> userCache[ownerId] = result.data
-                        else -> {}
+            val newOwnerIds = ownerIds.filter { it !in userCache }
+            if (newOwnerIds.isNotEmpty()) {
+                coroutineScope {
+                    newOwnerIds.map { ownerId ->
+                        async {
+                            when (val result = userRepository.getUser(ownerId)) {
+                                is Resource.Success -> ownerId to result.data
+                                else -> null
+                            }
+                        }
+                    }.awaitAll().filterNotNull().forEach { (id, user) ->
+                        userCache[id] = user
                     }
                 }
             }
@@ -107,7 +118,11 @@ class HomeViewModel @Inject constructor(
             room.seats.values
                 .filter { it.state == SeatState.OCCUPIED && it.userId != null }
                 .mapNotNull { it.userId }
-        }.distinct()
+        }.toSet()
+
+        // Skip if seated users haven't changed and all are cached
+        if (seatedUserIds == lastSeatUserIds && seatedUserIds.all { it in userCache }) return
+        lastSeatUserIds = seatedUserIds
 
         val newUserIds = seatedUserIds.filter { it !in userCache }
         if (newUserIds.isEmpty()) {
@@ -118,10 +133,16 @@ class HomeViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            for (uid in newUserIds) {
-                when (val result = userRepository.getUser(uid)) {
-                    is Resource.Success -> userCache[uid] = result.data
-                    else -> {}
+            coroutineScope {
+                newUserIds.map { uid ->
+                    async {
+                        when (val result = userRepository.getUser(uid)) {
+                            is Resource.Success -> uid to result.data
+                            else -> null
+                        }
+                    }
+                }.awaitAll().filterNotNull().forEach { (id, user) ->
+                    userCache[id] = user
                 }
             }
             _uiState.value = _uiState.value.copy(

@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.room.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,6 +20,7 @@ fun RoomToolbar(
     participantCount: Int,
     isOwnerOrHost: Boolean,
     onBack: () -> Unit,
+    onLeave: () -> Unit,
     onSettings: () -> Unit,
     onTogglePeople: () -> Unit
 ) {
@@ -31,10 +33,13 @@ fun RoomToolbar(
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Leave room")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go back")
             }
         },
         actions = {
+            IconButton(onClick = onLeave) {
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Leave room")
+            }
             IconButton(onClick = onTogglePeople) {
                 Icon(Icons.Default.People, contentDescription = "Participants")
             }

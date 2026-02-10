@@ -49,6 +49,11 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.Icon
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.SeatState
@@ -98,6 +103,11 @@ fun RoomScreen(
         } else {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+
+    // System back navigates back without leaving the room (voice persists)
+    BackHandler(enabled = !showParticipantPanel && uiState.hasJoined) {
+        onNavigateBack()
     }
 
     BackHandler(enabled = showParticipantPanel) {
@@ -248,7 +258,8 @@ fun RoomScreen(
                 roomName = uiState.room?.name ?: "Room",
                 participantCount = uiState.room?.participantIds?.size ?: 0,
                 isOwnerOrHost = uiState.currentRole == RoomRole.OWNER || uiState.currentRole == RoomRole.HOST,
-                onBack = {
+                onBack = { onNavigateBack() },
+                onLeave = {
                     viewModel.leaveRoom()
                     onNavigateBack()
                 },
@@ -329,7 +340,7 @@ fun RoomScreen(
                         }
                     }
 
-                    // Seat Grid (upper portion)
+                    // Seat Grid (upper portion — only occupied seats)
                     SeatGrid(
                         seats = uiState.room?.seats ?: emptyMap(),
                         currentUserId = uiState.currentUserId,
@@ -353,6 +364,39 @@ fun RoomScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     )
+
+                    // "Take a Seat" button when not seated and empty seats exist
+                    val isSeated = uiState.room?.seats?.values?.any {
+                        it.userId == uiState.currentUserId && it.state == SeatState.OCCUPIED
+                    } ?: false
+
+                    val hasEmptySeats = uiState.room?.seats?.values?.any {
+                        it.state != SeatState.OCCUPIED
+                    } ?: false
+
+                    if (!isSeated && hasEmptySeats) {
+                        OutlinedButton(
+                            onClick = {
+                                // Find first empty non-owner seat
+                                val emptySeatIndex = (1 until com.shyden.shytalk.core.util.Constants.MAX_SEATS).firstOrNull { i ->
+                                    val seat = uiState.room?.seats?.get(i.toString())
+                                    seat != null && seat.state != SeatState.OCCUPIED
+                                }
+                                if (emptySeatIndex != null) {
+                                    viewModel.takeSeat(emptySeatIndex)
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.PersonAdd,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text("Take a Seat")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
 
                     HorizontalDivider()
 

@@ -34,6 +34,7 @@ class AgoraVoiceService @Inject constructor(
     }
 
     private var rtcEngine: RtcEngine? = null
+    private var currentChannelName: String? = null
 
     private val _speakingUsers = MutableStateFlow<Set<Int>>(emptySet())
     val speakingUsers: StateFlow<Set<Int>> = _speakingUsers.asStateFlow()
@@ -123,6 +124,12 @@ class AgoraVoiceService @Inject constructor(
     }
 
     suspend fun joinChannel(channelName: String, uid: Int) {
+        // Already in this channel — no-op
+        if (_isJoined.value && currentChannelName == channelName) {
+            Log.d(TAG, "Already joined channel=$channelName, skipping rejoin")
+            return
+        }
+
         initialize()
         val engine = rtcEngine ?: run {
             Log.e(TAG, "RtcEngine is null, cannot join channel")
@@ -158,6 +165,7 @@ class AgoraVoiceService @Inject constructor(
         if (result != 0) {
             Log.e(TAG, "joinChannel failed with error code $result")
         } else {
+            currentChannelName = channelName
             Log.d(TAG, "joinChannel call succeeded (waiting for onJoinChannelSuccess callback)")
             // Force speakerphone on and unmute mic after join
             engine.setEnableSpeakerphone(true)
@@ -169,6 +177,7 @@ class AgoraVoiceService @Inject constructor(
 
     fun leaveChannel() {
         Log.d(TAG, "leaveChannel called, isJoined=${_isJoined.value}")
+        currentChannelName = null
         rtcEngine?.leaveChannel()
     }
 
