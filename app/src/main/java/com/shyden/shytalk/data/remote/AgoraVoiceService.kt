@@ -80,7 +80,9 @@ class AgoraVoiceService @Inject constructor(
                 ?.filter { it.volume > 50 }
                 ?.map { it.uid }
                 ?.toSet() ?: emptySet()
-            _speakingUsers.value = speaking
+            if (speaking != _speakingUsers.value) {
+                _speakingUsers.value = speaking
+            }
         }
 
         override fun onUserOffline(uid: Int, reason: Int) {

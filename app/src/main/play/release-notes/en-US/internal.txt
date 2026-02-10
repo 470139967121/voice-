@@ -1,8 +1,12 @@
-v0.13 - Unit Tests, Custom Crop & Performance
+v0.14 - Performance, Refactoring & Expanded Tests
 
-- Replaced deprecated photo cropper with custom CropActivity
-- Removed unnecessary storage permission prompts (uses modern photo picker)
-- Added 177 unit tests covering all ViewModels, models, and utilities
-- Optimized user loading in room and home screens (skip redundant fetches)
+- Deduplicated Agora speaking state to reduce unnecessary recompositions
+- Batch parallel loading for block checks (was sequential per-participant)
+- Merged owner + seat user loading into single batch in home screen
+- Refactored MessageRepository, ProfileViewModel, and RoomViewModel for DRY code
+- Broke down 150-line observeRoom into 5 focused handler functions
+- Added 28 new tests (User model, ActiveRoomManager) — now 205 total
+- Custom CropActivity replacing deprecated photo cropper
 - PiP support, room mini bar, privacy policy screen
+- Force update check on app startup
 - Various bug fixes and stability improvements

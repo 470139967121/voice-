@@ -209,52 +209,23 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun uploadProfilePhoto(uri: Uri) {
-        val userId = authRepository.currentUser?.uid ?: return
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isUploadingPhoto = true)
-            val imageData = try {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            } catch (e: Exception) {
-                null
-            }
-            if (imageData == null) {
-                _uiState.value = _uiState.value.copy(
-                    isUploadingPhoto = false,
-                    error = "Failed to read image"
-                )
-                return@launch
-            }
-            when (val result = storageRepository.uploadImage(userId, "profile_photos", imageData)) {
-                is Resource.Success -> {
-                    val url = result.data
-                    when (val saveResult = userRepository.updateProfile(userId, mapOf("profilePhotoUrl" to url))) {
-                        is Resource.Success -> {
-                            _uiState.value = _uiState.value.copy(
-                                isUploadingPhoto = false,
-                                user = _uiState.value.user?.copy(profilePhotoUrl = url)
-                            )
-                        }
-                        is Resource.Error -> {
-                            _uiState.value = _uiState.value.copy(
-                                isUploadingPhoto = false,
-                                error = saveResult.message ?: "Failed to save photo URL"
-                            )
-                        }
-                        is Resource.Loading -> {}
-                    }
-                }
-                is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isUploadingPhoto = false,
-                        error = result.message
-                    )
-                }
-                is Resource.Loading -> {}
-            }
+        uploadPhoto(uri, "profile_photos", "profilePhotoUrl") { url ->
+            _uiState.value.user?.copy(profilePhotoUrl = url)
         }
     }
 
     fun uploadCoverPhoto(uri: Uri) {
+        uploadPhoto(uri, "cover_photos", "coverPhotoUrl") { url ->
+            _uiState.value.user?.copy(coverPhotoUrl = url)
+        }
+    }
+
+    private fun uploadPhoto(
+        uri: Uri,
+        folder: String,
+        profileField: String,
+        updateUser: (String) -> User?
+    ) {
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isUploadingPhoto = true)
@@ -270,14 +241,14 @@ class ProfileViewModel @Inject constructor(
                 )
                 return@launch
             }
-            when (val result = storageRepository.uploadImage(userId, "cover_photos", imageData)) {
+            when (val result = storageRepository.uploadImage(userId, folder, imageData)) {
                 is Resource.Success -> {
                     val url = result.data
-                    when (val saveResult = userRepository.updateProfile(userId, mapOf("coverPhotoUrl" to url))) {
+                    when (val saveResult = userRepository.updateProfile(userId, mapOf(profileField to url))) {
                         is Resource.Success -> {
                             _uiState.value = _uiState.value.copy(
                                 isUploadingPhoto = false,
-                                user = _uiState.value.user?.copy(coverPhotoUrl = url)
+                                user = updateUser(url)
                             )
                         }
                         is Resource.Error -> {

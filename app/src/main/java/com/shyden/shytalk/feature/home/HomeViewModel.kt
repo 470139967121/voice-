@@ -41,7 +41,6 @@ class HomeViewModel @Inject constructor(
     private val userCache = mutableMapOf<String, User>()
     private var myBlockedUserIds: Set<String> = emptySet()
     private var allRooms: List<ChatRoom> = emptyList()
-    private var lastSeatUserIds: Set<String> = emptySet()
 
     val currentUserId: String?
         get() = authRepository.currentUser?.uid
@@ -84,14 +83,23 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val userId = currentUserId ?: return@launch
 
-            val ownerIds = allRooms.map { it.ownerId }.distinct()
-            val newOwnerIds = ownerIds.filter { it !in userCache }
-            if (newOwnerIds.isNotEmpty()) {
+            // Collect all user IDs we need: owners + seated users
+            val ownerIds = allRooms.map { it.ownerId }.toSet()
+            val seatedUserIds = allRooms.flatMap { room ->
+                room.seats.values
+                    .filter { it.state == SeatState.OCCUPIED && it.userId != null }
+                    .mapNotNull { it.userId }
+            }.toSet()
+            val allNeededIds = ownerIds + seatedUserIds
+
+            // Single batch load for all uncached users
+            val newUserIds = allNeededIds.filter { it !in userCache }
+            if (newUserIds.isNotEmpty()) {
                 coroutineScope {
-                    newOwnerIds.map { ownerId ->
+                    newUserIds.map { uid ->
                         async {
-                            when (val result = userRepository.getUser(ownerId)) {
-                                is Resource.Success -> ownerId to result.data
+                            when (val result = userRepository.getUser(uid)) {
+                                is Resource.Success -> uid to result.data
                                 else -> null
                             }
                         }
@@ -108,45 +116,17 @@ class HomeViewModel @Inject constructor(
                 true
             }
 
-            _uiState.value = _uiState.value.copy(rooms = filtered, isLoading = false)
-            loadSeatUsers(filtered)
-        }
-    }
+            // Recompute seated users from filtered rooms only
+            val filteredSeatedUserIds = filtered.flatMap { room ->
+                room.seats.values
+                    .filter { it.state == SeatState.OCCUPIED && it.userId != null }
+                    .mapNotNull { it.userId }
+            }.toSet()
 
-    private fun loadSeatUsers(rooms: List<ChatRoom>) {
-        val seatedUserIds = rooms.flatMap { room ->
-            room.seats.values
-                .filter { it.state == SeatState.OCCUPIED && it.userId != null }
-                .mapNotNull { it.userId }
-        }.toSet()
-
-        // Skip if seated users haven't changed and all are cached
-        if (seatedUserIds == lastSeatUserIds && seatedUserIds.all { it in userCache }) return
-        lastSeatUserIds = seatedUserIds
-
-        val newUserIds = seatedUserIds.filter { it !in userCache }
-        if (newUserIds.isEmpty()) {
             _uiState.value = _uiState.value.copy(
-                seatUsers = userCache.filterKeys { it in seatedUserIds }
-            )
-            return
-        }
-
-        viewModelScope.launch {
-            coroutineScope {
-                newUserIds.map { uid ->
-                    async {
-                        when (val result = userRepository.getUser(uid)) {
-                            is Resource.Success -> uid to result.data
-                            else -> null
-                        }
-                    }
-                }.awaitAll().filterNotNull().forEach { (id, user) ->
-                    userCache[id] = user
-                }
-            }
-            _uiState.value = _uiState.value.copy(
-                seatUsers = userCache.filterKeys { it in seatedUserIds }
+                rooms = filtered,
+                isLoading = false,
+                seatUsers = userCache.filterKeys { it in filteredSeatedUserIds }
             )
         }
     }

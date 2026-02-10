@@ -142,149 +142,144 @@ class RoomViewModel @Inject constructor(
                 }
                 .collect { room ->
                     if (room == null || room.state == RoomState.CLOSED) {
-                        agoraVoiceService.leaveChannel()
-                        presenceService.removePresence()
-                        activeRoomManager.untrackRoom()
-                        val summary = buildClosedSummary(room)
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            roomClosed = true,
-                            roomClosedSummary = summary
-                        )
+                        handleRoomClosed(room)
                         return@collect
                     }
 
-                    // Cache room data for summary if it closes later
                     lastKnownRoom = room
-
                     val userId = _uiState.value.currentUserId
 
-                    // Only check kicked status after we've joined
-                    if (_uiState.value.hasJoined) {
-                        if (userId in room.bannedUserIds) {
-                            agoraVoiceService.leaveChannel()
-                            presenceService.removePresence()
-                            activeRoomManager.untrackRoom()
-                            _uiState.value = _uiState.value.copy(
-                                isLoading = false,
-                                wasKicked = true
-                            )
-                            return@collect
-                        }
-                        if (userId !in room.participantIds) {
-                            agoraVoiceService.leaveChannel()
-                            presenceService.removePresence()
-                            activeRoomManager.untrackRoom()
-                            _uiState.value = _uiState.value.copy(
-                                isLoading = false,
-                                shouldNavigateBack = true
-                            )
-                            return@collect
-                        }
+                    if (_uiState.value.hasJoined && handleKickedOrRemoved(room, userId)) {
+                        return@collect
                     }
 
                     val role = resolveRole(room, userId)
 
-                    // Pre-entry block check (only once, before joining)
                     if (!blockCheckDone && !_uiState.value.hasJoined) {
-                        blockCheckDone = true
-
-                        // Detect "already joined" state (ViewModel recreated after back navigation)
-                        val alreadyInRoom = userId in room.participantIds && activeRoomManager.isInRoom(roomId)
-                        if (alreadyInRoom) {
-                            _uiState.value = _uiState.value.copy(
-                                room = room,
-                                currentRole = role,
-                                isLoading = false,
-                                hasJoined = true
-                            )
-                            activeRoomManager.updateTrackedRoom(room)
-                            loadSeatUsers(room)
-                            loadParticipantUsers(room)
-                            handleOwnerAwayCountdown(room)
-                            return@collect
-                        }
-
-                        if (room.ownerId == userId) {
-                            // Owner skips block checks, joins immediately
-                            _uiState.value = _uiState.value.copy(
-                                room = room,
-                                currentRole = role,
-                                isLoading = false
-                            )
-                            joinRoom()
-                        } else {
-                            _uiState.value = _uiState.value.copy(
-                                room = room,
-                                currentRole = role,
-                                isLoading = false
-                            )
-                            checkBlockConflicts(room)
-                        }
-                        loadSeatUsers(room)
-                        loadParticipantUsers(room)
-                        handleOwnerAwayCountdown(room)
+                        handleFirstJoin(room, userId, role)
                         return@collect
                     }
 
-                    // Auto-detect owner return
-                    if (room.state == RoomState.OWNER_AWAY
-                        && room.ownerId == userId
-                        && _uiState.value.hasJoined
-                        && !ownerReturnTriggered
-                    ) {
-                        ownerReturnTriggered = true
-                        ownerReturn()
-                    }
-                    if (room.state == RoomState.ACTIVE) {
-                        ownerReturnTriggered = false
-                    }
-
-                    // Normal room updates after joining
-                    val currentlySeated = room.seats.values.any {
-                        it.userId == userId && it.state == SeatState.OCCUPIED
-                    }
-
-                    if (currentlySeated && !isSeated) {
-                        Log.d(TAG, "User became seated, hasAudioPermission=${_uiState.value.hasAudioPermission}")
-                        if (_uiState.value.hasAudioPermission) {
-                            joinVoiceChannel(room.agoraChannelName)
-                        }
-                    } else if (!currentlySeated && isSeated) {
-                        Log.d(TAG, "User left seat, leaving voice channel")
-                        agoraVoiceService.leaveChannel()
-                    }
-                    isSeated = currentlySeated
-
-                    if (currentlySeated) {
-                        val mySeat = room.seats.values.find { it.userId == userId }
-                        mySeat?.let { agoraVoiceService.muteLocalAudio(it.isMuted) }
-                    }
-
-                    val pendingInvite = room.pendingInvites[userId]
-
-                    // Update firstJoinTimestamp from room data
-                    val joinTs = room.firstJoinTimestamps[userId]
-                    if (joinTs != null && firstJoinTimestamp == null) {
-                        firstJoinTimestamp = joinTs
-                        updateFilteredMessages()
-                    }
-
-                    _uiState.value = _uiState.value.copy(
-                        room = room,
-                        currentRole = role,
-                        isLoading = false,
-                        pendingInvite = pendingInvite
-                    )
-
-                    // Keep notification/service current
-                    activeRoomManager.updateTrackedRoom(room)
-
-                    loadSeatUsers(room)
-                    loadParticipantUsers(room)
-                    handleOwnerAwayCountdown(room)
+                    handleOwnerReturnDetection(room, userId)
+                    handleNormalUpdate(room, userId, role)
                 }
         }
+    }
+
+    private fun handleRoomClosed(room: ChatRoom?) {
+        agoraVoiceService.leaveChannel()
+        presenceService.removePresence()
+        activeRoomManager.untrackRoom()
+        val summary = buildClosedSummary(room)
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            roomClosed = true,
+            roomClosedSummary = summary
+        )
+    }
+
+    /** Returns true if user was kicked/removed and collection should stop. */
+    private fun handleKickedOrRemoved(room: ChatRoom, userId: String): Boolean {
+        if (userId in room.bannedUserIds) {
+            agoraVoiceService.leaveChannel()
+            presenceService.removePresence()
+            activeRoomManager.untrackRoom()
+            _uiState.value = _uiState.value.copy(isLoading = false, wasKicked = true)
+            return true
+        }
+        if (userId !in room.participantIds) {
+            agoraVoiceService.leaveChannel()
+            presenceService.removePresence()
+            activeRoomManager.untrackRoom()
+            _uiState.value = _uiState.value.copy(isLoading = false, shouldNavigateBack = true)
+            return true
+        }
+        return false
+    }
+
+    private fun handleFirstJoin(room: ChatRoom, userId: String, role: RoomRole) {
+        blockCheckDone = true
+
+        // Detect "already joined" state (ViewModel recreated after back navigation)
+        val alreadyInRoom = userId in room.participantIds && activeRoomManager.isInRoom(roomId)
+        if (alreadyInRoom) {
+            _uiState.value = _uiState.value.copy(
+                room = room, currentRole = role, isLoading = false, hasJoined = true
+            )
+            activeRoomManager.updateTrackedRoom(room)
+            loadSeatUsers(room)
+            loadParticipantUsers(room)
+            handleOwnerAwayCountdown(room)
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(
+            room = room, currentRole = role, isLoading = false
+        )
+        if (room.ownerId == userId) {
+            joinRoom()
+        } else {
+            checkBlockConflicts(room)
+        }
+        loadSeatUsers(room)
+        loadParticipantUsers(room)
+        handleOwnerAwayCountdown(room)
+    }
+
+    private fun handleOwnerReturnDetection(room: ChatRoom, userId: String) {
+        if (room.state == RoomState.OWNER_AWAY
+            && room.ownerId == userId
+            && _uiState.value.hasJoined
+            && !ownerReturnTriggered
+        ) {
+            ownerReturnTriggered = true
+            ownerReturn()
+        }
+        if (room.state == RoomState.ACTIVE) {
+            ownerReturnTriggered = false
+        }
+    }
+
+    private fun handleNormalUpdate(room: ChatRoom, userId: String, role: RoomRole) {
+        val currentlySeated = room.seats.values.any {
+            it.userId == userId && it.state == SeatState.OCCUPIED
+        }
+
+        if (currentlySeated && !isSeated) {
+            Log.d(TAG, "User became seated, hasAudioPermission=${_uiState.value.hasAudioPermission}")
+            if (_uiState.value.hasAudioPermission) {
+                joinVoiceChannel(room.agoraChannelName)
+            }
+        } else if (!currentlySeated && isSeated) {
+            Log.d(TAG, "User left seat, leaving voice channel")
+            agoraVoiceService.leaveChannel()
+        }
+        isSeated = currentlySeated
+
+        if (currentlySeated) {
+            val mySeat = room.seats.values.find { it.userId == userId }
+            mySeat?.let { agoraVoiceService.muteLocalAudio(it.isMuted) }
+        }
+
+        val pendingInvite = room.pendingInvites[userId]
+
+        val joinTs = room.firstJoinTimestamps[userId]
+        if (joinTs != null && firstJoinTimestamp == null) {
+            firstJoinTimestamp = joinTs
+            updateFilteredMessages()
+        }
+
+        _uiState.value = _uiState.value.copy(
+            room = room,
+            currentRole = role,
+            isLoading = false,
+            pendingInvite = pendingInvite
+        )
+
+        activeRoomManager.updateTrackedRoom(room)
+        loadSeatUsers(room)
+        loadParticipantUsers(room)
+        handleOwnerAwayCountdown(room)
     }
 
     private fun checkBlockConflicts(room: ChatRoom) {
@@ -325,20 +320,24 @@ class RoomViewModel @Inject constructor(
             }
 
             // Check if any other participant (non-owner) has blocked me
-            for (participantId in room.participantIds) {
-                if (participantId == userId || participantId == room.ownerId) continue
-                val cached = userCache[participantId]
-                val participantUser = if (cached != null) {
-                    cached
-                } else {
-                    when (val result = userRepository.getUser(participantId)) {
-                        is Resource.Success -> {
-                            userCache[participantId] = result.data
-                            result.data
+            val otherParticipantIds = room.participantIds.filter { it != userId && it != room.ownerId }
+            val uncachedIds = otherParticipantIds.filter { it !in userCache }
+            if (uncachedIds.isNotEmpty()) {
+                coroutineScope {
+                    uncachedIds.map { pid ->
+                        async {
+                            when (val result = userRepository.getUser(pid)) {
+                                is Resource.Success -> pid to result.data
+                                else -> null
+                            }
                         }
-                        else -> continue
+                    }.awaitAll().filterNotNull().forEach { (id, user) ->
+                        userCache[id] = user
                     }
                 }
+            }
+            for (participantId in otherParticipantIds) {
+                val participantUser = userCache[participantId] ?: continue
                 if (userId in participantUser.blockedUserIds) {
                     _uiState.value = _uiState.value.copy(
                         blockWarning = BlockWarning.BlockedByUserInRoom
