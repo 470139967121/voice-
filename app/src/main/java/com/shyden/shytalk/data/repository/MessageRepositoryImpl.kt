@@ -37,11 +37,12 @@ class MessageRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    override suspend fun sendMessage(
+    private suspend fun createAndSendMessage(
         roomId: String,
         senderId: String,
         senderName: String,
-        text: String
+        text: String,
+        type: MessageType
     ): Resource<Unit> {
         return try {
             val messageId = UUID.randomUUID().toString()
@@ -51,7 +52,7 @@ class MessageRepositoryImpl @Inject constructor(
                 senderName = senderName,
                 text = text,
                 createdAt = Timestamp.now(),
-                type = MessageType.TEXT
+                type = type
             )
             messagesCollection(roomId).document(messageId).set(message.toMap()).await()
             Resource.Success(Unit)
@@ -60,44 +61,20 @@ class MessageRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun sendSystemMessage(roomId: String, text: String): Resource<Unit> {
-        return try {
-            val messageId = UUID.randomUUID().toString()
-            val message = Message(
-                messageId = messageId,
-                senderId = "system",
-                senderName = "System",
-                text = text,
-                createdAt = Timestamp.now(),
-                type = MessageType.SYSTEM
-            )
-            messagesCollection(roomId).document(messageId).set(message.toMap()).await()
-            Resource.Success(Unit)
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "Failed to send system message", e)
-        }
-    }
+    override suspend fun sendMessage(
+        roomId: String,
+        senderId: String,
+        senderName: String,
+        text: String
+    ): Resource<Unit> = createAndSendMessage(roomId, senderId, senderName, text, MessageType.TEXT)
+
+    override suspend fun sendSystemMessage(roomId: String, text: String): Resource<Unit> =
+        createAndSendMessage(roomId, "system", "System", text, MessageType.SYSTEM)
 
     override suspend fun sendJoinMessage(
         roomId: String,
         senderId: String,
         senderName: String,
         text: String
-    ): Resource<Unit> {
-        return try {
-            val messageId = UUID.randomUUID().toString()
-            val message = Message(
-                messageId = messageId,
-                senderId = senderId,
-                senderName = senderName,
-                text = text,
-                createdAt = Timestamp.now(),
-                type = MessageType.JOIN
-            )
-            messagesCollection(roomId).document(messageId).set(message.toMap()).await()
-            Resource.Success(Unit)
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "Failed to send join message", e)
-        }
-    }
+    ): Resource<Unit> = createAndSendMessage(roomId, senderId, senderName, text, MessageType.JOIN)
 }
