@@ -73,6 +73,28 @@ class ActiveRoomManager @Inject constructor(
     fun isInRoom(roomId: String): Boolean = _activeRoomId.value == roomId
     fun isInAnyRoom(): Boolean = _activeRoomId.value != null
 
+    /** Called by RoomViewModel after joining a room. Starts foreground service. */
+    fun trackRoom(roomId: String) {
+        _activeRoomId.value = roomId
+        _roomClosed.value = false
+        RoomService.start(context, roomId)
+    }
+
+    /** Called by RoomViewModel on each room update. Keeps notification current. */
+    fun updateTrackedRoom(room: ChatRoom) {
+        _activeRoom.value = room
+    }
+
+    /** Called by RoomViewModel when user explicitly leaves. Stops service. */
+    fun untrackRoom() {
+        _activeRoomId.value = null
+        _activeRoom.value = null
+        _messages.value = emptyList()
+        _ownerAwayRemainingMs.value = 0L
+        _roomClosed.value = false
+        RoomService.stop(context)
+    }
+
     suspend fun enterRoom(roomId: String) {
         if (_activeRoomId.value == roomId) return
 

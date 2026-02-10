@@ -1,5 +1,6 @@
 package com.shyden.shytalk.feature.main
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.feature.home.RoomListContent
 import com.shyden.shytalk.feature.profile.ProfileScreen
 
@@ -33,27 +36,43 @@ enum class BottomNavTab(val label: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
+    activeRoomManager: ActiveRoomManager,
     onNavigateToRoom: (String) -> Unit,
     onNavigateToUserProfile: (String) -> Unit,
+    onNavigateToPrivacyPolicy: () -> Unit,
     onSignOut: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(BottomNavTab.Rooms) }
     var showCreateDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val activeRoomId by activeRoomManager.activeRoomId.collectAsStateWithLifecycle()
+    val activeRoom by activeRoomManager.activeRoom.collectAsStateWithLifecycle()
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        when (selectedTab) {
-                            BottomNavTab.Rooms -> "ShyTalk"
-                            BottomNavTab.Profile -> "Profile"
-                        }
+            Column {
+                TopAppBar(
+                    title = {
+                        Text(
+                            when (selectedTab) {
+                                BottomNavTab.Rooms -> "ShyTalk"
+                                BottomNavTab.Profile -> "Profile"
+                            }
+                        )
+                    }
+                )
+                // Show RoomMiniBar when user has an active room
+                val currentRoomId = activeRoomId
+                val currentRoom = activeRoom
+                if (currentRoomId != null) {
+                    RoomMiniBar(
+                        roomName = currentRoom?.name ?: "Voice Room",
+                        onClick = { onNavigateToRoom(currentRoomId) }
                     )
                 }
-            )
+            }
         },
         bottomBar = {
             NavigationBar {
@@ -97,6 +116,7 @@ fun MainScreen(
                     showBackButton = false,
                     onNavigateBack = {},
                     onSignOut = onSignOut,
+                    onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
