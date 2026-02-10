@@ -1,8 +1,8 @@
-Profile Photo Improvements
+v0.12 - Unit Tests, Custom Crop & Performance
 
-- Fixed crash when cropping profile/cover photos
-- Storage permission requested before selecting a photo
-- Tap profile or cover photo to view full screen
-- Crop toolbar now visible (dark toolbar with white icons)
-
-WARNING: Voice chat not working, fix coming in a later version.
+- Replaced deprecated photo cropper with custom CropActivity
+- Removed unnecessary storage permission prompts (uses modern photo picker)
+- Added 177 unit tests covering all ViewModels, models, and utilities
+- Optimized user loading in room and home screens (skip redundant fetches)
+- PiP support, room mini bar, privacy policy screen
+- Various bug fixes and stability improvements
