@@ -88,7 +88,20 @@ class RoomRepositoryImplTest {
 
     @Test
     fun `leaveRoom returns Success`() = runTest {
-        every { docRef.update(any<String>(), any()) } returns Tasks.forResult(null)
+        val transaction = mockk<Transaction>(relaxed = true)
+        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
+        every { snapshot.data } returns mapOf(
+            "ownerId" to "owner-1",
+            "state" to "ACTIVE",
+            "participantIds" to listOf("owner-1", "user-1")
+        )
+        every { snapshot.id } returns "room-1"
+        every { transaction.get(docRef) } returns snapshot
+        every { firestore.runTransaction(any<Transaction.Function<*>>()) } answers {
+            val fn = firstArg<Transaction.Function<*>>()
+            fn.apply(transaction)
+            Tasks.forResult(null)
+        }
 
         val result = repo.leaveRoom("room-1", "user-1")
 

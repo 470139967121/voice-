@@ -1,39 +1,42 @@
 package com.shyden.shytalk.feature.home
 
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.flagEmojiForCode
+
+private val BottomGradient = Brush.verticalGradient(
+    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
+    startY = 60f
+)
+
+private val WhiteAlpha80 = Color.White.copy(alpha = 0.8f)
 
 @Composable
 fun RoomListItem(
@@ -78,99 +81,95 @@ fun RoomListItem(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable(onClick = onClick)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            // Avatar stack row
-            if (seatedUserList.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box {
-                        seatedUserList.forEachIndexed { index, user ->
-                            val photoUrl = user.photoUrl
+        Box {
+            // Full-bleed profile photos (owner is always seated)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                seatedUserList.forEach { user ->
+                    val photoUrl = user.photoUrl
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(140.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (photoUrl != null) {
+                            AsyncImage(
+                                model = photoUrl,
+                                contentDescription = user.displayName,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
                             Box(
                                 modifier = Modifier
-                                    .offset(x = (index * 28).dp)
-                                    .zIndex((seatedUserList.size - index).toFloat())
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
                             ) {
-                                if (photoUrl != null) {
-                                    AsyncImage(
-                                        model = photoUrl,
-                                        contentDescription = user.displayName,
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .border(
-                                                2.dp,
-                                                MaterialTheme.colorScheme.surface,
-                                                CircleShape
-                                            ),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Surface(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .border(
-                                                2.dp,
-                                                MaterialTheme.colorScheme.surface,
-                                                CircleShape
-                                            ),
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.primaryContainer
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Person,
-                                            contentDescription = user.displayName,
-                                            modifier = Modifier.padding(8.dp),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
-                                }
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = user.displayName,
+                                    modifier = Modifier.fillMaxSize(0.4f),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Room info row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = room.name,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "$occupiedSeats/$totalSeats seats",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            // Gradient overlay at bottom for text readability
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(BottomGradient)
+            )
 
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "${room.participantIds.size} in room",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    if (nationalityFlags.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                            nationalityFlags.take(6).forEach { flag ->
-                                Text(
-                                    text = flag,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
+            // Room info overlay
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = room.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "$occupiedSeats/$totalSeats seats",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = WhiteAlpha80
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "${room.participantIds.size} in room",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White
+                        )
+                        if (nationalityFlags.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                nationalityFlags.take(6).forEach { flag ->
+                                    Text(
+                                        text = flag,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
                             }
                         }
                     }
