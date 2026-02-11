@@ -1,9 +1,5 @@
-v0.19 - Dynamic Seats & ChatHead UX
+v0.20 - Agora SDK crash fix
 
-- Seat avatars now scale dynamically (large when few, smaller as seats fill)
-- ChatHead bubble slightly bigger with blue border
-- Added X close button on chathead for quick dismiss
-- Room list cards always show photo layout (owner always seated)
-- Memoized recomposition in seat grid and room list
-- Fixed pre-existing leaveRoom test failure
-- Fixed chathead close button touch handling
+- Fixed native crash (SIGABRT) when entering a room on Android 16
+- Upgraded Agora Voice SDK from 4.6.2 to 4.6.3
+- Root cause: missing io.agora.base.internal.voiceengine.BuildInfo class in 4.6.2
