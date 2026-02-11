@@ -148,7 +148,6 @@ class MainActivity : ComponentActivity() {
                             NavGraph(
                                 navController = navController,
                                 startDestination = Screen.GoogleSignIn.route,
-                                activeRoomManager = activeRoomManager,
                                 onSignOut = { authRepository.signOut() }
                             )
                         }
@@ -159,6 +158,16 @@ class MainActivity : ComponentActivity() {
 
         // Handle notification tap to open room (cold start)
         handleRoomIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        activeRoomManager.isAppInForeground = true
+    }
+
+    override fun onStop() {
+        super.onStop()
+        activeRoomManager.isAppInForeground = false
     }
 
     override fun onNewIntent(intent: Intent) {

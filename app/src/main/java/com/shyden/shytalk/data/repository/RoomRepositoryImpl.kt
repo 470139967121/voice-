@@ -84,9 +84,29 @@ class RoomRepositoryImpl @Inject constructor(
     }
 
     override suspend fun leaveRoom(roomId: String, userId: String): Resource<Unit> = firebaseCall("Failed to leave room") {
-        roomsCollection.document(roomId).update(
-            "participantIds", FieldValue.arrayRemove(userId)
-        ).await()
+        val docRef = roomsCollection.document(roomId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val room = snapshot.data?.let { ChatRoom.fromMap(it, snapshot.id) }
+                ?: return@runTransaction
+
+            val remaining = room.participantIds - userId
+
+            if (remaining.isEmpty() ||
+                (remaining.singleOrNull() == room.ownerId && room.state == RoomState.OWNER_AWAY)) {
+                // Room is empty — close it
+                val updates = emptySeatsUpdate() + mapOf(
+                    "state" to RoomState.CLOSED.name,
+                    "closedAt" to Timestamp.now(),
+                    "participantIds" to emptyList<String>()
+                )
+                transaction.update(docRef, updates)
+            } else {
+                transaction.update(docRef, mapOf(
+                    "participantIds" to FieldValue.arrayRemove(userId)
+                ))
+            }
+        }.await()
     }
 
     override suspend fun takeSeat(roomId: String, seatIndex: Int, userId: String): Resource<Unit> = firebaseCall("Failed to take seat") {
@@ -279,11 +299,26 @@ class RoomRepositoryImpl @Inject constructor(
 
             val updates = clearUserSeats(room, userId)
 
-            if (room.ownerId == userId) {
+            val remainingParticipants = room.participantIds - userId
+
+            if (remainingParticipants.isEmpty()) {
+                // Room is now empty — close it
+                updates.putAll(emptySeatsUpdate())
+                updates["state"] = RoomState.CLOSED.name
+                updates["closedAt"] = Timestamp.now()
+                updates["participantIds"] = emptyList<String>()
+            } else if (room.ownerId == userId) {
                 updates["state"] = RoomState.OWNER_AWAY.name
                 updates["ownerLeftAt"] = Timestamp.now()
             } else {
                 updates["participantIds"] = FieldValue.arrayRemove(userId)
+                // If only the owner remains and they're away, close the room
+                if (remainingParticipants.singleOrNull() == room.ownerId && room.state == RoomState.OWNER_AWAY) {
+                    updates.putAll(emptySeatsUpdate())
+                    updates["state"] = RoomState.CLOSED.name
+                    updates["closedAt"] = Timestamp.now()
+                    updates["participantIds"] = emptyList<String>()
+                }
             }
 
             if (updates.isNotEmpty()) {

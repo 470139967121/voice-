@@ -6,7 +6,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.feature.auth.GoogleSignInScreen
 import com.shyden.shytalk.feature.main.MainScreen
 import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
@@ -18,7 +17,6 @@ import com.shyden.shytalk.feature.room.RoomScreen
 fun NavGraph(
     navController: NavHostController,
     startDestination: String,
-    activeRoomManager: ActiveRoomManager,
     onSignOut: () -> Unit
 ) {
     NavHost(
@@ -53,7 +51,6 @@ fun NavGraph(
 
         composable(Screen.Main.route) {
             MainScreen(
-                activeRoomManager = activeRoomManager,
                 onNavigateToRoom = { roomId ->
                     navController.navigate(Screen.Room.createRoute(roomId))
                 },
