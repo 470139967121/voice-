@@ -44,6 +44,7 @@ import androidx.compose.ui.layout.ContentScale
 import com.shyden.shytalk.ui.theme.SpeakingGreen
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.shyden.shytalk.core.model.RoomRole
@@ -61,11 +62,18 @@ fun SeatItem(
     canLeaveSeat: Boolean,
     isSpeaking: Boolean,
     user: User? = null,
+    seatSize: Dp = 70.dp,
     onClick: () -> Unit,
     onTapUser: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
+
+    // Scale badges and icon padding proportionally to seat size
+    val sizeScale = (seatSize / 70.dp).coerceIn(1f, 1.5f)
+    val badgeSize = (22.dp * sizeScale).coerceAtMost(30.dp)
+    val badgeIconSize = (14.dp * sizeScale).coerceAtMost(18.dp)
+    val iconPadding = (14.dp * (seatSize / 70.dp)).coerceIn(14.dp, 40.dp)
 
     // Speaking animation — transition always exists but scale only applied when speaking
     val infiniteTransition = rememberInfiniteTransition(label = "speaking")
@@ -98,7 +106,7 @@ fun SeatItem(
         Box(contentAlignment = Alignment.Center) {
             Surface(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(seatSize)
                     .then(
                         if (isSpeaking) Modifier.scale(speakingScale) else Modifier
                     )
@@ -140,7 +148,7 @@ fun SeatItem(
                         model = photoUrl,
                         contentDescription = user?.displayName ?: "User",
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(seatSize)
                             .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
@@ -152,7 +160,7 @@ fun SeatItem(
                             Icons.Default.PersonAdd
                         },
                         contentDescription = if (seat.state == SeatState.OCCUPIED) "Occupied" else "Empty seat",
-                        modifier = Modifier.padding(14.dp),
+                        modifier = Modifier.padding(iconPadding),
                         tint = if (seat.state == SeatState.OCCUPIED) {
                             MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
@@ -167,7 +175,7 @@ fun SeatItem(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .size(18.dp)
+                        .size(badgeSize)
                         .clip(CircleShape)
                         .background(
                             if (seatRole == RoomRole.OWNER) MaterialTheme.colorScheme.primary
@@ -178,7 +186,7 @@ fun SeatItem(
                     Icon(
                         Icons.Default.Star,
                         contentDescription = seatRole.name,
-                        modifier = Modifier.size(12.dp),
+                        modifier = Modifier.size(badgeIconSize),
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
@@ -189,7 +197,7 @@ fun SeatItem(
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .size(18.dp)
+                        .size(badgeSize)
                         .clip(CircleShape)
                         .background(
                             if (seat.isMuted) MaterialTheme.colorScheme.error
@@ -200,7 +208,7 @@ fun SeatItem(
                     Icon(
                         if (seat.isMuted) Icons.Default.MicOff else Icons.Default.Mic,
                         contentDescription = if (seat.isMuted) "Muted" else "Unmuted",
-                        modifier = Modifier.size(12.dp),
+                        modifier = Modifier.size(badgeIconSize),
                         tint = Color.White
                     )
                 }

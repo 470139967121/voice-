@@ -346,7 +346,8 @@ fun RoomScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
+                            .weight(1f)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     )
 
                     // "Take a Seat" button when not seated and empty seats exist

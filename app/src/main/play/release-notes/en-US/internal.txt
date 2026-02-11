@@ -1,7 +1,9 @@
-v0.18 - Room Lifecycle & Stability
+v0.19 - Dynamic Seats & ChatHead UX
 
-- Owner dismissing chathead now closes room immediately (no 5-min delay)
-- App only closes on chathead dismiss when in background
-- Empty rooms auto-close when all participants leave
-- Removed redundant "In: room / Return" mini-bar from home screen
-- Fixed Agora joinChannel race condition (error -17)
+- Seat avatars now scale dynamically (large when few, smaller as seats fill)
+- ChatHead bubble slightly bigger with blue border
+- Added X close button on chathead for quick dismiss
+- Room list cards always show photo layout (owner always seated)
+- Memoized recomposition in seat grid and room list
+- Fixed pre-existing leaveRoom test failure
+- Fixed chathead close button touch handling

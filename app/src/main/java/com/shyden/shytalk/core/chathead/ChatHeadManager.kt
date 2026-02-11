@@ -34,9 +34,12 @@ class ChatHeadManager(
     private var isShowing = false
     private val imageLoader by lazy { ImageLoader(context) }
 
-    private val bubbleSizePx = dpToPx(BUBBLE_SIZE_DP)
-    private val edgeMarginPx = dpToPx(EDGE_MARGIN_DP)
-    private val closeZoneHeightPx = dpToPx(CLOSE_ZONE_HEIGHT_DP)
+    private val density = context.resources.displayMetrics.density
+    private val screenWidthPx = context.resources.displayMetrics.widthPixels
+    private val screenHeightPx = context.resources.displayMetrics.heightPixels
+    private val bubbleSizePx = (BUBBLE_SIZE_DP * density).toInt()
+    private val edgeMarginPx = (EDGE_MARGIN_DP * density).toInt()
+    private val closeZoneHeightPx = (CLOSE_ZONE_HEIGHT_DP * density).toInt()
 
     fun show(ownerPhotoUrl: String?) {
         if (isShowing) return
@@ -152,13 +155,14 @@ class ChatHeadManager(
     @Suppress("ClickableViewAccessibility")
     private fun setupTouchListener(view: View, params: WindowManager.LayoutParams) {
         val tapThreshold = ViewConfiguration.get(context).scaledTouchSlop
+        val closeButtonSizePx = (CLOSE_BUTTON_SIZE_DP * density).toInt()
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
 
-        view.setOnTouchListener { _, event ->
+        view.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = params.x
@@ -189,7 +193,12 @@ class ChatHeadManager(
 
                 MotionEvent.ACTION_UP -> {
                     if (!isDragging) {
-                        onBubbleTapped()
+                        // Check if tap landed on the close button (top-right corner)
+                        if (event.x >= v.width - closeButtonSizePx && event.y <= closeButtonSizePx) {
+                            onBubbleDismissed()
+                        } else {
+                            onBubbleTapped()
+                        }
                     } else if (isInCloseZone(event.rawY)) {
                         onBubbleDismissed()
                     } else {
@@ -274,22 +283,13 @@ class ChatHeadManager(
         closeZoneParams = null
     }
 
-    private fun getScreenWidth(): Int {
-        val metrics = context.resources.displayMetrics
-        return metrics.widthPixels
-    }
+    private fun getScreenWidth(): Int = screenWidthPx
 
-    private fun getScreenHeight(): Int {
-        val metrics = context.resources.displayMetrics
-        return metrics.heightPixels
-    }
-
-    private fun dpToPx(dp: Int): Int {
-        return (dp * context.resources.displayMetrics.density).toInt()
-    }
+    private fun getScreenHeight(): Int = screenHeightPx
 
     companion object {
-        private const val BUBBLE_SIZE_DP = 56
+        private const val BUBBLE_SIZE_DP = 72
+        private const val CLOSE_BUTTON_SIZE_DP = 20
         private const val EDGE_MARGIN_DP = 8
         private const val CLOSE_ZONE_HEIGHT_DP = 72
     }
