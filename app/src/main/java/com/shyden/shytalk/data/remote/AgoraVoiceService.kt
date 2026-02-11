@@ -10,6 +10,7 @@ import io.agora.rtc2.RtcEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -158,9 +159,12 @@ class AgoraVoiceService @Inject constructor(
         }
 
         // Leave any existing channel first
-        if (_isJoined.value) {
+        if (currentChannelName != null) {
             Log.d(TAG, "Already in a channel, leaving first")
             engine.leaveChannel()
+            _isJoined.value = false
+            currentChannelName = null
+            delay(500)
         }
 
         // Only enable audio capture when joining as broadcaster (requires RECORD_AUDIO permission)
@@ -226,6 +230,7 @@ class AgoraVoiceService @Inject constructor(
 
     fun leaveChannel() {
         Log.d(TAG, "leaveChannel called, isJoined=${_isJoined.value}")
+        _isJoined.value = false
         currentChannelName = null
         localUid = 0
         isLocalMuted = false

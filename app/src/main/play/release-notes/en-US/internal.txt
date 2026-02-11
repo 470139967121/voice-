@@ -1,9 +1,7 @@
-v0.17 - ChatHead, Room UX & Performance
+v0.18 - Room Lifecycle & Stability
 
-- Floating chathead bubble with owner photo & voice wave animation
-- Dismiss chathead to leave room and close app
-- Room closed summary screen when entering a closed room
-- Member count moved into participants button
-- Performance: lazy ImageLoader, cached clip paths, atomic state updates
-- Refactored User.photoUrl, deduplicated message flow
-- 375 unit tests (up from 327)
+- Owner dismissing chathead now closes room immediately (no 5-min delay)
+- App only closes on chathead dismiss when in background
+- Empty rooms auto-close when all participants leave
+- Removed redundant "In: room / Return" mini-bar from home screen
+- Fixed Agora joinChannel race condition (error -17)

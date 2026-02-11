@@ -71,6 +71,8 @@ class ActiveRoomManager @Inject constructor(
     private var presenceMonitorJob: Job? = null
     private var isSeated = false
 
+    var isAppInForeground: Boolean = false
+
     var currentUserName: String = ""
         private set
 

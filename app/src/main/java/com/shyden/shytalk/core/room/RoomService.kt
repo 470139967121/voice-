@@ -70,14 +70,21 @@ class RoomService : Service() {
             },
             onBubbleDismissed = {
                 serviceScope.launch {
-                    activeRoomManager.leaveRoom()
+                    val isOwner = activeRoomManager.activeRoom.value?.ownerId == activeRoomManager.currentUserId
+                    if (isOwner) {
+                        activeRoomManager.closeRoom()
+                    } else {
+                        activeRoomManager.leaveRoom()
+                    }
                 }
-                val finishIntent = Intent(this, MainActivity::class.java).apply {
-                    action = "FINISH_APP"
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP
+                if (!activeRoomManager.isAppInForeground) {
+                    val finishIntent = Intent(this, MainActivity::class.java).apply {
+                        action = "FINISH_APP"
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    startActivity(finishIntent)
                 }
-                startActivity(finishIntent)
                 stopSelf()
             }
         )
