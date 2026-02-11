@@ -46,7 +46,7 @@ class HomeViewModelTest {
         }
         every { authRepository.currentUser } returns mockUser
         every { roomRepository.getActiveRooms() } returns roomsFlow
-        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptyList())
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
     }
 
     private fun createViewModel() = HomeViewModel(
@@ -57,7 +57,7 @@ class HomeViewModelTest {
 
     @Test
     fun `room owned by blocked user is excluded`() = runTest {
-        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(listOf("blocked-owner"))
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(setOf("blocked-owner"))
         coEvery { userRepository.getUser("blocked-owner") } returns Resource.Success(
             TestData.createTestUser(uid = "blocked-owner")
         )
@@ -73,7 +73,7 @@ class HomeViewModelTest {
     @Test
     fun `room whose owner blocked current user is excluded`() = runTest {
         coEvery { userRepository.getUser("hostile-owner") } returns Resource.Success(
-            TestData.createTestUser(uid = "hostile-owner", blockedUserIds = listOf(currentUserId))
+            TestData.createTestUser(uid = "hostile-owner", blockedUserIds = setOf(currentUserId))
         )
         val vm = createViewModel()
         advanceUntilIdle()

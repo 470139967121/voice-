@@ -11,15 +11,21 @@ data class ChatRoom(
     val ownerLeftAt: Timestamp? = null,
     val createdAt: Timestamp = Timestamp.now(),
     val closedAt: Timestamp? = null,
-    val participantIds: List<String> = emptyList(),
-    val hostIds: List<String> = emptyList(),
+    val participantIds: Set<String> = emptySet(),
+    val hostIds: Set<String> = emptySet(),
     val requireApproval: Boolean = false,
-    val bannedUserIds: List<String> = emptyList(),
+    val bannedUserIds: Set<String> = emptySet(),
     val pendingInvites: Map<String, String> = emptyMap(),
-    val seats: Map<String, Seat> = (0 until Constants.MAX_SEATS).associate { it.toString() to Seat() },
+    val seats: Map<String, Seat> = DEFAULT_SEATS,
     val agoraChannelName: String = "",
     val firstJoinTimestamps: Map<String, Timestamp> = emptyMap()
 ) {
+    fun resolveRole(userId: String): RoomRole = when {
+        ownerId == userId -> RoomRole.OWNER
+        userId in hostIds -> RoomRole.HOST
+        else -> RoomRole.ATTENDEE
+    }
+
     fun toMap(): Map<String, Any?> = mapOf(
         "roomId" to roomId,
         "name" to name,
@@ -28,10 +34,10 @@ data class ChatRoom(
         "ownerLeftAt" to ownerLeftAt,
         "createdAt" to createdAt,
         "closedAt" to closedAt,
-        "participantIds" to participantIds,
-        "hostIds" to hostIds,
+        "participantIds" to participantIds.toList(),
+        "hostIds" to hostIds.toList(),
         "requireApproval" to requireApproval,
-        "bannedUserIds" to bannedUserIds,
+        "bannedUserIds" to bannedUserIds.toList(),
         "pendingInvites" to pendingInvites,
         "seats" to seats.mapValues { it.value.toMap() },
         "agoraChannelName" to agoraChannelName,
@@ -39,6 +45,9 @@ data class ChatRoom(
     )
 
     companion object {
+        val DEFAULT_SEATS: Map<String, Seat> =
+            (0 until Constants.MAX_SEATS).associate { it.toString() to Seat() }
+
         fun fromMap(map: Map<String, Any?>, roomId: String): ChatRoom {
             val seatsRaw = (map["seats"] as? Map<*, *>) ?: emptyMap<String, Any>()
             val seats = (0 until Constants.MAX_SEATS).associate { i ->
@@ -59,10 +68,10 @@ data class ChatRoom(
                 ownerLeftAt = map["ownerLeftAt"] as? Timestamp,
                 createdAt = map["createdAt"] as? Timestamp ?: Timestamp.now(),
                 closedAt = map["closedAt"] as? Timestamp,
-                participantIds = (map["participantIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                hostIds = (map["hostIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                participantIds = (map["participantIds"] as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
+                hostIds = (map["hostIds"] as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
                 requireApproval = map["requireApproval"] as? Boolean ?: false,
-                bannedUserIds = (map["bannedUserIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                bannedUserIds = (map["bannedUserIds"] as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
                 pendingInvites = (map["pendingInvites"] as? Map<*, *>)?.entries?.associate {
                     it.key.toString() to (it.value as? String ?: "")
                 } ?: emptyMap(),

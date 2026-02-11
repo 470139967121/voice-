@@ -10,7 +10,6 @@ import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.model.SeatRequestStatus
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
-import com.shyden.shytalk.core.util.Constants
 import java.util.Date
 
 object TestData {
@@ -21,7 +20,7 @@ object TestData {
     fun createTestUser(
         uid: String = "user-1",
         displayName: String = "Test User",
-        blockedUserIds: List<String> = emptyList(),
+        blockedUserIds: Set<String> = emptySet(),
         profilePhotoUrl: String? = null,
         coverPhotoUrl: String? = null,
         uniqueId: Long = 12345L
@@ -42,8 +41,7 @@ object TestData {
         isMuted: Boolean = false
     ) = Seat(userId = userId, state = state, isMuted = isMuted)
 
-    fun createDefaultSeats(): Map<String, Seat> =
-        (0 until Constants.MAX_SEATS).associate { it.toString() to Seat() }
+    fun createDefaultSeats(): Map<String, Seat> = ChatRoom.DEFAULT_SEATS
 
     fun createSeatsWithOwner(ownerId: String): Map<String, Seat> {
         val seats = createDefaultSeats().toMutableMap()
@@ -56,10 +54,10 @@ object TestData {
         name: String = "Test Room",
         ownerId: String = "owner-1",
         state: RoomState = RoomState.ACTIVE,
-        participantIds: List<String> = listOf(ownerId),
-        hostIds: List<String> = emptyList(),
+        participantIds: Set<String> = setOf(ownerId),
+        hostIds: Set<String> = emptySet(),
         requireApproval: Boolean = false,
-        bannedUserIds: List<String> = emptyList(),
+        bannedUserIds: Set<String> = emptySet(),
         pendingInvites: Map<String, String> = emptyMap(),
         seats: Map<String, Seat> = createSeatsWithOwner(ownerId),
         agoraChannelName: String = "channel-1",
@@ -105,13 +103,18 @@ object TestData {
         userId: String = "user-1",
         userName: String = "Test User",
         seatIndex: Int = 3,
-        status: SeatRequestStatus = SeatRequestStatus.PENDING
+        status: SeatRequestStatus = SeatRequestStatus.PENDING,
+        createdAt: Timestamp = BASE_TIMESTAMP,
+        resolvedBy: String? = null,
+        resolvedAt: Timestamp? = null
     ) = SeatRequest(
         requestId = requestId,
         userId = userId,
         userName = userName,
         seatIndex = seatIndex,
         status = status,
-        createdAt = BASE_TIMESTAMP
+        createdAt = createdAt,
+        resolvedBy = resolvedBy,
+        resolvedAt = resolvedAt
     )
 }

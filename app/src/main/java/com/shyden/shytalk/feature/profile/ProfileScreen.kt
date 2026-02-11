@@ -427,7 +427,7 @@ private fun ProfileContent(
             contentAlignment = Alignment.CenterStart
         ) {
             Box {
-                val photoUrl = user.profilePhotoUrl ?: user.avatarUrl
+                val photoUrl = user.photoUrl
                 if (photoUrl != null) {
                     AsyncImage(
                         model = photoUrl,

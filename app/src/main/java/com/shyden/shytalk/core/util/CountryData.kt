@@ -13,8 +13,10 @@ fun flagEmojiForCode(code: String): String {
     return String(first) + String(second)
 }
 
+private val countryByCode: Map<String, Country> by lazy { countries.associateBy { it.code } }
+
 fun countryNameForCode(code: String): String? {
-    return countries.find { it.code == code.uppercase() }?.name
+    return countryByCode[code.uppercase()]?.name
 }
 
 val countries: List<Country> = listOf(

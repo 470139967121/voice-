@@ -1,6 +1,7 @@
 package com.shyden.shytalk.data.repository
 
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.firebaseCall
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -17,16 +18,10 @@ class AuthRepositoryImpl @Inject constructor(
     override val isAuthenticated: Boolean
         get() = auth.currentUser != null
 
-    override suspend fun signInWithGoogleIdToken(idToken: String): Resource<FirebaseUser> {
-        return try {
-            val credential = GoogleAuthProvider.getCredential(idToken, null)
-            val result = auth.signInWithCredential(credential).await()
-            result.user?.let {
-                Resource.Success(it)
-            } ?: Resource.Error("Sign in failed: no user returned")
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "Google sign in failed", e)
-        }
+    override suspend fun signInWithGoogleIdToken(idToken: String): Resource<FirebaseUser> = firebaseCall("Google sign in failed") {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        val result = auth.signInWithCredential(credential).await()
+        result.user ?: throw Exception("Sign in failed: no user returned")
     }
 
     override fun signOut() {

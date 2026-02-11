@@ -91,29 +91,24 @@ class ActiveRoomManagerTest {
         Dispatchers.resetMain()
     }
 
-    // --- resolveRole ---
+    // --- resolveRole (now on ChatRoom) ---
 
     @Test
     fun `resolveRole returns OWNER when userId matches ownerId`() {
         val room = TestData.createTestRoom(ownerId = currentUserId)
-        assertEquals(RoomRole.OWNER, manager.resolveRole(room, currentUserId))
+        assertEquals(RoomRole.OWNER, room.resolveRole(currentUserId))
     }
 
     @Test
     fun `resolveRole returns HOST when userId in hostIds`() {
-        val room = TestData.createTestRoom(ownerId = "other", hostIds = listOf(currentUserId))
-        assertEquals(RoomRole.HOST, manager.resolveRole(room, currentUserId))
+        val room = TestData.createTestRoom(ownerId = "other", hostIds = setOf(currentUserId))
+        assertEquals(RoomRole.HOST, room.resolveRole(currentUserId))
     }
 
     @Test
     fun `resolveRole returns ATTENDEE for regular user`() {
         val room = TestData.createTestRoom(ownerId = "other")
-        assertEquals(RoomRole.ATTENDEE, manager.resolveRole(room, currentUserId))
-    }
-
-    @Test
-    fun `resolveRole returns ATTENDEE for null room`() {
-        assertEquals(RoomRole.ATTENDEE, manager.resolveRole(null, currentUserId))
+        assertEquals(RoomRole.ATTENDEE, room.resolveRole(currentUserId))
     }
 
     // --- trackRoom / untrackRoom ---
@@ -187,7 +182,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            participantIds = listOf("other-owner", currentUserId)
+            participantIds = setOf("other-owner", currentUserId)
         )
         manager.updateTrackedRoom(room)
 
@@ -201,7 +196,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            participantIds = listOf("other-owner", currentUserId)
+            participantIds = setOf("other-owner", currentUserId)
         )
         manager.updateTrackedRoom(room)
 
@@ -216,7 +211,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            hostIds = listOf(currentUserId),
+            hostIds = setOf(currentUserId),
             requireApproval = true
         )
         manager.updateTrackedRoom(room)
@@ -248,7 +243,7 @@ class ActiveRoomManagerTest {
         hostManager.trackRoom("room-1")
         val hostRoom = TestData.createTestRoom(
             ownerId = "other-owner",
-            hostIds = listOf("host-1"),
+            hostIds = setOf("host-1"),
             seats = seats
         )
         hostManager.updateTrackedRoom(hostRoom)
@@ -290,7 +285,7 @@ class ActiveRoomManagerTest {
         seats["3"] = TestData.createTestSeat(userId = "target")
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            participantIds = listOf("other-owner", currentUserId, "target"),
+            participantIds = setOf("other-owner", currentUserId, "target"),
             seats = seats
         )
         manager.updateTrackedRoom(room)
@@ -305,7 +300,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            hostIds = listOf(currentUserId)
+            hostIds = setOf(currentUserId)
         )
         manager.updateTrackedRoom(room)
 
@@ -321,7 +316,7 @@ class ActiveRoomManagerTest {
         seats["3"] = TestData.createTestSeat(userId = "other-host")
         val room = TestData.createTestRoom(
             ownerId = "the-owner",
-            hostIds = listOf(currentUserId, "other-host"),
+            hostIds = setOf(currentUserId, "other-host"),
             seats = seats
         )
         manager.updateTrackedRoom(room)
@@ -340,7 +335,7 @@ class ActiveRoomManagerTest {
         seats["0"] = TestData.createTestSeat(userId = "the-owner")
         val room = TestData.createTestRoom(
             ownerId = "the-owner",
-            hostIds = listOf(currentUserId),
+            hostIds = setOf(currentUserId),
             seats = seats
         )
         manager.updateTrackedRoom(room)
@@ -357,7 +352,7 @@ class ActiveRoomManagerTest {
         seats["3"] = TestData.createTestSeat(userId = "a-host")
         val room = TestData.createTestRoom(
             ownerId = "the-owner",
-            hostIds = listOf(currentUserId, "a-host"),
+            hostIds = setOf(currentUserId, "a-host"),
             seats = seats
         )
         manager.updateTrackedRoom(room)
@@ -374,7 +369,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            participantIds = listOf("other-owner", currentUserId)
+            participantIds = setOf("other-owner", currentUserId)
         )
         manager.updateTrackedRoom(room)
 
@@ -405,7 +400,7 @@ class ActiveRoomManagerTest {
         // Seat 2 is empty
         val room = TestData.createTestRoom(
             ownerId = "owner",
-            participantIds = listOf("owner", "someone", currentUserId),
+            participantIds = setOf("owner", "someone", currentUserId),
             pendingInvites = mapOf(currentUserId to "owner"),
             seats = seats
         )
@@ -483,7 +478,7 @@ class ActiveRoomManagerTest {
         seats["0"] = TestData.createTestSeat(userId = "the-owner")
         val room = TestData.createTestRoom(
             ownerId = "the-owner",
-            hostIds = listOf(currentUserId),
+            hostIds = setOf(currentUserId),
             seats = seats
         )
         manager.updateTrackedRoom(room)
@@ -500,7 +495,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = "owner",
-            hostIds = listOf(currentUserId)
+            hostIds = setOf(currentUserId)
         )
         manager.updateTrackedRoom(room)
 
@@ -535,7 +530,7 @@ class ActiveRoomManagerTest {
         seats["3"] = TestData.createTestSeat(userId = currentUserId)
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            participantIds = listOf("other-owner", currentUserId),
+            participantIds = setOf("other-owner", currentUserId),
             seats = seats
         )
         manager.updateTrackedRoom(room)
@@ -552,7 +547,7 @@ class ActiveRoomManagerTest {
         seats["3"] = TestData.createTestSeat(userId = currentUserId)
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            participantIds = listOf("other-owner", currentUserId),
+            participantIds = setOf("other-owner", currentUserId),
             seats = seats
         )
         manager.updateTrackedRoom(room)
@@ -570,7 +565,7 @@ class ActiveRoomManagerTest {
         val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
         val room = TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId),
+            participantIds = setOf(currentUserId),
             seats = seats
         )
         manager.updateTrackedRoom(room)
@@ -586,7 +581,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            participantIds = listOf("other-owner", currentUserId)
+            participantIds = setOf("other-owner", currentUserId)
         )
         manager.updateTrackedRoom(room)
 
@@ -625,7 +620,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "user-2")
+            participantIds = setOf(currentUserId, "user-2")
         )
         manager.updateTrackedRoom(room)
 
@@ -643,7 +638,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "user-2")
+            participantIds = setOf(currentUserId, "user-2")
         )
         manager.updateTrackedRoom(room)
 
@@ -670,7 +665,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = "other-owner",
-            participantIds = listOf("other-owner", currentUserId)
+            participantIds = setOf("other-owner", currentUserId)
         )
         manager.updateTrackedRoom(room)
 
@@ -691,7 +686,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "user-2", "user-3")
+            participantIds = setOf(currentUserId, "user-2", "user-3")
         )
         manager.updateTrackedRoom(room)
 
@@ -711,7 +706,7 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "user-2")
+            participantIds = setOf(currentUserId, "user-2")
         )
         manager.updateTrackedRoom(room)
 

@@ -24,8 +24,8 @@ android {
         applicationId = "com.shyden.shytalk"
         minSdk = 28
         targetSdk = 36
-        versionCode = 16
-        versionName = "0.16"
+        versionCode = 17
+        versionName = "0.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -46,6 +46,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

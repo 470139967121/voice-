@@ -1,17 +1,20 @@
 package com.shyden.shytalk.core.room
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.shyden.shytalk.MainActivity
 import com.shyden.shytalk.R
+import com.shyden.shytalk.core.chathead.ChatHeadManager
 import com.shyden.shytalk.core.util.Constants
+import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.data.repository.UserRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,9 +30,13 @@ import javax.inject.Inject
 class RoomService : Service() {
 
     @Inject lateinit var activeRoomManager: ActiveRoomManager
+    @Inject lateinit var userRepository: UserRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var observerJob: Job? = null
+    private var chatHeadJob: Job? = null
+    private var chatHeadManager: ChatHeadManager? = null
+    private var ownerPhotoUrl: String? = null
 
     companion object {
         const val ACTION_STOP = "com.shyden.shytalk.STOP_ROOM_SERVICE"
@@ -44,6 +51,36 @@ class RoomService : Service() {
         fun stop(context: Context) {
             context.stopService(Intent(context, RoomService::class.java))
         }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        chatHeadManager = ChatHeadManager(
+            context = this,
+            onBubbleTapped = {
+                val roomId = activeRoomManager.activeRoomId.value ?: return@ChatHeadManager
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    action = "OPEN_ROOM"
+                    putExtra("roomId", roomId)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                startActivity(intent)
+            },
+            onBubbleDismissed = {
+                serviceScope.launch {
+                    activeRoomManager.leaveRoom()
+                }
+                val finishIntent = Intent(this, MainActivity::class.java).apply {
+                    action = "FINISH_APP"
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                startActivity(finishIntent)
+                stopSelf()
+            }
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -62,6 +99,7 @@ class RoomService : Service() {
 
         startForeground(Constants.ROOM_NOTIFICATION_ID, buildNotification(roomId, "Voice Room"))
         observeRoom()
+        observeRoomScreenVisibility()
 
         return START_STICKY
     }
@@ -69,6 +107,7 @@ class RoomService : Service() {
     private fun observeRoom() {
         observerJob?.cancel()
         observerJob = serviceScope.launch {
+            var lastOwnerId: String? = null
             activeRoomManager.activeRoom.collect { room ->
                 if (room == null) {
                     stopSelf()
@@ -77,6 +116,35 @@ class RoomService : Service() {
                 val notification = buildNotification(room.roomId, room.name)
                 getSystemService(NotificationManager::class.java)
                     ?.notify(Constants.ROOM_NOTIFICATION_ID, notification)
+
+                // Fetch owner photo when owner changes
+                val ownerId = room.ownerId
+                if (ownerId != lastOwnerId) {
+                    lastOwnerId = ownerId
+                    when (val result = userRepository.getUser(ownerId)) {
+                        is Resource.Success -> {
+                            val url = result.data.photoUrl
+                            ownerPhotoUrl = url
+                            chatHeadManager?.updatePhoto(url)
+                        }
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
+
+    private fun observeRoomScreenVisibility() {
+        chatHeadJob?.cancel()
+        chatHeadJob = serviceScope.launch {
+            activeRoomManager.isRoomScreenVisible.collect { visible ->
+                if (visible) {
+                    chatHeadManager?.hide()
+                } else {
+                    if (Settings.canDrawOverlays(this@RoomService)) {
+                        chatHeadManager?.show(ownerPhotoUrl)
+                    }
+                }
             }
         }
     }
@@ -125,5 +193,8 @@ class RoomService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         observerJob?.cancel()
+        chatHeadJob?.cancel()
+        chatHeadManager?.destroy()
+        chatHeadManager = null
     }
 }

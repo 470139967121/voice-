@@ -19,4 +19,3 @@ val ShyTalkTertiaryDark = Color(0xFFEFB8C8)
 
 // Semantic colors
 val SpeakingGreen = Color(0xFF4CAF50)
-val OwnerGold = Color(0xFFFFB300)

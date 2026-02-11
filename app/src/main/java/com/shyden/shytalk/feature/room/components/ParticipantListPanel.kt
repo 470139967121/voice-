@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +33,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.shyden.shytalk.core.model.RoomRole
+import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.model.User
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PersonAdd
 
 data class ParticipantInfo(
     val user: User,
@@ -44,7 +48,13 @@ data class ParticipantInfo(
 fun ParticipantListPanel(
     voiceUsers: List<ParticipantInfo>,
     audienceUsers: List<ParticipantInfo>,
+    pendingRequests: List<SeatRequest> = emptyList(),
+    pendingInviteUserIds: Set<String> = emptySet(),
+    isOwnerOrHost: Boolean = false,
     onUserClick: (String) -> Unit,
+    onApproveRequest: (SeatRequest) -> Unit = {},
+    onDenyRequest: (SeatRequest) -> Unit = {},
+    onInviteUser: (String, String) -> Unit = { _, _ -> },
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -74,6 +84,10 @@ fun ParticipantListPanel(
             HorizontalDivider()
 
             // List
+            val requestByUserId = remember(pendingRequests) {
+                pendingRequests.associateBy { it.userId }
+            }
+
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 // Voice section
                 item { SectionHeader("Voice", voiceUsers.size) }
@@ -110,8 +124,18 @@ fun ParticipantListPanel(
                     }
                 }
                 items(audienceUsers, key = { it.user.uid }) { participant ->
+                    val pendingRequest = requestByUserId[participant.user.uid]
+                    val hasPendingInvite = participant.user.uid in pendingInviteUserIds
+                    val canInvite = isOwnerOrHost && pendingRequest == null && !hasPendingInvite
                     ParticipantRow(
                         participant = participant,
+                        pendingRequest = pendingRequest,
+                        isOwnerOrHost = isOwnerOrHost,
+                        onApprove = pendingRequest?.let { req -> { onApproveRequest(req) } },
+                        onDeny = pendingRequest?.let { req -> { onDenyRequest(req) } },
+                        onInvite = if (canInvite) {
+                            { onInviteUser(participant.user.uid, participant.user.displayName) }
+                        } else null,
                         onClick = { onUserClick(participant.user.uid) }
                     )
                 }
@@ -133,6 +157,11 @@ private fun SectionHeader(title: String, count: Int) {
 @Composable
 private fun ParticipantRow(
     participant: ParticipantInfo,
+    pendingRequest: SeatRequest? = null,
+    isOwnerOrHost: Boolean = false,
+    onApprove: (() -> Unit)? = null,
+    onDeny: (() -> Unit)? = null,
+    onInvite: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     Row(
@@ -144,7 +173,7 @@ private fun ParticipantRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Avatar
-        val photoUrl = participant.user.profilePhotoUrl ?: participant.user.avatarUrl
+        val photoUrl = participant.user.photoUrl
         if (photoUrl != null) {
             AsyncImage(
                 model = photoUrl,
@@ -177,6 +206,41 @@ private fun ParticipantRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+
+        // Seat request actions (audience members only)
+        if (pendingRequest != null && isOwnerOrHost) {
+            IconButton(onClick = { onApprove?.invoke() }, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = "Approve",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            IconButton(onClick = { onDeny?.invoke() }, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Deny",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        } else if (pendingRequest != null) {
+            Text(
+                text = "Requesting",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+        } else if (onInvite != null) {
+            IconButton(onClick = onInvite, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.PersonAdd,
+                    contentDescription = "Invite to seat",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
 
         // Role badge
         if (participant.role != RoomRole.ATTENDEE) {

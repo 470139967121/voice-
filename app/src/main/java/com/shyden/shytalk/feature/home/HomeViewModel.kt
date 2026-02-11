@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,7 +39,7 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private val userCache = mutableMapOf<String, User>()
+    private val userCache: MutableMap<String, User> = java.util.concurrent.ConcurrentHashMap()
     private var myBlockedUserIds: Set<String> = emptySet()
     private var allRooms: List<ChatRoom> = emptyList()
 
@@ -55,7 +56,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = userRepository.getBlockedUserIds(userId)) {
                 is Resource.Success -> {
-                    myBlockedUserIds = result.data.toSet()
+                    myBlockedUserIds = result.data
                     filterAndEmitRooms()
                 }
                 else -> {}
@@ -67,10 +68,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             roomRepository.getActiveRooms()
                 .catch { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = e.message
-                    )
+                    _uiState.update { it.copy(isLoading = false, error = e.message) }
                 }
                 .collect { rooms ->
                     allRooms = rooms
@@ -123,32 +121,28 @@ class HomeViewModel @Inject constructor(
                     .mapNotNull { it.userId }
             }.toSet()
 
-            _uiState.value = _uiState.value.copy(
-                rooms = filtered,
-                isLoading = false,
-                seatUsers = userCache.filterKeys { it in filteredSeatedUserIds }
-            )
+            _uiState.update {
+                it.copy(
+                    rooms = filtered,
+                    isLoading = false,
+                    seatUsers = userCache.filterKeys { key -> key in filteredSeatedUserIds }
+                )
+            }
         }
     }
 
     fun createRoom(name: String) {
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             // Close any existing rooms owned by this user
             roomRepository.closeAllRoomsByOwner(userId)
             when (val result = roomRepository.createRoom(name, userId)) {
                 is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        createdRoomId = result.data
-                    )
+                    _uiState.update { it.copy(isLoading = false, createdRoomId = result.data) }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.message
-                    )
+                    _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
                 is Resource.Loading -> {}
             }
@@ -156,11 +150,11 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onRoomNavigated() {
-        _uiState.value = _uiState.value.copy(createdRoomId = null)
+        _uiState.update { it.copy(createdRoomId = null) }
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 
     fun signOut() {

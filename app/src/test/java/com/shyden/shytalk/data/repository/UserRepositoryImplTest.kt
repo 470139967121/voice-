@@ -90,7 +90,7 @@ class UserRepositoryImplTest {
         assertEquals("Hi", user.description)
         assertEquals("US", user.nationality)
         assertEquals(12345678L, user.uniqueId)
-        assertEquals(listOf("blocked-1"), user.blockedUserIds)
+        assertEquals(setOf("blocked-1"), user.blockedUserIds)
         assertEquals("+123", user.phoneNumber)
         assertEquals("a@b.com", user.email)
     }
@@ -139,7 +139,7 @@ class UserRepositoryImplTest {
         val user = (result as Resource.Success).data
         assertEquals("", user.displayName)
         assertEquals(0L, user.uniqueId)
-        assertEquals(emptyList<String>(), user.blockedUserIds)
+        assertEquals(emptySet<String>(), user.blockedUserIds)
     }
 
     @Test
@@ -224,7 +224,7 @@ class UserRepositoryImplTest {
         val result = repo.getBlockedUserIds("user-1")
 
         assertTrue(result is Resource.Success)
-        assertEquals(listOf("b1", "b2"), (result as Resource.Success).data)
+        assertEquals(setOf("b1", "b2"), (result as Resource.Success).data)
     }
 
     @Test

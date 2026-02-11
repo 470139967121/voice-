@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import com.shyden.shytalk.ui.theme.SpeakingGreen
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,9 +67,9 @@ fun SeatItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    // Speaking animation
+    // Speaking animation — transition always exists but scale only applied when speaking
     val infiniteTransition = rememberInfiniteTransition(label = "speaking")
-    val speakingScale by infiniteTransition.animateFloat(
+    val animatedScale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
@@ -77,10 +78,11 @@ fun SeatItem(
         ),
         label = "speakingScale"
     )
+    val speakingScale = if (isSpeaking) animatedScale else 1f
 
     val borderColor by animateColorAsState(
         targetValue = when {
-            isSpeaking -> Color(0xFF4CAF50) // Green for speaking
+            isSpeaking -> SpeakingGreen
             seatRole == RoomRole.OWNER -> MaterialTheme.colorScheme.primary
             seatRole == RoomRole.HOST -> MaterialTheme.colorScheme.tertiary
             else -> Color.Transparent
@@ -132,7 +134,7 @@ fun SeatItem(
                     MaterialTheme.colorScheme.surfaceVariant
                 }
             ) {
-                val photoUrl = user?.profilePhotoUrl ?: user?.avatarUrl
+                val photoUrl = user?.photoUrl
                 if (seat.state == SeatState.OCCUPIED && photoUrl != null) {
                     AsyncImage(
                         model = photoUrl,
@@ -191,7 +193,7 @@ fun SeatItem(
                         .clip(CircleShape)
                         .background(
                             if (seat.isMuted) MaterialTheme.colorScheme.error
-                            else Color(0xFF4CAF50)
+                            else SpeakingGreen
                         ),
                     contentAlignment = Alignment.Center
                 ) {

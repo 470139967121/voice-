@@ -72,7 +72,7 @@ fun UserCardPopup(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val photoUrl = user.profilePhotoUrl ?: user.avatarUrl
+                val photoUrl = user.photoUrl
                 if (photoUrl != null) {
                     AsyncImage(
                         model = photoUrl,

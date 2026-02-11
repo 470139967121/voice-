@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Transaction
+import com.google.firebase.firestore.WriteBatch
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.Seat
@@ -309,10 +310,13 @@ class RoomRepositoryImplTest {
         every { roomsCollection.whereEqualTo("ownerId", "owner-1") } returns query
         every { query.whereIn("state", any()) } returns query
         every { query.get() } returns Tasks.forResult(querySnapshot)
-        every { docRef.update(any<Map<String, Any?>>()) } returns Tasks.forResult(null)
+        val batch = mockk<WriteBatch>(relaxed = true)
+        every { firestore.batch() } returns batch
+        every { batch.commit() } returns Tasks.forResult(null)
 
         val result = repo.closeAllRoomsByOwner("owner-1")
 
         assertTrue(result is Resource.Success)
+        verify(exactly = 2) { batch.update(any<DocumentReference>(), any<Map<String, Any>>()) }
     }
 }

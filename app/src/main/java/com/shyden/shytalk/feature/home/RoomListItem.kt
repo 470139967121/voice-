@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,28 +45,32 @@ fun RoomListItem(
     val totalSeats = room.seats.size
 
     // Build ordered list of seated users: owner first (seat 0), then others
-    val seatedUserList = buildList {
-        // Owner seat first
-        room.seats["0"]?.let { seat ->
-            if (seat.state == SeatState.OCCUPIED && seat.userId != null) {
-                seatUsers[seat.userId]?.let { add(it) }
-            }
-        }
-        // Then remaining seats in order
-        for (i in 1 until totalSeats) {
-            room.seats[i.toString()]?.let { seat ->
+    val seatedUserList = remember(room.seats, seatUsers) {
+        buildList {
+            // Owner seat first
+            room.seats["0"]?.let { seat ->
                 if (seat.state == SeatState.OCCUPIED && seat.userId != null) {
                     seatUsers[seat.userId]?.let { add(it) }
+                }
+            }
+            // Then remaining seats in order
+            for (i in 1 until totalSeats) {
+                room.seats[i.toString()]?.let { seat ->
+                    if (seat.state == SeatState.OCCUPIED && seat.userId != null) {
+                        seatUsers[seat.userId]?.let { add(it) }
+                    }
                 }
             }
         }
     }
 
     // Collect unique nationality flags from seated users
-    val nationalityFlags = seatedUserList
-        .mapNotNull { it.nationality }
-        .distinct()
-        .map { flagEmojiForCode(it) }
+    val nationalityFlags = remember(seatedUserList) {
+        seatedUserList
+            .mapNotNull { it.nationality }
+            .distinct()
+            .map { flagEmojiForCode(it) }
+    }
 
     Card(
         modifier = Modifier
@@ -88,7 +93,7 @@ fun RoomListItem(
                 ) {
                     Box {
                         seatedUserList.forEachIndexed { index, user ->
-                            val photoUrl = user.profilePhotoUrl ?: user.avatarUrl
+                            val photoUrl = user.photoUrl
                             Box(
                                 modifier = Modifier
                                     .offset(x = (index * 28).dp)
