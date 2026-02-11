@@ -14,7 +14,7 @@ class UserToMapTest {
         val user = TestData.createTestUser(
             uid = "u1",
             displayName = "Alice",
-            blockedUserIds = listOf("b1", "b2"),
+            blockedUserIds = setOf("b1", "b2"),
             profilePhotoUrl = "https://example.com/photo.jpg",
             coverPhotoUrl = "https://example.com/cover.jpg",
             uniqueId = 99999L
@@ -60,7 +60,7 @@ class UserToMapTest {
 
     @Test
     fun `toMap serializes empty blocked list`() {
-        val user = TestData.createTestUser(blockedUserIds = emptyList())
+        val user = TestData.createTestUser(blockedUserIds = emptySet())
         val map = user.toMap()
         assertEquals(emptyList<String>(), map["blockedUserIds"])
     }
@@ -94,7 +94,7 @@ class UserToMapTest {
         assertNull(user.description)
         assertNull(user.nationality)
         assertEquals(0L, user.uniqueId)
-        assertEquals(emptyList<String>(), user.blockedUserIds)
+        assertEquals(emptySet<String>(), user.blockedUserIds)
         assertNull(user.phoneNumber)
         assertNull(user.email)
     }
@@ -110,7 +110,7 @@ class UserToMapTest {
             description = "Hello world",
             nationality = "US",
             uniqueId = 42L,
-            blockedUserIds = listOf("x"),
+            blockedUserIds = setOf("x"),
             phoneNumber = "+1234567890",
             email = "test@example.com",
             createdAt = TestData.BASE_TIMESTAMP,
@@ -126,7 +126,7 @@ class UserToMapTest {
         assertEquals(user.description, map["description"])
         assertEquals(user.nationality, map["nationality"])
         assertEquals(user.uniqueId, map["uniqueId"])
-        assertEquals(user.blockedUserIds, map["blockedUserIds"])
+        assertEquals(user.blockedUserIds.toList(), map["blockedUserIds"])
         assertEquals(user.phoneNumber, map["phoneNumber"])
         assertEquals(user.email, map["email"])
         assertEquals(user.createdAt, map["createdAt"])

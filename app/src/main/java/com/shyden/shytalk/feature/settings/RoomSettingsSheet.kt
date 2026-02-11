@@ -182,7 +182,7 @@ fun RoomSettingsSheet(
                 val nonSeatedParticipants = room.participantIds.filter { pid ->
                     pid != room.ownerId &&
                     pid !in room.pendingInvites &&
-                    room.seats.values.none { it.userId == pid && it.state == SeatState.OCCUPIED }
+                    room.seats.values.none { it.isOccupiedBy(pid) }
                 }
                 if (nonSeatedParticipants.isNotEmpty()) {
                     Text(

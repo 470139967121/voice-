@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    android:background="@drawable/chathead_circle_bg">
+
+    <!-- Owner photo (fills entire bubble) -->
+    <ImageView
+        android:id="@+id/ownerPhoto"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        android:contentDescription="Room host" />
+
+    <!-- Fallback mic icon -->
+    <ImageView
+        android:id="@+id/micIcon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_gravity="center"
+        android:src="@android:drawable/ic_btn_speak_now"
+        android:visibility="visible"
+        android:contentDescription="Voice room" />
+
+    <!-- Voice wave animation overlay -->
+    <com.shyden.shytalk.core.chathead.VoiceWaveView
+        android:id="@+id/voiceWaves"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</FrameLayout>

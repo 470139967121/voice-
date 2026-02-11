@@ -64,6 +64,9 @@ class ActiveRoomManager @Inject constructor(
     private var roomObserverJob: Job? = null
     private var messageObserverJob: Job? = null
     private var ownerAwayCountdownJob: Job? = null
+    private val _isRoomScreenVisible = MutableStateFlow(false)
+    val isRoomScreenVisible: StateFlow<Boolean> = _isRoomScreenVisible.asStateFlow()
+
     private var connectionMonitorJob: Job? = null
     private var presenceMonitorJob: Job? = null
     private var isSeated = false
@@ -76,6 +79,10 @@ class ActiveRoomManager @Inject constructor(
 
     fun isInRoom(roomId: String): Boolean = _activeRoomId.value == roomId
     fun isInAnyRoom(): Boolean = _activeRoomId.value != null
+
+    fun setRoomScreenVisible(visible: Boolean) {
+        _isRoomScreenVisible.value = visible
+    }
 
     /** Called by RoomViewModel after joining a room. Starts foreground service. */
     fun trackRoom(roomId: String) {
@@ -130,15 +137,13 @@ class ActiveRoomManager @Inject constructor(
 
         presenceService.removePresence()
 
-        // Vacate seats
-        room.seats.forEach { (index, seat) ->
-            if (seat.userId == userId) {
-                if (index.toInt() == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
-                    roomRepository.leaveSeat(roomId, index.toInt())
-                    roomRepository.setOwnerAway(roomId)
-                } else {
-                    roomRepository.leaveSeat(roomId, index.toInt())
-                }
+        // Vacate seat
+        val mySeatEntry = room.seats.entries.find { it.value.userId == userId }
+        if (mySeatEntry != null) {
+            val seatIndex = mySeatEntry.key.toInt()
+            roomRepository.leaveSeat(roomId, seatIndex)
+            if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
+                roomRepository.setOwnerAway(roomId)
             }
         }
 
@@ -219,9 +224,10 @@ class ActiveRoomManager @Inject constructor(
                     }
 
                     // Switch Agora role based on seat status
-                    val currentlySeated = room.seats.values.any {
-                        it.userId == userId && it.state == SeatState.OCCUPIED
+                    val mySeat = room.seats.values.find {
+                        it.isOccupiedBy(userId)
                     }
+                    val currentlySeated = mySeat != null
                     if (currentlySeated && !isSeated) {
                         agoraVoiceService.setRole(true)
                     } else if (!currentlySeated && isSeated) {
@@ -230,9 +236,8 @@ class ActiveRoomManager @Inject constructor(
                     isSeated = currentlySeated
 
                     // Sync mute state
-                    if (currentlySeated) {
-                        val mySeat = room.seats.values.find { it.userId == userId }
-                        mySeat?.let { agoraVoiceService.muteLocalAudio(it.isMuted) }
+                    if (mySeat != null) {
+                        agoraVoiceService.muteLocalAudio(mySeat.isMuted)
                     }
 
                     _activeRoom.value = room
@@ -261,9 +266,7 @@ class ActiveRoomManager @Inject constructor(
                 val userId = currentUserId
 
                 // Only monitor when user is seated (has an Agora connection)
-                val currentlySeated = room.seats.values.any {
-                    it.userId == userId && it.state == SeatState.OCCUPIED
-                }
+                val currentlySeated = room.seats.values.any { it.isOccupiedBy(userId) }
                 if (!currentlySeated) {
                     graceJob?.cancel()
                     wasEverConnected = false
@@ -304,7 +307,7 @@ class ActiveRoomManager @Inject constructor(
                 .catch { e -> Log.w("ActiveRoomManager", "Presence monitor error", e) }
                 .collect { presentUserIds ->
                     val room = _activeRoom.value ?: return@collect
-                    val participantIds = room.participantIds.toSet()
+                    val participantIds = room.participantIds
 
                     // Users in room but not present in RTDB
                     val absentUsers = participantIds - presentUserIds - currentUserId
@@ -336,7 +339,7 @@ class ActiveRoomManager @Inject constructor(
                     val elapsed = System.currentTimeMillis() - room.ownerLeftAt.toDate().time
                     val remaining = Constants.OWNER_LEAVE_TIMEOUT_MS - elapsed
                     if (remaining <= 0) {
-                        if (resolveRole(room, currentUserId) == RoomRole.OWNER) {
+                        if (room.resolveRole(currentUserId) == RoomRole.OWNER) {
                             roomRepository.closeRoom(room.roomId)
                         }
                         break
@@ -353,20 +356,11 @@ class ActiveRoomManager @Inject constructor(
 
     // --- Room Actions ---
 
-    fun resolveRole(room: ChatRoom?, userId: String): RoomRole {
-        if (room == null) return RoomRole.ATTENDEE
-        return when {
-            room.ownerId == userId -> RoomRole.OWNER
-            userId in room.hostIds -> RoomRole.HOST
-            else -> RoomRole.ATTENDEE
-        }
-    }
-
     suspend fun takeSeat(seatIndex: Int) {
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
         val userId = currentUserId
-        val role = resolveRole(room, userId)
+        val role = room.resolveRole(userId)
 
         if (role == RoomRole.OWNER && seatIndex != Constants.OWNER_SEAT_INDEX) return
         if (seatIndex == Constants.OWNER_SEAT_INDEX && role != RoomRole.OWNER) return
@@ -381,7 +375,7 @@ class ActiveRoomManager @Inject constructor(
         if (role == RoomRole.HOST && room.requireApproval) return
 
         val currentSeatEntry = room.seats.entries.find {
-            it.value.userId == userId && it.value.state == SeatState.OCCUPIED
+            it.value.isOccupiedBy(userId)
         }
         if (currentSeatEntry != null) {
             roomRepository.leaveSeat(roomId, currentSeatEntry.key.toInt())
@@ -399,7 +393,7 @@ class ActiveRoomManager @Inject constructor(
     suspend fun removeFromSeat(seatIndex: Int) {
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
-        val role = resolveRole(room, currentUserId)
+        val role = room.resolveRole(currentUserId)
         if (role == RoomRole.ATTENDEE) return
         if (seatIndex == Constants.OWNER_SEAT_INDEX) return
 
@@ -424,7 +418,7 @@ class ActiveRoomManager @Inject constructor(
     suspend fun forceMuteUser(seatIndex: Int) {
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
-        val role = resolveRole(room, currentUserId)
+        val role = room.resolveRole(currentUserId)
         if (role == RoomRole.ATTENDEE) return
 
         val seat = room.seats[seatIndex.toString()] ?: return
@@ -437,7 +431,7 @@ class ActiveRoomManager @Inject constructor(
     suspend fun moveSeat(fromIndex: Int, toIndex: Int) {
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
-        val role = resolveRole(room, currentUserId)
+        val role = room.resolveRole(currentUserId)
         if (role == RoomRole.ATTENDEE) return
         if (fromIndex == Constants.OWNER_SEAT_INDEX || toIndex == Constants.OWNER_SEAT_INDEX) return
 
@@ -454,7 +448,7 @@ class ActiveRoomManager @Inject constructor(
     suspend fun kickUser(seatIndex: Int) {
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
-        val role = resolveRole(room, currentUserId)
+        val role = room.resolveRole(currentUserId)
         if (role == RoomRole.ATTENDEE) return
 
         val seat = room.seats[seatIndex.toString()] ?: return
@@ -468,7 +462,7 @@ class ActiveRoomManager @Inject constructor(
     suspend fun inviteUser(userId: String, userName: String) {
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
-        val role = resolveRole(room, currentUserId)
+        val role = room.resolveRole(currentUserId)
         if (role == RoomRole.ATTENDEE) return
         if (role == RoomRole.HOST && room.requireApproval) return
 

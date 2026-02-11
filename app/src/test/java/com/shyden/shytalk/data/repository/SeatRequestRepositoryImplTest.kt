@@ -7,6 +7,8 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Transaction
+import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.model.SeatRequestStatus
 import com.shyden.shytalk.core.util.Resource
 import io.mockk.every
@@ -14,6 +16,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -49,6 +52,7 @@ class SeatRequestRepositoryImplTest {
         val querySnapshot = mockk<QuerySnapshot> { every { isEmpty } returns true }
         every { requestsCollection.whereEqualTo("userId", "user-1") } returns query
         every { query.whereEqualTo("status", SeatRequestStatus.PENDING.name) } returns query
+        every { query.limit(1) } returns query
         every { query.get() } returns Tasks.forResult(querySnapshot)
         every { requestDoc.set(any()) } returns Tasks.forResult(null)
 
@@ -63,6 +67,7 @@ class SeatRequestRepositoryImplTest {
         val querySnapshot = mockk<QuerySnapshot> { every { isEmpty } returns false }
         every { requestsCollection.whereEqualTo("userId", "user-1") } returns query
         every { query.whereEqualTo("status", SeatRequestStatus.PENDING.name) } returns query
+        every { query.limit(1) } returns query
         every { query.get() } returns Tasks.forResult(querySnapshot)
 
         val result = repo.createRequest("room-1", "user-1", "Alice", 2)
@@ -74,8 +79,6 @@ class SeatRequestRepositoryImplTest {
 
     @Test
     fun `approveRequest updates status and returns request`() = runTest {
-        val mapSlot = slot<Map<String, Any?>>()
-        every { requestDoc.update(capture(mapSlot)) } returns Tasks.forResult(null)
         val docSnapshot = mockk<DocumentSnapshot> {
             every { id } returns "req-1"
             every { data } returns mapOf(
@@ -83,18 +86,26 @@ class SeatRequestRepositoryImplTest {
                 "userId" to "user-1",
                 "userName" to "Alice",
                 "seatIndex" to 2L,
-                "status" to "APPROVED",
-                "resolvedBy" to "owner-1"
+                "status" to "PENDING"
             )
         }
-        every { requestDoc.get() } returns Tasks.forResult(docSnapshot)
+        val transaction = mockk<Transaction>(relaxed = true)
+        every { transaction.get(requestDoc) } returns docSnapshot
+
+        every { firestore.runTransaction(any<Transaction.Function<SeatRequest>>()) } answers {
+            val func = firstArg<Transaction.Function<SeatRequest>>()
+            val resultVal = func.apply(transaction)
+            Tasks.forResult(resultVal)
+        }
 
         val result = repo.approveRequest("room-1", "req-1", "owner-1")
 
         assertTrue(result is Resource.Success)
-        val updateData = mapSlot.captured
-        assertTrue(updateData["status"] == SeatRequestStatus.APPROVED.name)
-        assertTrue(updateData["resolvedBy"] == "owner-1")
+        val approved = (result as Resource.Success).data
+        assertEquals("user-1", approved.userId)
+        assertEquals("Alice", approved.userName)
+        assertEquals(2, approved.seatIndex)
+        assertEquals(SeatRequestStatus.APPROVED, approved.status)
     }
 
     @Test
@@ -112,7 +123,8 @@ class SeatRequestRepositoryImplTest {
 
     @Test
     fun `approveRequest returns Error on exception`() = runTest {
-        every { requestDoc.update(any<Map<String, Any?>>()) } returns Tasks.forException(RuntimeException("Fail"))
+        every { firestore.runTransaction(any<Transaction.Function<SeatRequest>>()) } returns
+            Tasks.forException(RuntimeException("Fail"))
 
         val result = repo.approveRequest("room-1", "req-1", "owner-1")
 

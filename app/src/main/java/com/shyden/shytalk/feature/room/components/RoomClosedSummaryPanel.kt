@@ -153,7 +153,7 @@ private fun HostChip(user: User) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
-            model = user.profilePhotoUrl ?: user.avatarUrl,
+            model = user.photoUrl,
             contentDescription = user.displayName,
             modifier = Modifier
                 .size(56.dp)

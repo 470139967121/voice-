@@ -10,6 +10,8 @@ import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.Seat
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
+import com.shyden.shytalk.core.util.Constants
+import com.shyden.shytalk.core.util.toAgoraUid
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -18,7 +20,7 @@ fun SeatGrid(
     currentUserId: String,
     currentRole: RoomRole,
     ownerId: String,
-    hostIds: List<String>,
+    hostIds: Set<String>,
     speakingUids: Set<Int>,
     seatUsers: Map<String, User> = emptyMap(),
     onSeatClick: (Int) -> Unit,
@@ -46,10 +48,10 @@ fun SeatGrid(
             }
 
             val isSpeaking = seatUserId != null &&
-                (seatUserId.hashCode() and 0x7FFFFFFF) in speakingUids
+                seatUserId.toAgoraUid() in speakingUids
 
             val isOwnerOnOwnSeat = seat.userId == currentUserId
-                && seatIndex == com.shyden.shytalk.core.util.Constants.OWNER_SEAT_INDEX
+                && seatIndex == Constants.OWNER_SEAT_INDEX
                 && currentRole == RoomRole.OWNER
 
             val seatUser = seatUserId?.let { seatUsers[it] }

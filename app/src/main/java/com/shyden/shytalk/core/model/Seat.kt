@@ -5,6 +5,9 @@ data class Seat(
     val state: SeatState = SeatState.EMPTY,
     val isMuted: Boolean = false
 ) {
+    fun isOccupiedBy(uid: String): Boolean =
+        userId == uid && state == SeatState.OCCUPIED
+
     fun toMap(): Map<String, Any?> = mapOf(
         "userId" to userId,
         "state" to state.name,

@@ -5,6 +5,7 @@ import com.shyden.shytalk.core.util.Constants
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 import java.util.Date
 
@@ -33,10 +34,10 @@ class ChatRoomFromMapTest {
         assertEquals("My Room", room.name)
         assertEquals("owner-1", room.ownerId)
         assertEquals(RoomState.ACTIVE, room.state)
-        assertEquals(listOf("owner-1", "user-2"), room.participantIds)
-        assertEquals(listOf("user-2"), room.hostIds)
+        assertEquals(setOf("owner-1", "user-2"), room.participantIds)
+        assertEquals(setOf("user-2"), room.hostIds)
         assertEquals(true, room.requireApproval)
-        assertEquals(listOf("banned-1"), room.bannedUserIds)
+        assertEquals(setOf("banned-1"), room.bannedUserIds)
         assertEquals("channel-1", room.agoraChannelName)
         assertEquals("owner-1", room.seats["0"]?.userId)
     }
@@ -80,13 +81,13 @@ class ChatRoomFromMapTest {
             "participantIds" to listOf("user-1", 42, null, "user-2")
         )
         val room = ChatRoom.fromMap(map, "room-1")
-        assertEquals(listOf("user-1", "user-2"), room.participantIds)
+        assertEquals(setOf("user-1", "user-2"), room.participantIds)
     }
 
     @Test
     fun `fromMap defaults participantIds to empty when missing`() {
         val room = ChatRoom.fromMap(emptyMap(), "room-1")
-        assertEquals(emptyList<String>(), room.participantIds)
+        assertEquals(emptySet<String>(), room.participantIds)
     }
 
     @Test
@@ -107,10 +108,10 @@ class ChatRoomFromMapTest {
         assertEquals("", room.name)
         assertEquals("", room.ownerId)
         assertEquals(RoomState.ACTIVE, room.state)
-        assertEquals(emptyList<String>(), room.participantIds)
-        assertEquals(emptyList<String>(), room.hostIds)
+        assertEquals(emptySet<String>(), room.participantIds)
+        assertEquals(emptySet<String>(), room.hostIds)
         assertFalse(room.requireApproval)
-        assertEquals(emptyList<String>(), room.bannedUserIds)
+        assertEquals(emptySet<String>(), room.bannedUserIds)
         assertEquals(emptyMap<String, String>(), room.pendingInvites)
         assertEquals(Constants.MAX_SEATS, room.seats.size)
     }
@@ -139,7 +140,7 @@ class ChatRoomFromMapTest {
             ownerId = "owner-1",
             state = RoomState.ACTIVE,
             createdAt = ts,
-            participantIds = listOf("owner-1"),
+            participantIds = setOf("owner-1"),
             requireApproval = true,
             agoraChannelName = "ch-1"
         )
@@ -164,5 +165,87 @@ class ChatRoomFromMapTest {
         val seatsMap = map["seats"] as Map<String, Map<String, Any?>>
         assertEquals("owner-1", seatsMap["0"]?.get("userId"))
         assertEquals("OCCUPIED", seatsMap["0"]?.get("state"))
+    }
+
+    @Test
+    fun `fromMap of toMap produces equivalent room`() {
+        val seats = (0 until Constants.MAX_SEATS).associate { i ->
+            i.toString() to if (i == 0) Seat(userId = "owner-1", state = SeatState.OCCUPIED)
+            else Seat()
+        }
+        val original = ChatRoom(
+            roomId = "room-1",
+            name = "Test Room",
+            ownerId = "owner-1",
+            state = RoomState.ACTIVE,
+            createdAt = ts,
+            participantIds = setOf("owner-1", "user-2"),
+            hostIds = setOf("user-2"),
+            requireApproval = true,
+            bannedUserIds = setOf("banned-1"),
+            pendingInvites = mapOf("user-3" to "owner-1"),
+            seats = seats,
+            agoraChannelName = "channel-1",
+            firstJoinTimestamps = mapOf("owner-1" to ts)
+        )
+        val roundtripped = ChatRoom.fromMap(original.toMap(), "room-1")
+        assertEquals(original, roundtripped)
+    }
+
+    // --- resolveRole ---
+
+    @Test
+    fun `resolveRole returns OWNER when userId matches ownerId`() {
+        val room = ChatRoom(roomId = "r", ownerId = "user-1")
+        assertEquals(RoomRole.OWNER, room.resolveRole("user-1"))
+    }
+
+    @Test
+    fun `resolveRole returns HOST when userId in hostIds`() {
+        val room = ChatRoom(roomId = "r", ownerId = "owner", hostIds = setOf("host-1"))
+        assertEquals(RoomRole.HOST, room.resolveRole("host-1"))
+    }
+
+    @Test
+    fun `resolveRole returns ATTENDEE for regular user`() {
+        val room = ChatRoom(roomId = "r", ownerId = "owner")
+        assertEquals(RoomRole.ATTENDEE, room.resolveRole("other"))
+    }
+
+    @Test
+    fun `resolveRole prioritizes OWNER over HOST`() {
+        val room = ChatRoom(roomId = "r", ownerId = "user-1", hostIds = setOf("user-1"))
+        assertEquals(RoomRole.OWNER, room.resolveRole("user-1"))
+    }
+
+    // --- DEFAULT_SEATS ---
+
+    @Test
+    fun `DEFAULT_SEATS has MAX_SEATS entries all empty`() {
+        val seats = ChatRoom.DEFAULT_SEATS
+        assertEquals(Constants.MAX_SEATS, seats.size)
+        seats.values.forEach { seat ->
+            assertNull(seat.userId)
+            assertEquals(SeatState.EMPTY, seat.state)
+            assertFalse(seat.isMuted)
+        }
+    }
+
+    @Test
+    fun `default constructor uses DEFAULT_SEATS`() {
+        val room = ChatRoom()
+        assertEquals(ChatRoom.DEFAULT_SEATS, room.seats)
+    }
+
+    @Test
+    fun `DEFAULT_SEATS is same instance on repeated access`() {
+        // Verifies the constant is not re-computed each time
+        assertSame(ChatRoom.DEFAULT_SEATS, ChatRoom.DEFAULT_SEATS)
+    }
+
+    @Test
+    fun `DEFAULT_SEATS keys are zero-indexed strings`() {
+        val expectedKeys = (0 until Constants.MAX_SEATS).map { it.toString() }.toSet()
+        assertEquals(expectedKeys, ChatRoom.DEFAULT_SEATS.keys)
     }
 }

@@ -14,5 +14,5 @@ interface UserRepository {
     suspend fun generateUniqueId(userId: String): Resource<Long>
     suspend fun blockUser(userId: String, blockedUserId: String): Resource<Unit>
     suspend fun unblockUser(userId: String, blockedUserId: String): Resource<Unit>
-    suspend fun getBlockedUserIds(userId: String): Resource<List<String>>
+    suspend fun getBlockedUserIds(userId: String): Resource<Set<String>>
 }

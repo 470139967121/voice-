@@ -3,12 +3,14 @@ package com.shyden.shytalk.data.repository
 import com.shyden.shytalk.core.model.Message
 import com.shyden.shytalk.core.model.MessageType
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.firebaseCall
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import javax.inject.Inject
@@ -35,7 +37,7 @@ class MessageRepositoryImpl @Inject constructor(
                 trySend(messages)
             }
         awaitClose { listener.remove() }
-    }
+    }.distinctUntilChanged()
 
     private suspend fun createAndSendMessage(
         roomId: String,
@@ -43,22 +45,17 @@ class MessageRepositoryImpl @Inject constructor(
         senderName: String,
         text: String,
         type: MessageType
-    ): Resource<Unit> {
-        return try {
-            val messageId = UUID.randomUUID().toString()
-            val message = Message(
-                messageId = messageId,
-                senderId = senderId,
-                senderName = senderName,
-                text = text,
-                createdAt = Timestamp.now(),
-                type = type
-            )
-            messagesCollection(roomId).document(messageId).set(message.toMap()).await()
-            Resource.Success(Unit)
-        } catch (e: Exception) {
-            Resource.Error(e.message ?: "Failed to send message", e)
-        }
+    ): Resource<Unit> = firebaseCall("Failed to send message") {
+        val messageId = UUID.randomUUID().toString()
+        val message = Message(
+            messageId = messageId,
+            senderId = senderId,
+            senderName = senderName,
+            text = text,
+            createdAt = Timestamp.now(),
+            type = type
+        )
+        messagesCollection(roomId).document(messageId).set(message.toMap()).await()
     }
 
     override suspend fun sendMessage(

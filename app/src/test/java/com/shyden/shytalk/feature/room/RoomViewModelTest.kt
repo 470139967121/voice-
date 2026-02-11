@@ -9,6 +9,8 @@ import com.shyden.shytalk.core.model.MessageType
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.Seat
+import com.shyden.shytalk.core.model.SeatRequest
+import com.shyden.shytalk.core.model.SeatRequestStatus
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.room.ActiveRoomManager
@@ -63,6 +65,8 @@ class RoomViewModelTest {
     private val speakingFlow = MutableStateFlow<Set<Int>>(emptySet())
     private val joinedFlow = MutableStateFlow(false)
     private val voiceErrorFlow = MutableStateFlow<String?>(null)
+    private val pendingRequestsFlow = MutableStateFlow<List<SeatRequest>>(emptyList())
+    private val myRequestsFlow = MutableStateFlow<List<SeatRequest>>(emptyList())
 
     private val currentUserId = "current-user"
     private val ownerId = "owner-1"
@@ -83,7 +87,9 @@ class RoomViewModelTest {
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(
             TestData.createTestUser(uid = currentUserId, displayName = "Current User")
         )
-        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptyList())
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+        every { seatRequestRepository.getPendingRequests(any()) } returns pendingRequestsFlow
+        every { seatRequestRepository.getRequestsByUser(any(), any()) } returns myRequestsFlow
         every { activeRoomManager.isInRoom(any()) } returns false
     }
 
@@ -108,7 +114,7 @@ class RoomViewModelTest {
     private fun emitRoomAsAttendee(
         room: ChatRoom = TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId)
+            participantIds = setOf(ownerId, currentUserId)
         )
     ) {
         // Mock owner user for block check
@@ -121,8 +127,8 @@ class RoomViewModelTest {
     private fun emitRoomAsHost(
         room: ChatRoom = TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
-            hostIds = listOf(currentUserId)
+            participantIds = setOf(ownerId, currentUserId),
+            hostIds = setOf(currentUserId)
         )
     ) {
         coEvery { userRepository.getUser(ownerId) } returns Resource.Success(
@@ -203,8 +209,8 @@ class RoomViewModelTest {
         viewModel = createViewModel()
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
-            hostIds = listOf(currentUserId),
+            participantIds = setOf(ownerId, currentUserId),
+            hostIds = setOf(currentUserId),
             requireApproval = false
         ))
         advanceUntilIdle()
@@ -220,8 +226,8 @@ class RoomViewModelTest {
         viewModel = createViewModel()
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
-            hostIds = listOf(currentUserId),
+            participantIds = setOf(ownerId, currentUserId),
+            hostIds = setOf(currentUserId),
             requireApproval = true
         ))
         advanceUntilIdle()
@@ -291,8 +297,8 @@ class RoomViewModelTest {
         seats["3"] = TestData.createTestSeat(userId = ownerId) // owner sitting elsewhere too
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
-            hostIds = listOf(currentUserId),
+            participantIds = setOf(ownerId, currentUserId),
+            hostIds = setOf(currentUserId),
             seats = seats
         ))
         advanceUntilIdle()
@@ -311,8 +317,8 @@ class RoomViewModelTest {
         seats["3"] = TestData.createTestSeat(userId = otherHost)
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId, otherHost),
-            hostIds = listOf(currentUserId, otherHost),
+            participantIds = setOf(ownerId, currentUserId, otherHost),
+            hostIds = setOf(currentUserId, otherHost),
             seats = seats
         ))
         advanceUntilIdle()
@@ -330,7 +336,7 @@ class RoomViewModelTest {
         seats["3"] = TestData.createTestSeat(userId = "attendee-1")
         emitRoomAsOwner(TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "attendee-1"),
+            participantIds = setOf(currentUserId, "attendee-1"),
             seats = seats
         ))
         advanceUntilIdle()
@@ -373,8 +379,8 @@ class RoomViewModelTest {
         val seats = TestData.createSeatsWithOwner(ownerId).toMutableMap()
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
-            hostIds = listOf(currentUserId),
+            participantIds = setOf(ownerId, currentUserId),
+            hostIds = setOf(currentUserId),
             seats = seats
         ))
         advanceUntilIdle()
@@ -396,8 +402,8 @@ class RoomViewModelTest {
         )
         emitRoomAsOwner(TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, otherHost),
-            hostIds = listOf(otherHost),
+            participantIds = setOf(currentUserId, otherHost),
+            hostIds = setOf(otherHost),
             seats = seats
         ))
         advanceUntilIdle()
@@ -415,7 +421,7 @@ class RoomViewModelTest {
         seats["3"] = TestData.createTestSeat(userId = "attendee-1", isMuted = false)
         emitRoomAsOwner(TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "attendee-1"),
+            participantIds = setOf(currentUserId, "attendee-1"),
             seats = seats
         ))
         advanceUntilIdle()
@@ -459,7 +465,7 @@ class RoomViewModelTest {
         seats["3"] = TestData.createTestSeat(userId = "attendee-1")
         emitRoomAsOwner(TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "attendee-1"),
+            participantIds = setOf(currentUserId, "attendee-1"),
             seats = seats
         ))
         advanceUntilIdle()
@@ -495,7 +501,7 @@ class RoomViewModelTest {
         seats["2"] = TestData.createTestSeat(userId = "attendee-1")
         emitRoomAsOwner(TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "attendee-1"),
+            participantIds = setOf(currentUserId, "attendee-1"),
             seats = seats
         ))
         advanceUntilIdle()
@@ -514,8 +520,8 @@ class RoomViewModelTest {
         seats["2"] = TestData.createTestSeat(userId = otherHost)
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId, otherHost),
-            hostIds = listOf(currentUserId, otherHost),
+            participantIds = setOf(ownerId, currentUserId, otherHost),
+            hostIds = setOf(currentUserId, otherHost),
             seats = seats
         ))
         advanceUntilIdle()
@@ -560,8 +566,8 @@ class RoomViewModelTest {
         seats["3"] = TestData.createTestSeat(userId = otherHost)
         emitRoomAsOwner(TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, otherHost),
-            hostIds = listOf(otherHost),
+            participantIds = setOf(currentUserId, otherHost),
+            hostIds = setOf(otherHost),
             seats = seats
         ))
         advanceUntilIdle()
@@ -582,7 +588,7 @@ class RoomViewModelTest {
         )
         emitRoomAsOwner(TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId, "attendee-1"),
+            participantIds = setOf(currentUserId, "attendee-1"),
             seats = seats
         ))
         advanceUntilIdle()
@@ -625,8 +631,8 @@ class RoomViewModelTest {
         viewModel = createViewModel()
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
-            hostIds = listOf(currentUserId),
+            participantIds = setOf(ownerId, currentUserId),
+            hostIds = setOf(currentUserId),
             requireApproval = true
         ))
         advanceUntilIdle()
@@ -642,8 +648,8 @@ class RoomViewModelTest {
         viewModel = createViewModel()
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
-            hostIds = listOf(currentUserId),
+            participantIds = setOf(ownerId, currentUserId),
+            hostIds = setOf(currentUserId),
             requireApproval = false
         ))
         advanceUntilIdle()
@@ -696,7 +702,7 @@ class RoomViewModelTest {
         // seat 2 is empty
         emitRoomAsAttendee(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
+            participantIds = setOf(ownerId, currentUserId),
             pendingInvites = mapOf(currentUserId to ownerId),
             seats = seats
         ))
@@ -728,7 +734,7 @@ class RoomViewModelTest {
         }
         emitRoomAsAttendee(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = listOf(ownerId, currentUserId),
+            participantIds = setOf(ownerId, currentUserId),
             pendingInvites = mapOf(currentUserId to ownerId),
             seats = seats
         ))
@@ -857,7 +863,7 @@ class RoomViewModelTest {
     @Test
     fun `unblockUser - success removes from blocked set`() = runTest {
         viewModel = createViewModel()
-        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(listOf("target"))
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(setOf("target"))
         emitRoomAsOwner()
         advanceUntilIdle()
         coEvery { userRepository.unblockUser(currentUserId, "target") } returns Resource.Success(Unit)
@@ -1140,7 +1146,7 @@ class RoomViewModelTest {
         // Pre-set room with owner seated BEFORE creating VM
         roomFlow.value = TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId)
+            participantIds = setOf(currentUserId)
         )
         viewModel = createViewModel()
         advanceUntilIdle()
@@ -1160,7 +1166,7 @@ class RoomViewModelTest {
         val emptySeats = TestData.createDefaultSeats()
         roomFlow.value = TestData.createTestRoom(
             ownerId = currentUserId,
-            participantIds = listOf(currentUserId),
+            participantIds = setOf(currentUserId),
             seats = emptySeats
         )
         viewModel = createViewModel()
@@ -1171,5 +1177,241 @@ class RoomViewModelTest {
         advanceUntilIdle()
 
         verify(exactly = 0) { agoraVoiceService.setRole(any()) }
+    }
+
+    // ===== Seat Request Notification Tests =====
+
+    @Test
+    fun `pending request enqueues SeatRequestReceived notification for owner`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
+        pendingRequestsFlow.value = listOf(request)
+        // Don't advanceUntilIdle — it advances past the 3s auto-dismiss timer
+
+        val notif = viewModel.uiState.value.activeNotification
+        assertTrue(notif is RoomNotification.SeatRequestReceived)
+        assertEquals("attendee-1", (notif as RoomNotification.SeatRequestReceived).request.userId)
+    }
+
+    @Test
+    fun `pending request enqueues SeatRequestReceived notification for host`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsHost()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
+        pendingRequestsFlow.value = listOf(request)
+        // Don't advanceUntilIdle — it advances past the 3s auto-dismiss timer
+
+        val notif = viewModel.uiState.value.activeNotification
+        assertTrue(notif is RoomNotification.SeatRequestReceived)
+    }
+
+    @Test
+    fun `pending request does NOT enqueue notification for attendee`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(userId = "other-attendee", userName = "Other")
+        pendingRequestsFlow.value = listOf(request)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.activeNotification)
+    }
+
+    @Test
+    fun `pending requests update panel state`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
+        pendingRequestsFlow.value = listOf(request)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.pendingRequestsForPanel.size)
+        assertEquals("attendee-1", viewModel.uiState.value.pendingRequestsForPanel[0].userId)
+    }
+
+    @Test
+    fun `dismissCurrentNotification clears active notification`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
+        pendingRequestsFlow.value = listOf(request)
+        // Don't advanceUntilIdle — it advances past the 3s auto-dismiss timer
+        assertNotNull(viewModel.uiState.value.activeNotification)
+
+        viewModel.dismissCurrentNotification()
+
+        assertNull(viewModel.uiState.value.activeNotification)
+    }
+
+    @Test
+    fun `approveRequestFromNotification within 5s calls takeSeat`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        // Create a request with createdAt = now (within 5s)
+        val now = Timestamp(Date(System.currentTimeMillis()))
+        val request = TestData.createTestSeatRequest(
+            userId = "attendee-1", userName = "Attendee", createdAt = now
+        )
+        coEvery {
+            seatRequestRepository.approveRequest("room-1", "req-1", currentUserId)
+        } returns Resource.Success(request.copy(status = SeatRequestStatus.APPROVED))
+
+        viewModel.approveRequestFromNotification(request)
+        advanceUntilIdle()
+
+        coVerify { roomRepository.takeSeat("room-1", 3, "attendee-1") }
+    }
+
+    @Test
+    fun `approveRequestFromNotification after 5s does NOT call takeSeat`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        // Create a request with createdAt = 10s ago (beyond 5s threshold)
+        val oldTime = Timestamp(Date(System.currentTimeMillis() - 10_000L))
+        val request = TestData.createTestSeatRequest(
+            userId = "attendee-1", userName = "Attendee", createdAt = oldTime
+        )
+        coEvery {
+            seatRequestRepository.approveRequest("room-1", "req-1", currentUserId)
+        } returns Resource.Success(request.copy(status = SeatRequestStatus.APPROVED))
+
+        viewModel.approveRequestFromNotification(request)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.takeSeat(any(), any(), any()) }
+    }
+
+    @Test
+    fun `denyRequestFromNotification calls denyRequest`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
+        pendingRequestsFlow.value = listOf(request)
+        advanceUntilIdle()
+
+        viewModel.denyRequestFromNotification(request)
+        advanceUntilIdle()
+
+        coVerify { seatRequestRepository.denyRequest("room-1", "req-1", currentUserId) }
+    }
+
+    @Test
+    fun `approved request shows RequestApproved notification to requester`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        val approvedRequest = TestData.createTestSeatRequest(
+            userId = currentUserId,
+            userName = "Current User",
+            status = SeatRequestStatus.APPROVED
+        )
+        myRequestsFlow.value = listOf(approvedRequest)
+        advanceUntilIdle()
+
+        val notif = viewModel.uiState.value.activeNotification
+        assertTrue(notif is RoomNotification.RequestApproved)
+        assertEquals(currentUserId, (notif as RoomNotification.RequestApproved).request.userId)
+    }
+
+    @Test
+    fun `approved request does NOT show notification if user is already seated`() = runTest {
+        viewModel = createViewModel()
+        // Emit room with current user seated
+        val seats = TestData.createDefaultSeats().toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = currentUserId)
+        emitRoomAsAttendee(
+            TestData.createTestRoom(
+                ownerId = ownerId,
+                participantIds = setOf(ownerId, currentUserId),
+                seats = seats
+            )
+        )
+        advanceUntilIdle()
+
+        val approvedRequest = TestData.createTestSeatRequest(
+            userId = currentUserId,
+            userName = "Current User",
+            status = SeatRequestStatus.APPROVED
+        )
+        myRequestsFlow.value = listOf(approvedRequest)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.activeNotification)
+    }
+
+    @Test
+    fun `acceptApprovedRequest calls takeSeat`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(
+            userId = currentUserId, userName = "Current User", seatIndex = 3,
+            status = SeatRequestStatus.APPROVED
+        )
+
+        viewModel.acceptApprovedRequest(request)
+        advanceUntilIdle()
+
+        coVerify { roomRepository.takeSeat("room-1", 3, currentUserId) }
+    }
+
+    @Test
+    fun `declineApprovedRequest calls cancelApprovedRequest`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(
+            userId = currentUserId, userName = "Current User",
+            status = SeatRequestStatus.APPROVED
+        )
+
+        viewModel.declineApprovedRequest(request)
+        advanceUntilIdle()
+
+        coVerify { seatRequestRepository.cancelApprovedRequest("room-1", "req-1", currentUserId) }
+    }
+
+    // ===== Invite Notification Tests =====
+
+    @Test
+    fun `new invite enqueues InviteReceived notification`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        // Emit room with a pending invite for current user
+        val roomWithInvite = TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId),
+            pendingInvites = mapOf(currentUserId to ownerId)
+        )
+        coEvery { userRepository.getUser(ownerId) } returns Resource.Success(
+            TestData.createTestUser(uid = ownerId, displayName = "Owner")
+        )
+        roomFlow.value = roomWithInvite
+        advanceUntilIdle()
+
+        val notif = viewModel.uiState.value.activeNotification
+        assertTrue(notif is RoomNotification.InviteReceived)
+        assertEquals(ownerId, (notif as RoomNotification.InviteReceived).inviterUserId)
     }
 }

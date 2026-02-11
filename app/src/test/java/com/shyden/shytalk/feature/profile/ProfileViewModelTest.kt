@@ -169,7 +169,7 @@ class ProfileViewModelTest {
     fun `loadProfile - other user sets isOwnProfile false`() = runTest {
         val user = TestData.createTestUser(uid = otherUserId)
         coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
-        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptyList())
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
 
         val vm = createViewModel()
         vm.loadProfile(otherUserId)
@@ -181,9 +181,9 @@ class ProfileViewModelTest {
 
     @Test
     fun `loadProfile - detects target blocked viewer`() = runTest {
-        val user = TestData.createTestUser(uid = otherUserId, blockedUserIds = listOf(currentUserId))
+        val user = TestData.createTestUser(uid = otherUserId, blockedUserIds = setOf(currentUserId))
         coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
-        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptyList())
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
 
         val vm = createViewModel()
         vm.loadProfile(otherUserId)
@@ -197,7 +197,7 @@ class ProfileViewModelTest {
     fun `loadProfile - detects viewer blocked target`() = runTest {
         val user = TestData.createTestUser(uid = otherUserId)
         coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
-        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(listOf(otherUserId))
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(setOf(otherUserId))
 
         val vm = createViewModel()
         vm.loadProfile(otherUserId)

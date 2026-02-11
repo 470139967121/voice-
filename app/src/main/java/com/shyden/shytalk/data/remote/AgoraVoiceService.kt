@@ -10,7 +10,10 @@ import io.agora.rtc2.RtcEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
+import com.shyden.shytalk.core.util.Constants as AppConstants
 import javax.inject.Singleton
 
 /**
@@ -36,6 +39,7 @@ class AgoraVoiceService @Inject constructor(
     private var currentChannelName: String? = null
     private var localUid: Int = 0
     private var isLocalMuted = false
+    private val joinMutex = Mutex()
 
     private val _speakingUsers = MutableStateFlow<Set<Int>>(emptySet())
     val speakingUsers: StateFlow<Set<Int>> = _speakingUsers.asStateFlow()
@@ -73,9 +77,10 @@ class AgoraVoiceService @Inject constructor(
         override fun onConnectionStateChanged(state: Int, reason: Int) {
             Log.d(TAG, "onConnectionStateChanged state=$state reason=$reason")
             _connectionState.value = when (state) {
-                3 -> ConnectionState.CONNECTED      // CONNECTION_STATE_CONNECTED
-                1, 5 -> ConnectionState.DISCONNECTED // DISCONNECTED or FAILED
-                else -> ConnectionState.RECONNECTING // CONNECTING or RECONNECTING
+                Constants.CONNECTION_STATE_CONNECTED -> ConnectionState.CONNECTED
+                Constants.CONNECTION_STATE_DISCONNECTED,
+                Constants.CONNECTION_STATE_FAILED -> ConnectionState.DISCONNECTED
+                else -> ConnectionState.RECONNECTING
             }
         }
 
@@ -84,7 +89,7 @@ class AgoraVoiceService @Inject constructor(
             totalVolume: Int
         ) {
             val speaking = speakers
-                ?.filter { it.volume > 50 }
+                ?.filter { it.volume > AppConstants.AGORA_SPEAKING_VOLUME_THRESHOLD }
                 ?.filter { !(it.uid == 0 && isLocalMuted) }
                 ?.map { if (it.uid == 0) localUid else it.uid }
                 ?.toSet() ?: emptySet()
@@ -124,7 +129,11 @@ class AgoraVoiceService @Inject constructor(
                     Constants.AUDIO_PROFILE_SPEECH_STANDARD,
                     Constants.AUDIO_SCENARIO_CHATROOM
                 )
-                enableAudioVolumeIndication(300, 3, true)
+                enableAudioVolumeIndication(
+                    AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
+                    AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
+                    true
+                )
                 setDefaultAudioRoutetoSpeakerphone(true)
             }
         } catch (e: Exception) {
@@ -134,18 +143,18 @@ class AgoraVoiceService @Inject constructor(
         }
     }
 
-    suspend fun joinChannel(channelName: String, uid: Int, asBroadcaster: Boolean = false) {
+    suspend fun joinChannel(channelName: String, uid: Int, asBroadcaster: Boolean = false) = joinMutex.withLock {
         // Already in this channel — no-op
         if (_isJoined.value && currentChannelName == channelName) {
             Log.d(TAG, "Already joined channel=$channelName, skipping rejoin")
-            return
+            return@withLock
         }
 
         initialize()
         val engine = rtcEngine ?: run {
             Log.e(TAG, "RtcEngine is null, cannot join channel")
             _error.value = "Voice engine failed to initialize"
-            return
+            return@withLock
         }
 
         // Leave any existing channel first
@@ -187,8 +196,8 @@ class AgoraVoiceService @Inject constructor(
             if (asBroadcaster) {
                 engine.setEnableSpeakerphone(true)
                 engine.muteLocalAudioStream(false)
-                engine.adjustRecordingSignalVolume(400)
-                Log.d(TAG, "Audio configured: speakerphone=on, mic=unmuted, recordingVolume=400")
+                engine.adjustRecordingSignalVolume(AppConstants.AGORA_RECORDING_SIGNAL_VOLUME)
+                Log.d(TAG, "Audio configured: speakerphone=on, mic=unmuted, recordingVolume=${AppConstants.AGORA_RECORDING_SIGNAL_VOLUME}")
             }
         }
     }
@@ -204,7 +213,7 @@ class AgoraVoiceService @Inject constructor(
             })
             engine.setEnableSpeakerphone(true)
             engine.muteLocalAudioStream(false)
-            engine.adjustRecordingSignalVolume(400)
+            engine.adjustRecordingSignalVolume(AppConstants.AGORA_RECORDING_SIGNAL_VOLUME)
             isLocalMuted = false
         } else {
             engine.setClientRole(Constants.CLIENT_ROLE_AUDIENCE)

@@ -68,7 +68,7 @@ fun MessageBubble(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Small avatar
-                val photoUrl = user?.profilePhotoUrl ?: user?.avatarUrl
+                val photoUrl = user?.photoUrl
                 if (photoUrl != null) {
                     AsyncImage(
                         model = photoUrl,
@@ -132,7 +132,7 @@ fun MessageBubble(
                 verticalAlignment = Alignment.Top
             ) {
                 // Avatar
-                val photoUrl = user?.profilePhotoUrl ?: user?.avatarUrl
+                val photoUrl = user?.photoUrl
                 if (photoUrl != null) {
                     AsyncImage(
                         model = photoUrl,

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.SeatRequest
+import com.shyden.shytalk.core.util.Constants.SEAT_REQUEST_IMMEDIATE_THRESHOLD_MS
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.MessageRepository
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -43,19 +45,20 @@ class RoomSettingsViewModel @Inject constructor(
     fun loadRoom(roomId: String) {
         currentRoomId = roomId
         viewModelScope.launch {
-            roomRepository.getRoomFlow(roomId)
+            combine(
+                roomRepository.getRoomFlow(roomId),
+                seatRequestRepository.getPendingRequests(roomId)
+            ) { room, requests ->
+                room to requests
+            }
                 .catch { e ->
                     _uiState.value = _uiState.value.copy(error = e.message)
                 }
-                .collect { room ->
-                    _uiState.value = _uiState.value.copy(room = room)
-                }
-        }
-        viewModelScope.launch {
-            seatRequestRepository.getPendingRequests(roomId)
-                .catch { /* ignore */ }
-                .collect { requests ->
-                    _uiState.value = _uiState.value.copy(pendingRequests = requests)
+                .collect { (room, requests) ->
+                    _uiState.value = _uiState.value.copy(
+                        room = room,
+                        pendingRequests = requests
+                    )
                 }
         }
     }
@@ -105,16 +108,27 @@ class RoomSettingsViewModel @Inject constructor(
         // When OFF, owner + hosts can approve (attendees never see this)
         if (currentUserId != room.ownerId && currentUserId !in room.hostIds) return
         viewModelScope.launch {
+            val createdAtMs = request.createdAt.toDate().time
+            val nowMs = System.currentTimeMillis()
+            val delayMs = nowMs - createdAtMs
+
             when (val result = seatRequestRepository.approveRequest(
                 currentRoomId, request.requestId, currentUserId
             )) {
                 is Resource.Success -> {
                     val approved = result.data
-                    roomRepository.takeSeat(currentRoomId, approved.seatIndex, approved.userId)
-                    messageRepository.sendSystemMessage(
-                        currentRoomId,
-                        "${approved.userName} was seated at seat ${approved.seatIndex + 1}"
-                    )
+                    if (delayMs <= SEAT_REQUEST_IMMEDIATE_THRESHOLD_MS) {
+                        roomRepository.takeSeat(currentRoomId, approved.seatIndex, approved.userId)
+                        messageRepository.sendSystemMessage(
+                            currentRoomId,
+                            "${approved.userName} was seated at seat ${approved.seatIndex + 1}"
+                        )
+                    } else {
+                        messageRepository.sendSystemMessage(
+                            currentRoomId,
+                            "${approved.userName}'s seat request was approved"
+                        )
+                    }
                 }
                 is Resource.Error -> {
                     _uiState.value = _uiState.value.copy(error = result.message)

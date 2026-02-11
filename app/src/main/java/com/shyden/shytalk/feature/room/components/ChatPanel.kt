@@ -26,8 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.shyden.shytalk.ui.theme.SpeakingGreen
 import com.shyden.shytalk.core.model.Message
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.Seat
@@ -57,8 +57,10 @@ fun ChatPanel(
             .toSet()
     }
 
-    val currentSeatEntry = seats.entries.find {
-        it.value.userId == currentUserId && it.value.state == SeatState.OCCUPIED
+    val currentSeatEntry = remember(seats, currentUserId) {
+        seats.entries.find {
+            it.value.isOccupiedBy(currentUserId)
+        }
     }
     val isSeated = currentSeatEntry != null
     val isSelfMuted = currentSeatEntry?.value?.isMuted ?: false
@@ -74,6 +76,8 @@ fun ChatPanel(
         }
     }
 
+    val reversedMessages = remember(messages) { messages.reversed() }
+
     Column(modifier = modifier) {
         LazyColumn(
             state = listState,
@@ -84,7 +88,7 @@ fun ChatPanel(
                 .weight(1f)
                 .padding(horizontal = 8.dp)
         ) {
-            items(messages.reversed(), key = { it.messageId }) { message ->
+            items(reversedMessages, key = { it.messageId }) { message ->
                 val senderUser = userMap[message.senderId]
                 val isSelf = message.senderId == currentUserId
                 val isUserSeated = message.senderId in seatedUserIds
@@ -122,7 +126,7 @@ fun ChatPanel(
                     Icon(
                         imageVector = if (isSelfMuted) Icons.Default.MicOff else Icons.Default.Mic,
                         contentDescription = if (isSelfMuted) "Unmute" else "Mute",
-                        tint = if (isSelfMuted) MaterialTheme.colorScheme.error else Color(0xFF4CAF50)
+                        tint = if (isSelfMuted) MaterialTheme.colorScheme.error else SpeakingGreen
                     )
                 }
             }

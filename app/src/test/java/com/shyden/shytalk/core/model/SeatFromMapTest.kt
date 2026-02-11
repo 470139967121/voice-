@@ -3,6 +3,7 @@ package com.shyden.shytalk.core.model
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SeatFromMapTest {
@@ -60,5 +61,37 @@ class SeatFromMapTest {
         assertEquals("user-1", map["userId"])
         assertEquals("OCCUPIED", map["state"])
         assertEquals(true, map["isMuted"])
+    }
+
+    // --- isOccupiedBy ---
+
+    @Test
+    fun `isOccupiedBy returns true when matching userId and OCCUPIED state`() {
+        val seat = Seat(userId = "user-1", state = SeatState.OCCUPIED)
+        assertTrue(seat.isOccupiedBy("user-1"))
+    }
+
+    @Test
+    fun `isOccupiedBy returns false for different userId`() {
+        val seat = Seat(userId = "user-1", state = SeatState.OCCUPIED)
+        assertFalse(seat.isOccupiedBy("user-2"))
+    }
+
+    @Test
+    fun `isOccupiedBy returns false for EMPTY state`() {
+        val seat = Seat(userId = "user-1", state = SeatState.EMPTY)
+        assertFalse(seat.isOccupiedBy("user-1"))
+    }
+
+    @Test
+    fun `isOccupiedBy returns false for null userId`() {
+        val seat = Seat(userId = null, state = SeatState.OCCUPIED)
+        assertFalse(seat.isOccupiedBy("user-1"))
+    }
+
+    @Test
+    fun `isOccupiedBy returns false for empty seat`() {
+        val seat = Seat()
+        assertFalse(seat.isOccupiedBy("user-1"))
     }
 }

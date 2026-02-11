@@ -1,8 +1,12 @@
 package com.shyden.shytalk.feature.room.components
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -12,6 +16,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,14 +27,13 @@ fun RoomToolbar(
     participantCount: Int,
     isOwnerOrHost: Boolean,
     onBack: () -> Unit,
-    onLeave: () -> Unit,
     onSettings: () -> Unit,
     onTogglePeople: () -> Unit
 ) {
     TopAppBar(
         title = {
             Text(
-                text = "$roomName ($participantCount)",
+                text = roomName,
                 style = MaterialTheme.typography.titleMedium
             )
         },
@@ -37,11 +43,22 @@ fun RoomToolbar(
             }
         },
         actions = {
-            IconButton(onClick = onLeave) {
-                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Leave room")
-            }
             IconButton(onClick = onTogglePeople) {
-                Icon(Icons.Default.People, contentDescription = "Participants")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.People,
+                        contentDescription = "Participants",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = "$participantCount",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
             if (isOwnerOrHost) {
                 IconButton(onClick = onSettings) {
