@@ -77,7 +77,9 @@ data class RoomUiState(
     val wasKicked: Boolean = false,
     val hasAudioPermission: Boolean = false,
     val activeNotification: RoomNotification? = null,
-    val pendingRequestsForPanel: List<SeatRequest> = emptyList()
+    val pendingRequestsForPanel: List<SeatRequest> = emptyList(),
+    val kickedByName: String? = null,
+    val kickReason: String? = null
 )
 
 @HiltViewModel
@@ -211,7 +213,13 @@ class RoomViewModel @Inject constructor(
             agoraVoiceService.leaveChannel()
             presenceService.removePresence()
             activeRoomManager.untrackRoom()
-            _uiState.value = _uiState.value.copy(isLoading = false, wasKicked = true)
+            val info = room.kickInfo[userId]
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                wasKicked = true,
+                kickedByName = info?.get("kickerName"),
+                kickReason = info?.get("reason") ?: "No reason given"
+            )
             return true
         }
         if (userId !in room.participantIds) {
@@ -535,7 +543,15 @@ class RoomViewModel @Inject constructor(
             val seat = room.seats[seatIndex.toString()] ?: return@launch
             if (seat.state == SeatState.OCCUPIED) return@launch
 
-            // Attendees ALWAYS need approval
+            // When seats are locked, attendees cannot request
+            if (role == RoomRole.ATTENDEE && room.requireApproval) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Seats are locked. You cannot request to sit until the room owner allows it."
+                )
+                return@launch
+            }
+
+            // Attendees need approval via seat request
             if (role == RoomRole.ATTENDEE) {
                 seatRequestRepository.createRequest(
                     roomId = roomId,
@@ -642,7 +658,7 @@ class RoomViewModel @Inject constructor(
         }
     }
 
-    fun kickUser(seatIndex: Int) {
+    fun kickUser(seatIndex: Int, reason: String = "") {
         viewModelScope.launch {
             val room = _uiState.value.room ?: return@launch
             val role = _uiState.value.currentRole
@@ -659,11 +675,12 @@ class RoomViewModel @Inject constructor(
             val kickerName = _uiState.value.currentUserName
             val targetUser = userCache[targetUserId]
             val targetName = targetUser?.displayName ?: "A user"
+            val displayReason = reason.ifBlank { "No reason given" }
 
-            roomRepository.kickUser(roomId, targetUserId, seatIndex)
+            roomRepository.kickUser(roomId, targetUserId, seatIndex, kickerName, displayReason)
             messageRepository.sendSystemMessage(
                 roomId,
-                "$targetName was kicked by $kickerName"
+                "$targetName was kicked by $kickerName. Reason: $displayReason"
             )
         }
     }
@@ -704,6 +721,7 @@ class RoomViewModel @Inject constructor(
     }
 
     fun acceptInvite() {
+        dismissCurrentNotification()
         viewModelScope.launch {
             val userId = _uiState.value.currentUserId
             val room = _uiState.value.room ?: return@launch
@@ -720,6 +738,7 @@ class RoomViewModel @Inject constructor(
     }
 
     fun declineInvite() {
+        dismissCurrentNotification()
         viewModelScope.launch {
             val userId = _uiState.value.currentUserId
             roomRepository.cancelInvite(roomId, userId)
@@ -999,13 +1018,22 @@ class RoomViewModel @Inject constructor(
                         it.status == SeatRequestStatus.APPROVED
                     } ?: return@collect
 
+                    if (approvedRequest.requestId in processedApprovalIds) return@collect
+
                     val alreadySeated = _uiState.value.room?.seats?.values?.any {
                         it.isOccupiedBy(userId)
                     } ?: false
+                    if (alreadySeated) return@collect
 
-                    if (!alreadySeated && approvedRequest.requestId !in processedApprovalIds) {
-                        enqueueNotification(RoomNotification.RequestApproved(approvedRequest))
+                    // During the grace period the owner auto-seats the requester,
+                    // so suppress the "request accepted" dialog — user is being seated immediately.
+                    val requestAge = System.currentTimeMillis() - approvedRequest.createdAt.toDate().time
+                    if (requestAge <= Constants.SEAT_REQUEST_IMMEDIATE_THRESHOLD_MS) {
+                        processedApprovalIds.add(approvedRequest.requestId)
+                        return@collect
                     }
+
+                    enqueueNotification(RoomNotification.RequestApproved(approvedRequest))
                 }
         }
     }

@@ -16,7 +16,7 @@ interface RoomRepository {
     suspend fun leaveSeat(roomId: String, seatIndex: Int): Resource<Unit>
     suspend fun removeFromSeat(roomId: String, seatIndex: Int): Resource<Unit>
     suspend fun moveSeat(roomId: String, fromIndex: Int, toIndex: Int, userId: String): Resource<Unit>
-    suspend fun kickUser(roomId: String, userId: String, seatIndex: Int?): Resource<Unit>
+    suspend fun kickUser(roomId: String, userId: String, seatIndex: Int?, kickerName: String = "", reason: String = ""): Resource<Unit>
     suspend fun toggleMute(roomId: String, seatIndex: Int, isMuted: Boolean): Resource<Unit>
     suspend fun addHost(roomId: String, userId: String): Resource<Unit>
     suspend fun removeHost(roomId: String, userId: String): Resource<Unit>

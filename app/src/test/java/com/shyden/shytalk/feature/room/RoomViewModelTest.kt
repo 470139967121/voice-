@@ -192,7 +192,7 @@ class RoomViewModelTest {
     }
 
     @Test
-    fun `takeSeat - attendee always creates seat request`() = runTest {
+    fun `takeSeat - attendee creates seat request when requireApproval OFF`() = runTest {
         viewModel = createViewModel()
         emitRoomAsAttendee()
         advanceUntilIdle()
@@ -202,6 +202,25 @@ class RoomViewModelTest {
 
         coVerify { seatRequestRepository.createRequest("room-1", currentUserId, any(), 3) }
         coVerify(exactly = 0) { roomRepository.takeSeat(any(), 3, any()) }
+    }
+
+    @Test
+    fun `takeSeat - attendee blocked with error when requireApproval ON`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee(TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId),
+            requireApproval = true
+        ))
+        advanceUntilIdle()
+
+        viewModel.takeSeat(3)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { seatRequestRepository.createRequest(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { roomRepository.takeSeat(any(), 3, any()) }
+        assertNotNull(viewModel.uiState.value.error)
+        assertTrue(viewModel.uiState.value.error!!.contains("locked"))
     }
 
     @Test
@@ -543,7 +562,7 @@ class RoomViewModelTest {
         viewModel.kickUser(3)
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any()) }
+        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -555,7 +574,7 @@ class RoomViewModelTest {
         viewModel.kickUser(0) // owner seat
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any()) }
+        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -575,7 +594,7 @@ class RoomViewModelTest {
         viewModel.kickUser(3)
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any()) }
+        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -596,7 +615,7 @@ class RoomViewModelTest {
         viewModel.kickUser(3)
         advanceUntilIdle()
 
-        coVerify { roomRepository.kickUser("room-1", "attendee-1", 3) }
+        coVerify { roomRepository.kickUser("room-1", "attendee-1", 3, any(), any()) }
         coVerify { messageRepository.sendSystemMessage("room-1", any()) }
     }
 
@@ -609,7 +628,116 @@ class RoomViewModelTest {
         viewModel.kickUser(3)
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any()) }
+        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `kickUser - reason is passed to repository`() = runTest {
+        viewModel = createViewModel()
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = "attendee-1")
+        coEvery { userRepository.getUser("attendee-1") } returns Resource.Success(
+            TestData.createTestUser(uid = "attendee-1", displayName = "Attendee")
+        )
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "attendee-1"),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.kickUser(3, "Being disruptive")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.kickUser("room-1", "attendee-1", 3, any(), "Being disruptive") }
+    }
+
+    @Test
+    fun `kickUser - blank reason defaults to No reason given`() = runTest {
+        viewModel = createViewModel()
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = "attendee-1")
+        coEvery { userRepository.getUser("attendee-1") } returns Resource.Success(
+            TestData.createTestUser(uid = "attendee-1", displayName = "Attendee")
+        )
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "attendee-1"),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.kickUser(3, "")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.kickUser("room-1", "attendee-1", 3, any(), "No reason given") }
+    }
+
+    @Test
+    fun `kickUser - system message includes reason`() = runTest {
+        viewModel = createViewModel()
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = "attendee-1")
+        coEvery { userRepository.getUser("attendee-1") } returns Resource.Success(
+            TestData.createTestUser(uid = "attendee-1", displayName = "Attendee")
+        )
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "attendee-1"),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.kickUser(3, "Spamming")
+        advanceUntilIdle()
+
+        coVerify {
+            messageRepository.sendSystemMessage("room-1", match { it.contains("Spamming") })
+        }
+    }
+
+    @Test
+    fun `kicked user sees kicker name and reason in UI state`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        // Simulate being kicked: bannedUserIds contains current user with kickInfo
+        roomFlow.value = TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId),
+            bannedUserIds = setOf(currentUserId),
+            kickInfo = mapOf(
+                currentUserId to mapOf(
+                    "kickerName" to "Owner",
+                    "reason" to "Being rude"
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.wasKicked)
+        assertEquals("Owner", viewModel.uiState.value.kickedByName)
+        assertEquals("Being rude", viewModel.uiState.value.kickReason)
+    }
+
+    @Test
+    fun `kicked user without kickInfo sees default reason`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        // Simulate being kicked without kickInfo (legacy data)
+        roomFlow.value = TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId),
+            bannedUserIds = setOf(currentUserId)
+        )
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.wasKicked)
+        assertNull(viewModel.uiState.value.kickedByName)
+        assertEquals("No reason given", viewModel.uiState.value.kickReason)
     }
 
     // ===== inviteUser Tests =====

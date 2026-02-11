@@ -23,6 +23,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,12 +57,13 @@ fun UserCardPopup(
     onMuteToggle: (() -> Unit)? = null,
     isTargetMuted: Boolean = false,
     onRemoveFromSeat: (() -> Unit)? = null,
-    onKickFromRoom: (() -> Unit)? = null,
+    onKickFromRoom: ((String) -> Unit)? = null,
     onMoveSeat: ((Int) -> Unit)? = null,
     emptySeats: List<Int> = emptyList()
 ) {
     var showBlockConfirm by remember { mutableStateOf(false) }
     var showKickConfirm by remember { mutableStateOf(false) }
+    var kickReason by remember { mutableStateOf("") }
     var showMoveDialog by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -288,20 +290,41 @@ fun UserCardPopup(
 
     if (showKickConfirm) {
         AlertDialog(
-            onDismissRequest = { showKickConfirm = false },
+            onDismissRequest = {
+                showKickConfirm = false
+                kickReason = ""
+            },
             title = { Text("Kick User") },
-            text = { Text("Are you sure you want to kick ${user.displayName} from the room? They will not be able to rejoin.") },
+            text = {
+                Column {
+                    Text("Are you sure you want to kick ${user.displayName} from the room? They will not be able to rejoin.")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = kickReason,
+                        onValueChange = { kickReason = it },
+                        label = { Text("Reason (optional)") },
+                        placeholder = { Text("No reason given") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
+                    val reason = kickReason
                     showKickConfirm = false
-                    onKickFromRoom?.invoke()
+                    kickReason = ""
+                    onKickFromRoom?.invoke(reason)
                     onDismiss()
                 }) {
                     Text("Kick", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showKickConfirm = false }) {
+                TextButton(onClick = {
+                    showKickConfirm = false
+                    kickReason = ""
+                }) {
                     Text("Cancel")
                 }
             }

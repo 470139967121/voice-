@@ -141,10 +141,14 @@ class RoomRepositoryImpl @Inject constructor(
         ).await()
     }
 
-    override suspend fun kickUser(roomId: String, userId: String, seatIndex: Int?): Resource<Unit> = firebaseCall("Failed to kick user") {
+    override suspend fun kickUser(roomId: String, userId: String, seatIndex: Int?, kickerName: String, reason: String): Resource<Unit> = firebaseCall("Failed to kick user") {
         val updates = mutableMapOf<String, Any>(
             "participantIds" to FieldValue.arrayRemove(userId),
-            "bannedUserIds" to FieldValue.arrayUnion(userId)
+            "bannedUserIds" to FieldValue.arrayUnion(userId),
+            "kickInfo.$userId" to mapOf(
+                "kickerName" to kickerName,
+                "reason" to reason.ifBlank { "No reason given" }
+            )
         )
         if (seatIndex != null) {
             updates["seats.$seatIndex"] = Seat().toMap()

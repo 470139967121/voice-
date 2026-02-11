@@ -342,7 +342,7 @@ class ActiveRoomManagerTest {
 
         manager.kickUser(0)
 
-        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any()) }
+        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -359,7 +359,7 @@ class ActiveRoomManagerTest {
 
         manager.kickUser(3)
 
-        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any()) }
+        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
     }
 
     // --- inviteUser ---

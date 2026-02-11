@@ -165,6 +165,33 @@ class RoomRepositoryImplTest {
         assertTrue(mapSlot.captured.keys.none { it.startsWith("seats.") })
     }
 
+    @Test
+    fun `kickUser stores kickInfo with kicker name and reason`() = runTest {
+        val mapSlot = slot<Map<String, Any>>()
+        every { docRef.update(capture(mapSlot)) } returns Tasks.forResult(null)
+
+        val result = repo.kickUser("room-1", "bad-user", 2, "Admin", "Spamming")
+
+        assertTrue(result is Resource.Success)
+        @Suppress("UNCHECKED_CAST")
+        val kickInfo = mapSlot.captured["kickInfo.bad-user"] as Map<String, String>
+        assertEquals("Admin", kickInfo["kickerName"])
+        assertEquals("Spamming", kickInfo["reason"])
+    }
+
+    @Test
+    fun `kickUser with blank reason defaults to No reason given`() = runTest {
+        val mapSlot = slot<Map<String, Any>>()
+        every { docRef.update(capture(mapSlot)) } returns Tasks.forResult(null)
+
+        val result = repo.kickUser("room-1", "bad-user", 2, "Admin", "")
+
+        assertTrue(result is Resource.Success)
+        @Suppress("UNCHECKED_CAST")
+        val kickInfo = mapSlot.captured["kickInfo.bad-user"] as Map<String, String>
+        assertEquals("No reason given", kickInfo["reason"])
+    }
+
     // --- toggleMute ---
 
     @Test

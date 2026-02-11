@@ -34,6 +34,28 @@ class AgoraVoiceService @Inject constructor(
     companion object {
         private const val TAG = "AgoraVoiceService"
         const val AGORA_APP_ID = "7bdf5596c88f49edba75568f529c4389"
+
+        /**
+         * Processes raw Agora speaker data into a set of speaking user UIDs.
+         * Uses separate thresholds: local mic capture levels are higher than
+         * remote decoded playback levels, so remote uses a lower threshold.
+         */
+        fun processSpeakers(
+            speakers: Array<out IRtcEngineEventHandler.AudioVolumeInfo>?,
+            localUid: Int,
+            isLocalMuted: Boolean,
+            localThreshold: Int = AppConstants.AGORA_SPEAKING_VOLUME_THRESHOLD,
+            remoteThreshold: Int = AppConstants.AGORA_REMOTE_SPEAKING_THRESHOLD
+        ): Set<Int> {
+            return speakers
+                ?.filter {
+                    val threshold = if (it.uid == 0) localThreshold else remoteThreshold
+                    it.volume > threshold
+                }
+                ?.filter { !(it.uid == 0 && isLocalMuted) }
+                ?.map { if (it.uid == 0) localUid else it.uid }
+                ?.toSet() ?: emptySet()
+        }
     }
 
     private var rtcEngine: RtcEngine? = null
@@ -89,11 +111,7 @@ class AgoraVoiceService @Inject constructor(
             speakers: Array<out AudioVolumeInfo>?,
             totalVolume: Int
         ) {
-            val speaking = speakers
-                ?.filter { it.volume > AppConstants.AGORA_SPEAKING_VOLUME_THRESHOLD }
-                ?.filter { !(it.uid == 0 && isLocalMuted) }
-                ?.map { if (it.uid == 0) localUid else it.uid }
-                ?.toSet() ?: emptySet()
+            val speaking = processSpeakers(speakers, localUid, isLocalMuted)
             if (speaking != _speakingUsers.value) {
                 _speakingUsers.value = speaking
             }
@@ -136,6 +154,8 @@ class AgoraVoiceService @Inject constructor(
                     true
                 )
                 setDefaultAudioRoutetoSpeakerphone(true)
+                // Keep audio session alive when another app (e.g. WeChat) takes audio focus
+                setParameters("{\"che.audio.keep.audiosession\":true}")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize RtcEngine", e)
@@ -196,6 +216,12 @@ class AgoraVoiceService @Inject constructor(
         } else {
             currentChannelName = channelName
             localUid = uid
+            // Re-apply volume indication after join (may be reset by leaveChannel in some SDK versions)
+            engine.enableAudioVolumeIndication(
+                AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
+                AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
+                true
+            )
             Log.d(TAG, "joinChannel call succeeded (waiting for onJoinChannelSuccess callback)")
             if (asBroadcaster) {
                 engine.setEnableSpeakerphone(true)

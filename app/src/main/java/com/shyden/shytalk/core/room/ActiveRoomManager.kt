@@ -447,7 +447,7 @@ class ActiveRoomManager @Inject constructor(
         roomRepository.moveSeat(roomId, fromIndex, toIndex, targetUserId)
     }
 
-    suspend fun kickUser(seatIndex: Int) {
+    suspend fun kickUser(seatIndex: Int, reason: String = "") {
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
         val role = room.resolveRole(currentUserId)
@@ -457,8 +457,9 @@ class ActiveRoomManager @Inject constructor(
         val targetUserId = seat.userId ?: return
         if (targetUserId == room.ownerId || targetUserId in room.hostIds) return
 
-        roomRepository.kickUser(roomId, targetUserId, seatIndex)
-        messageRepository.sendSystemMessage(roomId, "A user was kicked from the room")
+        val displayReason = reason.ifBlank { "No reason given" }
+        roomRepository.kickUser(roomId, targetUserId, seatIndex, kickerName = "", reason = displayReason)
+        messageRepository.sendSystemMessage(roomId, "A user was kicked from the room. Reason: $displayReason")
     }
 
     suspend fun inviteUser(userId: String, userName: String) {

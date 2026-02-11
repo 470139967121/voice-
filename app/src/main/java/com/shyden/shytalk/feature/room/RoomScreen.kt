@@ -127,7 +127,23 @@ fun RoomScreen(
         AlertDialog(
             onDismissRequest = {},
             title = { Text("Removed from Room") },
-            text = { Text("You have been kicked from this room.") },
+            text = {
+                Column {
+                    if (uiState.kickedByName != null) {
+                        Text("You were kicked by ${uiState.kickedByName}.")
+                    } else {
+                        Text("You have been kicked from this room.")
+                    }
+                    if (uiState.kickReason != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Reason: ${uiState.kickReason}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = { onNavigateBack() }) {
                     Text("OK")
@@ -541,7 +557,7 @@ fun RoomScreen(
                         { viewModel.removeFromSeat(targetSeatIndex) }
                     } else null,
                     onKickFromRoom = if (canModerate && targetSeatIndex != null) {
-                        { viewModel.kickUser(targetSeatIndex) }
+                        { reason -> viewModel.kickUser(targetSeatIndex, reason) }
                     } else null,
                     onMoveSeat = if (canModerate && targetSeatIndex != null && emptySeats.isNotEmpty()
                         && targetSeatIndex != Constants.OWNER_SEAT_INDEX) {
