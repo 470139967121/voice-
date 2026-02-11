@@ -235,7 +235,8 @@ fun SeatItem(
 
         Text(
             text = if (seat.state == SeatState.OCCUPIED && user != null) {
-                user.displayName.ifEmpty { "Seat ${seatIndex + 1}" }
+                val name = user.displayName.ifEmpty { "User" }
+                "#${seatIndex + 1} $name"
             } else {
                 "Seat ${seatIndex + 1}"
             },

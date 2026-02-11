@@ -15,6 +15,7 @@ data class ChatRoom(
     val hostIds: Set<String> = emptySet(),
     val requireApproval: Boolean = false,
     val bannedUserIds: Set<String> = emptySet(),
+    val kickInfo: Map<String, Map<String, String>> = emptyMap(),
     val pendingInvites: Map<String, String> = emptyMap(),
     val seats: Map<String, Seat> = DEFAULT_SEATS,
     val agoraChannelName: String = "",
@@ -38,6 +39,7 @@ data class ChatRoom(
         "hostIds" to hostIds.toList(),
         "requireApproval" to requireApproval,
         "bannedUserIds" to bannedUserIds.toList(),
+        "kickInfo" to kickInfo,
         "pendingInvites" to pendingInvites,
         "seats" to seats.mapValues { it.value.toMap() },
         "agoraChannelName" to agoraChannelName,
@@ -72,6 +74,11 @@ data class ChatRoom(
                 hostIds = (map["hostIds"] as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
                 requireApproval = map["requireApproval"] as? Boolean ?: false,
                 bannedUserIds = (map["bannedUserIds"] as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
+                kickInfo = (map["kickInfo"] as? Map<*, *>)?.entries?.associate { entry ->
+                    entry.key.toString() to ((entry.value as? Map<*, *>)?.entries?.associate {
+                        it.key.toString() to (it.value as? String ?: "")
+                    } ?: emptyMap())
+                } ?: emptyMap(),
                 pendingInvites = (map["pendingInvites"] as? Map<*, *>)?.entries?.associate {
                     it.key.toString() to (it.value as? String ?: "")
                 } ?: emptyMap(),

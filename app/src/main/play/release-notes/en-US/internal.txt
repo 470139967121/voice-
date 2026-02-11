@@ -1,5 +1,8 @@
-v0.20 - Agora SDK crash fix
+v0.21 - Kick reasons, locked seating & voice stability
 
-- Fixed native crash (SIGABRT) when entering a room on Android 16
-- Upgraded Agora Voice SDK from 4.6.2 to 4.6.3
-- Root cause: missing io.agora.base.internal.voiceengine.BuildInfo class in 4.6.2
+- Kick with reason: moderators are prompted for a reason when kicking; kicked users see who kicked them and why
+- Locked seating: when seats are locked, attendees see a clear message instead of silent failure
+- Voice stability: voice chat no longer stops when switching to WeChat or other audio apps
+- Seat numbers now shown alongside user names
+- Invite dialog dismiss fix
+- Grace period dialog suppression fix

@@ -15,7 +15,8 @@ object Constants {
     const val SEAT_REQUEST_IMMEDIATE_THRESHOLD_MS = 5000L
 
     // Agora voice settings
-    const val AGORA_SPEAKING_VOLUME_THRESHOLD = 50
+    const val AGORA_SPEAKING_VOLUME_THRESHOLD = 50  // local mic (raw capture)
+    const val AGORA_REMOTE_SPEAKING_THRESHOLD = 10  // remote (decoded playback)
     const val AGORA_RECORDING_SIGNAL_VOLUME = 400
     const val AGORA_VOLUME_INDICATION_INTERVAL_MS = 300
     const val AGORA_VOLUME_INDICATION_SMOOTH = 3
