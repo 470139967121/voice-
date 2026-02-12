@@ -58,8 +58,8 @@ class HomeViewModelTest {
     @Test
     fun `room owned by blocked user is excluded`() = runTest {
         coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(setOf("blocked-owner"))
-        coEvery { userRepository.getUser("blocked-owner") } returns Resource.Success(
-            TestData.createTestUser(uid = "blocked-owner")
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(
+            listOf(TestData.createTestUser(uid = "blocked-owner"))
         )
         val vm = createViewModel()
         advanceUntilIdle()
@@ -72,8 +72,8 @@ class HomeViewModelTest {
 
     @Test
     fun `room whose owner blocked current user is excluded`() = runTest {
-        coEvery { userRepository.getUser("hostile-owner") } returns Resource.Success(
-            TestData.createTestUser(uid = "hostile-owner", blockedUserIds = setOf(currentUserId))
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(
+            listOf(TestData.createTestUser(uid = "hostile-owner", blockedUserIds = setOf(currentUserId)))
         )
         val vm = createViewModel()
         advanceUntilIdle()
@@ -86,8 +86,8 @@ class HomeViewModelTest {
 
     @Test
     fun `normal room is included`() = runTest {
-        coEvery { userRepository.getUser("good-owner") } returns Resource.Success(
-            TestData.createTestUser(uid = "good-owner")
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(
+            listOf(TestData.createTestUser(uid = "good-owner"))
         )
         val vm = createViewModel()
         advanceUntilIdle()

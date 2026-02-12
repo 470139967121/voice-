@@ -22,4 +22,7 @@ object Constants {
     const val AGORA_RECORDING_SIGNAL_VOLUME = 400
     const val AGORA_VOLUME_INDICATION_INTERVAL_MS = 300
     const val AGORA_VOLUME_INDICATION_SMOOTH = 3
+
+    // Online status
+    const val ONLINE_THRESHOLD_MS = 300_000L // 5 minutes
 }

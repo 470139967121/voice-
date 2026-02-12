@@ -169,60 +169,42 @@ fun RoomScreen(
 
     // Block warning dialogs
     uiState.blockWarning?.let { warning ->
-        when (warning) {
-            is BlockWarning.BlockedByRoomOwner -> {
-                AlertDialog(
-                    onDismissRequest = {},
-                    title = { Text("Cannot Enter Room") },
-                    text = {
-                        Text("You are not allowed to enter this room.")
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { onNavigateBack() }) {
-                            Text("Go Back")
-                        }
-                    }
-                )
-            }
-            is BlockWarning.BlockedUserInRoom -> {
-                AlertDialog(
-                    onDismissRequest = {},
-                    title = { Text("Blocked User in Room") },
-                    text = {
-                        Text("A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?")
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { viewModel.confirmJoinDespiteBlock() }) {
-                            Text("Enter")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { onNavigateBack() }) {
-                            Text("Choose Another Room")
-                        }
-                    }
-                )
-            }
-            is BlockWarning.BlockedByUserInRoom -> {
-                AlertDialog(
-                    onDismissRequest = {},
-                    title = { Text("Notice") },
-                    text = {
-                        Text("A user in this room has blocked you. You may have a limited experience. Enter anyway?")
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { viewModel.confirmJoinDespiteBlock() }) {
-                            Text("Enter")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { onNavigateBack() }) {
-                            Text("Choose Another Room")
-                        }
-                    }
-                )
-            }
+        val (title, message, showEnterOption) = when (warning) {
+            is BlockWarning.BlockedByRoomOwner -> Triple(
+                "Cannot Enter Room",
+                "You are not allowed to enter this room.",
+                false
+            )
+            is BlockWarning.BlockedUserInRoom -> Triple(
+                "Blocked User in Room",
+                "A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?",
+                true
+            )
+            is BlockWarning.BlockedByUserInRoom -> Triple(
+                "Notice",
+                "A user in this room has blocked you. You may have a limited experience. Enter anyway?",
+                true
+            )
         }
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(title) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (showEnterOption) viewModel.confirmJoinDespiteBlock() else onNavigateBack()
+                }) {
+                    Text(if (showEnterOption) "Enter" else "Go Back")
+                }
+            },
+            dismissButton = if (showEnterOption) {
+                {
+                    TextButton(onClick = { onNavigateBack() }) {
+                        Text("Choose Another Room")
+                    }
+                }
+            } else null
+        )
     }
 
     // Compute participant lists for the panel (memoized to avoid recomposition waste)
@@ -519,13 +501,13 @@ fun RoomScreen(
                         )
                     },
                     confirmButton = {
-                        TextButton(onClick = {
-                            val trimmed = editedName.trim()
-                            if (trimmed.isNotEmpty()) {
-                                viewModel.updateRoomName(trimmed)
-                            }
-                            showRoomNameDialog = false
-                        }) {
+                        TextButton(
+                            onClick = {
+                                viewModel.updateRoomName(editedName.trim())
+                                showRoomNameDialog = false
+                            },
+                            enabled = editedName.isNotBlank()
+                        ) {
                             Text("Save")
                         }
                     },
@@ -554,14 +536,13 @@ fun RoomScreen(
             }
         }
 
-        val emptySeats = remember(uiState.room?.seats) {
-            uiState.room?.seats?.entries
-                ?.filter { it.value.state != SeatState.OCCUPIED && it.key.toInt() != Constants.OWNER_SEAT_INDEX }
-                ?.map { it.key.toInt() } ?: emptyList()
-        }
-
         // User card popup when tapping a user
         showUserCardForId?.let { userId ->
+            val emptySeats = remember(uiState.room?.seats) {
+                uiState.room?.seats?.entries
+                    ?.filter { it.value.state != SeatState.OCCUPIED && it.key.toInt() != Constants.OWNER_SEAT_INDEX }
+                    ?.map { it.key.toInt() } ?: emptyList()
+            }
             val user = uiState.seatUsers[userId] ?: uiState.participantUsers[userId]
             if (user != null) {
                 val targetSeatEntry = uiState.room?.seats?.entries?.find {

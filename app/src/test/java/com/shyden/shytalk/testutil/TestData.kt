@@ -23,7 +23,9 @@ object TestData {
         blockedUserIds: Set<String> = emptySet(),
         profilePhotoUrl: String? = null,
         coverPhotoUrl: String? = null,
-        uniqueId: Long = 12345L
+        uniqueId: Long = 12345L,
+        dateOfBirth: Timestamp? = null,
+        hideAge: Boolean = false
     ) = User(
         uid = uid,
         displayName = displayName,
@@ -31,6 +33,8 @@ object TestData {
         profilePhotoUrl = profilePhotoUrl,
         coverPhotoUrl = coverPhotoUrl,
         uniqueId = uniqueId,
+        dateOfBirth = dateOfBirth,
+        hideAge = hideAge,
         createdAt = BASE_TIMESTAMP,
         lastSeenAt = BASE_TIMESTAMP
     )

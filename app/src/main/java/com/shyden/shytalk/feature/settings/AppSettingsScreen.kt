@@ -1,0 +1,774 @@
+package com.shyden.shytalk.feature.settings
+
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.shyden.shytalk.BuildConfig
+import com.shyden.shytalk.R
+import com.shyden.shytalk.core.model.User
+
+private enum class SettingsPage { Main, BlockedUsers, Account, Privacy, About }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppSettingsScreen(
+    onNavigateBack: () -> Unit,
+    onNavigateToPrivacyPolicy: () -> Unit,
+    onSignOut: () -> Unit,
+    viewModel: AppSettingsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var currentPageName by rememberSaveable { mutableStateOf(SettingsPage.Main.name) }
+    val currentPage = SettingsPage.valueOf(currentPageName)
+    var showSignOutDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(uiState.cacheCleared) {
+        if (uiState.cacheCleared) {
+            snackbarHostState.showSnackbar("Cache cleared")
+            viewModel.resetCacheCleared()
+        }
+    }
+
+    BackHandler(enabled = currentPage != SettingsPage.Main) {
+        currentPageName = SettingsPage.Main.name
+    }
+
+    if (uiState.isLoading) {
+        SettingsSubPage(
+            title = "Settings",
+            onBack = onNavigateBack,
+            snackbarHostState = snackbarHostState
+        ) { modifier ->
+            Box(modifier = modifier, contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+    } else {
+        when (currentPage) {
+            SettingsPage.Main -> SettingsMainPage(
+                onNavigateBack = onNavigateBack,
+                onNavigateToPage = { currentPageName = it.name },
+                onSignOut = { showSignOutDialog = true },
+                snackbarHostState = snackbarHostState
+            )
+            SettingsPage.BlockedUsers -> BlockedUsersPage(
+                uiState = uiState,
+                onBack = { currentPageName = SettingsPage.Main.name },
+                onUnblockUser = { viewModel.unblockUser(it) },
+                snackbarHostState = snackbarHostState
+            )
+            SettingsPage.Account -> AccountPage(
+                uiState = uiState,
+                onBack = { currentPageName = SettingsPage.Main.name },
+                snackbarHostState = snackbarHostState
+            )
+            SettingsPage.Privacy -> PrivacyPage(
+                uiState = uiState,
+                onBack = { currentPageName = SettingsPage.Main.name },
+                onToggleHideFollowing = { viewModel.toggleHideFollowing() },
+                onToggleHideOnlineStatus = { viewModel.toggleHideOnlineStatus() },
+                onToggleHideAge = { viewModel.toggleHideAge() },
+                snackbarHostState = snackbarHostState
+            )
+            SettingsPage.About -> AboutPage(
+                uiState = uiState,
+                onBack = { currentPageName = SettingsPage.Main.name },
+                onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
+                onCheckForUpdates = { viewModel.checkForUpdates() },
+                onClearCache = { viewModel.clearCache() },
+                snackbarHostState = snackbarHostState
+            )
+        }
+    }
+
+    // Sign Out confirmation dialog
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = { Text("Sign Out") },
+            text = { Text("Are you sure you want to sign out?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSignOutDialog = false
+                    onSignOut()
+                }) {
+                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Update check result dialog
+    uiState.updateCheckResult?.let { result ->
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissUpdateResult() },
+            title = {
+                Text(
+                    when (result) {
+                        is UpdateCheckResult.UpToDate -> "Up to Date"
+                        is UpdateCheckResult.UpdateAvailable -> "Update Available"
+                        is UpdateCheckResult.Error -> "Error"
+                    }
+                )
+            },
+            text = {
+                Text(
+                    when (result) {
+                        is UpdateCheckResult.UpToDate -> "You're on the latest version."
+                        is UpdateCheckResult.UpdateAvailable -> "Version ${result.versionName} is available."
+                        is UpdateCheckResult.Error -> result.message
+                    }
+                )
+            },
+            confirmButton = {
+                if (result is UpdateCheckResult.UpdateAvailable) {
+                    Button(onClick = {
+                        viewModel.dismissUpdateResult()
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://play.google.com/store/apps/details?id=com.shyden.shytalk")
+                        )
+                        context.startActivity(intent)
+                    }) {
+                        Text("Download Now")
+                    }
+                } else {
+                    TextButton(onClick = { viewModel.dismissUpdateResult() }) {
+                        Text("OK")
+                    }
+                }
+            },
+            dismissButton = {
+                if (result is UpdateCheckResult.UpdateAvailable) {
+                    TextButton(onClick = { viewModel.dismissUpdateResult() }) {
+                        Text("Later")
+                    }
+                }
+            }
+        )
+    }
+}
+
+// ===== Main Settings Menu =====
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsMainPage(
+    onNavigateBack: () -> Unit,
+    onNavigateToPage: (SettingsPage) -> Unit,
+    onSignOut: () -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            SettingsMenuItem(
+                icon = Icons.Default.Block,
+                title = "Blocked Users",
+                onClick = { onNavigateToPage(SettingsPage.BlockedUsers) }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsMenuItem(
+                icon = Icons.Default.Person,
+                title = "Account",
+                onClick = { onNavigateToPage(SettingsPage.Account) }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsMenuItem(
+                icon = Icons.Default.Lock,
+                title = "Privacy",
+                onClick = { onNavigateToPage(SettingsPage.Privacy) }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsMenuItem(
+                icon = Icons.Default.Info,
+                title = "About",
+                onClick = { onNavigateToPage(SettingsPage.About) }
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            OutlinedButton(
+                onClick = onSignOut,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Sign Out")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun SettingsMenuItem(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+// ===== Shared Sub-Page Layout =====
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsSubPage(
+    title: String,
+    onBack: () -> Unit,
+    snackbarHostState: SnackbarHostState,
+    content: @Composable (Modifier) -> Unit
+) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        content(Modifier.fillMaxSize().padding(padding))
+    }
+}
+
+// ===== Blocked Users Page =====
+
+@Composable
+private fun BlockedUsersPage(
+    uiState: AppSettingsUiState,
+    onBack: () -> Unit,
+    onUnblockUser: (String) -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    var showUnblockDialog by remember { mutableStateOf<User?>(null) }
+
+    SettingsSubPage(
+        title = "Blocked Users",
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
+    ) { modifier ->
+        Column(
+            modifier = modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+        ) {
+            if (uiState.blockedUsers.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 64.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Text(
+                        text = "No blocked users",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                uiState.blockedUsers.forEach { user ->
+                    key(user.uid) {
+                        BlockedUserRow(
+                            user = user,
+                            onUnblock = { showUnblockDialog = user }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    showUnblockDialog?.let { user ->
+        AlertDialog(
+            onDismissRequest = { showUnblockDialog = null },
+            title = { Text("Unblock ${user.displayName}?") },
+            text = { Text("They will be able to view your profile again.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onUnblockUser(user.uid)
+                    showUnblockDialog = null
+                }) {
+                    Text("Unblock")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnblockDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+// ===== Account Page =====
+
+@Composable
+private fun AccountPage(
+    uiState: AppSettingsUiState,
+    onBack: () -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
+
+    SettingsSubPage(
+        title = "Account",
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
+    ) { modifier ->
+        Column(
+            modifier = modifier
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            uiState.user?.let { user ->
+                if (user.uniqueId != 0L) {
+                    SettingsRow("ShyTalk ID", "${user.uniqueId}")
+                }
+                user.email?.let { email ->
+                    SettingsRow("Email", email)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            OutlinedButton(
+                onClick = { showDeleteAccountDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Delete Account")
+            }
+        }
+    }
+
+    if (showDeleteAccountDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountDialog = false },
+            title = { Text("Delete Account") },
+            text = {
+                Text("Account deletion is not available yet. Please contact shytalk.help@gmail.com for assistance.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showDeleteAccountDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+}
+
+// ===== Privacy Page =====
+
+@Composable
+private fun PrivacyPage(
+    uiState: AppSettingsUiState,
+    onBack: () -> Unit,
+    onToggleHideFollowing: () -> Unit,
+    onToggleHideOnlineStatus: () -> Unit,
+    onToggleHideAge: () -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    SettingsSubPage(
+        title = "Privacy",
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
+    ) { modifier ->
+        Column(
+            modifier = modifier
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            SettingsSwitch(
+                title = "Hide Following List",
+                description = "Others won't see who you follow. Followers are always visible.",
+                checked = uiState.hideFollowing,
+                onCheckedChange = { onToggleHideFollowing() }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            SettingsSwitch(
+                title = "Hide Online Status",
+                description = "Others won't see when you're online.",
+                checked = uiState.hideOnlineStatus,
+                onCheckedChange = { onToggleHideOnlineStatus() }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            SettingsSwitch(
+                title = "Hide Age",
+                description = "Others won't see your age on your profile.",
+                checked = uiState.hideAge,
+                onCheckedChange = { onToggleHideAge() }
+            )
+        }
+    }
+}
+
+// ===== About Page =====
+
+@Composable
+private fun AboutPage(
+    uiState: AppSettingsUiState,
+    onBack: () -> Unit,
+    onNavigateToPrivacyPolicy: () -> Unit,
+    onCheckForUpdates: () -> Unit,
+    onClearCache: () -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    val context = LocalContext.current
+
+    SettingsSubPage(
+        title = "About",
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
+    ) { modifier ->
+        Column(
+            modifier = modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+        ) {
+            // App icon + version
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val appIcon = remember {
+                    ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+                        ?.toBitmap(128, 128)
+                        ?.asImageBitmap()
+                }
+                if (appIcon != null) {
+                    androidx.compose.foundation.Image(
+                        painter = BitmapPainter(appIcon),
+                        contentDescription = "ShyTalk",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "ShyTalk",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "v${BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Contact
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("mailto:shytalk.help@gmail.com")
+                        }
+                        context.startActivity(intent)
+                    }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Contact Us",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = "shytalk.help@gmail.com",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Privacy Policy
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToPrivacyPolicy() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Privacy Policy",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            // Check for Updates
+            Spacer(modifier = Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = onCheckForUpdates,
+                enabled = !uiState.isCheckingUpdate,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (uiState.isCheckingUpdate) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text("Check for Updates")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Clear Cache
+            OutlinedButton(
+                onClick = onClearCache,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Clear Cache")
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+// ===== Helper Composables =====
+
+@Composable
+private fun SettingsRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+private fun SettingsSwitch(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
+}
+
+@Composable
+private fun BlockedUserRow(
+    user: User,
+    onUnblock: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        val photoUrl = user.photoUrl
+        if (photoUrl != null) {
+            AsyncImage(
+                model = photoUrl,
+                contentDescription = user.displayName,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.padding(10.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+
+        Text(
+            text = user.displayName.ifEmpty { "Unknown" },
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+
+        TextButton(onClick = onUnblock) {
+            Text("Unblock")
+        }
+    }
+}

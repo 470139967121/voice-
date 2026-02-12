@@ -115,9 +115,10 @@ fun SeatItem(
     ) {
         Box(contentAlignment = Alignment.Center) {
             // Outer border box for outward-pulsing speaking indicator
+            val outerSize = if (isSpeaking) seatSize + borderWidth * 2 else seatSize
             Box(
                 modifier = Modifier
-                    .size(seatSize + if (isSpeaking) borderWidth * 2 else 0.dp)
+                    .size(outerSize)
                     .then(
                         if (borderColor != Color.Transparent) {
                             Modifier.border(

@@ -1,11 +1,13 @@
 package com.shyden.shytalk.feature.auth
 
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
+import com.shyden.shytalk.testutil.TestData
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -20,6 +22,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
@@ -32,6 +35,8 @@ class AuthViewModelTest {
     private val deviceRepository = mockk<DeviceRepository>(relaxed = true)
     private val deviceId = "test-device-id"
     private val userId = "user-1"
+
+    private val testDob = Timestamp(Date(946684800000L)) // 2000-01-01
 
     private fun mockFirebaseUser(): FirebaseUser = mockk {
         every { uid } returns userId
@@ -57,17 +62,39 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `init - authenticated with profile sets both flags`() = runTest {
+    fun `init - authenticated with profile and DOB sets all flags`() = runTest {
         every { authRepository.isAuthenticated } returns true
         every { authRepository.currentUser } returns mockFirebaseUser()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
         coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        )
 
         val vm = createViewModel()
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.isAuthenticated)
         assertTrue(vm.uiState.value.hasProfile)
+        assertTrue(vm.uiState.value.hasDOB)
+    }
+
+    @Test
+    fun `init - authenticated with profile but no DOB sets hasDOB false`() = runTest {
+        every { authRepository.isAuthenticated } returns true
+        every { authRepository.currentUser } returns mockFirebaseUser()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
+        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+            TestData.createTestUser(uid = userId, dateOfBirth = null)
+        )
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isAuthenticated)
+        assertTrue(vm.uiState.value.hasProfile)
+        assertFalse(vm.uiState.value.hasDOB)
     }
 
     @Test
@@ -89,6 +116,9 @@ class AuthViewModelTest {
         every { authRepository.currentUser } returns mockFirebaseUser()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(null)
         coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        )
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -102,6 +132,9 @@ class AuthViewModelTest {
         every { authRepository.currentUser } returns mockFirebaseUser()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Error("network")
         coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        )
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -126,17 +159,21 @@ class AuthViewModelTest {
 
         assertTrue(vm.uiState.value.isAuthenticated)
         assertFalse(vm.uiState.value.hasProfile)
+        assertFalse(vm.uiState.value.hasDOB)
         coVerify { deviceRepository.bindDevice(deviceId, userId) }
     }
 
     @Test
-    fun `signInWithGoogle - success with existing user`() = runTest {
+    fun `signInWithGoogle - existing user with DOB`() = runTest {
         every { authRepository.isAuthenticated } returns false
         every { authRepository.currentUser } returns null
         val firebaseUser = mockFirebaseUser()
         coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success(firebaseUser)
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
         coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        )
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -145,6 +182,29 @@ class AuthViewModelTest {
 
         assertTrue(vm.uiState.value.isAuthenticated)
         assertTrue(vm.uiState.value.hasProfile)
+        assertTrue(vm.uiState.value.hasDOB)
+    }
+
+    @Test
+    fun `signInWithGoogle - existing user without DOB`() = runTest {
+        every { authRepository.isAuthenticated } returns false
+        every { authRepository.currentUser } returns null
+        val firebaseUser = mockFirebaseUser()
+        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success(firebaseUser)
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
+        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+            TestData.createTestUser(uid = userId, dateOfBirth = null)
+        )
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.signInWithGoogle("token")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isAuthenticated)
+        assertTrue(vm.uiState.value.hasProfile)
+        assertFalse(vm.uiState.value.hasDOB)
     }
 
     @Test
@@ -183,6 +243,9 @@ class AuthViewModelTest {
         every { authRepository.currentUser } returns mockFirebaseUser()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
         coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        )
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -220,5 +283,20 @@ class AuthViewModelTest {
 
         vm.clearDeviceLocked()
         assertFalse(vm.uiState.value.isDeviceLocked)
+    }
+
+    @Test
+    fun `init - getUser error defaults hasDOB to false`() = runTest {
+        every { authRepository.isAuthenticated } returns true
+        every { authRepository.currentUser } returns mockFirebaseUser()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
+        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(userId) } returns Resource.Error("fetch failed")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.hasProfile)
+        assertFalse(vm.uiState.value.hasDOB)
     }
 }

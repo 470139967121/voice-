@@ -2,7 +2,9 @@ package com.shyden.shytalk.core.model
 
 import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
 
@@ -106,6 +108,51 @@ class UserFromMapTest {
     }
 
     @Test
+    fun `fromMap parses hideFollowing and hideOnlineStatus`() {
+        val map = mapOf<String, Any?>(
+            "hideFollowing" to true,
+            "hideOnlineStatus" to true
+        )
+        val user = User.fromMap(map, "uid")
+        assertTrue(user.hideFollowing)
+        assertTrue(user.hideOnlineStatus)
+    }
+
+    @Test
+    fun `fromMap defaults hideFollowing and hideOnlineStatus to false`() {
+        val user = User.fromMap(emptyMap(), "uid")
+        assertFalse(user.hideFollowing)
+        assertFalse(user.hideOnlineStatus)
+    }
+
+    @Test
+    fun `fromMap parses dateOfBirth`() {
+        val dob = Timestamp(Date(946684800000L))
+        val map = mapOf<String, Any?>("dateOfBirth" to dob)
+        val user = User.fromMap(map, "uid")
+        assertEquals(dob, user.dateOfBirth)
+    }
+
+    @Test
+    fun `fromMap defaults dateOfBirth to null`() {
+        val user = User.fromMap(emptyMap(), "uid")
+        assertNull(user.dateOfBirth)
+    }
+
+    @Test
+    fun `fromMap parses hideAge`() {
+        val map = mapOf<String, Any?>("hideAge" to true)
+        val user = User.fromMap(map, "uid")
+        assertTrue(user.hideAge)
+    }
+
+    @Test
+    fun `fromMap defaults hideAge to false`() {
+        val user = User.fromMap(emptyMap(), "uid")
+        assertFalse(user.hideAge)
+    }
+
+    @Test
     fun `fromMap of toMap produces equivalent user`() {
         val original = User(
             uid = "user-1",
@@ -117,6 +164,10 @@ class UserFromMapTest {
             nationality = "US",
             uniqueId = 12345L,
             blockedUserIds = setOf("user-2", "user-3"),
+            dateOfBirth = ts,
+            hideFollowing = true,
+            hideOnlineStatus = true,
+            hideAge = true,
             phoneNumber = "+1234567890",
             email = "alice@example.com",
             createdAt = ts,

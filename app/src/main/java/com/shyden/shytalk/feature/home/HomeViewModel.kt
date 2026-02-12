@@ -10,9 +10,6 @@ import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -93,17 +90,11 @@ class HomeViewModel @Inject constructor(
             // Single batch load for all uncached users
             val newUserIds = allNeededIds.filter { it !in userCache }
             if (newUserIds.isNotEmpty()) {
-                coroutineScope {
-                    newUserIds.map { uid ->
-                        async {
-                            when (val result = userRepository.getUser(uid)) {
-                                is Resource.Success -> uid to result.data
-                                else -> null
-                            }
-                        }
-                    }.awaitAll().filterNotNull().forEach { (id, user) ->
-                        userCache[id] = user
+                when (val result = userRepository.getUsers(newUserIds.toList())) {
+                    is Resource.Success -> {
+                        result.data.forEach { user -> userCache[user.uid] = user }
                     }
+                    else -> {}
                 }
             }
 

@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.User
+import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.StorageRepository
@@ -16,6 +17,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,7 +31,12 @@ data class ProfileUiState(
     val isOwnProfile: Boolean = true,
     val isBlockedByTarget: Boolean = false,
     val isBlockedByViewer: Boolean = false,
-    val currentUserId: String = ""
+    val currentUserId: String = "",
+    val isFollowingTarget: Boolean = false,
+    val followerCount: Int = 0,
+    val followingCount: Int = 0,
+    val isOnline: Boolean = false,
+    val hideFollowing: Boolean = false
 )
 
 @HiltViewModel
@@ -48,7 +55,7 @@ class ProfileViewModel @Inject constructor(
 
     init {
         val currentUid = authRepository.currentUser?.uid ?: ""
-        _uiState.value = _uiState.value.copy(currentUserId = currentUid)
+        _uiState.update { it.copy(currentUserId = currentUid) }
     }
 
     fun loadProfile(userId: String?) {
@@ -56,61 +63,71 @@ class ProfileViewModel @Inject constructor(
         val profileUserId = if (userId.isNullOrEmpty() || userId == currentUid) currentUid else userId
         val isOwn = profileUserId == currentUid
 
-        val alreadyHasData = _uiState.value.user != null
-        _uiState.value = _uiState.value.copy(
-            isLoading = !alreadyHasData,
-            isOwnProfile = isOwn,
-            currentUserId = currentUid
-        )
+        _uiState.update {
+            it.copy(isLoading = it.user == null, isOwnProfile = isOwn)
+        }
 
         viewModelScope.launch {
             when (val result = userRepository.getUser(profileUserId)) {
                 is Resource.Success -> {
                     val user = result.data
+                    val followerCount = user.followerIds.size
+                    val followingCount = user.followingIds.size
+                    val isOnline = !user.hideOnlineStatus &&
+                        (System.currentTimeMillis() - user.lastSeenAt.toDate().time) < Constants.ONLINE_THRESHOLD_MS
 
                     if (!isOwn) {
-                        // Check if target has blocked the viewer
                         val blockedByTarget = user.blockedUserIds.contains(currentUid)
-                        // Check if viewer has blocked the target
                         val viewerBlockedTarget = when (val blockedResult = userRepository.getBlockedUserIds(currentUid)) {
                             is Resource.Success -> blockedResult.data.contains(profileUserId)
                             else -> false
                         }
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            user = user,
-                            isBlockedByTarget = blockedByTarget,
-                            isBlockedByViewer = viewerBlockedTarget
-                        )
+                        val isFollowing = user.followerIds.contains(currentUid)
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                user = user,
+                                isBlockedByTarget = blockedByTarget,
+                                isBlockedByViewer = viewerBlockedTarget,
+                                isFollowingTarget = isFollowing,
+                                followerCount = followerCount,
+                                followingCount = followingCount,
+                                isOnline = isOnline,
+                                hideFollowing = user.hideFollowing
+                            )
+                        }
                     } else {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            user = user
-                        )
-                        // Auto-generate uniqueId for existing users who don't have one
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                user = user,
+                                followerCount = followerCount,
+                                followingCount = followingCount,
+                                isOnline = isOnline,
+                                hideFollowing = user.hideFollowing
+                            )
+                        }
                         if (user.uniqueId == 0L) {
                             generateUniqueId(currentUid)
                         }
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.message
-                    )
+                    _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
                 is Resource.Loading -> {}
             }
         }
     }
 
-    fun saveProfile(displayName: String) {
+    fun saveProfile(displayName: String, dateOfBirth: Timestamp) {
         val firebaseUser = authRepository.currentUser ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             val user = User(
                 uid = firebaseUser.uid,
                 displayName = displayName,
+                dateOfBirth = dateOfBirth,
                 phoneNumber = firebaseUser.phoneNumber,
                 email = firebaseUser.email,
                 createdAt = Timestamp.now(),
@@ -118,17 +135,10 @@ class ProfileViewModel @Inject constructor(
             )
             when (val result = userRepository.createOrUpdateUser(user)) {
                 is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        profileSaved = true,
-                        user = user
-                    )
+                    _uiState.update { it.copy(isLoading = false, profileSaved = true, user = user) }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.message
-                    )
+                    _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
                 is Resource.Loading -> {}
             }
@@ -139,14 +149,10 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = userRepository.generateUniqueId(userId)) {
                 is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        user = _uiState.value.user?.copy(uniqueId = result.data)
-                    )
+                    _uiState.update { it.copy(user = it.user?.copy(uniqueId = result.data)) }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        error = result.message ?: "Failed to generate unique ID"
-                    )
+                    _uiState.update { it.copy(error = result.message ?: "Failed to generate unique ID") }
                 }
                 is Resource.Loading -> {}
             }
@@ -156,19 +162,15 @@ class ProfileViewModel @Inject constructor(
     fun updateDisplayName(displayName: String) {
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             when (val result = userRepository.updateDisplayName(userId, displayName)) {
                 is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        user = _uiState.value.user?.copy(displayName = displayName)
-                    )
+                    _uiState.update {
+                        it.copy(isLoading = false, user = it.user?.copy(displayName = displayName))
+                    }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.message
-                    )
+                    _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
                 is Resource.Loading -> {}
             }
@@ -178,7 +180,7 @@ class ProfileViewModel @Inject constructor(
     fun saveProfileEdits(displayName: String, description: String, nationality: String?) {
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             val fields = mutableMapOf<String, Any?>(
                 "displayName" to displayName,
                 "description" to description
@@ -188,21 +190,20 @@ class ProfileViewModel @Inject constructor(
             }
             when (val result = userRepository.updateProfile(userId, fields)) {
                 is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isEditing = false,
-                        user = _uiState.value.user?.copy(
-                            displayName = displayName,
-                            description = description,
-                            nationality = nationality ?: _uiState.value.user?.nationality
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isEditing = false,
+                            user = it.user?.copy(
+                                displayName = displayName,
+                                description = description,
+                                nationality = nationality ?: it.user?.nationality
+                            )
                         )
-                    )
+                    }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.message
-                    )
+                    _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
                 is Resource.Loading -> {}
             }
@@ -232,17 +233,14 @@ class ProfileViewModel @Inject constructor(
     ) {
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isUploadingPhoto = true)
+            _uiState.update { it.copy(isUploadingPhoto = true) }
             val imageData = try {
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             } catch (e: Exception) {
                 null
             }
             if (imageData == null) {
-                _uiState.value = _uiState.value.copy(
-                    isUploadingPhoto = false,
-                    error = "Failed to read image"
-                )
+                _uiState.update { it.copy(isUploadingPhoto = false, error = "Failed to read image") }
                 return@launch
             }
             when (val result = storageRepository.uploadImage(userId, folder, imageData)) {
@@ -250,29 +248,21 @@ class ProfileViewModel @Inject constructor(
                     val url = result.data
                     when (val saveResult = userRepository.updateProfile(userId, mapOf(profileField to url))) {
                         is Resource.Success -> {
-                            _uiState.value = _uiState.value.copy(
-                                isUploadingPhoto = false,
-                                user = updateUser(url)
-                            )
-                            // Delete old photo from Firebase Storage
+                            _uiState.update { it.copy(isUploadingPhoto = false, user = updateUser(url)) }
                             if (!oldUrl.isNullOrEmpty()) {
                                 storageRepository.deleteImageByUrl(oldUrl)
                             }
                         }
                         is Resource.Error -> {
-                            _uiState.value = _uiState.value.copy(
-                                isUploadingPhoto = false,
-                                error = saveResult.message ?: "Failed to save photo URL"
-                            )
+                            _uiState.update {
+                                it.copy(isUploadingPhoto = false, error = saveResult.message ?: "Failed to save photo URL")
+                            }
                         }
                         is Resource.Loading -> {}
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isUploadingPhoto = false,
-                        error = result.message
-                    )
+                    _uiState.update { it.copy(isUploadingPhoto = false, error = result.message) }
                 }
                 is Resource.Loading -> {}
             }
@@ -280,7 +270,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun toggleEditing() {
-        _uiState.value = _uiState.value.copy(isEditing = !_uiState.value.isEditing)
+        _uiState.update { it.copy(isEditing = !it.isEditing) }
     }
 
     fun blockUser(targetUserId: String) {
@@ -288,10 +278,10 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             when (userRepository.blockUser(userId, targetUserId)) {
                 is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(isBlockedByViewer = true)
+                    _uiState.update { it.copy(isBlockedByViewer = true) }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(error = "Failed to block user")
+                    _uiState.update { it.copy(error = "Failed to block user") }
                 }
                 is Resource.Loading -> {}
             }
@@ -303,10 +293,50 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             when (userRepository.unblockUser(userId, targetUserId)) {
                 is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(isBlockedByViewer = false)
+                    _uiState.update { it.copy(isBlockedByViewer = false) }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(error = "Failed to unblock user")
+                    _uiState.update { it.copy(error = "Failed to unblock user") }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun followUser(targetUserId: String) {
+        val userId = authRepository.currentUser?.uid ?: return
+        _uiState.update { it.copy(isFollowingTarget = true, followerCount = it.followerCount + 1) }
+        viewModelScope.launch {
+            when (userRepository.followUser(userId, targetUserId)) {
+                is Resource.Success -> {}
+                is Resource.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isFollowingTarget = false,
+                            followerCount = it.followerCount - 1,
+                            error = "Failed to follow user"
+                        )
+                    }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun unfollowUser(targetUserId: String) {
+        val userId = authRepository.currentUser?.uid ?: return
+        _uiState.update { it.copy(isFollowingTarget = false, followerCount = it.followerCount - 1) }
+        viewModelScope.launch {
+            when (userRepository.unfollowUser(userId, targetUserId)) {
+                is Resource.Success -> {}
+                is Resource.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isFollowingTarget = true,
+                            followerCount = it.followerCount + 1,
+                            error = "Failed to unfollow user"
+                        )
+                    }
                 }
                 is Resource.Loading -> {}
             }
@@ -314,6 +344,6 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }

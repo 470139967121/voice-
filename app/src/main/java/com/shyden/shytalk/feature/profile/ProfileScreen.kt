@@ -27,12 +27,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,6 +57,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.shyden.shytalk.core.util.calculateAge
 import com.shyden.shytalk.core.util.countryNameForCode
 import com.shyden.shytalk.core.util.flagEmojiForCode
 
@@ -76,8 +80,9 @@ fun ProfileScreen(
     userId: String? = null,
     showBackButton: Boolean = true,
     onNavigateBack: () -> Unit = {},
-    onSignOut: (() -> Unit)? = null,
-    onNavigateToPrivacyPolicy: (() -> Unit)? = null,
+    onNavigateToUserProfile: ((String) -> Unit)? = null,
+    onNavigateToFollowList: ((String, String) -> Unit)? = null,
+    onNavigateToSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -96,7 +101,7 @@ fun ProfileScreen(
     }
     var showCountryPicker by remember { mutableStateOf(false) }
     var showBlockDialog by remember { mutableStateOf(false) }
-    var fullscreenPhotoUrl by remember { mutableStateOf<String?>(null) }
+    var fullscreenPhotoUrl by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Photo picking + cropping
     var pendingCropType by remember { mutableStateOf<String?>(null) }
@@ -160,8 +165,12 @@ fun ProfileScreen(
                 onPickCoverPhoto = { launchPhotoPicker("cover") },
                 onTapPhoto = { fullscreenPhotoUrl = it },
                 onBlockToggle = { showBlockDialog = true },
-                onSignOut = onSignOut,
-                onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
+                onFollowToggle = {
+                    val targetId = uiState.user?.uid ?: return@ProfileContent
+                    if (uiState.isFollowingTarget) viewModel.unfollowUser(targetId)
+                    else viewModel.followUser(targetId)
+                },
+                onNavigateToFollowList = onNavigateToFollowList,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier.fillMaxSize()
             )
@@ -201,8 +210,12 @@ fun ProfileScreen(
                 onPickCoverPhoto = { launchPhotoPicker("cover") },
                 onTapPhoto = { fullscreenPhotoUrl = it },
                 onBlockToggle = { showBlockDialog = true },
-                onSignOut = onSignOut,
-                onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
+                onFollowToggle = {
+                    val targetId = uiState.user?.uid ?: return@ProfileContent
+                    if (uiState.isFollowingTarget) viewModel.unfollowUser(targetId)
+                    else viewModel.followUser(targetId)
+                },
+                onNavigateToFollowList = onNavigateToFollowList,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxSize()
@@ -308,8 +321,8 @@ private fun ProfileContent(
     onPickCoverPhoto: () -> Unit,
     onTapPhoto: (String) -> Unit,
     onBlockToggle: () -> Unit,
-    onSignOut: (() -> Unit)?,
-    onNavigateToPrivacyPolicy: (() -> Unit)? = null,
+    onFollowToggle: () -> Unit = {},
+    onNavigateToFollowList: ((String, String) -> Unit)? = null,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -585,10 +598,23 @@ private fun ProfileContent(
                 }
             } else {
                 // View mode
-                Text(
-                    text = user.displayName,
-                    style = MaterialTheme.typography.headlineMedium
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = user.displayName,
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    if (uiState.isOnline) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF4CAF50))
+                        )
+                    }
+                }
 
                 if (user.uniqueId != 0L) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -607,6 +633,17 @@ private fun ProfileContent(
                     )
                 }
 
+                val age = user.dateOfBirth?.let { calculateAge(it) }
+                val shouldShowAge = age != null && (isOwn || !user.hideAge)
+                if (shouldShowAge) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$age years old",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 if (!user.description.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
@@ -614,6 +651,47 @@ private fun ProfileContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+
+                // Follower / Following counts
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.clickable {
+                            onNavigateToFollowList?.invoke(user.uid, "followers")
+                        },
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "${uiState.followerCount}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Followers",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    val followingHidden = !isOwn && uiState.hideFollowing
+                    Column(
+                        modifier = Modifier.clickable(enabled = !followingHidden) {
+                            onNavigateToFollowList?.invoke(user.uid, "following")
+                        },
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = if (followingHidden) "-" else "${uiState.followingCount}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = if (followingHidden) "Following (Private)" else "Following",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -629,34 +707,30 @@ private fun ProfileContent(
                         Text("Edit Profile")
                     }
 
-                    // Sign out button
-                    if (onSignOut != null) {
-                        Spacer(modifier = Modifier.height(32.dp))
+                } else {
+                    // Follow/Unfollow button for other users
+                    if (uiState.isFollowingTarget) {
                         OutlinedButton(
-                            onClick = onSignOut,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
+                            onClick = onFollowToggle,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Logout,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Icon(Icons.Default.PersonRemove, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Sign Out")
+                            Text("Unfollow")
+                        }
+                    } else {
+                        Button(
+                            onClick = onFollowToggle,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Follow")
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-                    TextButton(
-                        onClick = { onNavigateToPrivacyPolicy?.invoke() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Privacy Policy", style = MaterialTheme.typography.bodySmall)
-                    }
-                } else {
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     // Block/Unblock button for other users
                     val isBlocked = uiState.isBlockedByViewer
                     OutlinedButton(
