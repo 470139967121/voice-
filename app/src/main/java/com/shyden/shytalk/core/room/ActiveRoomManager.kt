@@ -140,7 +140,7 @@ class ActiveRoomManager @Inject constructor(
         presenceService.removePresence()
 
         // Vacate seat — but keep owner in seat 0 for reconnection
-        val mySeatEntry = room.seats.entries.find { it.value.userId == userId }
+        val mySeatEntry = room.seats.entries.find { it.value.isOccupiedBy(userId) }
         if (mySeatEntry != null) {
             val seatIndex = mySeatEntry.key.toInt()
             if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
@@ -158,11 +158,6 @@ class ActiveRoomManager @Inject constructor(
             roomRepository.leaveRoom(roomId, userId)
         }
 
-        messageRepository.sendSystemMessage(
-            roomId,
-            "${currentUserName.ifEmpty { "Someone" }} left the room"
-        )
-
         cleanup()
     }
 
@@ -178,6 +173,12 @@ class ActiveRoomManager @Inject constructor(
             roomRepository.closeRoom(ownedRoomId)
         }
     }
+
+    private fun findMySeat(room: ChatRoom, userId: String = currentUserId) =
+        room.seats.values.find { it.isOccupiedBy(userId) }
+
+    private fun isUserSeated(room: ChatRoom, userId: String = currentUserId) =
+        room.seats.values.any { it.isOccupiedBy(userId) }
 
     private fun cleanup() {
         roomObserverJob?.cancel()
@@ -228,9 +229,7 @@ class ActiveRoomManager @Inject constructor(
                     }
 
                     // Switch Agora role based on seat status
-                    val mySeat = room.seats.values.find {
-                        it.isOccupiedBy(userId)
-                    }
+                    val mySeat = findMySeat(room, userId)
                     val currentlySeated = mySeat != null
                     if (currentlySeated && !isSeated) {
                         agoraVoiceService.setRole(true)
@@ -270,7 +269,7 @@ class ActiveRoomManager @Inject constructor(
                 val userId = currentUserId
 
                 // Only monitor when user is seated (has an Agora connection)
-                val currentlySeated = room.seats.values.any { it.isOccupiedBy(userId) }
+                val currentlySeated = isUserSeated(room, userId)
                 if (!currentlySeated) {
                     graceJob?.cancel()
                     wasEverConnected = false
@@ -378,9 +377,7 @@ class ActiveRoomManager @Inject constructor(
         }
         if (role == RoomRole.HOST && room.requireApproval) return
 
-        val currentSeatEntry = room.seats.entries.find {
-            it.value.isOccupiedBy(userId)
-        }
+        val currentSeatEntry = room.seats.entries.find { it.value.isOccupiedBy(userId) }
         if (currentSeatEntry != null) {
             roomRepository.leaveSeat(roomId, currentSeatEntry.key.toInt())
         }
@@ -474,7 +471,6 @@ class ActiveRoomManager @Inject constructor(
         if (role == RoomRole.HOST && room.requireApproval) return
 
         roomRepository.sendInvite(roomId, userId, currentUserId)
-        messageRepository.sendSystemMessage(roomId, "${userName.ifEmpty { "Someone" }} was invited to sit")
     }
 
     suspend fun acceptInvite() {
@@ -512,7 +508,6 @@ class ActiveRoomManager @Inject constructor(
         val roomId = _activeRoomId.value ?: return
         agoraVoiceService.leaveChannel()
         roomRepository.closeRoom(roomId)
-        messageRepository.sendSystemMessage(roomId, "Room has been closed")
         _roomClosed.value = true
         cleanup()
     }

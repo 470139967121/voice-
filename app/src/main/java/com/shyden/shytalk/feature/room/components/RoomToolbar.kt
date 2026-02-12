@@ -55,7 +55,7 @@ fun RoomToolbar(
                     val minutes = (roomExpiryRemainingMs / 60_000).toInt()
                     val seconds = ((roomExpiryRemainingMs % 60_000) / 1_000).toInt()
                     Text(
-                        text = "Closing in ${minutes}:${"%02d".format(seconds)}",
+                        text = "Room closing in ${minutes}:${"%02d".format(seconds)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error
                     )

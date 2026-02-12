@@ -1,12 +1,12 @@
 v0.22 - Photo caching, room editing & auto-close
 
 - Photos load faster and are saved on your device
-- Room owners can edit the room name from the toolbar
+- Room owners can edit the room name
 - Rooms auto-close after 3 hours with a countdown
 - Owners can promote or demote hosts
-- Settings moved to the bottom bar
-- Speaking indicator pulses outward around the avatar
-- Room names can be up to 50 characters
-- Fixed profile flicker when switching tabs
-- Fixed voice reconnection when the owner returns
+- Cleaner chat: only join and kick messages
+- ChatHead now has a purple border
+- Speaking indicator pulses around the avatar
+- Improved performance and stability
+- Fixed voice reconnection when owner returns
 - Owners can now kick or mute hosts

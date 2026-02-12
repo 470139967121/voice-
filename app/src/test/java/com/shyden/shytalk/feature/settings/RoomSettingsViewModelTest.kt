@@ -5,7 +5,6 @@ import com.google.firebase.auth.FirebaseUser
 import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
-import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -37,7 +36,6 @@ class RoomSettingsViewModelTest {
 
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val seatRequestRepository = mockk<SeatRequestRepository>(relaxed = true)
-    private val messageRepository = mockk<MessageRepository>(relaxed = true)
     private val authRepository = mockk<AuthRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
 
@@ -57,7 +55,6 @@ class RoomSettingsViewModelTest {
     private fun createViewModel() = RoomSettingsViewModel(
         roomRepository = roomRepository,
         seatRequestRepository = seatRequestRepository,
-        messageRepository = messageRepository,
         authRepository = authRepository,
         userRepository = userRepository
     )
@@ -266,7 +263,6 @@ class RoomSettingsViewModelTest {
 
         coVerify { seatRequestRepository.approveRequest(roomId, request.requestId, currentUserId) }
         coVerify(exactly = 0) { roomRepository.takeSeat(any(), any(), any()) }
-        coVerify { messageRepository.sendSystemMessage(roomId, "${request.userName}'s seat request was approved") }
     }
 
     @Test
@@ -442,6 +438,126 @@ class RoomSettingsViewModelTest {
 
         vm.clearError()
 
+        assertNull(vm.uiState.value.error)
+    }
+
+    // ===== denyRequest =====
+
+    @Test
+    fun `denyRequest - calls repository`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsOwner(vm)
+        advanceUntilIdle()
+        val request = TestData.createTestSeatRequest()
+
+        vm.denyRequest(request)
+        advanceUntilIdle()
+
+        coVerify { seatRequestRepository.denyRequest(roomId, request.requestId, currentUserId) }
+    }
+
+    // ===== System message cleanup verifications =====
+
+    @Test
+    fun `addHost - does not send system message`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsOwner(vm)
+        advanceUntilIdle()
+
+        vm.addHost("user-2")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.addHost(roomId, "user-2") }
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `removeHost - does not send system message`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsOwner(vm)
+        advanceUntilIdle()
+
+        vm.removeHost("user-2")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.removeHost(roomId, "user-2") }
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `inviteUser - does not send system message`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsOwner(vm, requireApproval = false)
+        advanceUntilIdle()
+
+        vm.inviteUser("user-2", "User Two")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.sendInvite(roomId, "user-2", currentUserId) }
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `closeRoom - does not send system message`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsOwner(vm)
+        advanceUntilIdle()
+
+        vm.closeRoom()
+        advanceUntilIdle()
+
+        coVerify { roomRepository.closeRoom(roomId) }
+        assertNull(vm.uiState.value.error)
+    }
+
+    // ===== Parallel user resolution tests =====
+
+    @Test
+    fun `resolveUserNames resolves multiple users in parallel`() = runTest {
+        val host1 = "host-1"
+        val host2 = "host-2"
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(
+            TestData.createTestUser(uid = currentUserId, displayName = "Current User")
+        )
+        coEvery { userRepository.getUser(host1) } returns Resource.Success(
+            TestData.createTestUser(uid = host1, displayName = "Host One")
+        )
+        coEvery { userRepository.getUser(host2) } returns Resource.Success(
+            TestData.createTestUser(uid = host2, displayName = "Host Two")
+        )
+
+        val roomFlow = MutableStateFlow(TestData.createTestRoom(
+            roomId = roomId,
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, host1, host2),
+            hostIds = setOf(host1, host2)
+        ))
+        every { roomRepository.getRoomFlow(roomId) } returns roomFlow
+
+        val vm = createViewModel()
+        vm.loadRoom(roomId)
+        advanceUntilIdle()
+
+        val names = vm.uiState.value.userNames
+        assertEquals("Current User", names[currentUserId])
+        assertEquals("Host One", names[host1])
+        assertEquals("Host Two", names[host2])
+    }
+
+    // ===== Atomic state update tests =====
+
+    @Test
+    fun `clearError clears via atomic update`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsOwner(vm)
+        advanceUntilIdle()
+        val request = TestData.createTestSeatRequest()
+        coEvery { seatRequestRepository.approveRequest(any(), any(), any()) } returns Resource.Error("err")
+        vm.approveRequest(request)
+        advanceUntilIdle()
+
+        assertNotNull(vm.uiState.value.error)
+        vm.clearError()
         assertNull(vm.uiState.value.error)
     }
 }

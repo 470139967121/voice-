@@ -268,6 +268,12 @@ fun RoomScreen(
         }
     }
 
+    val isOwnerOrHost by remember {
+        derivedStateOf {
+            uiState.currentRole == RoomRole.OWNER || uiState.currentRole == RoomRole.HOST
+        }
+    }
+
     // Merged user map for ChatPanel (memoized)
     val userMap = remember(uiState.seatUsers, uiState.participantUsers) {
         uiState.seatUsers + uiState.participantUsers
@@ -368,17 +374,11 @@ fun RoomScreen(
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     )
 
-                    // "Take a Seat" button when not seated and empty seats exist
-                    val isSeated = remember(uiState.room?.seats, uiState.currentUserId) {
-                        uiState.room?.seats?.values?.any {
-                            it.isOccupiedBy(uiState.currentUserId)
-                        } ?: false
-                    }
+                    // Seat status derived from the already-computed seatedUserIds
+                    val isSeated = uiState.currentUserId in seatedUserIds
 
-                    val hasEmptySeats = remember(uiState.room?.seats) {
-                        uiState.room?.seats?.values?.any {
-                            it.state != SeatState.OCCUPIED
-                        } ?: false
+                    val hasEmptySeats = remember(room?.seats) {
+                        room?.seats?.values?.any { it.state != SeatState.OCCUPIED } ?: false
                     }
 
                     if (!isSeated && hasEmptySeats) {
@@ -414,7 +414,7 @@ fun RoomScreen(
                         currentRole = uiState.currentRole,
                         seats = uiState.room?.seats ?: emptyMap(),
                         userMap = userMap,
-                        isOwnerOrHost = uiState.currentRole == RoomRole.OWNER || uiState.currentRole == RoomRole.HOST,
+                        isOwnerOrHost = isOwnerOrHost,
                         onToggleMic = { seatIndex -> viewModel.toggleSelfMute(seatIndex) },
                         onSendMessage = { viewModel.sendMessage(it) },
                         onTapUser = { userId ->
@@ -474,7 +474,7 @@ fun RoomScreen(
                     audienceUsers = audienceUsers,
                     pendingRequests = uiState.pendingRequestsForPanel,
                     pendingInviteUserIds = uiState.room?.pendingInvites?.keys ?: emptySet(),
-                    isOwnerOrHost = uiState.currentRole == RoomRole.OWNER || uiState.currentRole == RoomRole.HOST,
+                    isOwnerOrHost = isOwnerOrHost,
                     onUserClick = { userId ->
                         showParticipantPanel = false
                         showUserCardForId = userId
@@ -506,7 +506,7 @@ fun RoomScreen(
         if (showRoomNameDialog && uiState.room != null) {
             val isOwner = uiState.currentRole == RoomRole.OWNER
             if (isOwner) {
-                var editedName by remember { mutableStateOf(uiState.room?.name ?: "") }
+                var editedName by remember(showRoomNameDialog) { mutableStateOf(uiState.room?.name ?: "") }
                 AlertDialog(
                     onDismissRequest = { showRoomNameDialog = false },
                     title = { Text("Edit Room Name") },

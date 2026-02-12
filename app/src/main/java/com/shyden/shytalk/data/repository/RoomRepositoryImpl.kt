@@ -10,6 +10,7 @@ import com.shyden.shytalk.core.util.firebaseCall
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import android.util.Log
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -22,6 +23,10 @@ class RoomRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : RoomRepository {
 
+    companion object {
+        private const val TAG = "RoomRepositoryImpl"
+    }
+
     private val roomsCollection = firestore.collection("rooms")
 
     override fun getActiveRooms(): Flow<List<ChatRoom>> = callbackFlow {
@@ -30,7 +35,7 @@ class RoomRepositoryImpl @Inject constructor(
             .limit(Constants.ACTIVE_ROOMS_QUERY_LIMIT)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "getActiveRooms listener error (will retry on next event)", error)
                     return@addSnapshotListener
                 }
                 val rooms = snapshot?.documents?.mapNotNull { doc ->
@@ -45,7 +50,7 @@ class RoomRepositoryImpl @Inject constructor(
         val listener = roomsCollection.document(roomId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "getRoomFlow listener error (will retry on next event)", error)
                     return@addSnapshotListener
                 }
                 val room = snapshot?.data?.let { ChatRoom.fromMap(it, snapshot.id) }
