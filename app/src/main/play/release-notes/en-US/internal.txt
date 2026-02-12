@@ -1,12 +1,12 @@
 v0.23 - Date of Birth, privacy & performance
 
-- Date of Birth is now required for all users
-- Existing users will be asked for their DOB on next login
-- Age is shown on profiles (must be 13+)
+- Date of Birth now required for all users
+- Existing users asked for DOB on next login
+- Age shown on profiles (must be 13+)
 - New "Hide Age" privacy toggle in Settings
 - Batch user loading for faster room lists
 - Thread-safe state updates across all screens
 - Chat text survives screen rotation
-- Memoized seat grid and room card computations
+- Memoized seat grid and room card calculations
 - Consolidated block-warning dialogs in rooms
-- Improved overall performance and stability
+- Improved performance and stability
