@@ -89,14 +89,22 @@ class ChatHeadManager(
     }
 
     fun destroy() {
+        // Cancel pending callbacks (e.g. showRoomClosed auto-dismiss) FIRST,
+        // then post cleanup to main thread so view removal happens safely.
         handler.removeCallbacksAndMessages(null)
-        handler.post {
-            voiceWaveView?.stopAnimation()
-            voiceWaveView = null
-            removeBubble()
-            removeCloseZone()
-            isShowing = false
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            destroyInternal()
+        } else {
+            handler.post { destroyInternal() }
         }
+    }
+
+    private fun destroyInternal() {
+        voiceWaveView?.stopAnimation()
+        voiceWaveView = null
+        removeBubble()
+        removeCloseZone()
+        isShowing = false
     }
 
     private fun createBubbleView(ownerPhotoUrl: String?) {
@@ -303,7 +311,7 @@ class ChatHeadManager(
     private fun getScreenHeight(): Int = screenHeightPx
 
     companion object {
-        private const val BUBBLE_SIZE_DP = 72
+        private const val BUBBLE_SIZE_DP = 80
         private const val CLOSE_BUTTON_SIZE_DP = 20
         private const val EDGE_MARGIN_DP = 8
         private const val CLOSE_ZONE_HEIGHT_DP = 72

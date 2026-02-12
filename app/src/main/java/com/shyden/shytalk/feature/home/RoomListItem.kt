@@ -71,7 +71,7 @@ fun RoomListItem(
     val nationalityFlags = remember(seatedUserList) {
         seatedUserList
             .mapNotNull { it.nationality }
-            .distinct()
+            .toSet()
             .map { flagEmojiForCode(it) }
     }
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -68,6 +69,7 @@ fun SeatGrid(
             maxItemsInEachRow = 4
         ) {
             occupiedSeats.forEach { (indexStr, seat) ->
+                key(indexStr) {
                 val seatIndex = indexStr.toIntOrNull() ?: return@forEach
                 val seatUserId = seat.userId
 
@@ -99,6 +101,7 @@ fun SeatGrid(
                     onTapUser = seatUserId?.let { uid -> { onTapUser(uid) } },
                     modifier = Modifier.weight(1f)
                 )
+                }
             }
         }
     }

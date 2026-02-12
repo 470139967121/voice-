@@ -6,18 +6,20 @@ import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.util.Constants.SEAT_REQUEST_IMMEDIATE_THRESHOLD_MS
 import com.shyden.shytalk.core.util.Resource
-import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.data.repository.AuthRepository
-import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -33,7 +35,6 @@ data class RoomSettingsUiState(
 class RoomSettingsViewModel @Inject constructor(
     private val roomRepository: RoomRepository,
     private val seatRequestRepository: SeatRequestRepository,
-    private val messageRepository: MessageRepository,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository
 ) : ViewModel() {
@@ -56,13 +57,10 @@ class RoomSettingsViewModel @Inject constructor(
                 room to requests
             }
                 .catch { e ->
-                    _uiState.value = _uiState.value.copy(error = e.message)
+                    _uiState.update { it.copy(error = e.message) }
                 }
                 .collect { (room, requests) ->
-                    _uiState.value = _uiState.value.copy(
-                        room = room,
-                        pendingRequests = requests
-                    )
+                    _uiState.update { it.copy(room = room, pendingRequests = requests) }
                     if (room != null) {
                         resolveUserNames(room)
                     }
@@ -77,17 +75,25 @@ class RoomSettingsViewModel @Inject constructor(
         val newIds = allIds.filter { it !in resolvedIds }
         if (newIds.isEmpty()) return
 
-        val names = _uiState.value.userNames.toMutableMap()
-        for (id in newIds) {
-            when (val result = userRepository.getUser(id)) {
-                is Resource.Success -> {
-                    names[id] = result.data.displayName.ifEmpty { id.take(8) }
-                    resolvedIds.add(id)
+        val resolved = coroutineScope {
+            newIds.map { id ->
+                async {
+                    when (val result = userRepository.getUser(id)) {
+                        is Resource.Success -> id to result.data.displayName.ifEmpty { id.take(8) }
+                        else -> null
+                    }
                 }
-                else -> {}
-            }
+            }.awaitAll().filterNotNull()
         }
-        _uiState.value = _uiState.value.copy(userNames = names)
+
+        if (resolved.isNotEmpty()) {
+            val names = _uiState.value.userNames.toMutableMap()
+            for ((id, name) in resolved) {
+                names[id] = name
+                resolvedIds.add(id)
+            }
+            _uiState.update { it.copy(userNames = names) }
+        }
     }
 
     fun toggleRequireApproval() {
@@ -103,7 +109,6 @@ class RoomSettingsViewModel @Inject constructor(
         if (currentUserId != room.ownerId) return
         viewModelScope.launch {
             roomRepository.addHost(currentRoomId, userId)
-            messageRepository.sendSystemMessage(currentRoomId, "A new host was added")
         }
     }
 
@@ -112,7 +117,6 @@ class RoomSettingsViewModel @Inject constructor(
         if (currentUserId != room.ownerId) return
         viewModelScope.launch {
             roomRepository.removeHost(currentRoomId, userId)
-            messageRepository.sendSystemMessage(currentRoomId, "A host was removed")
         }
     }
 
@@ -122,10 +126,6 @@ class RoomSettingsViewModel @Inject constructor(
         if (currentUserId != room.ownerId && (currentUserId !in room.hostIds || room.requireApproval)) return
         viewModelScope.launch {
             roomRepository.sendInvite(currentRoomId, userId, currentUserId)
-            messageRepository.sendSystemMessage(
-                currentRoomId,
-                "${userName.ifEmpty { "Someone" }} was invited to sit"
-            )
         }
     }
 
@@ -147,19 +147,10 @@ class RoomSettingsViewModel @Inject constructor(
                     val approved = result.data
                     if (delayMs <= SEAT_REQUEST_IMMEDIATE_THRESHOLD_MS) {
                         roomRepository.takeSeat(currentRoomId, approved.seatIndex, approved.userId)
-                        messageRepository.sendSystemMessage(
-                            currentRoomId,
-                            "${approved.userName} was seated at seat ${approved.seatIndex + 1}"
-                        )
-                    } else {
-                        messageRepository.sendSystemMessage(
-                            currentRoomId,
-                            "${approved.userName}'s seat request was approved"
-                        )
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(error = result.message)
+                    _uiState.update { it.copy(error = result.message) }
                 }
                 is Resource.Loading -> {}
             }
@@ -176,12 +167,11 @@ class RoomSettingsViewModel @Inject constructor(
         val room = _uiState.value.room ?: return
         if (currentUserId != room.ownerId) return
         viewModelScope.launch {
-            messageRepository.sendSystemMessage(currentRoomId, "Room has been closed by the owner")
             roomRepository.closeRoom(currentRoomId)
         }
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }

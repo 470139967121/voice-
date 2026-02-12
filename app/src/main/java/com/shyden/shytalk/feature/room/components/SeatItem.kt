@@ -71,11 +71,15 @@ fun SeatItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    // Scale badges and icon padding proportionally to seat size
-    val sizeScale = (seatSize / 70.dp).coerceIn(1f, 1.5f)
-    val badgeSize = (22.dp * sizeScale).coerceAtMost(30.dp)
-    val badgeIconSize = (14.dp * sizeScale).coerceAtMost(18.dp)
-    val iconPadding = (14.dp * (seatSize / 70.dp)).coerceIn(14.dp, 40.dp)
+    // Scale badges and icon padding proportionally to seat size (memoized)
+    val (badgeSize, badgeIconSize, iconPadding) = remember(seatSize) {
+        val scale = (seatSize / 70.dp).coerceIn(1f, 1.5f)
+        Triple(
+            (22.dp * scale).coerceAtMost(30.dp),
+            (14.dp * scale).coerceAtMost(18.dp),
+            (14.dp * (seatSize / 70.dp)).coerceIn(14.dp, 40.dp)
+        )
+    }
 
     val borderColor by animateColorAsState(
         targetValue = when {
@@ -88,17 +92,21 @@ fun SeatItem(
     )
 
     // Pulsing border width when speaking — expands outward from 2dp to 8dp
-    val infiniteTransition = rememberInfiniteTransition(label = "speakingPulse")
-    val pulsingWidth by infiniteTransition.animateFloat(
-        initialValue = 2f,
-        targetValue = 8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "borderPulse"
-    )
-    val borderWidth = if (isSpeaking) pulsingWidth.dp else 2.dp
+    val borderWidth = if (isSpeaking) {
+        val infiniteTransition = rememberInfiniteTransition(label = "speakingPulse")
+        val pulsingWidth by infiniteTransition.animateFloat(
+            initialValue = 2f,
+            targetValue = 8f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(600),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "borderPulse"
+        )
+        pulsingWidth.dp
+    } else {
+        2.dp
+    }
 
     Column(
         modifier = modifier.padding(4.dp),

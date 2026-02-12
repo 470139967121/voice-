@@ -58,10 +58,10 @@ class AgoraVoiceService @Inject constructor(
         }
     }
 
-    private var rtcEngine: RtcEngine? = null
-    private var currentChannelName: String? = null
-    private var localUid: Int = 0
-    private var isLocalMuted = false
+    @Volatile private var rtcEngine: RtcEngine? = null
+    @Volatile private var currentChannelName: String? = null
+    @Volatile private var localUid: Int = 0
+    @Volatile private var isLocalMuted = false
     private val joinMutex = Mutex()
 
     private val _speakingUsers = MutableStateFlow<Set<Int>>(emptySet())
@@ -116,6 +116,8 @@ class AgoraVoiceService @Inject constructor(
                     Log.v(TAG, "volumeIndication uid=${it.uid} vol=${it.volume} vad=${it.vad}")
                 }
             }
+            // Fast path: skip allocation when no speakers and already empty
+            if (speakers.isNullOrEmpty() && _speakingUsers.value.isEmpty()) return
             val speaking = processSpeakers(speakers, localUid, isLocalMuted)
             if (speaking != _speakingUsers.value) {
                 _speakingUsers.value = speaking

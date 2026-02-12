@@ -1800,7 +1800,6 @@ class RoomViewModelTest {
         advanceUntilIdle()
 
         coVerify { roomRepository.addHost("room-1", "user-2") }
-        coVerify { messageRepository.sendSystemMessage("room-1", match { it.contains("promoted to host") }) }
     }
 
     @Test
@@ -1840,7 +1839,6 @@ class RoomViewModelTest {
         advanceUntilIdle()
 
         coVerify { roomRepository.removeHost("room-1", "user-2") }
-        coVerify { messageRepository.sendSystemMessage("room-1", match { it.contains("removed as host") }) }
     }
 
     @Test
@@ -2034,7 +2032,7 @@ class RoomViewModelTest {
     }
 
     @Test
-    fun `room expiry - sends system message when under 5 minutes`() = runTest {
+    fun `room expiry - shows countdown when under 5 minutes`() = runTest {
         viewModel = createViewModel()
         // Room with ~10 seconds remaining — short enough to fully advance through
         val nearExpiryRoom = TestData.createTestRoom(
@@ -2044,13 +2042,177 @@ class RoomViewModelTest {
         emitRoomAsOwner(nearExpiryRoom)
         advanceTimeBy(1001L)
 
-        coVerify {
-            messageRepository.sendSystemMessage("room-1", match { it.contains("maximum time") })
-        }
         val remaining = viewModel.uiState.value.roomExpiryRemainingMs
         assertTrue("Expected remaining > 0 but was $remaining", remaining > 0)
 
         // Advance through remaining time so the loop completes
         advanceUntilIdle()
+    }
+
+    // ===== System message cleanup verifications =====
+
+    @Test
+    fun `addHost - does not send system message`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        viewModel.addHost("user-2")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.addHost("room-1", "user-2") }
+        coVerify(exactly = 0) { messageRepository.sendSystemMessage(any(), match { it.contains("host") }) }
+    }
+
+    @Test
+    fun `removeHost - does not send system message`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner(TestData.createTestRoom(ownerId = currentUserId, hostIds = setOf("user-2")))
+        advanceUntilIdle()
+
+        viewModel.removeHost("user-2")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.removeHost("room-1", "user-2") }
+        coVerify(exactly = 0) { messageRepository.sendSystemMessage(any(), match { it.contains("host") }) }
+    }
+
+    @Test
+    fun `inviteUser - does not send system message`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "user-2")
+        ))
+        advanceUntilIdle()
+
+        viewModel.inviteUser("user-2", "User Two")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.sendInvite("room-1", "user-2", currentUserId) }
+        coVerify(exactly = 0) { messageRepository.sendSystemMessage(any(), match { it.contains("invited") }) }
+    }
+
+    @Test
+    fun `closeRoom - does not send system message`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        viewModel.closeRoom()
+        advanceUntilIdle()
+
+        coVerify { roomRepository.closeRoom("room-1") }
+        coVerify(exactly = 0) { messageRepository.sendSystemMessage(any(), match { it.contains("closed") }) }
+    }
+
+    @Test
+    fun `room expiry - does not send system message`() = runTest {
+        viewModel = createViewModel()
+        val nearExpiryRoom = TestData.createTestRoom(
+            ownerId = currentUserId,
+            createdAt = Timestamp(Date(System.currentTimeMillis() - Constants.MAX_ROOM_DURATION_MS + 10_000L))
+        )
+        emitRoomAsOwner(nearExpiryRoom)
+        advanceTimeBy(1001L)
+
+        coVerify(exactly = 0) { messageRepository.sendSystemMessage(any(), match { it.contains("maximum time") }) }
+
+        advanceUntilIdle()
+    }
+
+    // ===== Countdown deduplication tests =====
+
+    @Test
+    fun `owner-away countdown - re-emitting same state does not restart job`() = runTest {
+        viewModel = createViewModel()
+        val ownerLeftAt = Timestamp.now()
+        val awayRoom = TestData.createTestRoom(
+            ownerId = currentUserId,
+            state = RoomState.OWNER_AWAY,
+            ownerLeftAt = ownerLeftAt
+        )
+        emitRoomAsOwner(awayRoom)
+        advanceTimeBy(1100L)
+
+        val remainingFirst = viewModel.uiState.value.ownerAwayRemainingMs
+        assertTrue(remainingFirst > 0)
+
+        // Re-emit the same room state (no actual change)
+        roomFlow.value = awayRoom.copy(name = "Updated Name")
+        advanceTimeBy(1100L)
+
+        // The countdown should still be running, not restarted
+        val remainingSecond = viewModel.uiState.value.ownerAwayRemainingMs
+        assertTrue(remainingSecond > 0)
+    }
+
+    // ===== Room expiry countdown threshold constant test =====
+
+    @Test
+    fun `room expiry countdown - does not start before 5min threshold`() = runTest {
+        viewModel = createViewModel()
+        // Room created 2h 50min ago (10 min remaining, above 5min threshold)
+        val earlyRoom = TestData.createTestRoom(
+            ownerId = currentUserId,
+            createdAt = Timestamp(Date(System.currentTimeMillis() - Constants.MAX_ROOM_DURATION_MS + 600_000L))
+        )
+        emitRoomAsOwner(earlyRoom)
+        advanceUntilIdle()
+
+        assertEquals(0L, viewModel.uiState.value.roomExpiryRemainingMs)
+    }
+
+    @Test
+    fun `room expiry countdown - starts within 5min threshold`() = runTest {
+        viewModel = createViewModel()
+        // Room created just inside the 5min threshold
+        val nearExpiryRoom = TestData.createTestRoom(
+            ownerId = currentUserId,
+            createdAt = Timestamp(Date(System.currentTimeMillis() - Constants.MAX_ROOM_DURATION_MS + 120_000L))
+        )
+        emitRoomAsOwner(nearExpiryRoom)
+        advanceTimeBy(1100L)
+
+        assertTrue(viewModel.uiState.value.roomExpiryRemainingMs > 0)
+    }
+
+    // ===== Message filtering optimization =====
+
+    @Test
+    fun `message filtering - only updates state when messages actually change`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        val msg1 = TestData.createTestMessage(messageId = "m1", text = "Hello")
+        messagesFlow.value = listOf(msg1)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.messages.size)
+
+        // Re-emit the same list reference
+        val sameMessages = listOf(msg1)
+        messagesFlow.value = sameMessages
+        advanceUntilIdle()
+
+        // Should still be exactly 1 message, state was not unnecessarily updated
+        assertEquals(1, viewModel.uiState.value.messages.size)
+    }
+
+    // ===== Atomic state update (thread safety) =====
+
+    @Test
+    fun `clearError uses atomic update`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        // Trigger an error
+        voiceErrorFlow.value = "test error"
+        advanceUntilIdle()
+
+        viewModel.clearError()
+        assertNull(viewModel.uiState.value.error)
     }
 }

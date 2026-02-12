@@ -114,12 +114,17 @@ class HomeViewModel @Inject constructor(
                 true
             }
 
-            // Recompute seated users from filtered rooms only
-            val filteredSeatedUserIds = filtered.flatMap { room ->
-                room.seats.values
-                    .filter { it.state == SeatState.OCCUPIED && it.userId != null }
-                    .mapNotNull { it.userId }
-            }.toSet()
+            // Reuse seated user IDs, narrowing to filtered rooms only
+            val filteredRoomIds = filtered.map { it.roomId }.toSet()
+            val filteredSeatedUserIds = if (filteredRoomIds.size == allRooms.size) {
+                seatedUserIds // No rooms were filtered out, reuse the set
+            } else {
+                filtered.flatMap { room ->
+                    room.seats.values
+                        .filter { it.state == SeatState.OCCUPIED && it.userId != null }
+                        .mapNotNull { it.userId }
+                }.toSet()
+            }
 
             _uiState.update {
                 it.copy(

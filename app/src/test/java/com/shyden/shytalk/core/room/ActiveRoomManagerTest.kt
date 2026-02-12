@@ -731,7 +731,6 @@ class ActiveRoomManagerTest {
 
         verify { agoraVoiceService.leaveChannel() }
         coVerify { roomRepository.closeRoom("room-1") }
-        coVerify { messageRepository.sendSystemMessage("room-1", any()) }
         // cleanup() resets roomClosed and activeRoomId
         assertNull(manager.activeRoomId.value)
     }
