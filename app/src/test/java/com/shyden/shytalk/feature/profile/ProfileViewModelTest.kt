@@ -10,6 +10,7 @@ import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
+import com.google.firebase.Timestamp
 import com.shyden.shytalk.testutil.TestData
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -252,7 +253,7 @@ class ProfileViewModelTest {
         coEvery { userRepository.createOrUpdateUser(any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
-        vm.saveProfile("My Name")
+        vm.saveProfile("My Name", Timestamp(java.util.Date(946684800000L)))
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.profileSaved)
@@ -265,7 +266,7 @@ class ProfileViewModelTest {
         coEvery { userRepository.createOrUpdateUser(any()) } returns Resource.Error("save failed")
 
         val vm = createViewModel()
-        vm.saveProfile("My Name")
+        vm.saveProfile("My Name", Timestamp(java.util.Date(946684800000L)))
         advanceUntilIdle()
 
         assertEquals("save failed", vm.uiState.value.error)
@@ -277,7 +278,7 @@ class ProfileViewModelTest {
         every { authRepository.currentUser } returns null
 
         val vm = createViewModel()
-        vm.saveProfile("My Name")
+        vm.saveProfile("My Name", Timestamp(java.util.Date(946684800000L)))
         advanceUntilIdle()
 
         coVerify(exactly = 0) { userRepository.createOrUpdateUser(any()) }
@@ -642,5 +643,163 @@ class ProfileViewModelTest {
 
         vm.clearError()
         assertNull(vm.uiState.value.error)
+    }
+
+    // ===== online status =====
+
+    @Test
+    fun `loadProfile - online when lastSeenAt is recent`() = runTest {
+        val recentTs = Timestamp(java.util.Date(System.currentTimeMillis() - 60_000L))
+        val user = TestData.createTestUser(uid = currentUserId).copy(lastSeenAt = recentTs)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isOnline)
+    }
+
+    @Test
+    fun `loadProfile - offline when lastSeenAt is old`() = runTest {
+        val oldTs = Timestamp(java.util.Date(System.currentTimeMillis() - 600_000L))
+        val user = TestData.createTestUser(uid = currentUserId).copy(lastSeenAt = oldTs)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isOnline)
+    }
+
+    @Test
+    fun `loadProfile - hidden online status shows offline`() = runTest {
+        val recentTs = Timestamp(java.util.Date(System.currentTimeMillis() - 60_000L))
+        val user = TestData.createTestUser(uid = currentUserId).copy(
+            lastSeenAt = recentTs,
+            hideOnlineStatus = true
+        )
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isOnline)
+    }
+
+    // ===== hideFollowing =====
+
+    @Test
+    fun `loadProfile - hideFollowing is set from user`() = runTest {
+        val user = TestData.createTestUser(uid = otherUserId).copy(hideFollowing = true)
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.hideFollowing)
+    }
+
+    // ===== follow / unfollow =====
+
+    @Test
+    fun `followUser - success sets isFollowingTarget and increments count`() = runTest {
+        val user = TestData.createTestUser(uid = otherUserId)
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+        coEvery { userRepository.followUser(currentUserId, otherUserId) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        val countBefore = vm.uiState.value.followerCount
+        vm.followUser(otherUserId)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isFollowingTarget)
+        assertEquals(countBefore + 1, vm.uiState.value.followerCount)
+    }
+
+    @Test
+    fun `unfollowUser - success clears isFollowingTarget and decrements count`() = runTest {
+        val user = TestData.createTestUser(uid = otherUserId).copy(
+            followerIds = setOf(currentUserId)
+        )
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+        coEvery { userRepository.unfollowUser(currentUserId, otherUserId) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.isFollowingTarget)
+
+        val countBefore = vm.uiState.value.followerCount
+        vm.unfollowUser(otherUserId)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isFollowingTarget)
+        assertEquals(countBefore - 1, vm.uiState.value.followerCount)
+    }
+
+    @Test
+    fun `followUser - error reverts optimistic update`() = runTest {
+        val user = TestData.createTestUser(uid = otherUserId)
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+        coEvery { userRepository.followUser(currentUserId, otherUserId) } returns Resource.Error("fail")
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        vm.followUser(otherUserId)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isFollowingTarget)
+        assertEquals("Failed to follow user", vm.uiState.value.error)
+    }
+
+    @Test
+    fun `unfollowUser - error reverts optimistic update`() = runTest {
+        val user = TestData.createTestUser(uid = otherUserId).copy(
+            followerIds = setOf(currentUserId)
+        )
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+        coEvery { userRepository.unfollowUser(currentUserId, otherUserId) } returns Resource.Error("fail")
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        vm.unfollowUser(otherUserId)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isFollowingTarget)
+        assertEquals("Failed to unfollow user", vm.uiState.value.error)
+    }
+
+    // ===== follower / following counts =====
+
+    @Test
+    fun `loadProfile sets follower and following counts`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId).copy(
+            followerIds = setOf("a", "b"),
+            followingIds = setOf("c", "d", "e")
+        )
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        assertEquals(2, vm.uiState.value.followerCount)
+        assertEquals(3, vm.uiState.value.followingCount)
     }
 }

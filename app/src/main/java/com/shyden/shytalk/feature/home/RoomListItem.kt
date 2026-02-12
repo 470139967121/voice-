@@ -44,7 +44,9 @@ fun RoomListItem(
     seatUsers: Map<String, User>,
     onClick: () -> Unit
 ) {
-    val occupiedSeats = room.seats.values.count { it.state == SeatState.OCCUPIED }
+    val occupiedSeats = remember(room.seats) {
+        room.seats.values.count { it.state == SeatState.OCCUPIED }
+    }
     val totalSeats = room.seats.size
 
     // Build ordered list of seated users: owner first (seat 0), then others

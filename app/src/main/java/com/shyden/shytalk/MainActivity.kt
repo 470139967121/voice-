@@ -20,6 +20,10 @@ import androidx.navigation.compose.rememberNavController
 import com.google.firebase.firestore.FirebaseFirestore
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.UserRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
 import com.shyden.shytalk.feature.update.ForceUpdateScreen
 import com.shyden.shytalk.navigation.NavGraph
@@ -34,6 +38,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var authRepository: AuthRepository
+
+    @Inject
+    lateinit var userRepository: UserRepository
 
     @Inject
     lateinit var activeRoomManager: ActiveRoomManager
@@ -163,6 +170,9 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         activeRoomManager.isAppInForeground = true
+        authRepository.currentUser?.uid?.let { uid ->
+            CoroutineScope(Dispatchers.IO).launch { userRepository.updateLastSeen(uid) }
+        }
     }
 
     override fun onStop() {

@@ -39,7 +39,7 @@ private const val WEB_CLIENT_ID =
 
 @Composable
 fun GoogleSignInScreen(
-    onAuthSuccess: (hasProfile: Boolean) -> Unit,
+    onAuthSuccess: (hasProfile: Boolean, hasDOB: Boolean) -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -50,7 +50,7 @@ fun GoogleSignInScreen(
 
     LaunchedEffect(uiState.isAuthenticated) {
         if (uiState.isAuthenticated) {
-            onAuthSuccess(uiState.hasProfile)
+            onAuthSuccess(uiState.hasProfile, uiState.hasDOB)
         }
     }
 
@@ -98,7 +98,7 @@ fun GoogleSignInScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Sign in with Google",
+                text = "Connect with friends through voice",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

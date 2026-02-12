@@ -42,14 +42,16 @@ fun SeatGrid(
             .sortedBy { it.key.toIntOrNull() ?: 0 }
     }
 
-    val targetSeatSize = when (occupiedSeats.size) {
-        1    -> 200.dp
-        2    -> 140.dp
-        3    -> 110.dp
-        4    ->  80.dp
-        5    ->  76.dp
-        6    ->  72.dp
-        else ->  70.dp
+    val targetSeatSize = remember(occupiedSeats.size) {
+        when (occupiedSeats.size) {
+            1    -> 200.dp
+            2    -> 140.dp
+            3    -> 110.dp
+            4    ->  80.dp
+            5    ->  76.dp
+            6    ->  72.dp
+            else ->  70.dp
+        }
     }
 
     val seatSize by animateDpAsState(

@@ -66,10 +66,10 @@ class UserToMapTest {
     }
 
     @Test
-    fun `toMap contains exactly 13 keys`() {
+    fun `toMap contains exactly 19 keys`() {
         val user = TestData.createTestUser()
         val map = user.toMap()
-        assertEquals(13, map.size)
+        assertEquals(19, map.size)
     }
 
     @Test
@@ -77,10 +77,45 @@ class UserToMapTest {
         val expectedKeys = setOf(
             "uid", "displayName", "avatarUrl", "profilePhotoUrl", "coverPhotoUrl",
             "description", "nationality", "uniqueId", "blockedUserIds",
-            "phoneNumber", "email", "createdAt", "lastSeenAt"
+            "followingIds", "followerIds", "dateOfBirth", "hideFollowing",
+            "hideOnlineStatus", "hideAge", "phoneNumber", "email",
+            "createdAt", "lastSeenAt"
         )
         val user = TestData.createTestUser()
         assertEquals(expectedKeys, user.toMap().keys)
+    }
+
+    @Test
+    fun `toMap includes privacy fields`() {
+        val user = User(hideFollowing = true, hideOnlineStatus = true, hideAge = true)
+        val map = user.toMap()
+        assertEquals(true, map["hideFollowing"])
+        assertEquals(true, map["hideOnlineStatus"])
+        assertEquals(true, map["hideAge"])
+    }
+
+    @Test
+    fun `toMap defaults privacy fields to false`() {
+        val user = User()
+        val map = user.toMap()
+        assertEquals(false, map["hideFollowing"])
+        assertEquals(false, map["hideOnlineStatus"])
+        assertEquals(false, map["hideAge"])
+    }
+
+    @Test
+    fun `toMap includes dateOfBirth when set`() {
+        val dob = Timestamp(Date(946684800000L)) // 2000-01-01
+        val user = User(dateOfBirth = dob)
+        val map = user.toMap()
+        assertEquals(dob, map["dateOfBirth"])
+    }
+
+    @Test
+    fun `toMap includes null dateOfBirth when not set`() {
+        val user = User()
+        val map = user.toMap()
+        assertNull(map["dateOfBirth"])
     }
 
     @Test
@@ -95,6 +130,10 @@ class UserToMapTest {
         assertNull(user.nationality)
         assertEquals(0L, user.uniqueId)
         assertEquals(emptySet<String>(), user.blockedUserIds)
+        assertNull(user.dateOfBirth)
+        assertEquals(false, user.hideFollowing)
+        assertEquals(false, user.hideOnlineStatus)
+        assertEquals(false, user.hideAge)
         assertNull(user.phoneNumber)
         assertNull(user.email)
     }

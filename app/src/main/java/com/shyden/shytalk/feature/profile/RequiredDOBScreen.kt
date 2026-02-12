@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -34,22 +32,22 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileSetupScreen(
-    onProfileComplete: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+fun RequiredDOBScreen(
+    onComplete: () -> Unit,
+    viewModel: RequiredDOBViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var displayName by rememberSaveable { mutableStateOf("") }
     var selectedDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var dateError by rememberSaveable { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(uiState.profileSaved) {
-        if (uiState.profileSaved) {
-            onProfileComplete()
+    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+
+    LaunchedEffect(uiState.saved) {
+        if (uiState.saved) {
+            onComplete()
         }
     }
 
@@ -59,8 +57,6 @@ fun ProfileSetupScreen(
             viewModel.clearError()
         }
     }
-
-    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         Column(
@@ -72,32 +68,20 @@ fun ProfileSetupScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Set Up Your Profile",
+                text = "One More Step",
                 style = MaterialTheme.typography.headlineMedium
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Choose a display name and enter your date of birth",
+                text = "We need your date of birth to continue.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            OutlinedTextField(
-                value = displayName,
-                onValueChange = { if (it.length <= 30) displayName = it },
-                label = { Text("Display Name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                supportingText = { Text("${displayName.length}/30") }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Date of Birth picker
             OutlinedButton(
                 onClick = { showDatePicker = true },
                 modifier = Modifier.fillMaxWidth()
@@ -130,15 +114,12 @@ fun ProfileSetupScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            val canContinue = displayName.isNotBlank() &&
-                selectedDateMillis != null &&
-                dateError == null &&
-                !uiState.isLoading
+            val canContinue = selectedDateMillis != null && dateError == null && !uiState.isLoading
 
             Button(
                 onClick = {
                     selectedDateMillis?.let { millis ->
-                        viewModel.saveProfile(displayName.trim(), Timestamp(Date(millis)))
+                        viewModel.saveDateOfBirth(Timestamp(Date(millis)))
                     }
                 },
                 enabled = canContinue,

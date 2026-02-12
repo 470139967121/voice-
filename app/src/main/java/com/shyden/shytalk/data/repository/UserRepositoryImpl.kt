@@ -4,6 +4,7 @@ import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.firebaseCall
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.TimeoutCancellationException
@@ -86,4 +87,31 @@ class UserRepositoryImpl @Inject constructor(
         val data = doc.data ?: return@firebaseCall emptySet()
         (data["blockedUserIds"] as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet()
     }
+
+    override suspend fun followUser(currentUserId: String, targetUserId: String): Resource<Unit> =
+        firebaseCall("Failed to follow user") {
+            val batch = firestore.batch()
+            batch.update(usersCollection.document(currentUserId), "followingIds", FieldValue.arrayUnion(targetUserId))
+            batch.update(usersCollection.document(targetUserId), "followerIds", FieldValue.arrayUnion(currentUserId))
+            batch.commit().await()
+        }
+
+    override suspend fun unfollowUser(currentUserId: String, targetUserId: String): Resource<Unit> =
+        firebaseCall("Failed to unfollow user") {
+            val batch = firestore.batch()
+            batch.update(usersCollection.document(currentUserId), "followingIds", FieldValue.arrayRemove(targetUserId))
+            batch.update(usersCollection.document(targetUserId), "followerIds", FieldValue.arrayRemove(currentUserId))
+            batch.commit().await()
+        }
+
+    override suspend fun getUsers(userIds: List<String>): Resource<List<User>> =
+        firebaseCall("Failed to get users") {
+            if (userIds.isEmpty()) return@firebaseCall emptyList()
+            userIds.chunked(30).flatMap { chunk ->
+                val snapshot = usersCollection.whereIn(FieldPath.documentId(), chunk).get().await()
+                snapshot.documents.mapNotNull { doc ->
+                    doc.data?.let { User.fromMap(it, doc.id) }
+                }
+            }
+        }
 }

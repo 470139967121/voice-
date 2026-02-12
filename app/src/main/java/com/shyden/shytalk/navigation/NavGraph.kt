@@ -9,8 +9,11 @@ import androidx.navigation.navArgument
 import com.shyden.shytalk.feature.auth.GoogleSignInScreen
 import com.shyden.shytalk.feature.main.MainScreen
 import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
+import com.shyden.shytalk.feature.settings.AppSettingsScreen
+import com.shyden.shytalk.feature.profile.FollowListScreen
 import com.shyden.shytalk.feature.profile.ProfileScreen
 import com.shyden.shytalk.feature.profile.ProfileSetupScreen
+import com.shyden.shytalk.feature.profile.RequiredDOBScreen
 import com.shyden.shytalk.feature.room.RoomScreen
 
 @Composable
@@ -25,13 +28,15 @@ fun NavGraph(
     ) {
         composable(Screen.GoogleSignIn.route) {
             GoogleSignInScreen(
-                onAuthSuccess = { hasProfile ->
-                    if (hasProfile) {
-                        navController.navigate(Screen.Main.route) {
+                onAuthSuccess = { hasProfile, hasDOB ->
+                    when {
+                        !hasProfile -> navController.navigate(Screen.ProfileSetup.route) {
                             popUpTo(Screen.GoogleSignIn.route) { inclusive = true }
                         }
-                    } else {
-                        navController.navigate(Screen.ProfileSetup.route) {
+                        !hasDOB -> navController.navigate(Screen.RequiredDOB.route) {
+                            popUpTo(Screen.GoogleSignIn.route) { inclusive = true }
+                        }
+                        else -> navController.navigate(Screen.Main.route) {
                             popUpTo(Screen.GoogleSignIn.route) { inclusive = true }
                         }
                     }
@@ -49,6 +54,16 @@ fun NavGraph(
             )
         }
 
+        composable(Screen.RequiredDOB.route) {
+            RequiredDOBScreen(
+                onComplete = {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(Screen.RequiredDOB.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Main.route) {
             MainScreen(
                 onNavigateToRoom = { roomId ->
@@ -57,14 +72,11 @@ fun NavGraph(
                 onNavigateToUserProfile = { userId ->
                     navController.navigate(Screen.UserProfile.createRoute(userId))
                 },
-                onNavigateToPrivacyPolicy = {
-                    navController.navigate(Screen.PrivacyPolicy.route)
+                onNavigateToFollowList = { userId, tab ->
+                    navController.navigate(Screen.FollowList.createRoute(userId, tab))
                 },
-                onSignOut = {
-                    onSignOut()
-                    navController.navigate(Screen.GoogleSignIn.route) {
-                        popUpTo(Screen.Main.route) { inclusive = true }
-                    }
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -90,7 +102,43 @@ fun NavGraph(
             val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
             ProfileScreen(
                 userId = userId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToUserProfile = { uid ->
+                    navController.navigate(Screen.UserProfile.createRoute(uid))
+                },
+                onNavigateToFollowList = { uid, tab ->
+                    navController.navigate(Screen.FollowList.createRoute(uid, tab))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.FollowList.route,
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType },
+                navArgument("tab") { type = NavType.StringType }
+            )
+        ) {
+            FollowListScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToUserProfile = { uid ->
+                    navController.navigate(Screen.UserProfile.createRoute(uid))
+                }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            AppSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPrivacyPolicy = {
+                    navController.navigate(Screen.PrivacyPolicy.route)
+                },
+                onSignOut = {
+                    onSignOut()
+                    navController.navigate(Screen.GoogleSignIn.route) {
+                        popUpTo(Screen.Main.route) { inclusive = true }
+                    }
+                }
             )
         }
 

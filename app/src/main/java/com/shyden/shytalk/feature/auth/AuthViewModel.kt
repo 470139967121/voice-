@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Named
@@ -19,6 +20,7 @@ data class AuthUiState(
     val error: String? = null,
     val isAuthenticated: Boolean = false,
     val hasProfile: Boolean = false,
+    val hasDOB: Boolean = false,
     val isDeviceLocked: Boolean = false
 )
 
@@ -43,10 +45,10 @@ class AuthViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true) }
             val userId = authRepository.currentUser?.uid
             if (userId == null) {
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                _uiState.update { it.copy(isLoading = false) }
                 return@launch
             }
 
@@ -55,10 +57,7 @@ class AuthViewModel @Inject constructor(
                     val boundUserId = binding.data
                     if (boundUserId != null && boundUserId != userId) {
                         authRepository.signOut()
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            isDeviceLocked = true
-                        )
+                        _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
                         return@launch
                     }
                     if (boundUserId == null) {
@@ -71,29 +70,13 @@ class AuthViewModel @Inject constructor(
                 is Resource.Loading -> {}
             }
 
-            when (val result = userRepository.userExists(userId)) {
-                is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        hasProfile = result.data
-                    )
-                }
-                is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        hasProfile = false
-                    )
-                }
-                is Resource.Loading -> {}
-            }
+            resolveProfileState(userId)
         }
     }
 
     fun signInWithGoogle(idToken: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             when (val result = authRepository.signInWithGoogleIdToken(idToken)) {
                 is Resource.Success -> {
                     val user = result.data
@@ -103,10 +86,7 @@ class AuthViewModel @Inject constructor(
                             val boundUserId = binding.data
                             if (boundUserId != null && boundUserId != user.uid) {
                                 authRepository.signOut()
-                                _uiState.value = _uiState.value.copy(
-                                    isLoading = false,
-                                    isDeviceLocked = true
-                                )
+                                _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
                                 return@launch
                             }
                             if (boundUserId == null) {
@@ -119,31 +99,50 @@ class AuthViewModel @Inject constructor(
                         is Resource.Loading -> {}
                     }
 
-                    val exists = userRepository.userExists(user.uid)
-                    val hasProfile = exists is Resource.Success && exists.data
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        hasProfile = hasProfile
-                    )
+                    resolveProfileState(user.uid)
                 }
                 is Resource.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.message
-                    )
+                    _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
                 is Resource.Loading -> {}
             }
         }
     }
 
+    private suspend fun resolveProfileState(userId: String) {
+        when (val result = userRepository.userExists(userId)) {
+            is Resource.Success -> {
+                val hasProfile = result.data
+                val hasDOB = if (hasProfile) {
+                    when (val userResult = userRepository.getUser(userId)) {
+                        is Resource.Success -> userResult.data.dateOfBirth != null
+                        else -> false
+                    }
+                } else false
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isAuthenticated = true,
+                        hasProfile = hasProfile,
+                        hasDOB = hasDOB
+                    )
+                }
+            }
+            is Resource.Error -> {
+                _uiState.update {
+                    it.copy(isLoading = false, isAuthenticated = true, hasProfile = false)
+                }
+            }
+            is Resource.Loading -> {}
+        }
+    }
+
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 
     fun clearDeviceLocked() {
-        _uiState.value = _uiState.value.copy(isDeviceLocked = false)
+        _uiState.update { it.copy(isDeviceLocked = false) }
     }
 
     fun signOut() {

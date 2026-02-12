@@ -1,12 +1,12 @@
-v0.22 - Photo caching, room editing & auto-close
+v0.23 - Date of Birth, privacy & performance
 
-- Photos load faster and are saved on your device
-- Room owners can edit the room name
-- Rooms auto-close after 3 hours with a countdown
-- Owners can promote or demote hosts
-- Cleaner chat: only join and kick messages
-- ChatHead now has a purple border
-- Speaking indicator pulses around the avatar
-- Improved performance and stability
-- Fixed voice reconnection when owner returns
-- Owners can now kick or mute hosts
+- Date of Birth is now required for all users
+- Existing users will be asked for their DOB on next login
+- Age is shown on profiles (must be 13+)
+- New "Hide Age" privacy toggle in Settings
+- Batch user loading for faster room lists
+- Thread-safe state updates across all screens
+- Chat text survives screen rotation
+- Memoized seat grid and room card computations
+- Consolidated block-warning dialogs in rooms
+- Improved overall performance and stability
