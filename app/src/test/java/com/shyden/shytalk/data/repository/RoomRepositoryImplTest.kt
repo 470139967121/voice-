@@ -339,6 +339,27 @@ class RoomRepositoryImplTest {
         assertTrue(result is Resource.Error)
     }
 
+    // --- updateRoomName ---
+
+    @Test
+    fun `updateRoomName returns Success`() = runTest {
+        every { docRef.update(any<String>(), any()) } returns Tasks.forResult(null)
+
+        val result = repo.updateRoomName("room-1", "New Name")
+
+        assertTrue(result is Resource.Success)
+        verify { docRef.update("name", "New Name") }
+    }
+
+    @Test
+    fun `updateRoomName returns Error on exception`() = runTest {
+        every { docRef.update(any<String>(), any()) } returns Tasks.forException(RuntimeException("fail"))
+
+        val result = repo.updateRoomName("room-1", "New Name")
+
+        assertTrue(result is Resource.Error)
+    }
+
     // --- closeAllRoomsByOwner ---
 
     @Test

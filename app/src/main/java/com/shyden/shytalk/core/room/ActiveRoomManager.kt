@@ -139,13 +139,15 @@ class ActiveRoomManager @Inject constructor(
 
         presenceService.removePresence()
 
-        // Vacate seat
+        // Vacate seat — but keep owner in seat 0 for reconnection
         val mySeatEntry = room.seats.entries.find { it.value.userId == userId }
         if (mySeatEntry != null) {
             val seatIndex = mySeatEntry.key.toInt()
-            roomRepository.leaveSeat(roomId, seatIndex)
             if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
+                // Owner keeps their seat for reconnection — just mark away
                 roomRepository.setOwnerAway(roomId)
+            } else {
+                roomRepository.leaveSeat(roomId, seatIndex)
             }
         }
 
@@ -425,7 +427,8 @@ class ActiveRoomManager @Inject constructor(
 
         val seat = room.seats[seatIndex.toString()] ?: return
         val targetUserId = seat.userId ?: return
-        if (targetUserId == room.ownerId || targetUserId in room.hostIds) return
+        if (targetUserId == room.ownerId) return
+        if (role == RoomRole.HOST && targetUserId in room.hostIds) return
 
         roomRepository.toggleMute(roomId, seatIndex, !seat.isMuted)
     }
@@ -455,7 +458,8 @@ class ActiveRoomManager @Inject constructor(
 
         val seat = room.seats[seatIndex.toString()] ?: return
         val targetUserId = seat.userId ?: return
-        if (targetUserId == room.ownerId || targetUserId in room.hostIds) return
+        if (targetUserId == room.ownerId) return
+        if (role == RoomRole.HOST && targetUserId in room.hostIds) return
 
         val displayReason = reason.ifBlank { "No reason given" }
         roomRepository.kickUser(roomId, targetUserId, seatIndex, kickerName = "", reason = displayReason)

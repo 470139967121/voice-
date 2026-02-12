@@ -46,4 +46,25 @@ class StorageRepositoryImplTest {
         // Verify the child path includes userId and avatars prefix
         io.mockk.verify { storageRef.child(match { it.startsWith("avatars/user-1/") && it.endsWith(".jpg") }) }
     }
+
+    // --- deleteImageByUrl ---
+
+    @Test
+    fun `deleteImageByUrl calls delete on reference from url`() = runTest {
+        val urlRef = mockk<StorageReference>(relaxed = true)
+        every { storage.getReferenceFromUrl("https://firebase.storage/photo.jpg") } returns urlRef
+        every { urlRef.delete() } returns com.google.android.gms.tasks.Tasks.forResult(null)
+
+        repo.deleteImageByUrl("https://firebase.storage/photo.jpg")
+
+        io.mockk.verify { urlRef.delete() }
+    }
+
+    @Test
+    fun `deleteImageByUrl swallows exception silently`() = runTest {
+        every { storage.getReferenceFromUrl(any()) } throws IllegalArgumentException("invalid url")
+
+        // Should not throw
+        repo.deleteImageByUrl("bad-url")
+    }
 }

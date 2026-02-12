@@ -12,7 +12,8 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.ImageView
-import coil.ImageLoader
+import android.widget.TextView
+import coil.imageLoader
 import coil.request.ImageRequest
 import coil.transform.CircleCropTransformation
 import com.shyden.shytalk.R
@@ -32,7 +33,7 @@ class ChatHeadManager(
     private var closeZoneParams: WindowManager.LayoutParams? = null
     private var voiceWaveView: VoiceWaveView? = null
     private var isShowing = false
-    private val imageLoader by lazy { ImageLoader(context) }
+    private val imageLoader get() = context.imageLoader
 
     private val density = context.resources.displayMetrics.density
     private val screenWidthPx = context.resources.displayMetrics.widthPixels
@@ -70,6 +71,20 @@ class ChatHeadManager(
         handler.post {
             val view = bubbleView ?: return@post
             loadPhoto(view, ownerPhotoUrl)
+        }
+    }
+
+    fun showRoomClosed() {
+        handler.post {
+            val view = bubbleView ?: return@post
+            voiceWaveView?.stopAnimation()
+            voiceWaveView?.visibility = View.GONE
+            view.findViewById<ImageView>(R.id.ownerPhoto)?.visibility = View.GONE
+            view.findViewById<ImageView>(R.id.micIcon)?.visibility = View.GONE
+            view.findViewById<ImageView>(R.id.closeButton)?.visibility = View.GONE
+            view.findViewById<TextView>(R.id.roomClosedText)?.visibility = View.VISIBLE
+            // Auto-dismiss after 3 seconds
+            handler.postDelayed({ destroy() }, ROOM_CLOSED_DISPLAY_MS)
         }
     }
 
@@ -292,5 +307,6 @@ class ChatHeadManager(
         private const val CLOSE_BUTTON_SIZE_DP = 20
         private const val EDGE_MARGIN_DP = 8
         private const val CLOSE_ZONE_HEIGHT_DP = 72
+        private const val ROOM_CLOSED_DISPLAY_MS = 3000L
     }
 }

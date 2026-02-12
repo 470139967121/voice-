@@ -35,6 +35,7 @@ class RoomService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var observerJob: Job? = null
     private var chatHeadJob: Job? = null
+    private var roomClosedJob: Job? = null
     private var chatHeadManager: ChatHeadManager? = null
     private var ownerPhotoUrl: String? = null
 
@@ -107,6 +108,7 @@ class RoomService : Service() {
         startForeground(Constants.ROOM_NOTIFICATION_ID, buildNotification(roomId, "Voice Room"))
         observeRoom()
         observeRoomScreenVisibility()
+        observeRoomClosed()
 
         return START_STICKY
     }
@@ -117,7 +119,7 @@ class RoomService : Service() {
             var lastOwnerId: String? = null
             activeRoomManager.activeRoom.collect { room ->
                 if (room == null) {
-                    stopSelf()
+                    // Don't stopSelf() immediately — let observeRoomClosed show "Room Closed" on chathead
                     return@collect
                 }
                 val notification = buildNotification(room.roomId, room.name)
@@ -136,6 +138,20 @@ class RoomService : Service() {
                         }
                         else -> {}
                     }
+                }
+            }
+        }
+    }
+
+    private fun observeRoomClosed() {
+        roomClosedJob?.cancel()
+        roomClosedJob = serviceScope.launch {
+            activeRoomManager.roomClosed.collect { closed ->
+                if (closed) {
+                    chatHeadManager?.showRoomClosed()
+                    // Stop service after chathead finishes displaying "Room Closed"
+                    kotlinx.coroutines.delay(3500L)
+                    stopSelf()
                 }
             }
         }
@@ -201,6 +217,7 @@ class RoomService : Service() {
         super.onDestroy()
         observerJob?.cancel()
         chatHeadJob?.cancel()
+        roomClosedJob?.cancel()
         chatHeadManager?.destroy()
         chatHeadManager = null
     }

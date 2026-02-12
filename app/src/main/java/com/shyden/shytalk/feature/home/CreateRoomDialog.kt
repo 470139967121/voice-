@@ -32,7 +32,7 @@ fun CreateRoomDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = roomName,
-                    onValueChange = { roomName = it },
+                    onValueChange = { if (it.length <= 50) roomName = it },
                     label = { Text("Room Name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true

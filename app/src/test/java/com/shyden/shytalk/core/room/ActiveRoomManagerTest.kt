@@ -560,7 +560,7 @@ class ActiveRoomManagerTest {
     }
 
     @Test
-    fun `leaveRoom - owner sets owner away`() = runTest {
+    fun `leaveRoom - owner sets owner away and keeps seat`() = runTest {
         manager.trackRoom("room-1")
         val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
         val room = TestData.createTestRoom(
@@ -572,7 +572,8 @@ class ActiveRoomManagerTest {
 
         manager.leaveRoom()
 
-        coVerify { roomRepository.leaveSeat("room-1", 0) }
+        // Owner's seat is preserved for reconnection — only setOwnerAway is called
+        coVerify(exactly = 0) { roomRepository.leaveSeat("room-1", 0) }
         coVerify { roomRepository.setOwnerAway("room-1") }
     }
 
@@ -786,5 +787,85 @@ class ActiveRoomManagerTest {
     fun `clearError clears error state`() {
         manager.clearError()
         assertNull(manager.error.value)
+    }
+
+    // --- Owner can kick/force-mute hosts (v0.18 fix) ---
+
+    @Test
+    fun `kickUser - owner can kick a host`() = runTest {
+        manager.trackRoom("room-1")
+        val seats = TestData.createDefaultSeats().toMutableMap()
+        seats["0"] = TestData.createTestSeat(userId = currentUserId)
+        seats["3"] = TestData.createTestSeat(userId = "a-host")
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            hostIds = setOf("a-host"),
+            participantIds = setOf(currentUserId, "a-host"),
+            seats = seats
+        )
+        manager.updateTrackedRoom(room)
+
+        manager.kickUser(3)
+
+        coVerify { roomRepository.kickUser("room-1", "a-host", 3, any(), any()) }
+    }
+
+    @Test
+    fun `kickUser - host cannot kick another host`() = runTest {
+        manager.trackRoom("room-1")
+        val seats = TestData.createDefaultSeats().toMutableMap()
+        seats["0"] = TestData.createTestSeat(userId = "the-owner")
+        seats["2"] = TestData.createTestSeat(userId = currentUserId)
+        seats["3"] = TestData.createTestSeat(userId = "other-host")
+        val room = TestData.createTestRoom(
+            ownerId = "the-owner",
+            hostIds = setOf(currentUserId, "other-host"),
+            participantIds = setOf("the-owner", currentUserId, "other-host"),
+            seats = seats
+        )
+        manager.updateTrackedRoom(room)
+
+        manager.kickUser(3)
+
+        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `forceMuteUser - owner can force-mute a host`() = runTest {
+        manager.trackRoom("room-1")
+        val seats = TestData.createDefaultSeats().toMutableMap()
+        seats["0"] = TestData.createTestSeat(userId = currentUserId)
+        seats["3"] = TestData.createTestSeat(userId = "a-host", isMuted = false)
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            hostIds = setOf("a-host"),
+            participantIds = setOf(currentUserId, "a-host"),
+            seats = seats
+        )
+        manager.updateTrackedRoom(room)
+
+        manager.forceMuteUser(3)
+
+        coVerify { roomRepository.toggleMute("room-1", 3, true) }
+    }
+
+    @Test
+    fun `forceMuteUser - host cannot force-mute another host`() = runTest {
+        manager.trackRoom("room-1")
+        val seats = TestData.createDefaultSeats().toMutableMap()
+        seats["0"] = TestData.createTestSeat(userId = "the-owner")
+        seats["2"] = TestData.createTestSeat(userId = currentUserId)
+        seats["3"] = TestData.createTestSeat(userId = "other-host", isMuted = false)
+        val room = TestData.createTestRoom(
+            ownerId = "the-owner",
+            hostIds = setOf(currentUserId, "other-host"),
+            participantIds = setOf("the-owner", currentUserId, "other-host"),
+            seats = seats
+        )
+        manager.updateTrackedRoom(room)
+
+        manager.forceMuteUser(3)
+
+        coVerify(exactly = 0) { roomRepository.toggleMute(any(), any(), any()) }
     }
 }

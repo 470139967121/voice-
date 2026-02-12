@@ -431,6 +431,84 @@ class ProfileViewModelTest {
         assertFalse(vm.uiState.value.isUploadingPhoto)
     }
 
+    @Test
+    fun `uploadProfilePhoto - deletes old photo after successful upload`() = runTest {
+        val oldUrl = "https://firebase.storage/old-profile.jpg"
+        val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = oldUrl)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val uri = mockk<Uri>()
+        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1, 2))
+        coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://new.url")
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadProfilePhoto(uri)
+        advanceUntilIdle()
+
+        coVerify { storageRepository.deleteImageByUrl(oldUrl) }
+    }
+
+    @Test
+    fun `uploadProfilePhoto - no old photo skips delete`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = null)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val uri = mockk<Uri>()
+        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1, 2))
+        coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://new.url")
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadProfilePhoto(uri)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
+    }
+
+    @Test
+    fun `uploadProfilePhoto - upload failure does not delete old photo`() = runTest {
+        val oldUrl = "https://firebase.storage/old-profile.jpg"
+        val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = oldUrl)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val uri = mockk<Uri>()
+        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1))
+        coEvery { storageRepository.uploadImage(any(), any(), any()) } returns Resource.Error("upload failed")
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadProfilePhoto(uri)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
+    }
+
+    @Test
+    fun `uploadProfilePhoto - save url failure does not delete old photo`() = runTest {
+        val oldUrl = "https://firebase.storage/old-profile.jpg"
+        val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = oldUrl)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val uri = mockk<Uri>()
+        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1))
+        coEvery { storageRepository.uploadImage(any(), any(), any()) } returns Resource.Success("https://new.url")
+        coEvery { userRepository.updateProfile(any(), any()) } returns Resource.Error("save failed")
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadProfilePhoto(uri)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
+    }
+
     // ===== uploadCoverPhoto =====
 
     @Test
@@ -451,6 +529,26 @@ class ProfileViewModelTest {
 
         assertEquals("https://cover.url", vm.uiState.value.user?.coverPhotoUrl)
         assertFalse(vm.uiState.value.isUploadingPhoto)
+    }
+
+    @Test
+    fun `uploadCoverPhoto - deletes old cover after successful upload`() = runTest {
+        val oldUrl = "https://firebase.storage/old-cover.jpg"
+        val user = TestData.createTestUser(uid = currentUserId, coverPhotoUrl = oldUrl)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val uri = mockk<Uri>()
+        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1, 2))
+        coEvery { storageRepository.uploadImage(currentUserId, "cover_photos", any()) } returns Resource.Success("https://new-cover.url")
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadCoverPhoto(uri)
+        advanceUntilIdle()
+
+        coVerify { storageRepository.deleteImageByUrl(oldUrl) }
     }
 
     @Test

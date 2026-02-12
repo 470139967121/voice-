@@ -56,8 +56,9 @@ class ProfileViewModel @Inject constructor(
         val profileUserId = if (userId.isNullOrEmpty() || userId == currentUid) currentUid else userId
         val isOwn = profileUserId == currentUid
 
+        val alreadyHasData = _uiState.value.user != null
         _uiState.value = _uiState.value.copy(
-            isLoading = true,
+            isLoading = !alreadyHasData,
             isOwnProfile = isOwn,
             currentUserId = currentUid
         )
@@ -209,13 +210,15 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun uploadProfilePhoto(uri: Uri) {
-        uploadPhoto(uri, "profile_photos", "profilePhotoUrl") { url ->
+        val oldUrl = _uiState.value.user?.profilePhotoUrl
+        uploadPhoto(uri, "profile_photos", "profilePhotoUrl", oldUrl) { url ->
             _uiState.value.user?.copy(profilePhotoUrl = url)
         }
     }
 
     fun uploadCoverPhoto(uri: Uri) {
-        uploadPhoto(uri, "cover_photos", "coverPhotoUrl") { url ->
+        val oldUrl = _uiState.value.user?.coverPhotoUrl
+        uploadPhoto(uri, "cover_photos", "coverPhotoUrl", oldUrl) { url ->
             _uiState.value.user?.copy(coverPhotoUrl = url)
         }
     }
@@ -224,6 +227,7 @@ class ProfileViewModel @Inject constructor(
         uri: Uri,
         folder: String,
         profileField: String,
+        oldUrl: String?,
         updateUser: (String) -> User?
     ) {
         val userId = authRepository.currentUser?.uid ?: return
@@ -250,6 +254,10 @@ class ProfileViewModel @Inject constructor(
                                 isUploadingPhoto = false,
                                 user = updateUser(url)
                             )
+                            // Delete old photo from Firebase Storage
+                            if (!oldUrl.isNullOrEmpty()) {
+                                storageRepository.deleteImageByUrl(oldUrl)
+                            }
                         }
                         is Resource.Error -> {
                             _uiState.value = _uiState.value.copy(

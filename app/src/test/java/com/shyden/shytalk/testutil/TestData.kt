@@ -63,6 +63,7 @@ object TestData {
         seats: Map<String, Seat> = createSeatsWithOwner(ownerId),
         agoraChannelName: String = "channel-1",
         firstJoinTimestamps: Map<String, Timestamp> = emptyMap(),
+        createdAt: Timestamp = Timestamp.now(),
         ownerLeftAt: Timestamp? = null,
         closedAt: Timestamp? = null
     ) = ChatRoom(
@@ -79,7 +80,7 @@ object TestData {
         seats = seats,
         agoraChannelName = agoraChannelName,
         firstJoinTimestamps = firstJoinTimestamps,
-        createdAt = BASE_TIMESTAMP,
+        createdAt = createdAt,
         ownerLeftAt = ownerLeftAt,
         closedAt = closedAt
     )

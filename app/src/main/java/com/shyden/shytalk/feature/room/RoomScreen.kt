@@ -26,6 +26,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -81,6 +82,7 @@ fun RoomScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showUserCardForId by remember { mutableStateOf<String?>(null) }
     var showParticipantPanel by remember { mutableStateOf(false) }
+    var showRoomNameDialog by remember { mutableStateOf(false) }
 
     // Track room screen visibility for chathead
     DisposableEffect(Unit) {
@@ -277,10 +279,10 @@ fun RoomScreen(
             RoomToolbar(
                 roomName = uiState.room?.name ?: "Room",
                 participantCount = uiState.room?.participantIds?.size ?: 0,
-                isOwnerOrHost = uiState.currentRole == RoomRole.OWNER || uiState.currentRole == RoomRole.HOST,
+                roomExpiryRemainingMs = uiState.roomExpiryRemainingMs,
                 onBack = { onNavigateBack() },
-                onSettings = { showSettings = true },
-                onTogglePeople = { showParticipantPanel = !showParticipantPanel }
+                onTogglePeople = { showParticipantPanel = !showParticipantPanel },
+                onRoomNameClick = { showRoomNameDialog = true }
             )
         }
     ) { padding ->
@@ -412,6 +414,7 @@ fun RoomScreen(
                         currentRole = uiState.currentRole,
                         seats = uiState.room?.seats ?: emptyMap(),
                         userMap = userMap,
+                        isOwnerOrHost = uiState.currentRole == RoomRole.OWNER || uiState.currentRole == RoomRole.HOST,
                         onToggleMic = { seatIndex -> viewModel.toggleSelfMute(seatIndex) },
                         onSendMessage = { viewModel.sendMessage(it) },
                         onTapUser = { userId ->
@@ -420,6 +423,7 @@ fun RoomScreen(
                         onInviteUser = { senderId, senderName ->
                             viewModel.inviteFromMessage(senderId, senderName)
                         },
+                        onSettings = { showSettings = true },
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
@@ -499,6 +503,57 @@ fun RoomScreen(
             )
         }
 
+        if (showRoomNameDialog && uiState.room != null) {
+            val isOwner = uiState.currentRole == RoomRole.OWNER
+            if (isOwner) {
+                var editedName by remember { mutableStateOf(uiState.room?.name ?: "") }
+                AlertDialog(
+                    onDismissRequest = { showRoomNameDialog = false },
+                    title = { Text("Edit Room Name") },
+                    text = {
+                        OutlinedTextField(
+                            value = editedName,
+                            onValueChange = { if (it.length <= 50) editedName = it },
+                            singleLine = true,
+                            placeholder = { Text("Room name") }
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val trimmed = editedName.trim()
+                            if (trimmed.isNotEmpty()) {
+                                viewModel.updateRoomName(trimmed)
+                            }
+                            showRoomNameDialog = false
+                        }) {
+                            Text("Save")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showRoomNameDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            } else {
+                AlertDialog(
+                    onDismissRequest = { showRoomNameDialog = false },
+                    title = { Text("Room Name") },
+                    text = {
+                        Text(
+                            text = uiState.room?.name ?: "",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showRoomNameDialog = false }) {
+                            Text("Close")
+                        }
+                    }
+                )
+            }
+        }
+
         val emptySeats = remember(uiState.room?.seats) {
             uiState.room?.seats?.entries
                 ?.filter { it.value.state != SeatState.OCCUPIED && it.key.toInt() != Constants.OWNER_SEAT_INDEX }
@@ -521,10 +576,13 @@ fun RoomScreen(
                         && userId != uiState.currentUserId
                         && !isTargetSeated
 
-                // Mod capabilities: owner/host can act on normal users
-                val isTargetNormalUser = userId != uiState.currentUserId && targetRole == RoomRole.ATTENDEE
-                val canModerate = isTargetNormalUser && isTargetSeated
-                        && (uiState.currentRole == RoomRole.OWNER || uiState.currentRole == RoomRole.HOST)
+                // Mod capabilities: owner can act on hosts + attendees; hosts can act on attendees only
+                val isNotSelf = userId != uiState.currentUserId
+                val isOwner = uiState.currentRole == RoomRole.OWNER
+                val isHostOrOwner = isOwner || uiState.currentRole == RoomRole.HOST
+                val canModerate = isNotSelf && isTargetSeated && isHostOrOwner
+                    && (isOwner || targetRole == RoomRole.ATTENDEE)
+                    && userId != uiState.room?.ownerId
 
                 UserCardPopup(
                     user = user,
@@ -564,6 +622,14 @@ fun RoomScreen(
                         { toIndex -> viewModel.moveSeat(targetSeatIndex, toIndex) }
                     } else null,
                     emptySeats = emptySeats,
+                    onMakeHost = if (isOwner && isNotSelf && isTargetSeated
+                        && targetRole == RoomRole.ATTENDEE) {
+                        { viewModel.addHost(userId) }
+                    } else null,
+                    onRemoveHost = if (isOwner && isNotSelf && targetRole == RoomRole.HOST) {
+                        { viewModel.removeHost(userId) }
+                    } else null,
+                    isHost = targetRole == RoomRole.HOST,
                     onDismiss = { showUserCardForId = null }
                 )
             }

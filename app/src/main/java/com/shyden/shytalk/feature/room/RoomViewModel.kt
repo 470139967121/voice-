@@ -65,6 +65,7 @@ data class RoomUiState(
     val roomClosed: Boolean = false,
     val roomClosedSummary: RoomClosedSummary? = null,
     val ownerAwayRemainingMs: Long = 0L,
+    val roomExpiryRemainingMs: Long = 0L,
     val speakingUids: Set<Int> = emptySet(),
     val isVoiceJoined: Boolean = false,
     val pendingInvite: String? = null,
@@ -105,6 +106,7 @@ class RoomViewModel @Inject constructor(
     val uiState: StateFlow<RoomUiState> = _uiState.asStateFlow()
 
     private var ownerAwayCountdownJob: Job? = null
+    private var roomExpiryCountdownJob: Job? = null
     private var isSeated = false
     private val userCache: MutableMap<String, User> = java.util.concurrent.ConcurrentHashMap()
     private var blockCheckDone = false
@@ -256,6 +258,7 @@ class RoomViewModel @Inject constructor(
             loadSeatUsers(room)
             loadParticipantUsers(room)
             handleOwnerAwayCountdown(room)
+            handleRoomExpiryCountdown(room)
             return
         }
 
@@ -270,6 +273,7 @@ class RoomViewModel @Inject constructor(
         loadSeatUsers(room)
         loadParticipantUsers(room)
         handleOwnerAwayCountdown(room)
+        handleRoomExpiryCountdown(room)
     }
 
     private fun handleOwnerReturnDetection(room: ChatRoom, userId: String) {
@@ -423,9 +427,9 @@ class RoomViewModel @Inject constructor(
     private fun updateFilteredMessages() {
         val ts = firstJoinTimestamp
         val filtered = if (ts != null) {
-            allMessages.filter { it.createdAt >= ts && it.type != MessageType.SYSTEM }
+            allMessages.filter { it.createdAt >= ts }
         } else {
-            allMessages.filter { it.type != MessageType.SYSTEM }
+            allMessages
         }
         _uiState.value = _uiState.value.copy(messages = filtered)
     }
@@ -529,6 +533,46 @@ class RoomViewModel @Inject constructor(
         }
     }
 
+    private var expiryWarningSent = false
+
+    private fun handleRoomExpiryCountdown(room: ChatRoom) {
+        if (room.state == RoomState.CLOSED) {
+            roomExpiryCountdownJob?.cancel()
+            return
+        }
+        val elapsed = System.currentTimeMillis() - room.createdAt.toDate().time
+        val remaining = Constants.MAX_ROOM_DURATION_MS - elapsed
+
+        // Only start the countdown loop when under 5 minutes remain
+        if (remaining <= 300_000L) {
+            if (roomExpiryCountdownJob?.isActive == true) return
+            roomExpiryCountdownJob = viewModelScope.launch {
+                // Send warning message once
+                if (!expiryWarningSent) {
+                    expiryWarningSent = true
+                    if (_uiState.value.currentRole == RoomRole.OWNER) {
+                        messageRepository.sendSystemMessage(
+                            roomId,
+                            "This room has reached its maximum time and will close in 5 minutes"
+                        )
+                    }
+                }
+                while (true) {
+                    val now = System.currentTimeMillis() - room.createdAt.toDate().time
+                    val left = Constants.MAX_ROOM_DURATION_MS - now
+                    if (left <= 0) {
+                        if (_uiState.value.currentRole == RoomRole.OWNER) {
+                            roomRepository.closeRoom(roomId)
+                        }
+                        break
+                    }
+                    _uiState.value = _uiState.value.copy(roomExpiryRemainingMs = left)
+                    delay(1000L)
+                }
+            }
+        }
+    }
+
     fun takeSeat(seatIndex: Int) {
         viewModelScope.launch {
             val userId = _uiState.value.currentUserId
@@ -624,10 +668,9 @@ class RoomViewModel @Inject constructor(
             val seat = room.seats[seatIndex.toString()] ?: return@launch
             val targetUserId = seat.userId ?: return@launch
 
-            // Can only force-mute normal users (attendees)
-            val isTargetOwner = targetUserId == room.ownerId
-            val isTargetHost = targetUserId in room.hostIds
-            if (isTargetOwner || isTargetHost) return@launch
+            // Cannot force-mute owner; hosts can't force-mute other hosts
+            if (targetUserId == room.ownerId) return@launch
+            if (role == RoomRole.HOST && targetUserId in room.hostIds) return@launch
 
             roomRepository.toggleMute(roomId, seatIndex, !seat.isMuted)
         }
@@ -667,10 +710,9 @@ class RoomViewModel @Inject constructor(
             val seat = room.seats[seatIndex.toString()] ?: return@launch
             val targetUserId = seat.userId ?: return@launch
 
-            // Cannot kick owner or hosts (hosts can't kick hosts either)
-            val isTargetOwner = targetUserId == room.ownerId
-            val isTargetHost = targetUserId in room.hostIds
-            if (isTargetOwner || isTargetHost) return@launch
+            // Cannot kick owner; hosts can't kick other hosts
+            if (targetUserId == room.ownerId) return@launch
+            if (role == RoomRole.HOST && targetUserId in room.hostIds) return@launch
 
             val kickerName = _uiState.value.currentUserName
             val targetUser = userCache[targetUserId]
@@ -682,6 +724,26 @@ class RoomViewModel @Inject constructor(
                 roomId,
                 "$targetName was kicked by $kickerName. Reason: $displayReason"
             )
+        }
+    }
+
+    fun addHost(userId: String) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            if (_uiState.value.currentUserId != room.ownerId) return@launch
+            val userName = userCache[userId]?.displayName ?: "A user"
+            roomRepository.addHost(roomId, userId)
+            messageRepository.sendSystemMessage(roomId, "$userName was promoted to host")
+        }
+    }
+
+    fun removeHost(userId: String) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            if (_uiState.value.currentUserId != room.ownerId) return@launch
+            val userName = userCache[userId]?.displayName ?: "A user"
+            roomRepository.removeHost(roomId, userId)
+            messageRepository.sendSystemMessage(roomId, "$userName was removed as host")
         }
     }
 
@@ -795,7 +857,39 @@ class RoomViewModel @Inject constructor(
             val room = _uiState.value.room ?: return@launch
             if (room.ownerId != userId) return@launch
 
-            roomRepository.setOwnerReturned(roomId, userId)
+            try {
+                roomRepository.setOwnerReturned(roomId, userId)
+
+                // Re-establish presence and room tracking if lost during disconnect
+                if (!activeRoomManager.isInRoom(roomId)) {
+                    presenceService.setPresence(roomId, userId)
+                    activeRoomManager.trackRoom(roomId)
+                }
+
+                // Rejoin voice as broadcaster if needed
+                val channel = room.agoraChannelName
+                if (channel.isNotEmpty()) {
+                    if (!agoraVoiceService.isJoined.value) {
+                        agoraVoiceService.joinChannel(
+                            channel, userId.toAgoraUid(),
+                            asBroadcaster = _uiState.value.hasAudioPermission
+                        )
+                    } else {
+                        agoraVoiceService.setRole(true)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "ownerReturn failed, will retry on next room update", e)
+                ownerReturnTriggered = false
+            }
+        }
+    }
+
+    fun updateRoomName(newName: String) {
+        viewModelScope.launch {
+            val room = _uiState.value.room ?: return@launch
+            if (_uiState.value.currentUserId != room.ownerId) return@launch
+            roomRepository.updateRoomName(roomId, newName)
         }
     }
 
@@ -993,12 +1087,21 @@ class RoomViewModel @Inject constructor(
             seatRequestRepository.getPendingRequests(roomId)
                 .catch { /* ignore */ }
                 .collect { requests ->
-                    _uiState.value = _uiState.value.copy(pendingRequestsForPanel = requests)
+                    val room = _uiState.value.room
+                    // Filter out stale requests: user already seated or left the room
+                    val validRequests = requests.filter { req ->
+                        val alreadySeated = room?.seats?.values?.any {
+                            it.isOccupiedBy(req.userId)
+                        } ?: false
+                        val leftRoom = room != null && req.userId !in room.participantIds
+                        !alreadySeated && !leftRoom
+                    }
+                    _uiState.value = _uiState.value.copy(pendingRequestsForPanel = validRequests)
 
                     val role = _uiState.value.currentRole
                     val isHostOrOwner = role == RoomRole.OWNER || role == RoomRole.HOST
                     if (isHostOrOwner && _uiState.value.hasJoined) {
-                        for (request in requests) {
+                        for (request in validRequests) {
                             if (request.requestId !in processedRequestIds) {
                                 enqueueNotification(RoomNotification.SeatRequestReceived(request))
                             }
@@ -1129,6 +1232,7 @@ class RoomViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         ownerAwayCountdownJob?.cancel()
+        roomExpiryCountdownJob?.cancel()
         // DO NOT call presenceService.removePresence() or agoraVoiceService.leaveChannel()
         // Voice/presence survive ViewModel destruction; explicit leaveRoom() handles cleanup.
     }

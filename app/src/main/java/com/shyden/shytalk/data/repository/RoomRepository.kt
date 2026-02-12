@@ -20,6 +20,7 @@ interface RoomRepository {
     suspend fun toggleMute(roomId: String, seatIndex: Int, isMuted: Boolean): Resource<Unit>
     suspend fun addHost(roomId: String, userId: String): Resource<Unit>
     suspend fun removeHost(roomId: String, userId: String): Resource<Unit>
+    suspend fun updateRoomName(roomId: String, newName: String): Resource<Unit>
     suspend fun setRequireApproval(roomId: String, requireApproval: Boolean): Resource<Unit>
     suspend fun setOwnerAway(roomId: String): Resource<Unit>
     suspend fun setOwnerReturned(roomId: String, ownerId: String): Resource<Unit>

@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -59,7 +61,10 @@ fun UserCardPopup(
     onRemoveFromSeat: (() -> Unit)? = null,
     onKickFromRoom: ((String) -> Unit)? = null,
     onMoveSeat: ((Int) -> Unit)? = null,
-    emptySeats: List<Int> = emptyList()
+    emptySeats: List<Int> = emptyList(),
+    onMakeHost: (() -> Unit)? = null,
+    onRemoveHost: (() -> Unit)? = null,
+    isHost: Boolean = false
 ) {
     var showBlockConfirm by remember { mutableStateOf(false) }
     var showKickConfirm by remember { mutableStateOf(false) }
@@ -178,7 +183,7 @@ fun UserCardPopup(
                 }
 
                 // Moderation actions
-                if (onMuteToggle != null || onRemoveFromSeat != null || onMoveSeat != null || onKickFromRoom != null) {
+                if (onMuteToggle != null || onRemoveFromSeat != null || onMoveSeat != null || onKickFromRoom != null || onMakeHost != null || onRemoveHost != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Moderation",
@@ -203,6 +208,44 @@ fun UserCardPopup(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(if (isTargetMuted) "Unmute User" else "Mute User")
+                    }
+                }
+
+                if (onMakeHost != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedButton(
+                        onClick = {
+                            onMakeHost()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Make Host")
+                    }
+                }
+
+                if (onRemoveHost != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedButton(
+                        onClick = {
+                            onRemoveHost()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.StarBorder,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Remove Host")
                     }
                 }
 
