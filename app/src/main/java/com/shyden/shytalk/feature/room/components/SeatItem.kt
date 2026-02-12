@@ -13,10 +13,12 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
@@ -38,12 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.shyden.shytalk.ui.theme.SpeakingGreen
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -75,19 +77,6 @@ fun SeatItem(
     val badgeIconSize = (14.dp * sizeScale).coerceAtMost(18.dp)
     val iconPadding = (14.dp * (seatSize / 70.dp)).coerceIn(14.dp, 40.dp)
 
-    // Speaking animation — transition always exists but scale only applied when speaking
-    val infiniteTransition = rememberInfiniteTransition(label = "speaking")
-    val animatedScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(400),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "speakingScale"
-    )
-    val speakingScale = if (isSpeaking) animatedScale else 1f
-
     val borderColor by animateColorAsState(
         targetValue = when {
             isSpeaking -> SpeakingGreen
@@ -98,29 +87,45 @@ fun SeatItem(
         label = "borderColor"
     )
 
+    // Pulsing border width when speaking — expands outward from 2dp to 8dp
+    val infiniteTransition = rememberInfiniteTransition(label = "speakingPulse")
+    val pulsingWidth by infiniteTransition.animateFloat(
+        initialValue = 2f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "borderPulse"
+    )
+    val borderWidth = if (isSpeaking) pulsingWidth.dp else 2.dp
+
     Column(
         modifier = modifier.padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Surface(
+            // Outer border box for outward-pulsing speaking indicator
+            Box(
                 modifier = Modifier
-                    .size(seatSize)
-                    .then(
-                        if (isSpeaking) Modifier.scale(speakingScale) else Modifier
-                    )
+                    .size(seatSize + if (isSpeaking) borderWidth * 2 else 0.dp)
                     .then(
                         if (borderColor != Color.Transparent) {
                             Modifier.border(
-                                width = if (isSpeaking) 3.dp else 2.dp,
+                                width = borderWidth,
                                 color = borderColor,
                                 shape = CircleShape
                             )
                         } else {
                             Modifier
                         }
-                    )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+            Surface(
+                modifier = Modifier
+                    .size(seatSize)
                     .combinedClickable(
                         onClick = {
                             if (seat.state == SeatState.OCCUPIED && !isCurrentUser && onTapUser != null) {
@@ -168,6 +173,7 @@ fun SeatItem(
                         }
                     )
                 }
+            }
             }
 
             // Role indicator badge
@@ -233,17 +239,41 @@ fun SeatItem(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        Text(
-            text = if (seat.state == SeatState.OCCUPIED && user != null) {
-                val name = user.displayName.ifEmpty { "User" }
-                "#${seatIndex + 1} $name"
-            } else {
-                "Seat ${seatIndex + 1}"
-            },
-            style = MaterialTheme.typography.labelSmall,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        if (seat.state == SeatState.OCCUPIED && user != null) {
+            val name = user.displayName.ifEmpty { "User" }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${seatIndex + 1}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        } else {
+            Text(
+                text = "Seat ${seatIndex + 1}",
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }

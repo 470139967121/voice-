@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -19,7 +20,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,10 +41,12 @@ fun ChatPanel(
     currentRole: RoomRole,
     seats: Map<String, Seat>,
     userMap: Map<String, User>,
+    isOwnerOrHost: Boolean = false,
     onToggleMic: (Int) -> Unit = {},
     onSendMessage: (String) -> Unit,
     onTapUser: (String) -> Unit,
     onInviteUser: (String, String) -> Unit,
+    onSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -65,13 +67,11 @@ fun ChatPanel(
     val isSeated = currentSeatEntry != null
     val isSelfMuted = currentSeatEntry?.value?.isMuted ?: false
 
-    // Auto-scroll: with reverseLayout=true, index 0 is the bottom (newest message)
-    val isAtBottom by remember {
-        derivedStateOf { listState.firstVisibleItemIndex == 0 }
-    }
-
+    // Auto-scroll: with reverseLayout=true, index 0 is the bottom (newest message).
+    // When a new message is inserted at index 0, the previous first visible shifts to
+    // index 1, so use <= 1 to still count that as "at bottom".
     LaunchedEffect(messages.size) {
-        if (isAtBottom) {
+        if (listState.firstVisibleItemIndex <= 1) {
             listState.animateScrollToItem(0)
         }
     }
@@ -111,9 +111,19 @@ fun ChatPanel(
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (isOwnerOrHost) {
+                IconButton(onClick = onSettings) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = "Room settings",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             OutlinedTextField(
                 value = messageText,
-                onValueChange = { messageText = it },
+                onValueChange = { if (it.length <= 200) messageText = it },
                 placeholder = { Text("Type a message...") },
                 modifier = Modifier.weight(1f),
                 singleLine = true

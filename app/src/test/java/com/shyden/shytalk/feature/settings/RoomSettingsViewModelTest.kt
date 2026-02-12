@@ -8,6 +8,7 @@ import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
+import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
 import com.shyden.shytalk.testutil.TestData
 import io.mockk.coEvery
@@ -19,8 +20,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -35,6 +39,7 @@ class RoomSettingsViewModelTest {
     private val seatRequestRepository = mockk<SeatRequestRepository>(relaxed = true)
     private val messageRepository = mockk<MessageRepository>(relaxed = true)
     private val authRepository = mockk<AuthRepository>(relaxed = true)
+    private val userRepository = mockk<UserRepository>(relaxed = true)
 
     private val currentUserId = "current-user"
     private val ownerId = "owner-1"
@@ -53,7 +58,8 @@ class RoomSettingsViewModelTest {
         roomRepository = roomRepository,
         seatRequestRepository = seatRequestRepository,
         messageRepository = messageRepository,
-        authRepository = authRepository
+        authRepository = authRepository,
+        userRepository = userRepository
     )
 
     private fun loadRoomAsOwner(vm: RoomSettingsViewModel, requireApproval: Boolean = false) {
@@ -315,6 +321,111 @@ class RoomSettingsViewModelTest {
         advanceUntilIdle()
 
         coVerify { roomRepository.setRequireApproval(roomId, true) }
+    }
+
+    // ===== toggleRequireApproval owner-only (v0.18 fix) =====
+
+    @Test
+    fun `toggleRequireApproval - host cannot toggle`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsHost(vm, requireApproval = false)
+        advanceUntilIdle()
+
+        vm.toggleRequireApproval()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.setRequireApproval(any(), any()) }
+    }
+
+    @Test
+    fun `toggleRequireApproval - attendee cannot toggle`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsAttendee(vm)
+        advanceUntilIdle()
+
+        vm.toggleRequireApproval()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.setRequireApproval(any(), any()) }
+    }
+
+    @Test
+    fun `toggleRequireApproval - owner toggles ON to OFF`() = runTest {
+        val vm = createViewModel()
+        loadRoomAsOwner(vm, requireApproval = true)
+        advanceUntilIdle()
+
+        vm.toggleRequireApproval()
+        advanceUntilIdle()
+
+        coVerify { roomRepository.setRequireApproval(roomId, false) }
+    }
+
+    // ===== resolveUserNames =====
+
+    @Test
+    fun `loadRoom resolves user names for participants`() = runTest {
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(
+            TestData.createTestUser(uid = currentUserId, displayName = "Current User")
+        )
+        val vm = createViewModel()
+        loadRoomAsOwner(vm)
+        advanceUntilIdle()
+
+        val names = vm.uiState.value.userNames
+        assertTrue(names.containsKey(currentUserId))
+        assertEquals("Current User", names[currentUserId])
+    }
+
+    @Test
+    fun `resolveUserNames falls back to ID prefix for empty displayName`() = runTest {
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(
+            TestData.createTestUser(uid = currentUserId, displayName = "")
+        )
+        val vm = createViewModel()
+        loadRoomAsOwner(vm)
+        advanceUntilIdle()
+
+        val names = vm.uiState.value.userNames
+        assertEquals(currentUserId.take(8), names[currentUserId])
+    }
+
+    @Test
+    fun `resolveUserNames skips already resolved IDs on subsequent emissions`() = runTest {
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(
+            TestData.createTestUser(uid = currentUserId, displayName = "Current User")
+        )
+        val roomFlow = MutableStateFlow(TestData.createTestRoom(
+            roomId = roomId,
+            ownerId = currentUserId
+        ))
+        every { roomRepository.getRoomFlow(roomId) } returns roomFlow
+        val vm = createViewModel()
+        vm.loadRoom(roomId)
+        advanceUntilIdle()
+
+        // Re-emit the same room (e.g. a field changed)
+        roomFlow.value = TestData.createTestRoom(
+            roomId = roomId,
+            ownerId = currentUserId,
+            name = "Updated Name"
+        )
+        advanceUntilIdle()
+
+        // getUser should only be called once for the same ID
+        coVerify(exactly = 1) { userRepository.getUser(currentUserId) }
+    }
+
+    @Test
+    fun `resolveUserNames handles failed lookup gracefully`() = runTest {
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Error("not found")
+        val vm = createViewModel()
+        loadRoomAsOwner(vm)
+        advanceUntilIdle()
+
+        // Name not added on failure, no crash
+        assertFalse(vm.uiState.value.userNames.containsKey(currentUserId))
+        assertNull(vm.uiState.value.error) // no global error set
     }
 
     // ===== clearError =====

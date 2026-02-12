@@ -174,6 +174,10 @@ class RoomRepositoryImpl @Inject constructor(
         ).await()
     }
 
+    override suspend fun updateRoomName(roomId: String, newName: String): Resource<Unit> = firebaseCall("Failed to update room name") {
+        roomsCollection.document(roomId).update("name", newName).await()
+    }
+
     override suspend fun setRequireApproval(roomId: String, requireApproval: Boolean): Resource<Unit> = firebaseCall("Failed to update approval setting") {
         roomsCollection.document(roomId).update(
             "requireApproval", requireApproval
@@ -301,17 +305,20 @@ class RoomRepositoryImpl @Inject constructor(
 
             if (userId !in room.participantIds) return@runTransaction
 
-            val updates = clearUserSeats(room, userId)
+            val isOwner = room.ownerId == userId
+            // Owner keeps seat 0 for reconnection — only clear non-owner seats
+            val updates = if (isOwner) mutableMapOf() else clearUserSeats(room, userId)
 
             val remainingParticipants = room.participantIds - userId
 
-            if (remainingParticipants.isEmpty()) {
+            if (remainingParticipants.isEmpty() && !isOwner) {
                 // Room is now empty — close it
                 updates.putAll(emptySeatsUpdate())
                 updates["state"] = RoomState.CLOSED.name
                 updates["closedAt"] = Timestamp.now()
                 updates["participantIds"] = emptyList<String>()
-            } else if (room.ownerId == userId) {
+            } else if (isOwner) {
+                // Owner disconnected — mark away but keep them in participants and seat
                 updates["state"] = RoomState.OWNER_AWAY.name
                 updates["ownerLeftAt"] = Timestamp.now()
             } else {

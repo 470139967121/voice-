@@ -33,6 +33,7 @@ import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -411,18 +412,15 @@ class RoomViewModelTest {
     }
 
     @Test
-    fun `forceMuteUser - cannot mute host`() = runTest {
+    fun `forceMuteUser - host cannot mute other host`() = runTest {
         viewModel = createViewModel()
         val otherHost = "host-2"
-        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
-        seats["3"] = TestData.createTestSeat(userId = otherHost)
-        coEvery { userRepository.getUser(otherHost) } returns Resource.Success(
-            TestData.createTestUser(uid = otherHost, displayName = "Host 2")
-        )
-        emitRoomAsOwner(TestData.createTestRoom(
-            ownerId = currentUserId,
-            participantIds = setOf(currentUserId, otherHost),
-            hostIds = setOf(otherHost),
+        val seats = TestData.createSeatsWithOwner(ownerId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = otherHost, isMuted = false)
+        emitRoomAsHost(TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId, otherHost),
+            hostIds = setOf(currentUserId, otherHost),
             seats = seats
         ))
         advanceUntilIdle()
@@ -578,15 +576,15 @@ class RoomViewModelTest {
     }
 
     @Test
-    fun `kickUser - cannot kick host`() = runTest {
+    fun `kickUser - host cannot kick other host`() = runTest {
         viewModel = createViewModel()
         val otherHost = "host-2"
-        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        val seats = TestData.createSeatsWithOwner(ownerId).toMutableMap()
         seats["3"] = TestData.createTestSeat(userId = otherHost)
-        emitRoomAsOwner(TestData.createTestRoom(
-            ownerId = currentUserId,
-            participantIds = setOf(currentUserId, otherHost),
-            hostIds = setOf(otherHost),
+        emitRoomAsHost(TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId, otherHost),
+            hostIds = setOf(currentUserId, otherHost),
             seats = seats
         ))
         advanceUntilIdle()
@@ -1312,12 +1310,16 @@ class RoomViewModelTest {
     @Test
     fun `pending request enqueues SeatRequestReceived notification for owner`() = runTest {
         viewModel = createViewModel()
-        emitRoomAsOwner()
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "attendee-1")
+        ))
         advanceUntilIdle()
 
         val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
         pendingRequestsFlow.value = listOf(request)
-        // Don't advanceUntilIdle — it advances past the 3s auto-dismiss timer
+        // Advance just enough for the flow collector to run, but not past the 3s auto-dismiss
+        advanceTimeBy(1)
 
         val notif = viewModel.uiState.value.activeNotification
         assertTrue(notif is RoomNotification.SeatRequestReceived)
@@ -1327,12 +1329,17 @@ class RoomViewModelTest {
     @Test
     fun `pending request enqueues SeatRequestReceived notification for host`() = runTest {
         viewModel = createViewModel()
-        emitRoomAsHost()
+        emitRoomAsHost(TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId, "attendee-1"),
+            hostIds = setOf(currentUserId)
+        ))
         advanceUntilIdle()
 
         val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
         pendingRequestsFlow.value = listOf(request)
-        // Don't advanceUntilIdle — it advances past the 3s auto-dismiss timer
+        // Advance just enough for the flow collector to run, but not past the 3s auto-dismiss
+        advanceTimeBy(1)
 
         val notif = viewModel.uiState.value.activeNotification
         assertTrue(notif is RoomNotification.SeatRequestReceived)
@@ -1354,12 +1361,16 @@ class RoomViewModelTest {
     @Test
     fun `pending requests update panel state`() = runTest {
         viewModel = createViewModel()
-        emitRoomAsOwner()
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "attendee-1")
+        ))
         advanceUntilIdle()
 
         val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
         pendingRequestsFlow.value = listOf(request)
-        advanceUntilIdle()
+        // Advance just enough for flow collector, but not past 3s auto-dismiss
+        advanceTimeBy(1)
 
         assertEquals(1, viewModel.uiState.value.pendingRequestsForPanel.size)
         assertEquals("attendee-1", viewModel.uiState.value.pendingRequestsForPanel[0].userId)
@@ -1368,12 +1379,16 @@ class RoomViewModelTest {
     @Test
     fun `dismissCurrentNotification clears active notification`() = runTest {
         viewModel = createViewModel()
-        emitRoomAsOwner()
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "attendee-1")
+        ))
         advanceUntilIdle()
 
         val request = TestData.createTestSeatRequest(userId = "attendee-1", userName = "Attendee")
         pendingRequestsFlow.value = listOf(request)
-        // Don't advanceUntilIdle — it advances past the 3s auto-dismiss timer
+        // Advance just enough for flow collector, but not past 3s auto-dismiss
+        advanceTimeBy(1)
         assertNotNull(viewModel.uiState.value.activeNotification)
 
         viewModel.dismissCurrentNotification()
@@ -1541,5 +1556,501 @@ class RoomViewModelTest {
         val notif = viewModel.uiState.value.activeNotification
         assertTrue(notif is RoomNotification.InviteReceived)
         assertEquals(ownerId, (notif as RoomNotification.InviteReceived).inviterUserId)
+    }
+
+    // ===== Owner Can Kick/Force-Mute Hosts (v0.18 fix) =====
+
+    @Test
+    fun `kickUser - owner can kick a host`() = runTest {
+        viewModel = createViewModel()
+        val hostUser = "host-1"
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = hostUser)
+        coEvery { userRepository.getUser(hostUser) } returns Resource.Success(
+            TestData.createTestUser(uid = hostUser, displayName = "Host One")
+        )
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, hostUser),
+            hostIds = setOf(hostUser),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.kickUser(3)
+        advanceUntilIdle()
+
+        coVerify { roomRepository.kickUser("room-1", hostUser, 3, any(), any()) }
+        coVerify { messageRepository.sendSystemMessage("room-1", any()) }
+    }
+
+    @Test
+    fun `kickUser - host cannot kick another host`() = runTest {
+        viewModel = createViewModel()
+        val otherHost = "host-2"
+        val seats = TestData.createSeatsWithOwner(ownerId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = otherHost)
+        emitRoomAsHost(TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId, otherHost),
+            hostIds = setOf(currentUserId, otherHost),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.kickUser(3)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `forceMuteUser - owner can force-mute a host`() = runTest {
+        viewModel = createViewModel()
+        val hostUser = "host-1"
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = hostUser, isMuted = false)
+        coEvery { userRepository.getUser(hostUser) } returns Resource.Success(
+            TestData.createTestUser(uid = hostUser, displayName = "Host One")
+        )
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, hostUser),
+            hostIds = setOf(hostUser),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.forceMuteUser(3)
+        advanceUntilIdle()
+
+        coVerify { roomRepository.toggleMute("room-1", 3, true) }
+    }
+
+    @Test
+    fun `forceMuteUser - host cannot force-mute another host`() = runTest {
+        viewModel = createViewModel()
+        val otherHost = "host-2"
+        val seats = TestData.createSeatsWithOwner(ownerId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = otherHost, isMuted = false)
+        emitRoomAsHost(TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId, otherHost),
+            hostIds = setOf(currentUserId, otherHost),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.forceMuteUser(3)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.toggleMute(any(), any(), any()) }
+    }
+
+    // ===== System Messages Visible (v0.18 fix) =====
+
+    @Test
+    fun `updateFilteredMessages - system messages are included`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        val textMessage = TestData.createTestMessage(
+            messageId = "msg-1",
+            text = "Hello",
+            type = MessageType.TEXT,
+            createdAt = TestData.BASE_TIMESTAMP
+        )
+        val systemMessage = TestData.createTestMessage(
+            messageId = "msg-2",
+            text = "User joined the room",
+            type = MessageType.SYSTEM,
+            createdAt = TestData.BASE_TIMESTAMP
+        )
+        messagesFlow.value = listOf(textMessage, systemMessage)
+        advanceUntilIdle()
+
+        val messages = viewModel.uiState.value.messages
+        assertEquals(2, messages.size)
+        assertTrue(messages.any { it.type == MessageType.SYSTEM })
+    }
+
+    @Test
+    fun `updateFilteredMessages - system messages not filtered after firstJoinTimestamp set`() = runTest {
+        viewModel = createViewModel()
+        // Emit room with firstJoinTimestamps to trigger firstJoinTimestamp being set
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            firstJoinTimestamps = mapOf(currentUserId to TestData.BASE_TIMESTAMP)
+        )
+        emitRoomAsOwner(room)
+        advanceUntilIdle()
+
+        val systemMessage = TestData.createTestMessage(
+            messageId = "sys-1",
+            text = "Room created",
+            type = MessageType.SYSTEM,
+            createdAt = TestData.BASE_TIMESTAMP
+        )
+        val laterSystemMessage = TestData.createTestMessage(
+            messageId = "sys-2",
+            text = "User joined",
+            type = MessageType.SYSTEM,
+            createdAt = TestData.LATER_TIMESTAMP
+        )
+        messagesFlow.value = listOf(systemMessage, laterSystemMessage)
+        advanceUntilIdle()
+
+        val messages = viewModel.uiState.value.messages
+        // Both messages should be present (system messages are no longer filtered out)
+        // The only filter is the firstJoinTimestamp time-based filter
+        assertTrue(messages.any { it.type == MessageType.SYSTEM })
+    }
+
+    // ===== Stale Seat Requests Filter (v0.18 fix) =====
+
+    @Test
+    fun `pendingRequests - filters out requests where user is already seated`() = runTest {
+        viewModel = createViewModel()
+        val seatedUser = "seated-user"
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = seatedUser)
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, seatedUser),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        val staleRequest = TestData.createTestSeatRequest(
+            requestId = "req-stale",
+            userId = seatedUser,
+            userName = "Seated User",
+            seatIndex = 5
+        )
+        pendingRequestsFlow.value = listOf(staleRequest)
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.pendingRequestsForPanel.size)
+    }
+
+    @Test
+    fun `pendingRequests - filters out requests where user left the room`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId)  // "gone-user" is NOT in participantIds
+        ))
+        advanceUntilIdle()
+
+        val staleRequest = TestData.createTestSeatRequest(
+            requestId = "req-gone",
+            userId = "gone-user",
+            userName = "Gone User",
+            seatIndex = 3
+        )
+        pendingRequestsFlow.value = listOf(staleRequest)
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.pendingRequestsForPanel.size)
+    }
+
+    @Test
+    fun `pendingRequests - keeps valid requests and filters stale ones`() = runTest {
+        viewModel = createViewModel()
+        val seatedUser = "seated-user"
+        val validUser = "valid-user"
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = seatedUser)
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, seatedUser, validUser),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        val staleRequest = TestData.createTestSeatRequest(
+            requestId = "req-stale",
+            userId = seatedUser,
+            userName = "Seated User",
+            seatIndex = 5
+        )
+        val validRequest = TestData.createTestSeatRequest(
+            requestId = "req-valid",
+            userId = validUser,
+            userName = "Valid User",
+            seatIndex = 4
+        )
+        pendingRequestsFlow.value = listOf(staleRequest, validRequest)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.pendingRequestsForPanel.size)
+        assertEquals("req-valid", viewModel.uiState.value.pendingRequestsForPanel[0].requestId)
+    }
+
+    // ===== addHost / removeHost from RoomViewModel (v0.18 feature) =====
+
+    @Test
+    fun `addHost - owner can add a host`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        viewModel.addHost("user-2")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.addHost("room-1", "user-2") }
+        coVerify { messageRepository.sendSystemMessage("room-1", match { it.contains("promoted to host") }) }
+    }
+
+    @Test
+    fun `addHost - non-owner cannot add a host`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsHost()
+        advanceUntilIdle()
+
+        viewModel.addHost("user-2")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.addHost(any(), any()) }
+    }
+
+    @Test
+    fun `addHost - attendee cannot add a host`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        viewModel.addHost("user-2")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.addHost(any(), any()) }
+    }
+
+    @Test
+    fun `removeHost - owner can remove a host`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            hostIds = setOf("user-2")
+        ))
+        advanceUntilIdle()
+
+        viewModel.removeHost("user-2")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.removeHost("room-1", "user-2") }
+        coVerify { messageRepository.sendSystemMessage("room-1", match { it.contains("removed as host") }) }
+    }
+
+    @Test
+    fun `removeHost - non-owner cannot remove a host`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsHost(TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId, "host-2"),
+            hostIds = setOf(currentUserId, "host-2")
+        ))
+        advanceUntilIdle()
+
+        viewModel.removeHost("host-2")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.removeHost(any(), any()) }
+    }
+
+    // ===== ownerReturn Tests =====
+
+    @Test
+    fun `ownerReturn - re-establishes presence when not in room`() = runTest {
+        viewModel = createViewModel()
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            state = RoomState.OWNER_AWAY
+        )
+        emitRoomAsOwner(room)
+        advanceUntilIdle()
+        every { activeRoomManager.isInRoom("room-1") } returns false
+
+        viewModel.ownerReturn()
+        advanceUntilIdle()
+
+        coVerify { roomRepository.setOwnerReturned("room-1", currentUserId) }
+        coVerify { presenceService.setPresence("room-1", currentUserId) }
+        verify { activeRoomManager.trackRoom("room-1") }
+    }
+
+    @Test
+    fun `ownerReturn - skips presence setup when already in room`() = runTest {
+        // Set isInRoom BEFORE creating VM and emitting room so the alreadyInRoom path is taken
+        every { activeRoomManager.isInRoom("room-1") } returns true
+        roomFlow.value = TestData.createTestRoom(
+            ownerId = currentUserId,
+            state = RoomState.OWNER_AWAY
+        )
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.ownerReturn()
+        advanceUntilIdle()
+
+        coVerify { roomRepository.setOwnerReturned("room-1", currentUserId) }
+        // Neither joinRoom (early return) nor ownerReturn calls setPresence when already in room
+        coVerify(exactly = 0) { presenceService.setPresence(any(), any()) }
+    }
+
+    @Test
+    fun `ownerReturn - rejoins voice when not joined`() = runTest {
+        viewModel = createViewModel()
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            state = RoomState.OWNER_AWAY
+        )
+        emitRoomAsOwner(room)
+        advanceUntilIdle()
+        joinedFlow.value = false
+
+        viewModel.ownerReturn()
+        advanceUntilIdle()
+
+        coVerify { agoraVoiceService.joinChannel("channel-1", any(), asBroadcaster = any()) }
+    }
+
+    @Test
+    fun `ownerReturn - sets broadcaster role when already joined`() = runTest {
+        viewModel = createViewModel()
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            state = RoomState.OWNER_AWAY
+        )
+        emitRoomAsOwner(room)
+        advanceUntilIdle()
+        joinedFlow.value = true
+
+        viewModel.ownerReturn()
+        advanceUntilIdle()
+
+        verify { agoraVoiceService.setRole(true) }
+    }
+
+    @Test
+    fun `ownerReturn - non-owner cannot return`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        viewModel.ownerReturn()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.setOwnerReturned(any(), any()) }
+    }
+
+    // ===== updateRoomName Tests =====
+
+    @Test
+    fun `updateRoomName - owner can update room name`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        viewModel.updateRoomName("New Room Name")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.updateRoomName("room-1", "New Room Name") }
+    }
+
+    @Test
+    fun `updateRoomName - non-owner cannot update room name`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        viewModel.updateRoomName("Hacked Name")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.updateRoomName(any(), any()) }
+    }
+
+    @Test
+    fun `updateRoomName - host cannot update room name`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsHost()
+        advanceUntilIdle()
+
+        viewModel.updateRoomName("Host Name")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.updateRoomName(any(), any()) }
+    }
+
+    @Test
+    fun `updateRoomName - no room does nothing`() = runTest {
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateRoomName("No Room")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.updateRoomName(any(), any()) }
+    }
+
+    // ===== Room Expiry Countdown Tests =====
+
+    @Test
+    fun `room expiry - countdown not started when room has plenty of time`() = runTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        // Room created just now — over 5 minutes remain, no countdown active
+        assertEquals(0L, viewModel.uiState.value.roomExpiryRemainingMs)
+    }
+
+    @Test
+    fun `room expiry - owner closes room when time expires`() = runTest {
+        viewModel = createViewModel()
+        val expiredRoom = TestData.createTestRoom(
+            ownerId = currentUserId,
+            createdAt = Timestamp(Date(System.currentTimeMillis() - Constants.MAX_ROOM_DURATION_MS - 1000L))
+        )
+        emitRoomAsOwner(expiredRoom)
+        advanceUntilIdle()
+
+        coVerify { roomRepository.closeRoom("room-1") }
+    }
+
+    @Test
+    fun `room expiry - non-owner does not close room when time expires`() = runTest {
+        viewModel = createViewModel()
+        val expiredRoom = TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId),
+            createdAt = Timestamp(Date(System.currentTimeMillis() - Constants.MAX_ROOM_DURATION_MS - 1000L))
+        )
+        emitRoomAsAttendee(expiredRoom)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { roomRepository.closeRoom(any()) }
+    }
+
+    @Test
+    fun `room expiry - sends system message when under 5 minutes`() = runTest {
+        viewModel = createViewModel()
+        // Room with ~10 seconds remaining — short enough to fully advance through
+        val nearExpiryRoom = TestData.createTestRoom(
+            ownerId = currentUserId,
+            createdAt = Timestamp(Date(System.currentTimeMillis() - Constants.MAX_ROOM_DURATION_MS + 10_000L))
+        )
+        emitRoomAsOwner(nearExpiryRoom)
+        advanceTimeBy(1001L)
+
+        coVerify {
+            messageRepository.sendSystemMessage("room-1", match { it.contains("maximum time") })
+        }
+        val remaining = viewModel.uiState.value.roomExpiryRemainingMs
+        assertTrue("Expected remaining > 0 but was $remaining", remaining > 0)
+
+        // Advance through remaining time so the loop completes
+        advanceUntilIdle()
     }
 }

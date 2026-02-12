@@ -27,4 +27,12 @@ class StorageRepositoryImpl @Inject constructor(
         }
         throw (lastException ?: Exception("Failed to get download URL"))
     }
+
+    override suspend fun deleteImageByUrl(url: String) {
+        try {
+            storage.getReferenceFromUrl(url).delete().await()
+        } catch (_: Exception) {
+            // Best-effort: ignore if file is already gone or URL is invalid
+        }
+    }
 }

@@ -111,6 +111,11 @@ class AgoraVoiceService @Inject constructor(
             speakers: Array<out AudioVolumeInfo>?,
             totalVolume: Int
         ) {
+            if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                speakers?.forEach {
+                    Log.v(TAG, "volumeIndication uid=${it.uid} vol=${it.volume} vad=${it.vad}")
+                }
+            }
             val speaking = processSpeakers(speakers, localUid, isLocalMuted)
             if (speaking != _speakingUsers.value) {
                 _speakingUsers.value = speaking
@@ -208,49 +213,65 @@ class AgoraVoiceService @Inject constructor(
             autoSubscribeVideo = false
         }
 
-        Log.d(TAG, "Joining channel=$channelName uid=$uid asBroadcaster=$asBroadcaster hasToken=${token != null}")
-        val result = engine.joinChannel(token, channelName, uid, options)
-        if (result != 0) {
-            Log.e(TAG, "joinChannel failed with error code $result")
-            _error.value = "Voice join failed (code $result)"
-        } else {
-            currentChannelName = channelName
-            localUid = uid
-            // Re-apply volume indication after join (may be reset by leaveChannel in some SDK versions)
-            engine.enableAudioVolumeIndication(
-                AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
-                AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
-                true
-            )
-            Log.d(TAG, "joinChannel call succeeded (waiting for onJoinChannelSuccess callback)")
-            if (asBroadcaster) {
-                engine.setEnableSpeakerphone(true)
-                engine.muteLocalAudioStream(false)
-                engine.adjustRecordingSignalVolume(AppConstants.AGORA_RECORDING_SIGNAL_VOLUME)
-                Log.d(TAG, "Audio configured: speakerphone=on, mic=unmuted, recordingVolume=${AppConstants.AGORA_RECORDING_SIGNAL_VOLUME}")
+        try {
+            Log.d(TAG, "Joining channel=$channelName uid=$uid asBroadcaster=$asBroadcaster hasToken=${token != null}")
+            val result = engine.joinChannel(token, channelName, uid, options)
+            if (result != 0) {
+                Log.e(TAG, "joinChannel failed with error code $result")
+                _error.value = "Voice join failed (code $result)"
+            } else {
+                currentChannelName = channelName
+                localUid = uid
+                // Re-apply volume indication after join (may be reset by leaveChannel in some SDK versions)
+                engine.enableAudioVolumeIndication(
+                    AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
+                    AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
+                    true
+                )
+                Log.d(TAG, "joinChannel call succeeded (waiting for onJoinChannelSuccess callback)")
+                if (asBroadcaster) {
+                    engine.setEnableSpeakerphone(true)
+                    engine.muteLocalAudioStream(false)
+                    engine.adjustRecordingSignalVolume(AppConstants.AGORA_RECORDING_SIGNAL_VOLUME)
+                    Log.d(TAG, "Audio configured: speakerphone=on, mic=unmuted, recordingVolume=${AppConstants.AGORA_RECORDING_SIGNAL_VOLUME}")
+                }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "joinChannel threw exception", e)
+            _error.value = "Voice join failed: ${e.message}"
         }
     }
 
     fun setRole(broadcaster: Boolean) {
         val engine = rtcEngine ?: return
-        Log.d(TAG, "setRole broadcaster=$broadcaster")
-        if (broadcaster) {
-            engine.enableAudio()
-            engine.setClientRole(Constants.CLIENT_ROLE_BROADCASTER)
-            engine.updateChannelMediaOptions(ChannelMediaOptions().apply {
-                publishMicrophoneTrack = true
-            })
-            engine.setEnableSpeakerphone(true)
-            engine.muteLocalAudioStream(false)
-            engine.adjustRecordingSignalVolume(AppConstants.AGORA_RECORDING_SIGNAL_VOLUME)
-            isLocalMuted = false
-        } else {
-            engine.setClientRole(Constants.CLIENT_ROLE_AUDIENCE)
-            engine.updateChannelMediaOptions(ChannelMediaOptions().apply {
-                publishMicrophoneTrack = false
-            })
-            isLocalMuted = false
+        try {
+            Log.d(TAG, "setRole broadcaster=$broadcaster")
+            if (broadcaster) {
+                engine.enableAudio()
+                engine.setClientRole(Constants.CLIENT_ROLE_BROADCASTER)
+                engine.updateChannelMediaOptions(ChannelMediaOptions().apply {
+                    publishMicrophoneTrack = true
+                })
+                engine.setEnableSpeakerphone(true)
+                engine.muteLocalAudioStream(false)
+                engine.adjustRecordingSignalVolume(AppConstants.AGORA_RECORDING_SIGNAL_VOLUME)
+                isLocalMuted = false
+            } else {
+                engine.setClientRole(Constants.CLIENT_ROLE_AUDIENCE)
+                engine.updateChannelMediaOptions(ChannelMediaOptions().apply {
+                    publishMicrophoneTrack = false
+                })
+                isLocalMuted = false
+            }
+            // Re-enable volume indication after role change — enableAudio() can reset it
+            engine.enableAudioVolumeIndication(
+                AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
+                AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
+                true
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "setRole failed", e)
+            _error.value = "Voice role change failed: ${e.message}"
         }
     }
 
@@ -260,18 +281,30 @@ class AgoraVoiceService @Inject constructor(
         currentChannelName = null
         localUid = 0
         isLocalMuted = false
-        rtcEngine?.leaveChannel()
+        try {
+            rtcEngine?.leaveChannel()
+        } catch (e: Exception) {
+            Log.e(TAG, "leaveChannel failed", e)
+        }
     }
 
     fun muteLocalAudio(mute: Boolean) {
         Log.d(TAG, "muteLocalAudio mute=$mute")
         isLocalMuted = mute
-        rtcEngine?.muteLocalAudioStream(mute)
+        try {
+            rtcEngine?.muteLocalAudioStream(mute)
+        } catch (e: Exception) {
+            Log.e(TAG, "muteLocalAudio failed", e)
+        }
     }
 
     fun destroy() {
-        rtcEngine?.leaveChannel()
-        RtcEngine.destroy()
+        try {
+            rtcEngine?.leaveChannel()
+            RtcEngine.destroy()
+        } catch (e: Exception) {
+            Log.e(TAG, "destroy failed", e)
+        }
         rtcEngine = null
         _isJoined.value = false
         _speakingUsers.value = emptySet()

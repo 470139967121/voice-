@@ -6,10 +6,12 @@ import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.util.Constants.SEAT_REQUEST_IMMEDIATE_THRESHOLD_MS
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
+import com.shyden.shytalk.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +24,7 @@ import javax.inject.Inject
 data class RoomSettingsUiState(
     val room: ChatRoom? = null,
     val pendingRequests: List<SeatRequest> = emptyList(),
+    val userNames: Map<String, String> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -31,7 +34,8 @@ class RoomSettingsViewModel @Inject constructor(
     private val roomRepository: RoomRepository,
     private val seatRequestRepository: SeatRequestRepository,
     private val messageRepository: MessageRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RoomSettingsUiState())
@@ -59,12 +63,36 @@ class RoomSettingsViewModel @Inject constructor(
                         room = room,
                         pendingRequests = requests
                     )
+                    if (room != null) {
+                        resolveUserNames(room)
+                    }
                 }
         }
     }
 
+    private val resolvedIds = mutableSetOf<String>()
+
+    private suspend fun resolveUserNames(room: ChatRoom) {
+        val allIds = room.participantIds + room.hostIds + room.ownerId
+        val newIds = allIds.filter { it !in resolvedIds }
+        if (newIds.isEmpty()) return
+
+        val names = _uiState.value.userNames.toMutableMap()
+        for (id in newIds) {
+            when (val result = userRepository.getUser(id)) {
+                is Resource.Success -> {
+                    names[id] = result.data.displayName.ifEmpty { id.take(8) }
+                    resolvedIds.add(id)
+                }
+                else -> {}
+            }
+        }
+        _uiState.value = _uiState.value.copy(userNames = names)
+    }
+
     fun toggleRequireApproval() {
         val room = _uiState.value.room ?: return
+        if (currentUserId != room.ownerId) return
         viewModelScope.launch {
             roomRepository.setRequireApproval(currentRoomId, !room.requireApproval)
         }

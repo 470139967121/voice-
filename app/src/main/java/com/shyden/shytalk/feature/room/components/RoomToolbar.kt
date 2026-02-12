@@ -1,14 +1,16 @@
 package com.shyden.shytalk.feature.room.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,17 +27,40 @@ import androidx.compose.ui.unit.dp
 fun RoomToolbar(
     roomName: String,
     participantCount: Int,
-    isOwnerOrHost: Boolean,
+    roomExpiryRemainingMs: Long = 0L,
     onBack: () -> Unit,
-    onSettings: () -> Unit,
-    onTogglePeople: () -> Unit
+    onTogglePeople: () -> Unit,
+    onRoomNameClick: () -> Unit = {}
 ) {
     TopAppBar(
         title = {
-            Text(
-                text = roomName,
-                style = MaterialTheme.typography.titleMedium
-            )
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { onRoomNameClick() }
+                ) {
+                    Text(
+                        text = roomName,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Room name",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (roomExpiryRemainingMs in 1..300_000L) {
+                    val minutes = (roomExpiryRemainingMs / 60_000).toInt()
+                    val seconds = ((roomExpiryRemainingMs % 60_000) / 1_000).toInt()
+                    Text(
+                        text = "Closing in ${minutes}:${"%02d".format(seconds)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
@@ -58,11 +83,6 @@ fun RoomToolbar(
                         text = "$participantCount",
                         style = MaterialTheme.typography.labelMedium
                     )
-                }
-            }
-            if (isOwnerOrHost) {
-                IconButton(onClick = onSettings) {
-                    Icon(Icons.Default.Settings, contentDescription = "Room settings")
                 }
             }
         }

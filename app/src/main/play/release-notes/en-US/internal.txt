@@ -1,8 +1,12 @@
-v0.21 - Kick reasons, locked seating & voice stability
+v0.22 - Photo caching, room editing & auto-close
 
-- Kick with reason: moderators are prompted for a reason when kicking; kicked users see who kicked them and why
-- Locked seating: when seats are locked, attendees see a clear message instead of silent failure
-- Voice stability: voice chat no longer stops when switching to WeChat or other audio apps
-- Seat numbers now shown alongside user names
-- Invite dialog dismiss fix
-- Grace period dialog suppression fix
+- Photos load faster and are saved on your device
+- Room owners can edit the room name from the toolbar
+- Rooms auto-close after 3 hours with a countdown
+- Owners can promote or demote hosts
+- Settings moved to the bottom bar
+- Speaking indicator pulses outward around the avatar
+- Room names can be up to 50 characters
+- Fixed profile flicker when switching tabs
+- Fixed voice reconnection when the owner returns
+- Owners can now kick or mute hosts
