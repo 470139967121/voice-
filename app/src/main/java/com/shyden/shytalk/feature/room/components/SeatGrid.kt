@@ -32,6 +32,7 @@ fun SeatGrid(
     hostIds: Set<String>,
     speakingUids: Set<Int>,
     seatUsers: Map<String, User> = emptyMap(),
+    disconnectedUserIds: Set<String> = emptySet(),
     onSeatClick: (Int) -> Unit,
     onTapUser: (String) -> Unit = {},
     modifier: Modifier = Modifier
@@ -72,37 +73,46 @@ fun SeatGrid(
         ) {
             occupiedSeats.forEach { (indexStr, seat) ->
                 key(indexStr) {
-                val seatIndex = indexStr.toIntOrNull() ?: return@forEach
-                val seatUserId = seat.userId
+                    val seatIndex = indexStr.toIntOrNull() ?: return@forEach
+                    val seatUserId = seat.userId
 
-                val seatRole = when {
-                    seatUserId == ownerId -> RoomRole.OWNER
-                    seatUserId != null && seatUserId in hostIds -> RoomRole.HOST
-                    else -> RoomRole.ATTENDEE
-                }
+                    val seatRole = remember(seatUserId, ownerId, hostIds) {
+                        when {
+                            seatUserId == ownerId -> RoomRole.OWNER
+                            seatUserId != null && seatUserId in hostIds -> RoomRole.HOST
+                            else -> RoomRole.ATTENDEE
+                        }
+                    }
 
-                val isSpeaking = seatUserId != null &&
-                    seatUserId.toAgoraUid() in speakingUids
+                    // Only suppress for the local user — Agora reports local mic volume
+                    // even when muted. For remote users, Agora is the source of truth.
+                    val seatAgoraUid = remember(seatUserId) { seatUserId?.toAgoraUid() }
+                    val isSpeaking = seatUserId != null &&
+                        !(seatUserId == currentUserId && seat.isMuted) &&
+                        seatAgoraUid in speakingUids
 
-                val isOwnerOnOwnSeat = seat.userId == currentUserId
-                    && seatIndex == Constants.OWNER_SEAT_INDEX
-                    && currentRole == RoomRole.OWNER
+                    val isDisconnected = seatUserId != null && seatUserId in disconnectedUserIds
 
-                val seatUser = seatUserId?.let { seatUsers[it] }
+                    val isOwnerOnOwnSeat = seatUserId == currentUserId
+                        && seatIndex == Constants.OWNER_SEAT_INDEX
+                        && currentRole == RoomRole.OWNER
 
-                SeatItem(
-                    seatIndex = seatIndex,
-                    seat = seat,
-                    seatRole = seatRole,
-                    isCurrentUser = seat.userId == currentUserId,
-                    canLeaveSeat = seat.userId == currentUserId && !isOwnerOnOwnSeat,
-                    isSpeaking = isSpeaking,
-                    user = seatUser,
-                    seatSize = seatSize,
-                    onClick = { onSeatClick(seatIndex) },
-                    onTapUser = seatUserId?.let { uid -> { onTapUser(uid) } },
-                    modifier = Modifier.weight(1f)
-                )
+                    val seatUser = seatUserId?.let { seatUsers[it] }
+
+                    SeatItem(
+                        seatIndex = seatIndex,
+                        seat = seat,
+                        seatRole = seatRole,
+                        isCurrentUser = seatUserId == currentUserId,
+                        canLeaveSeat = seatUserId == currentUserId && !isOwnerOnOwnSeat,
+                        isSpeaking = isSpeaking && !isDisconnected,
+                        isDisconnected = isDisconnected,
+                        user = seatUser,
+                        seatSize = seatSize,
+                        onClick = { onSeatClick(seatIndex) },
+                        onTapUser = seatUserId?.let { uid -> { onTapUser(uid) } },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }

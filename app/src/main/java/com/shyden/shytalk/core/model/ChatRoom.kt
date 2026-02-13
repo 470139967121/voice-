@@ -27,6 +27,10 @@ data class ChatRoom(
         else -> RoomRole.ATTENDEE
     }
 
+    /** Finds the seat entry occupied by the given user, or null if not seated. */
+    fun findUserSeat(userId: String): Map.Entry<String, Seat>? =
+        seats.entries.find { it.value.isOccupiedBy(userId) }
+
     fun toMap(): Map<String, Any?> = mapOf(
         "roomId" to roomId,
         "name" to name,

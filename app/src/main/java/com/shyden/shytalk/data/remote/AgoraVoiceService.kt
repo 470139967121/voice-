@@ -1,6 +1,7 @@
 package com.shyden.shytalk.data.remote
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.agora.rtc2.ChannelMediaOptions
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import com.shyden.shytalk.core.util.Constants as AppConstants
 import javax.inject.Singleton
@@ -64,6 +66,13 @@ class AgoraVoiceService @Inject constructor(
     @Volatile private var isLocalMuted = false
     private val joinMutex = Mutex()
 
+    // Track last-seen timestamp per speaker UID to merge split SDK callbacks.
+    // The Agora SDK fires onAudioVolumeIndication multiple times per interval
+    // (once for local, once for remote), each replacing the previous set.
+    // By keeping speakers "alive" for one full interval window, both local
+    // and remote speakers remain visible simultaneously.
+    private val speakerLastSeen = ConcurrentHashMap<Int, Long>()
+
     private val _speakingUsers = MutableStateFlow<Set<Int>>(emptySet())
     val speakingUsers: StateFlow<Set<Int>> = _speakingUsers.asStateFlow()
 
@@ -81,14 +90,24 @@ class AgoraVoiceService @Inject constructor(
     private val rtcEventHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
             Log.d(TAG, "onJoinChannelSuccess channel=$channel uid=$uid elapsed=${elapsed}ms")
+            localUid = uid  // Use Agora-confirmed UID
             _isJoined.value = true
             _connectionState.value = ConnectionState.CONNECTED
+            // Ensure volume indication is active after channel join completes —
+            // calls made before onJoinChannelSuccess may be ignored by the SDK.
+            // reportVad=false so local + remote speakers arrive in ONE callback.
+            rtcEngine?.enableAudioVolumeIndication(
+                AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
+                AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
+                false
+            )
         }
 
         override fun onLeaveChannel(stats: RtcStats?) {
             Log.d(TAG, "onLeaveChannel")
             _isJoined.value = false
             _speakingUsers.value = emptySet()
+            speakerLastSeen.clear()
             _connectionState.value = ConnectionState.DISCONNECTED
         }
 
@@ -111,16 +130,28 @@ class AgoraVoiceService @Inject constructor(
             speakers: Array<out AudioVolumeInfo>?,
             totalVolume: Int
         ) {
-            if (Log.isLoggable(TAG, Log.VERBOSE)) {
-                speakers?.forEach {
-                    Log.v(TAG, "volumeIndication uid=${it.uid} vol=${it.volume} vad=${it.vad}")
-                }
+            val now = SystemClock.elapsedRealtime()
+            val newSpeakers = processSpeakers(speakers, localUid, isLocalMuted)
+
+            // Record timestamp for each speaker reported in this callback
+            for (uid in newSpeakers) {
+                speakerLastSeen[uid] = now
             }
-            // Fast path: skip allocation when no speakers and already empty
-            if (speakers.isNullOrEmpty() && _speakingUsers.value.isEmpty()) return
-            val speaking = processSpeakers(speakers, localUid, isLocalMuted)
-            if (speaking != _speakingUsers.value) {
-                _speakingUsers.value = speaking
+
+            // Keep speakers visible for one full interval + margin so split
+            // callbacks (local vs remote) don't erase each other
+            val keepWindow = AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS + 100L
+            val active = speakerLastSeen.entries
+                .filter { now - it.value < keepWindow }
+                .map { it.key }
+                .toSet()
+
+            // Prune stale entries
+            speakerLastSeen.entries.removeIf { now - it.value >= keepWindow }
+
+            if (active != _speakingUsers.value) {
+                Log.d(TAG, "speakingUsers changed: $active (was: ${_speakingUsers.value})")
+                _speakingUsers.value = active
             }
         }
 
@@ -158,7 +189,7 @@ class AgoraVoiceService @Inject constructor(
                 enableAudioVolumeIndication(
                     AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
                     AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
-                    true
+                    false
                 )
                 setDefaultAudioRoutetoSpeakerphone(true)
                 // Keep audio session alive when another app (e.g. WeChat) takes audio focus
@@ -228,7 +259,7 @@ class AgoraVoiceService @Inject constructor(
                 engine.enableAudioVolumeIndication(
                     AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
                     AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
-                    true
+                    false
                 )
                 Log.d(TAG, "joinChannel call succeeded (waiting for onJoinChannelSuccess callback)")
                 if (asBroadcaster) {
@@ -269,7 +300,7 @@ class AgoraVoiceService @Inject constructor(
             engine.enableAudioVolumeIndication(
                 AppConstants.AGORA_VOLUME_INDICATION_INTERVAL_MS,
                 AppConstants.AGORA_VOLUME_INDICATION_SMOOTH,
-                true
+                false
             )
         } catch (e: Exception) {
             Log.e(TAG, "setRole failed", e)
@@ -310,6 +341,7 @@ class AgoraVoiceService @Inject constructor(
         rtcEngine = null
         _isJoined.value = false
         _speakingUsers.value = emptySet()
+        speakerLastSeen.clear()
         _connectionState.value = ConnectionState.DISCONNECTED
         isLocalMuted = false
     }

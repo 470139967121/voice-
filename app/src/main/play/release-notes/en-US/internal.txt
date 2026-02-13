@@ -1,12 +1,10 @@
-v0.23 - Date of Birth, privacy & performance
+v0.25 - Disconnect dimming & mute preservation
 
-- Date of Birth now required for all users
-- Existing users asked for DOB on next login
-- Age shown on profiles (must be 13+)
-- New "Hide Age" privacy toggle in Settings
-- Batch user loading for faster room lists
-- Thread-safe state updates across all screens
-- Chat text survives screen rotation
-- Memoized seat grid and room card calculations
-- Consolidated block-warning dialogs in rooms
-- Improved performance and stability
+- Disconnected users' seats dim in real time
+- Mute state preserved through disconnect/reconnect
+- Cloud Function preserves owner mute during OWNER_AWAY
+- Grace period prevents false disconnects
+- Deduplicated room-close logic across repository
+- Removed debug stack-trace logging
+- Batched UI state updates for fewer recompositions
+- Memoized per-seat computations in seat grid

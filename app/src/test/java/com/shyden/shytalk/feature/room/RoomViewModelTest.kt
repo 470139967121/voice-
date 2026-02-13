@@ -89,9 +89,21 @@ class RoomViewModelTest {
             TestData.createTestUser(uid = currentUserId, displayName = "Current User")
         )
         coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+        // Delegate batch getUsers to individual getUser mocks so existing per-user mocks work
+        coEvery { userRepository.getUsers(any()) } coAnswers {
+            val ids = firstArg<List<String>>()
+            val users = ids.mapNotNull { id ->
+                when (val result = userRepository.getUser(id)) {
+                    is Resource.Success -> result.data
+                    else -> null
+                }
+            }
+            Resource.Success(users)
+        }
         every { seatRequestRepository.getPendingRequests(any()) } returns pendingRequestsFlow
         every { seatRequestRepository.getRequestsByUser(any(), any()) } returns myRequestsFlow
         every { activeRoomManager.isInRoom(any()) } returns false
+        every { activeRoomManager.disconnectedUserIds } returns MutableStateFlow(emptySet())
     }
 
     private fun createViewModel(): RoomViewModel {
@@ -672,7 +684,7 @@ class RoomViewModelTest {
     }
 
     @Test
-    fun `kickUser - system message includes reason`() = runTest {
+    fun `kickUser - system message does not expose reason to room`() = runTest {
         viewModel = createViewModel()
         val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
         seats["3"] = TestData.createTestSeat(userId = "attendee-1")
@@ -689,8 +701,9 @@ class RoomViewModelTest {
         viewModel.kickUser(3, "Spamming")
         advanceUntilIdle()
 
+        // Room members only see that the person was kicked — reason is private
         coVerify {
-            messageRepository.sendSystemMessage("room-1", match { it.contains("Spamming") })
+            messageRepository.sendSystemMessage("room-1", "Attendee was kicked")
         }
     }
 
@@ -917,6 +930,26 @@ class RoomViewModelTest {
         coVerify { roomRepository.leaveRoom("room-1", currentUserId) }
         coVerify(exactly = 0) { roomRepository.setOwnerAway(any()) }
         coVerify(exactly = 0) { roomRepository.closeRoom(any()) }
+    }
+
+    @Test
+    fun `leaveRoom - owner stays in participants during OWNER_AWAY`() = runTest {
+        viewModel = createViewModel()
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = "other-user")
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "other-user"),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.leaveRoom()
+        advanceUntilIdle()
+
+        // Owner should NOT be removed from participants — stays for reconnection
+        coVerify(exactly = 0) { roomRepository.leaveRoom("room-1", currentUserId) }
+        coVerify { roomRepository.setOwnerAway("room-1") }
     }
 
     @Test
@@ -1879,7 +1912,7 @@ class RoomViewModelTest {
     }
 
     @Test
-    fun `ownerReturn - skips presence setup when already in room`() = runTest {
+    fun `ownerReturn - always re-establishes presence even when already in room`() = runTest {
         // Set isInRoom BEFORE creating VM and emitting room so the alreadyInRoom path is taken
         every { activeRoomManager.isInRoom("room-1") } returns true
         roomFlow.value = TestData.createTestRoom(
@@ -1893,8 +1926,8 @@ class RoomViewModelTest {
         advanceUntilIdle()
 
         coVerify { roomRepository.setOwnerReturned("room-1", currentUserId) }
-        // Neither joinRoom (early return) nor ownerReturn calls setPresence when already in room
-        coVerify(exactly = 0) { presenceService.setPresence(any(), any()) }
+        // ownerReturn always re-establishes presence as a safety net
+        coVerify { presenceService.setPresence("room-1", currentUserId) }
     }
 
     @Test
@@ -2214,5 +2247,75 @@ class RoomViewModelTest {
 
         viewModel.clearError()
         assertNull(viewModel.uiState.value.error)
+    }
+
+    // ===== Batch user loading (Pass 1 & 6) =====
+
+    @Test
+    fun `loadSeatUsers calls batch getUsers instead of individual getUser`() = runTest {
+        val userA = TestData.createTestUser(uid = "user-a", displayName = "Alice")
+        val userB = TestData.createTestUser(uid = "user-b", displayName = "Bob")
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(listOf(userA, userB))
+
+        viewModel = createViewModel()
+        val seats = TestData.createDefaultSeats().toMutableMap()
+        seats["0"] = TestData.createTestSeat(userId = currentUserId)
+        seats["1"] = TestData.createTestSeat(userId = "user-a")
+        seats["2"] = TestData.createTestSeat(userId = "user-b")
+
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "user-a", "user-b"),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        // Verify batch getUsers was called (not individual getUser for each seat user)
+        coVerify { userRepository.getUsers(match { it.containsAll(listOf("user-a", "user-b")) }) }
+    }
+
+    // ===== Disconnect Dimming Tests =====
+
+    @Test
+    fun `disconnectedUserIds - propagated from ActiveRoomManager`() = runTest {
+        val disconnectedFlow = MutableStateFlow<Set<String>>(emptySet())
+        every { activeRoomManager.disconnectedUserIds } returns disconnectedFlow
+
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        disconnectedFlow.value = setOf("user-x")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.disconnectedUserIds.contains("user-x"))
+    }
+
+    @Test
+    fun `handleRoomClosed batch-loads host users`() = runTest {
+        val hostUser = TestData.createTestUser(uid = "host-1", displayName = "Host")
+        val ownerUser = TestData.createTestUser(uid = currentUserId, displayName = "Owner")
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(listOf(ownerUser, hostUser))
+
+        viewModel = createViewModel()
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            hostIds = setOf("host-1"),
+            participantIds = setOf(currentUserId, "host-1")
+        ))
+        advanceUntilIdle()
+
+        // Close the room
+        roomFlow.value = TestData.createTestRoom(
+            ownerId = currentUserId,
+            state = RoomState.CLOSED,
+            hostIds = setOf("host-1"),
+            closedAt = Timestamp.now()
+        )
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.roomClosed)
+        // Verify batch loading was used for host users
+        coVerify { userRepository.getUsers(any()) }
     }
 }

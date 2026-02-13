@@ -154,6 +154,21 @@ class SpeakingDetectionTest {
         assertTrue(remoteUid1 in result)
     }
 
+    // --- Muted seat regression (UI layer) ---
+
+    @Test
+    fun `muted local user with high volume is excluded from speaking set`() {
+        // Regression: Agora reports mic volume even when muteLocalAudioStream is active.
+        // processSpeakers must exclude the local user when isLocalMuted is true,
+        // regardless of how loud the captured volume is.
+        val speakers = arrayOf(speaker(0, 255)) // max volume
+        val result = AgoraVoiceService.processSpeakers(
+            speakers, localUid, isLocalMuted = true,
+            localThreshold = 50, remoteThreshold = 10
+        )
+        assertTrue("Muted local user must never appear in speaking set", result.isEmpty())
+    }
+
     // --- Edge cases ---
 
     @Test

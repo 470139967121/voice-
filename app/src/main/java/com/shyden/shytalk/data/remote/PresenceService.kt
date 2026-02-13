@@ -43,7 +43,11 @@ class PresenceService @Inject constructor(
         val userId = currentUserId ?: return
 
         val ref = database.getReference("presence/$roomId/$userId")
-        ref.onDisconnect().cancel()
+        // Do NOT cancel onDisconnect — it serves as a safety net.
+        // If removeValue() succeeds, the onDisconnect becomes a harmless no-op.
+        // If the process is killed before removeValue() completes, the
+        // onDisconnect fires when the RTDB connection drops and triggers
+        // the Cloud Function to clean up the room.
         ref.removeValue()
         Log.d(TAG, "Presence removed for room=$roomId user=$userId")
 

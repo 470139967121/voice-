@@ -240,7 +240,7 @@ class RoomRepositoryImplTest {
 
     @Test
     fun `setOwnerAway returns Success`() = runTest {
-        every { docRef.update(any<Map<String, Any?>>()) } returns Tasks.forResult(null)
+        every { firestore.runTransaction(any<Transaction.Function<Any?>>()) } returns Tasks.forResult(null)
 
         val result = repo.setOwnerAway("room-1")
 
@@ -251,7 +251,7 @@ class RoomRepositoryImplTest {
 
     @Test
     fun `setOwnerReturned returns Success`() = runTest {
-        every { docRef.update(any<Map<String, Any?>>()) } returns Tasks.forResult(null)
+        every { firestore.runTransaction(any<Transaction.Function<Any?>>()) } returns Tasks.forResult(null)
 
         val result = repo.setOwnerReturned("room-1", "owner-1")
 
@@ -358,6 +358,119 @@ class RoomRepositoryImplTest {
         val result = repo.updateRoomName("room-1", "New Name")
 
         assertTrue(result is Resource.Error)
+    }
+
+    // --- mute state preservation ---
+
+    @Test
+    fun `setOwnerAway preserves isMuted from seat 0`() = runTest {
+        val transaction = mockk<Transaction>(relaxed = true)
+        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
+        every { snapshot.data } returns mapOf(
+            "ownerId" to "owner-1",
+            "state" to "ACTIVE",
+            "participantIds" to listOf("owner-1", "user-2"),
+            "seats" to mapOf(
+                "0" to mapOf("userId" to "owner-1", "state" to "OCCUPIED", "isMuted" to true),
+                "1" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "2" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "3" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "4" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "5" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "6" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "7" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false)
+            )
+        )
+        every { snapshot.id } returns "room-1"
+        every { transaction.get(docRef) } returns snapshot
+        val updateSlot = slot<Map<String, Any>>()
+        every { transaction.update(docRef, capture(updateSlot)) } returns transaction
+        every { firestore.runTransaction(any<Transaction.Function<*>>()) } answers {
+            val fn = firstArg<Transaction.Function<*>>()
+            fn.apply(transaction)
+            Tasks.forResult(null)
+        }
+
+        val result = repo.setOwnerAway("room-1")
+
+        assertTrue(result is Resource.Success)
+        @Suppress("UNCHECKED_CAST")
+        val seatMap = updateSlot.captured["seats.0"] as Map<String, Any?>
+        assertEquals(true, seatMap["isMuted"])
+    }
+
+    @Test
+    fun `setOwnerReturned preserves isMuted from seat 0`() = runTest {
+        val transaction = mockk<Transaction>(relaxed = true)
+        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
+        every { snapshot.data } returns mapOf(
+            "ownerId" to "owner-1",
+            "state" to "OWNER_AWAY",
+            "participantIds" to listOf("owner-1", "user-2"),
+            "seats" to mapOf(
+                "0" to mapOf("userId" to "owner-1", "state" to "OCCUPIED", "isMuted" to true),
+                "1" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "2" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "3" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "4" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "5" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "6" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "7" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false)
+            )
+        )
+        every { snapshot.id } returns "room-1"
+        every { transaction.get(docRef) } returns snapshot
+        val updateSlot = slot<Map<String, Any>>()
+        every { transaction.update(docRef, capture(updateSlot)) } returns transaction
+        every { firestore.runTransaction(any<Transaction.Function<*>>()) } answers {
+            val fn = firstArg<Transaction.Function<*>>()
+            fn.apply(transaction)
+            Tasks.forResult(null)
+        }
+
+        val result = repo.setOwnerReturned("room-1", "owner-1")
+
+        assertTrue(result is Resource.Success)
+        @Suppress("UNCHECKED_CAST")
+        val seatMap = updateSlot.captured["seats.0"] as Map<String, Any?>
+        assertEquals(true, seatMap["isMuted"])
+    }
+
+    @Test
+    fun `removeDisconnectedUser preserves owner isMuted during OWNER_AWAY`() = runTest {
+        val transaction = mockk<Transaction>(relaxed = true)
+        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
+        every { snapshot.data } returns mapOf(
+            "ownerId" to "owner-1",
+            "state" to "ACTIVE",
+            "participantIds" to listOf("owner-1", "user-2"),
+            "seats" to mapOf(
+                "0" to mapOf("userId" to "owner-1", "state" to "OCCUPIED", "isMuted" to true),
+                "1" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "2" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "3" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "4" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "5" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "6" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false),
+                "7" to mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false)
+            )
+        )
+        every { snapshot.id } returns "room-1"
+        every { transaction.get(docRef) } returns snapshot
+        val updateSlot = slot<Map<String, Any>>()
+        every { transaction.update(docRef, capture(updateSlot)) } returns transaction
+        every { firestore.runTransaction(any<Transaction.Function<*>>()) } answers {
+            val fn = firstArg<Transaction.Function<*>>()
+            fn.apply(transaction)
+            Tasks.forResult(null)
+        }
+
+        val result = repo.removeDisconnectedUser("room-1", "owner-1")
+
+        assertTrue(result is Resource.Success)
+        @Suppress("UNCHECKED_CAST")
+        val seatMap = updateSlot.captured["seats.0"] as Map<String, Any?>
+        assertEquals(true, seatMap["isMuted"])
     }
 
     // --- closeAllRoomsByOwner ---

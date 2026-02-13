@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.RoomState
+import com.shyden.shytalk.core.model.Seat
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.data.remote.AgoraVoiceService
@@ -560,7 +561,7 @@ class ActiveRoomManagerTest {
     }
 
     @Test
-    fun `leaveRoom - owner sets owner away and keeps seat`() = runTest {
+    fun `leaveRoom - owner alone closes room`() = runTest {
         manager.trackRoom("room-1")
         val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
         val room = TestData.createTestRoom(
@@ -572,9 +573,30 @@ class ActiveRoomManagerTest {
 
         manager.leaveRoom()
 
-        // Owner's seat is preserved for reconnection — only setOwnerAway is called
+        // Owner is alone — room should close immediately
+        coVerify(exactly = 0) { roomRepository.leaveSeat("room-1", 0) }
+        coVerify { roomRepository.closeRoom("room-1") }
+        coVerify(exactly = 0) { roomRepository.setOwnerAway(any()) }
+    }
+
+    @Test
+    fun `leaveRoom - owner with others on mic sets owner away`() = runTest {
+        manager.trackRoom("room-1")
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = "other-user")
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "other-user"),
+            seats = seats
+        )
+        manager.updateTrackedRoom(room)
+
+        manager.leaveRoom()
+
+        // Others present — owner keeps seat 0, room goes OWNER_AWAY
         coVerify(exactly = 0) { roomRepository.leaveSeat("room-1", 0) }
         coVerify { roomRepository.setOwnerAway("room-1") }
+        coVerify(exactly = 0) { roomRepository.closeRoom(any()) }
     }
 
     @Test
@@ -612,6 +634,61 @@ class ActiveRoomManagerTest {
         manager.trackRoom("room-1")
 
         assertTrue(manager.isInRoom("room-1"))
+    }
+
+    // --- connection monitor: owner vs non-owner ---
+
+    @Test
+    fun `connection monitor - owner disconnect does NOT trigger leaveRoom`() = runTest {
+        manager.trackRoom("room-1")
+        val seats = TestData.createSeatsWithOwner(currentUserId)
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "user-2"),
+            seats = seats
+        )
+        manager.updateTrackedRoom(room)
+
+        // Emit CONNECTED after room is set so wasEverConnected = true
+        connectionStateFlow.value = AgoraVoiceService.ConnectionState.CONNECTED
+
+        // Simulate Agora disconnect (WiFi off)
+        connectionStateFlow.value = AgoraVoiceService.ConnectionState.DISCONNECTED
+
+        // Advance past the grace period
+        testScheduler.advanceTimeBy(Constants.AGORA_DISCONNECT_GRACE_PERIOD_MS + 1000)
+
+        // Owner should NOT have leaveRoom called — presence system on other devices handles it
+        coVerify(exactly = 0) { roomRepository.setOwnerAway(any()) }
+        coVerify(exactly = 0) { roomRepository.closeRoom(any()) }
+        coVerify(exactly = 0) { roomRepository.leaveSeat(any(), any()) }
+        assertTrue(manager.isInRoom("room-1"))
+    }
+
+    @Test
+    fun `connection monitor - non-owner disconnect triggers leaveRoom after grace period`() = runTest {
+        manager.trackRoom("room-1")
+        val seats = TestData.createSeatsWithOwner("other-owner").toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = currentUserId)
+        val room = TestData.createTestRoom(
+            ownerId = "other-owner",
+            participantIds = setOf("other-owner", currentUserId),
+            seats = seats
+        )
+        manager.updateTrackedRoom(room)
+
+        // Emit CONNECTED after room is set so wasEverConnected = true
+        connectionStateFlow.value = AgoraVoiceService.ConnectionState.CONNECTED
+
+        // Simulate Agora disconnect
+        connectionStateFlow.value = AgoraVoiceService.ConnectionState.DISCONNECTED
+
+        // Advance past the grace period
+        testScheduler.advanceTimeBy(Constants.AGORA_DISCONNECT_GRACE_PERIOD_MS + 1000)
+
+        // Non-owner should have left the room
+        coVerify { roomRepository.leaveSeat("room-1", 3) }
+        coVerify { agoraVoiceService.leaveChannel() }
     }
 
     // --- presence monitor ---
@@ -866,5 +943,92 @@ class ActiveRoomManagerTest {
         manager.forceMuteUser(3)
 
         coVerify(exactly = 0) { roomRepository.toggleMute(any(), any(), any()) }
+    }
+
+    // --- disconnectedUserIds ---
+
+    @Test
+    fun `disconnectedUserIds - initially empty`() {
+        assertEquals(emptySet<String>(), manager.disconnectedUserIds.value)
+    }
+
+    @Test
+    fun `disconnectedUserIds - contains absent user during grace period`() = runTest {
+        manager.trackRoom("room-1")
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "user-2")
+        )
+        manager.updateTrackedRoom(room)
+
+        // user-2 is absent from presence
+        presenceFlow.value = setOf(currentUserId)
+
+        // Advance 15s — within PRESENCE_TIMEOUT_MS (30s), grace timer still running
+        testScheduler.advanceTimeBy(15_000)
+
+        assertTrue(manager.disconnectedUserIds.value.contains("user-2"))
+    }
+
+    @Test
+    fun `disconnectedUserIds - cleared when user reappears`() = runTest {
+        manager.trackRoom("room-1")
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "user-2")
+        )
+        manager.updateTrackedRoom(room)
+
+        // user-2 disappears
+        presenceFlow.value = setOf(currentUserId)
+        testScheduler.advanceTimeBy(15_000)
+        assertTrue(manager.disconnectedUserIds.value.contains("user-2"))
+
+        // user-2 reappears
+        presenceFlow.value = setOf(currentUserId, "user-2")
+        testScheduler.advanceTimeBy(1)
+
+        assertEquals(emptySet<String>(), manager.disconnectedUserIds.value)
+    }
+
+    @Test
+    fun `disconnectedUserIds - cleared on untrackRoom`() = runTest {
+        manager.trackRoom("room-1")
+        val room = TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "user-2")
+        )
+        manager.updateTrackedRoom(room)
+
+        // user-2 disappears
+        presenceFlow.value = setOf(currentUserId)
+        testScheduler.advanceTimeBy(15_000)
+        assertTrue(manager.disconnectedUserIds.value.contains("user-2"))
+
+        manager.untrackRoom()
+
+        assertEquals(emptySet<String>(), manager.disconnectedUserIds.value)
+    }
+
+    @Test
+    fun `disconnectedUserIds - cleared on cleanup via leaveRoom`() = runTest {
+        manager.trackRoom("room-1")
+        val seats = TestData.createSeatsWithOwner("other-owner").toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = currentUserId)
+        val room = TestData.createTestRoom(
+            ownerId = "other-owner",
+            participantIds = setOf("other-owner", currentUserId, "user-2"),
+            seats = seats
+        )
+        manager.updateTrackedRoom(room)
+
+        // user-2 disappears
+        presenceFlow.value = setOf(currentUserId, "other-owner")
+        testScheduler.advanceTimeBy(15_000)
+        assertTrue(manager.disconnectedUserIds.value.contains("user-2"))
+
+        manager.leaveRoom()
+
+        assertEquals(emptySet<String>(), manager.disconnectedUserIds.value)
     }
 }

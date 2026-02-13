@@ -25,6 +25,11 @@ class RoomRepositoryImpl @Inject constructor(
 
     companion object {
         private const val TAG = "RoomRepositoryImpl"
+
+        /** Cached map for resetting all 8 seats to empty — avoids re-creating on every call. */
+        private val EMPTY_SEATS_UPDATE: Map<String, Any> by lazy {
+            (0 until Constants.MAX_SEATS).associate { i -> "seats.$i" to Seat.EMPTY_MAP }
+        }
     }
 
     private val roomsCollection = firestore.collection("rooms")
@@ -100,12 +105,7 @@ class RoomRepositoryImpl @Inject constructor(
             if (remaining.isEmpty() ||
                 (remaining.singleOrNull() == room.ownerId && room.state == RoomState.OWNER_AWAY)) {
                 // Room is empty — close it
-                val updates = emptySeatsUpdate() + mapOf(
-                    "state" to RoomState.CLOSED.name,
-                    "closedAt" to Timestamp.now(),
-                    "participantIds" to emptyList<String>()
-                )
-                transaction.update(docRef, updates)
+                transaction.update(docRef, closeRoomUpdates())
             } else {
                 transaction.update(docRef, mapOf(
                     "participantIds" to FieldValue.arrayRemove(userId)
@@ -129,7 +129,7 @@ class RoomRepositoryImpl @Inject constructor(
 
     override suspend fun leaveSeat(roomId: String, seatIndex: Int): Resource<Unit> = firebaseCall("Failed to leave seat") {
         roomsCollection.document(roomId).update(
-            "seats.$seatIndex", Seat().toMap()
+            "seats.$seatIndex", Seat.EMPTY_MAP
         ).await()
     }
 
@@ -140,7 +140,7 @@ class RoomRepositoryImpl @Inject constructor(
     override suspend fun moveSeat(roomId: String, fromIndex: Int, toIndex: Int, userId: String): Resource<Unit> = firebaseCall("Failed to move seat") {
         roomsCollection.document(roomId).update(
             mapOf(
-                "seats.$fromIndex" to Seat().toMap(),
+                "seats.$fromIndex" to Seat.EMPTY_MAP,
                 "seats.$toIndex" to Seat(userId = userId, state = SeatState.OCCUPIED).toMap()
             )
         ).await()
@@ -156,7 +156,7 @@ class RoomRepositoryImpl @Inject constructor(
             )
         )
         if (seatIndex != null) {
-            updates["seats.$seatIndex"] = Seat().toMap()
+            updates["seats.$seatIndex"] = Seat.EMPTY_MAP
         }
         roomsCollection.document(roomId).update(updates).await()
     }
@@ -190,23 +190,37 @@ class RoomRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setOwnerAway(roomId: String): Resource<Unit> = firebaseCall("Failed to set owner away") {
-        roomsCollection.document(roomId).update(
-            mapOf(
+        val docRef = roomsCollection.document(roomId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val room = snapshot.data?.let { ChatRoom.fromMap(it, snapshot.id) }
+                ?: return@runTransaction
+            // Atomically set OWNER_AWAY and guarantee seat 0 stays occupied by the owner
+            val currentMuted = room.seats[Constants.OWNER_SEAT_INDEX.toString()]?.isMuted ?: false
+            val updates = mutableMapOf<String, Any>(
                 "state" to RoomState.OWNER_AWAY.name,
                 "ownerLeftAt" to Timestamp.now()
             )
-        ).await()
+            updates["seats.${Constants.OWNER_SEAT_INDEX}"] =
+                Seat(userId = room.ownerId, state = SeatState.OCCUPIED, isMuted = currentMuted).toMap()
+            transaction.update(docRef, updates)
+        }.await()
     }
 
     override suspend fun setOwnerReturned(roomId: String, ownerId: String): Resource<Unit> = firebaseCall("Failed to set owner returned") {
-        val seat = Seat(userId = ownerId, state = SeatState.OCCUPIED)
-        roomsCollection.document(roomId).update(
-            mapOf(
+        val docRef = roomsCollection.document(roomId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val room = snapshot.data?.let { ChatRoom.fromMap(it, snapshot.id) }
+                ?: return@runTransaction
+            val currentMuted = room.seats[Constants.OWNER_SEAT_INDEX.toString()]?.isMuted ?: false
+            val seat = Seat(userId = ownerId, state = SeatState.OCCUPIED, isMuted = currentMuted)
+            transaction.update(docRef, mapOf(
                 "state" to RoomState.ACTIVE.name,
                 "ownerLeftAt" to null,
                 "seats.${Constants.OWNER_SEAT_INDEX}" to seat.toMap()
-            )
-        ).await()
+            ))
+        }.await()
     }
 
     override suspend fun sendInvite(roomId: String, userId: String, invitedBy: String): Resource<Unit> = firebaseCall("Failed to send invite") {
@@ -271,13 +285,28 @@ class RoomRepositoryImpl @Inject constructor(
         val batch = firestore.batch()
         for (doc in docsToUpdate) {
             val room = doc.data?.let { ChatRoom.fromMap(it, doc.id) } ?: continue
-            val updates = clearUserSeats(room, userId)
-            updates["participantIds"] = FieldValue.arrayRemove(userId)
             if (room.ownerId == userId) {
-                updates["state"] = RoomState.OWNER_AWAY.name
-                updates["ownerLeftAt"] = Timestamp.now()
+                val otherParticipants = room.participantIds - userId
+                val updates: MutableMap<String, Any> = if (otherParticipants.isEmpty()) {
+                    // Nobody else in the room — close it
+                    closeRoomUpdates().toMutableMap()
+                } else {
+                    // Others still present — keep owner in seat 0, mark away
+                    val currentMuted = room.seats[Constants.OWNER_SEAT_INDEX.toString()]?.isMuted ?: false
+                    val u = mutableMapOf<String, Any>()
+                    u["participantIds"] = FieldValue.arrayRemove(userId)
+                    u["state"] = RoomState.OWNER_AWAY.name
+                    u["ownerLeftAt"] = Timestamp.now()
+                    u["seats.${Constants.OWNER_SEAT_INDEX}"] =
+                        Seat(userId = userId, state = SeatState.OCCUPIED, isMuted = currentMuted).toMap()
+                    u
+                }
+                batch.update(roomsCollection.document(doc.id), updates)
+            } else {
+                val updates = clearUserSeats(room, userId)
+                updates["participantIds"] = FieldValue.arrayRemove(userId)
+                batch.update(roomsCollection.document(doc.id), updates)
             }
-            batch.update(roomsCollection.document(doc.id), updates)
         }
         batch.commit().await()
     }
@@ -290,11 +319,7 @@ class RoomRepositoryImpl @Inject constructor(
             .await()
         if (snapshot.documents.isEmpty()) return@firebaseCall
         val batch = firestore.batch()
-        val closeUpdates = emptySeatsUpdate() + mapOf(
-            "state" to RoomState.CLOSED.name,
-            "closedAt" to Timestamp.now(),
-            "participantIds" to emptyList<String>()
-        )
+        val closeUpdates = closeRoomUpdates()
         for (doc in snapshot.documents) {
             batch.update(roomsCollection.document(doc.id), closeUpdates)
         }
@@ -318,22 +343,19 @@ class RoomRepositoryImpl @Inject constructor(
 
             if (remainingParticipants.isEmpty() && !isOwner) {
                 // Room is now empty — close it
-                updates.putAll(emptySeatsUpdate())
-                updates["state"] = RoomState.CLOSED.name
-                updates["closedAt"] = Timestamp.now()
-                updates["participantIds"] = emptyList<String>()
+                updates.putAll(closeRoomUpdates())
             } else if (isOwner) {
-                // Owner disconnected — mark away but keep them in participants and seat
+                // Owner disconnected — mark away, keep in participants, and guarantee seat 0
+                val currentMuted = room.seats[Constants.OWNER_SEAT_INDEX.toString()]?.isMuted ?: false
                 updates["state"] = RoomState.OWNER_AWAY.name
                 updates["ownerLeftAt"] = Timestamp.now()
+                updates["seats.${Constants.OWNER_SEAT_INDEX}"] =
+                    Seat(userId = userId, state = SeatState.OCCUPIED, isMuted = currentMuted).toMap()
             } else {
                 updates["participantIds"] = FieldValue.arrayRemove(userId)
                 // If only the owner remains and they're away, close the room
                 if (remainingParticipants.singleOrNull() == room.ownerId && room.state == RoomState.OWNER_AWAY) {
-                    updates.putAll(emptySeatsUpdate())
-                    updates["state"] = RoomState.CLOSED.name
-                    updates["closedAt"] = Timestamp.now()
-                    updates["participantIds"] = emptyList<String>()
+                    updates.putAll(closeRoomUpdates())
                 }
             }
 
@@ -344,22 +366,23 @@ class RoomRepositoryImpl @Inject constructor(
     }
 
     override suspend fun closeRoom(roomId: String): Resource<Unit> = firebaseCall("Failed to close room") {
-        val updates = emptySeatsUpdate() + mapOf(
-            "state" to RoomState.CLOSED.name,
-            "closedAt" to Timestamp.now(),
-            "participantIds" to emptyList<String>()
-        )
-        roomsCollection.document(roomId).update(updates).await()
+        roomsCollection.document(roomId).update(closeRoomUpdates()).await()
     }
 
-    private fun emptySeatsUpdate(): Map<String, Any> =
-        (0 until Constants.MAX_SEATS).associate { i -> "seats.$i" to Seat().toMap() }
+    /** All fields needed to close a room: reset seats, set CLOSED state, clear participants. */
+    private fun closeRoomUpdates(): Map<String, Any> = EMPTY_SEATS_UPDATE + mapOf(
+        "state" to RoomState.CLOSED.name,
+        "closedAt" to Timestamp.now(),
+        "participantIds" to emptyList<String>()
+    )
 
     private fun clearUserSeats(room: ChatRoom, userId: String): MutableMap<String, Any> {
         val updates = mutableMapOf<String, Any>()
         for ((idx, seat) in room.seats) {
             if (seat.isOccupiedBy(userId)) {
-                updates["seats.$idx"] = Seat().toMap()
+                // Owner must never be removed from seat 0
+                if (idx == Constants.OWNER_SEAT_INDEX.toString() && userId == room.ownerId) continue
+                updates["seats.$idx"] = Seat.EMPTY_MAP
             }
         }
         return updates
