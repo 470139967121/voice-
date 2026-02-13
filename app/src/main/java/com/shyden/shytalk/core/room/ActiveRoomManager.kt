@@ -41,6 +41,10 @@ class ActiveRoomManager @Inject constructor(
     private val presenceService: PresenceService,
     @param:ApplicationContext private val context: Context
 ) {
+    companion object {
+        private const val TAG = "ActiveRoomManager"
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val _activeRoomId = MutableStateFlow<String?>(null)
@@ -66,6 +70,9 @@ class ActiveRoomManager @Inject constructor(
     private var ownerAwayCountdownJob: Job? = null
     private val _isRoomScreenVisible = MutableStateFlow(false)
     val isRoomScreenVisible: StateFlow<Boolean> = _isRoomScreenVisible.asStateFlow()
+
+    private val _disconnectedUserIds = MutableStateFlow<Set<String>>(emptySet())
+    val disconnectedUserIds: StateFlow<Set<String>> = _disconnectedUserIds.asStateFlow()
 
     private var connectionMonitorJob: Job? = null
     private var presenceMonitorJob: Job? = null
@@ -102,11 +109,16 @@ class ActiveRoomManager @Inject constructor(
 
     /** Called by RoomViewModel when user explicitly leaves. Stops service. */
     fun untrackRoom() {
+        connectionMonitorJob?.cancel()
+        presenceMonitorJob?.cancel()
+        ownerAwayCountdownJob?.cancel()
+        isSeated = false
         _activeRoomId.value = null
         _activeRoom.value = null
         _messages.value = emptyList()
         _ownerAwayRemainingMs.value = 0L
         _roomClosed.value = false
+        _disconnectedUserIds.value = emptySet()
         RoomService.stop(context)
     }
 
@@ -133,28 +145,42 @@ class ActiveRoomManager @Inject constructor(
     }
 
     suspend fun leaveRoom() {
-        val roomId = _activeRoomId.value ?: return
-        val room = _activeRoom.value ?: return
+        val roomId = _activeRoomId.value ?: run {
+            Log.d(TAG, "leaveRoom: no activeRoomId, returning")
+            return
+        }
+        val room = _activeRoom.value ?: run {
+            Log.d(TAG, "leaveRoom: no activeRoom, returning")
+            return
+        }
         val userId = currentUserId
+        val isOwner = room.ownerId == userId
+        Log.d(TAG, "leaveRoom: roomId=$roomId userId=$userId isOwner=$isOwner")
 
         presenceService.removePresence()
 
-        // Vacate seat — but keep owner in seat 0 for reconnection
-        val mySeatEntry = room.seats.entries.find { it.value.isOccupiedBy(userId) }
-        if (mySeatEntry != null) {
-            val seatIndex = mySeatEntry.key.toInt()
-            if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) {
-                // Owner keeps their seat for reconnection — just mark away
+        // Vacate seat — owner keeps seat 0 for reconnection
+        val mySeatEntry = room.findUserSeat(userId)
+        if (isOwner) {
+            val anyoneOnMic = room.seats.any { (_, seat) ->
+                seat.userId != null && seat.userId != userId && seat.state == SeatState.OCCUPIED
+            }
+            if (anyoneOnMic) {
+                Log.d(TAG, "leaveRoom: owner → setOwnerAway (others present, seat preserved)")
                 roomRepository.setOwnerAway(roomId)
             } else {
-                roomRepository.leaveSeat(roomId, seatIndex)
+                Log.d(TAG, "leaveRoom: owner alone → closeRoom")
+                roomRepository.closeRoom(roomId)
             }
+        } else if (mySeatEntry != null) {
+            Log.d(TAG, "leaveRoom: non-owner → leaveSeat(${mySeatEntry.key})")
+            roomRepository.leaveSeat(roomId, mySeatEntry.key.toInt())
         }
 
         agoraVoiceService.leaveChannel()
 
         // Non-owners leave the participant list
-        if (room.ownerId != userId) {
+        if (!isOwner) {
             roomRepository.leaveRoom(roomId, userId)
         }
 
@@ -175,10 +201,10 @@ class ActiveRoomManager @Inject constructor(
     }
 
     private fun findMySeat(room: ChatRoom, userId: String = currentUserId) =
-        room.seats.values.find { it.isOccupiedBy(userId) }
+        room.findUserSeat(userId)?.value
 
     private fun isUserSeated(room: ChatRoom, userId: String = currentUserId) =
-        room.seats.values.any { it.isOccupiedBy(userId) }
+        room.findUserSeat(userId) != null
 
     private fun cleanup() {
         roomObserverJob?.cancel()
@@ -192,6 +218,7 @@ class ActiveRoomManager @Inject constructor(
         _messages.value = emptyList()
         _ownerAwayRemainingMs.value = 0L
         _roomClosed.value = false
+        _disconnectedUserIds.value = emptySet()
 
         RoomService.stop(context)
     }
@@ -267,6 +294,7 @@ class ActiveRoomManager @Inject constructor(
             agoraVoiceService.connectionState.collect { state ->
                 val room = _activeRoom.value ?: return@collect
                 val userId = currentUserId
+                Log.d(TAG, "connectionMonitor: state=$state userId=$userId ownerId=${room.ownerId} seated=${isUserSeated(room, userId)} wasEver=$wasEverConnected")
 
                 // Only monitor when user is seated (has an Agora connection)
                 val currentlySeated = isUserSeated(room, userId)
@@ -283,6 +311,19 @@ class ActiveRoomManager @Inject constructor(
                     }
                     AgoraVoiceService.ConnectionState.DISCONNECTED -> {
                         if (!wasEverConnected) return@collect
+
+                        // Owner must NOT leave from their own device on network loss.
+                        // The presence monitor on other devices will detect the
+                        // owner's absence and call removeDisconnectedUser, which
+                        // correctly transitions the room to OWNER_AWAY while
+                        // preserving seat 0.  If the owner's device queues a
+                        // leaveRoom() while offline, the Firestore writes can
+                        // overwrite the correct state when connectivity returns.
+                        val isOwner = room.ownerId == userId
+                        if (isOwner) {
+                            Log.d(TAG, "connectionMonitor: owner disconnected — skipping leaveRoom, presence system will handle")
+                            return@collect
+                        }
 
                         graceJob?.cancel()
                         graceJob = scope.launch {
@@ -306,8 +347,15 @@ class ActiveRoomManager @Inject constructor(
         presenceMonitorJob = scope.launch {
             val graceTimers = mutableMapOf<String, Job>()
 
+            fun emitDisconnectedIds() {
+                val newSet = graceTimers.keys.toSet()
+                if (newSet != _disconnectedUserIds.value) {
+                    _disconnectedUserIds.value = newSet
+                }
+            }
+
             presenceService.observeRoomPresence(roomId)
-                .catch { e -> Log.w("ActiveRoomManager", "Presence monitor error", e) }
+                .catch { e -> Log.w(TAG, "Presence monitor error", e) }
                 .collect { presentUserIds ->
                     val room = _activeRoom.value ?: return@collect
                     val participantIds = room.participantIds
@@ -328,8 +376,11 @@ class ActiveRoomManager @Inject constructor(
                             delay(Constants.PRESENCE_TIMEOUT_MS)
                             roomRepository.removeDisconnectedUser(roomId, userId)
                             graceTimers.remove(userId)
+                            emitDisconnectedIds()
                         }
                     }
+
+                    emitDisconnectedIds()
                 }
         }
     }
@@ -342,9 +393,8 @@ class ActiveRoomManager @Inject constructor(
                     val elapsed = System.currentTimeMillis() - room.ownerLeftAt.toDate().time
                     val remaining = Constants.OWNER_LEAVE_TIMEOUT_MS - elapsed
                     if (remaining <= 0) {
-                        if (room.resolveRole(currentUserId) == RoomRole.OWNER) {
-                            roomRepository.closeRoom(room.roomId)
-                        }
+                        // Any remaining participant can close an expired OWNER_AWAY room
+                        roomRepository.closeRoom(room.roomId)
                         break
                     }
                     _ownerAwayRemainingMs.value = remaining
@@ -377,7 +427,7 @@ class ActiveRoomManager @Inject constructor(
         }
         if (role == RoomRole.HOST && room.requireApproval) return
 
-        val currentSeatEntry = room.seats.entries.find { it.value.isOccupiedBy(userId) }
+        val currentSeatEntry = room.findUserSeat(userId)
         if (currentSeatEntry != null) {
             roomRepository.leaveSeat(roomId, currentSeatEntry.key.toInt())
         }

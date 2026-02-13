@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -63,6 +64,7 @@ fun SeatItem(
     isCurrentUser: Boolean,
     canLeaveSeat: Boolean,
     isSpeaking: Boolean,
+    isDisconnected: Boolean = false,
     user: User? = null,
     seatSize: Dp = 70.dp,
     onClick: () -> Unit,
@@ -91,7 +93,10 @@ fun SeatItem(
         label = "borderColor"
     )
 
-    // Pulsing border width when speaking — expands outward from 2dp to 8dp
+    // Max border so we can reserve stable layout space
+    val maxBorderWidth = 8.dp
+
+    // Pulsing border width when speaking — animates from 2dp to 8dp
     val borderWidth = if (isSpeaking) {
         val infiniteTransition = rememberInfiniteTransition(label = "speakingPulse")
         val pulsingWidth by infiniteTransition.animateFloat(
@@ -108,14 +113,18 @@ fun SeatItem(
         2.dp
     }
 
+    // Always reserve max border space so the layout never shifts
+    val outerSize = seatSize + maxBorderWidth * 2
+
     Column(
-        modifier = modifier.padding(4.dp),
+        modifier = modifier
+            .padding(4.dp)
+            .alpha(if (isDisconnected) 0.4f else 1f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Box(contentAlignment = Alignment.Center) {
-            // Outer border box for outward-pulsing speaking indicator
-            val outerSize = if (isSpeaking) seatSize + borderWidth * 2 else seatSize
+            // Fixed-size outer box — border pulses inside without affecting layout
             Box(
                 modifier = Modifier
                     .size(outerSize)

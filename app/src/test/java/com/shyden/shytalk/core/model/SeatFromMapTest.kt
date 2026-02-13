@@ -94,4 +94,25 @@ class SeatFromMapTest {
         val seat = Seat()
         assertFalse(seat.isOccupiedBy("user-1"))
     }
+
+    // --- EMPTY_MAP cache ---
+
+    @Test
+    fun `EMPTY_MAP matches default Seat toMap`() {
+        assertEquals(Seat().toMap(), Seat.EMPTY_MAP)
+    }
+
+    @Test
+    fun `EMPTY_MAP is same reference on repeated access`() {
+        val first = Seat.EMPTY_MAP
+        val second = Seat.EMPTY_MAP
+        assertTrue(first === second)
+    }
+
+    @Test
+    fun `EMPTY_MAP contains correct default values`() {
+        assertNull(Seat.EMPTY_MAP["userId"])
+        assertEquals("EMPTY", Seat.EMPTY_MAP["state"])
+        assertEquals(false, Seat.EMPTY_MAP["isMuted"])
+    }
 }

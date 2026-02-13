@@ -15,6 +15,9 @@ data class Seat(
     )
 
     companion object {
+        /** Cached toMap() result for a default empty seat — avoids repeated allocations. */
+        val EMPTY_MAP: Map<String, Any?> = Seat().toMap()
+
         fun fromMap(map: Map<String, Any?>): Seat = Seat(
             userId = map["userId"] as? String,
             state = (map["state"] as? String)?.let {

@@ -9,6 +9,8 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.shyden.shytalk.core.util.Constants
 import dagger.hilt.android.HiltAndroidApp
+import okhttp3.Cache
+import okhttp3.OkHttpClient
 
 @HiltAndroidApp
 class ShyTalkApp : Application(), ImageLoaderFactory {
@@ -24,6 +26,17 @@ class ShyTalkApp : Application(), ImageLoaderFactory {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
                     .maxSizeBytes(50L * 1024 * 1024)
+                    .build()
+            }
+            .okHttpClient {
+                OkHttpClient.Builder()
+                    .cache(Cache(cacheDir.resolve("http_cache"), 25L * 1024 * 1024))
+                    .addNetworkInterceptor { chain ->
+                        chain.proceed(chain.request()).newBuilder()
+                            .removeHeader("Pragma")
+                            .header("Cache-Control", "public, max-age=86400, immutable")
+                            .build()
+                    }
                     .build()
             }
             .crossfade(true)

@@ -2,6 +2,8 @@ package com.shyden.shytalk.core.model
 
 import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
@@ -87,5 +89,63 @@ class ChatRoomTest {
         val restored = ChatRoom.fromMap(map, "room-1")
 
         assertEquals(setOf("banned-1", "banned-2"), restored.bannedUserIds)
+    }
+
+    // --- findUserSeat ---
+
+    @Test
+    fun `findUserSeat returns correct entry for seated user`() {
+        val seats = ChatRoom.DEFAULT_SEATS.toMutableMap()
+        seats["2"] = Seat(userId = "user-A", state = SeatState.OCCUPIED)
+        val room = ChatRoom(
+            roomId = "room-1",
+            ownerId = "owner",
+            seats = seats,
+            createdAt = baseTimestamp
+        )
+
+        val entry = room.findUserSeat("user-A")
+
+        assertNotNull(entry)
+        assertEquals("2", entry!!.key)
+        assertEquals("user-A", entry.value.userId)
+        assertEquals(SeatState.OCCUPIED, entry.value.state)
+    }
+
+    @Test
+    fun `findUserSeat returns null for unseated user`() {
+        val room = ChatRoom(
+            roomId = "room-1",
+            ownerId = "owner",
+            createdAt = baseTimestamp
+        )
+
+        assertNull(room.findUserSeat("user-A"))
+    }
+
+    @Test
+    fun `findUserSeat returns null for empty room`() {
+        val room = ChatRoom(
+            roomId = "room-1",
+            ownerId = "owner",
+            seats = ChatRoom.DEFAULT_SEATS,
+            createdAt = baseTimestamp
+        )
+
+        assertNull(room.findUserSeat("anyone"))
+    }
+
+    @Test
+    fun `findUserSeat ignores non-OCCUPIED seats with matching userId`() {
+        val seats = ChatRoom.DEFAULT_SEATS.toMutableMap()
+        seats["3"] = Seat(userId = "user-B", state = SeatState.EMPTY)
+        val room = ChatRoom(
+            roomId = "room-1",
+            ownerId = "owner",
+            seats = seats,
+            createdAt = baseTimestamp
+        )
+
+        assertNull(room.findUserSeat("user-B"))
     }
 }

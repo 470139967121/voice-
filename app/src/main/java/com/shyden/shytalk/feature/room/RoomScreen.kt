@@ -223,7 +223,7 @@ fun RoomScreen(
             val r = room ?: return@derivedStateOf emptyList<ParticipantInfo>()
             seatedUserIds.mapNotNull { uid ->
                 participantUsers[uid]?.let { user ->
-                    val seat = r.seats.values.find { it.userId == uid }
+                    val seat = r.findUserSeat(uid)?.value
                     ParticipantInfo(user, r.resolveRole(uid), isMuted = seat?.isMuted ?: false)
                 }
             }.sortedWith(
@@ -339,6 +339,7 @@ fun RoomScreen(
                         hostIds = uiState.room?.hostIds ?: emptySet(),
                         speakingUids = uiState.speakingUids,
                         seatUsers = uiState.seatUsers,
+                        disconnectedUserIds = uiState.disconnectedUserIds,
                         onSeatClick = { seatIndex ->
                             val seat = uiState.room?.seats?.get(seatIndex.toString())
                             if (seat?.userId == uiState.currentUserId) {
@@ -382,7 +383,7 @@ fun RoomScreen(
                                 contentDescription = null,
                                 modifier = Modifier.padding(end = 8.dp)
                             )
-                            Text("Take a Seat")
+                            Text("Request a Seat")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -545,9 +546,7 @@ fun RoomScreen(
             }
             val user = uiState.seatUsers[userId] ?: uiState.participantUsers[userId]
             if (user != null) {
-                val targetSeatEntry = uiState.room?.seats?.entries?.find {
-                    it.value.isOccupiedBy(userId)
-                }
+                val targetSeatEntry = uiState.room?.findUserSeat(userId)
                 val isTargetSeated = targetSeatEntry != null
                 val targetSeatIndex = targetSeatEntry?.key?.toIntOrNull()
 

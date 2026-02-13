@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onValueDeleted } = require("firebase-functions/v2/database");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
+const { getDatabase } = require("firebase-admin/database");
 const { RtcTokenBuilder, RtcRole } = require("agora-token");
 
 initializeApp();
@@ -49,6 +50,19 @@ exports.onPresenceRemoved = onValueDeleted(
 
     console.log(`Presence removed: room=${roomId} user=${userId}`);
 
+    // Grace period: wait 15 seconds then re-check presence.
+    // RTDB connections can drop briefly (mobile power management, network
+    // fluctuations).  If the user reconnects within the grace window their
+    // presence entry reappears and we skip cleanup entirely.
+    await new Promise((resolve) => setTimeout(resolve, 15000));
+
+    const rtdb = getDatabase();
+    const presenceSnap = await rtdb.ref(`presence/${roomId}/${userId}`).get();
+    if (presenceSnap.exists()) {
+      console.log(`User ${userId} presence re-established in room ${roomId}, skipping cleanup`);
+      return;
+    }
+
     const db = getFirestore();
     const roomRef = db.collection("rooms").doc(roomId);
 
@@ -75,38 +89,25 @@ exports.onPresenceRemoved = onValueDeleted(
           return;
         }
 
-        const updates = {
-          participantIds: participantIds.filter((id) => id !== userId),
-        };
-
-        // Clear any seats occupied by this user
+        const isOwner = room.ownerId === userId;
         const seats = room.seats || {};
-        for (let i = 0; i < MAX_SEATS; i++) {
-          const key = i.toString();
-          const seat = seats[key];
-          if (seat && seat.userId === userId && seat.state === "OCCUPIED") {
-            updates[`seats.${key}`] = {
-              userId: null,
-              state: "EMPTY",
-              isMuted: false,
-            };
-          }
-        }
+        const updates = {};
 
         // Clear any pending invites for this user
         if (room.pendingInvites && room.pendingInvites[userId]) {
           updates[`pendingInvites.${userId}`] = require("firebase-admin/firestore").FieldValue.delete();
         }
 
-        // If this user is the owner, check if anyone is still on mic
-        if (room.ownerId === userId && room.state === "ACTIVE") {
-          // Check if any other user is still seated (on mic) after clearing this user's seats
+        if (isOwner) {
+          // --- Owner disconnected ---
+          // Owner keeps seat 0 and stays in participantIds for reconnection.
+          // Only transition the room state.
+
+          // Check if any other user is still seated (on mic)
           let anyoneOnMic = false;
           for (let i = 0; i < MAX_SEATS; i++) {
-            const key = i.toString();
-            // Skip seats we just cleared for this user
-            if (updates[`seats.${key}`]) continue;
-            const seat = seats[key];
+            if (i === OWNER_SEAT_INDEX) continue;
+            const seat = seats[i.toString()];
             if (seat && seat.userId && seat.userId !== userId && seat.state === "OCCUPIED") {
               anyoneOnMic = true;
               break;
@@ -114,20 +115,56 @@ exports.onPresenceRemoved = onValueDeleted(
           }
 
           if (anyoneOnMic) {
-            // Someone is still on mic, enter grace period
+            // Others still on mic — mark owner away, preserve seat 0
             updates.state = "OWNER_AWAY";
             updates.ownerLeftAt = require("firebase-admin/firestore").Timestamp.now();
-            console.log(`Owner left room ${roomId}, users still on mic - setting OWNER_AWAY`);
+            const currentOwnerSeat = seats[OWNER_SEAT_INDEX.toString()];
+            updates[`seats.${OWNER_SEAT_INDEX}`] = {
+              userId: userId,
+              state: "OCCUPIED",
+              isMuted: (currentOwnerSeat && currentOwnerSeat.isMuted) || false,
+            };
+            console.log(`Owner left room ${roomId}, users still on mic - setting OWNER_AWAY (seat 0 preserved)`);
           } else {
-            // No one on mic, close immediately
+            // Owner is alone — close immediately
             updates.state = "CLOSED";
             updates.closedAt = require("firebase-admin/firestore").Timestamp.now();
             updates.participantIds = [];
-            // Clear all seats
             for (let i = 0; i < MAX_SEATS; i++) {
               updates[`seats.${i.toString()}`] = { userId: null, state: "EMPTY", isMuted: false };
             }
             console.log(`Owner left room ${roomId}, no users on mic - closing immediately`);
+          }
+        } else {
+          // --- Non-owner disconnected ---
+          // Remove from participants and clear their seats.
+
+          // Clear any seats occupied by this user
+          for (let i = 0; i < MAX_SEATS; i++) {
+            const key = i.toString();
+            const seat = seats[key];
+            if (seat && seat.userId === userId && seat.state === "OCCUPIED") {
+              updates[`seats.${key}`] = {
+                userId: null,
+                state: "EMPTY",
+                isMuted: false,
+              };
+            }
+          }
+
+          const remainingParticipants = participantIds.filter((id) => id !== userId);
+
+          // If only the owner remains and they're away, close the room
+          if (remainingParticipants.length === 1 && remainingParticipants[0] === room.ownerId && room.state === "OWNER_AWAY") {
+            updates.state = "CLOSED";
+            updates.closedAt = require("firebase-admin/firestore").Timestamp.now();
+            updates.participantIds = [];
+            for (let i = 0; i < MAX_SEATS; i++) {
+              updates[`seats.${i.toString()}`] = { userId: null, state: "EMPTY", isMuted: false };
+            }
+            console.log(`Last non-owner left room ${roomId} (owner away) - closing`);
+          } else {
+            updates.participantIds = remainingParticipants;
           }
         }
 

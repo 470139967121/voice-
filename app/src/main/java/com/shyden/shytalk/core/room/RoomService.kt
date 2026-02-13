@@ -202,6 +202,7 @@ class RoomService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
+        android.util.Log.d("RoomService", "onTaskRemoved: app swiped from recents, calling leaveRoom")
         // Process is being killed — use runBlocking to ensure Firestore cleanup completes
         runBlocking {
             withContext(NonCancellable) {

@@ -8,6 +8,9 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
@@ -107,11 +110,15 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun getUsers(userIds: List<String>): Resource<List<User>> =
         firebaseCall("Failed to get users") {
             if (userIds.isEmpty()) return@firebaseCall emptyList()
-            userIds.chunked(30).flatMap { chunk ->
-                val snapshot = usersCollection.whereIn(FieldPath.documentId(), chunk).get().await()
-                snapshot.documents.mapNotNull { doc ->
-                    doc.data?.let { User.fromMap(it, doc.id) }
-                }
+            coroutineScope {
+                userIds.chunked(30).map { chunk ->
+                    async {
+                        val snapshot = usersCollection.whereIn(FieldPath.documentId(), chunk).get().await()
+                        snapshot.documents.mapNotNull { doc ->
+                            doc.data?.let { User.fromMap(it, doc.id) }
+                        }
+                    }
+                }.awaitAll().flatten()
             }
         }
 }
