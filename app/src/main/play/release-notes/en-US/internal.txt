@@ -1,8 +1,4 @@
-v0.26 - Request a seat & room improvements
+v0.27 - Privacy & account improvements
 
-- Tap an empty seat to request sitting when seats are open
-- Seat icons now stay perfectly circular on all devices
-- User profiles only open when tapping their avatar
-- Cleaner room closed screen with just profile icons
-- Simplified toolbar when a room ends
-- Performance improvements throughout the app
+- Your email address is now partially hidden in account settings for added privacy
+- Minor stability and performance improvements
