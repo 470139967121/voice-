@@ -472,7 +472,7 @@ private fun AccountPage(
                     SettingsRow("ShyTalk ID", "${user.uniqueId}")
                 }
                 user.email?.let { email ->
-                    SettingsRow("Email", email)
+                    SettingsRow("Email", censorEmail(email))
                 }
             }
 
@@ -891,6 +891,18 @@ private fun SettingsSwitch(
             onCheckedChange = onCheckedChange
         )
     }
+}
+
+internal fun censorEmail(email: String): String {
+    val parts = email.split("@", limit = 2)
+    if (parts.size != 2) return email
+    val local = parts[0]
+    val domain = parts[1]
+    val censored = when {
+        local.length <= 2 -> "${local.first()}*"
+        else -> "${local.take(2)}${"*".repeat((local.length - 3).coerceAtLeast(1))}${local.last()}"
+    }
+    return "$censored@$domain"
 }
 
 @Composable
