@@ -11,7 +11,8 @@ import java.util.Date
 
 class ChatRoomFromMapTest {
 
-    private val ts = Timestamp(Date(1_000_000_000L))
+    private val tsMillis = 1_000_000_000L
+    private val ts = Timestamp(Date(tsMillis))
 
     @Test
     fun `fromMap parses complete valid map`() {
@@ -24,7 +25,7 @@ class ChatRoomFromMapTest {
             "hostIds" to listOf("user-2"),
             "requireApproval" to true,
             "bannedUserIds" to listOf("banned-1"),
-            "agoraChannelName" to "channel-1",
+            "voiceRoomName" to "channel-1",
             "seats" to mapOf(
                 "0" to mapOf("userId" to "owner-1", "state" to "OCCUPIED", "isMuted" to false)
             )
@@ -38,7 +39,7 @@ class ChatRoomFromMapTest {
         assertEquals(setOf("user-2"), room.hostIds)
         assertEquals(true, room.requireApproval)
         assertEquals(setOf("banned-1"), room.bannedUserIds)
-        assertEquals("channel-1", room.agoraChannelName)
+        assertEquals("channel-1", room.voiceRoomName)
         assertEquals("owner-1", room.seats["0"]?.userId)
     }
 
@@ -139,10 +140,10 @@ class ChatRoomFromMapTest {
             name = "My Room",
             ownerId = "owner-1",
             state = RoomState.ACTIVE,
-            createdAt = ts,
+            createdAt = tsMillis,
             participantIds = setOf("owner-1"),
             requireApproval = true,
-            agoraChannelName = "ch-1"
+            voiceRoomName = "ch-1"
         )
         val map = room.toMap()
         assertEquals("room-1", map["roomId"])
@@ -157,7 +158,7 @@ class ChatRoomFromMapTest {
     fun `toMap seats are serialized as nested maps`() {
         val room = ChatRoom(
             roomId = "room-1",
-            createdAt = ts,
+            createdAt = tsMillis,
             seats = mapOf("0" to Seat(userId = "owner-1", state = SeatState.OCCUPIED))
         )
         val map = room.toMap()
@@ -178,15 +179,15 @@ class ChatRoomFromMapTest {
             name = "Test Room",
             ownerId = "owner-1",
             state = RoomState.ACTIVE,
-            createdAt = ts,
+            createdAt = tsMillis,
             participantIds = setOf("owner-1", "user-2"),
             hostIds = setOf("user-2"),
             requireApproval = true,
             bannedUserIds = setOf("banned-1"),
             pendingInvites = mapOf("user-3" to "owner-1"),
             seats = seats,
-            agoraChannelName = "channel-1",
-            firstJoinTimestamps = mapOf("owner-1" to ts)
+            voiceRoomName = "channel-1",
+            firstJoinTimestamps = mapOf("owner-1" to tsMillis)
         )
         val roundtripped = ChatRoom.fromMap(original.toMap(), "room-1")
         assertEquals(original, roundtripped)
@@ -219,6 +220,25 @@ class ChatRoomFromMapTest {
     }
 
     // --- DEFAULT_SEATS ---
+
+    @Test
+    fun `fromMap reads legacy agoraChannelName key for backward compat`() {
+        val map = mapOf<String, Any?>(
+            "agoraChannelName" to "legacy-channel"
+        )
+        val room = ChatRoom.fromMap(map, "room-1")
+        assertEquals("legacy-channel", room.voiceRoomName)
+    }
+
+    @Test
+    fun `fromMap prefers voiceRoomName over agoraChannelName`() {
+        val map = mapOf<String, Any?>(
+            "voiceRoomName" to "new-room",
+            "agoraChannelName" to "old-channel"
+        )
+        val room = ChatRoom.fromMap(map, "room-1")
+        assertEquals("new-room", room.voiceRoomName)
+    }
 
     @Test
     fun `DEFAULT_SEATS has MAX_SEATS entries all empty`() {

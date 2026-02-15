@@ -1,7 +1,10 @@
 package com.shyden.shytalk.feature.settings
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +29,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -64,14 +68,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.R
 import com.shyden.shytalk.core.model.User
 
-private enum class SettingsPage { Main, BlockedUsers, Account, Privacy, About }
+private enum class SettingsPage { Main, BlockedUsers, Account, Privacy, Permissions, About }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +83,7 @@ fun AppSettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPrivacyPolicy: () -> Unit,
     onSignOut: () -> Unit,
-    viewModel: AppSettingsViewModel = hiltViewModel()
+    viewModel: AppSettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -140,6 +144,10 @@ fun AppSettingsScreen(
                 onToggleHideFollowing = { viewModel.toggleHideFollowing() },
                 onToggleHideOnlineStatus = { viewModel.toggleHideOnlineStatus() },
                 onToggleHideAge = { viewModel.toggleHideAge() },
+                snackbarHostState = snackbarHostState
+            )
+            SettingsPage.Permissions -> PermissionsPage(
+                onBack = { currentPageName = SettingsPage.Main.name },
                 snackbarHostState = snackbarHostState
             )
             SettingsPage.About -> AboutPage(
@@ -271,6 +279,12 @@ private fun SettingsMainPage(
                 icon = Icons.Default.Lock,
                 title = "Privacy",
                 onClick = { onNavigateToPage(SettingsPage.Privacy) }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsMenuItem(
+                icon = Icons.Default.Notifications,
+                title = "Permissions",
+                onClick = { onNavigateToPage(SettingsPage.Permissions) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsMenuItem(
@@ -536,6 +550,161 @@ private fun PrivacyPage(
                 onCheckedChange = { onToggleHideAge() }
             )
         }
+    }
+}
+
+// ===== Permissions Page =====
+
+@Composable
+private fun PermissionsPage(
+    onBack: () -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    val context = LocalContext.current
+    val notificationManager = remember {
+        context.getSystemService(android.app.NotificationManager::class.java)
+    }
+
+    // Re-check permission state when returning from system settings
+    var refreshKey by remember { mutableStateOf(0) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                refreshKey++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val notificationsEnabled = remember(refreshKey) {
+        notificationManager?.areNotificationsEnabled() == true
+    }
+    val overlayEnabled = remember(refreshKey) {
+        Settings.canDrawOverlays(context)
+    }
+    val microphoneEnabled = remember(refreshKey) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+    val bluetoothEnabled = remember(refreshKey) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else true
+    }
+
+    SettingsSubPage(
+        title = "Permissions",
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
+    ) { modifier ->
+        Column(
+            modifier = modifier.padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            PermissionRow(
+                title = "Notifications",
+                description = "Receive alerts when you're in a live room in the background.",
+                enabled = notificationsEnabled,
+                onClick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            }
+                        )
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            PermissionRow(
+                title = "Display over other apps",
+                description = "Show a floating bubble when you leave a voice room, so you can quickly return.",
+                enabled = overlayEnabled,
+                onClick = {
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            PermissionRow(
+                title = "Microphone",
+                description = "Required for voice chat in rooms.",
+                enabled = microphoneEnabled,
+                onClick = {
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                    )
+                }
+            )
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                PermissionRow(
+                    title = "Bluetooth",
+                    description = "Connect to Bluetooth audio devices during voice chat.",
+                    enabled = bluetoothEnabled,
+                    onClick = {
+                        context.startActivity(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:${context.packageName}")
+                            )
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    title: String,
+    description: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = if (enabled) "Allowed" else "Denied",
+            style = MaterialTheme.typography.labelMedium,
+            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+        )
     }
 }
 

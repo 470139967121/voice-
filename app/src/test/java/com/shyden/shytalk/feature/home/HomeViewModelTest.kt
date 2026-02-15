@@ -1,6 +1,5 @@
 package com.shyden.shytalk.feature.home
 
-import com.google.firebase.auth.FirebaseUser
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -15,7 +14,9 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -41,10 +42,7 @@ class HomeViewModelTest {
 
     @Before
     fun setup() {
-        val mockUser = mockk<FirebaseUser> {
-            every { uid } returns currentUserId
-        }
-        every { authRepository.currentUser } returns mockUser
+        every { authRepository.currentUserId } returns currentUserId
         every { roomRepository.getActiveRooms() } returns roomsFlow
         coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
     }
@@ -170,5 +168,59 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isLoading)
+    }
+
+    // ===== refreshRooms =====
+
+    @Test
+    fun `refreshRooms reloads blocked users and re-filters`() = runTest {
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(
+            listOf(TestData.createTestUser(uid = "owner-1"))
+        )
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        roomsFlow.emit(listOf(TestData.createTestRoom(ownerId = "owner-1")))
+        advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.rooms.size)
+
+        // Now block the owner
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(setOf("owner-1"))
+
+        vm.refreshRooms()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.rooms.isEmpty())
+        assertFalse(vm.uiState.value.isRefreshing)
+    }
+
+    @Test
+    fun `refreshRooms sets isRefreshing false after completion`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+        roomsFlow.emit(emptyList())
+        advanceUntilIdle()
+
+        vm.refreshRooms()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isRefreshing)
+    }
+
+    @Test
+    fun `setActive starts periodic refresh`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+        roomsFlow.emit(emptyList())
+        advanceUntilIdle()
+
+        vm.setActive(true)
+        advanceTimeBy(HomeViewModel.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+
+        // Blocked users should be re-fetched (initial + periodic)
+        coVerify(atLeast = 2) { userRepository.getBlockedUserIds(currentUserId) }
+
+        vm.setActive(false)
     }
 }

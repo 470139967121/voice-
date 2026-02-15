@@ -134,7 +134,7 @@ class RoomRepositoryImplTest {
 
     @Test
     fun `moveSeat returns Success`() = runTest {
-        every { docRef.update(any<Map<String, Any?>>()) } returns Tasks.forResult(null)
+        every { firestore.runTransaction(any<Transaction.Function<Any?>>()) } returns Tasks.forResult(null)
 
         val result = repo.moveSeat("room-1", 1, 3, "user-1")
 
@@ -208,7 +208,7 @@ class RoomRepositoryImplTest {
 
     @Test
     fun `addHost returns Success`() = runTest {
-        every { docRef.update(any<String>(), any()) } returns Tasks.forResult(null)
+        every { docRef.update(any<Map<String, Any>>()) } returns Tasks.forResult(null)
 
         val result = repo.addHost("room-1", "user-1")
 

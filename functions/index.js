@@ -1,43 +1,44 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onValueDeleted } = require("firebase-functions/v2/database");
+const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getDatabase } = require("firebase-admin/database");
-const { RtcTokenBuilder, RtcRole } = require("agora-token");
+const { AccessToken } = require("livekit-server-sdk");
 
 initializeApp();
 
-const AGORA_APP_ID = "7bdf5596c88f49edba75568f529c4389";
-const AGORA_APP_CERTIFICATE = "30d7d7008b7e458fb689135c38b49033";
+const livekitApiKey = defineSecret("LIVEKIT_API_KEY");
+const livekitApiSecret = defineSecret("LIVEKIT_API_SECRET");
 
 const MAX_SEATS = 8;
 const OWNER_SEAT_INDEX = 0;
 
-exports.generateAgoraToken = onCall((request) => {
-  const { channelName, uid } = request.data;
+exports.generateLiveKitToken = onCall({ secrets: [livekitApiKey, livekitApiSecret] }, async (request) => {
+  const { roomName, identity } = request.data;
 
-  if (!channelName || uid === undefined || uid === null) {
+  if (!roomName || !identity) {
     throw new HttpsError(
       "invalid-argument",
-      "channelName and uid are required"
+      "roomName and identity are required"
     );
   }
 
-  // agora-token v2 expects relative expiration in seconds (not absolute timestamps)
-  const tokenExpirationSeconds = 86400; // 24 hours
-  const privilegeExpirationSeconds = 86400;
+  const at = new AccessToken(livekitApiKey.value(), livekitApiSecret.value(), {
+    identity: identity,
+    ttl: "24h",
+  });
 
-  const token = RtcTokenBuilder.buildTokenWithUid(
-    AGORA_APP_ID,
-    AGORA_APP_CERTIFICATE,
-    channelName,
-    uid,
-    RtcRole.PUBLISHER,
-    tokenExpirationSeconds,
-    privilegeExpirationSeconds
-  );
+  at.addGrant({
+    roomJoin: true,
+    room: roomName,
+    canPublish: true,
+    canSubscribe: true,
+  });
 
-  console.log(`Generated token for channel=${channelName} uid=${uid}`);
+  const token = await at.toJwt();
+
+  console.log(`Generated LiveKit token for room=${roomName} identity=${identity}`);
   return { token };
 });
 

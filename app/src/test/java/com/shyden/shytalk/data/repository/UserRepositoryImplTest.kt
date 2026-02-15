@@ -68,7 +68,6 @@ class UserRepositoryImplTest {
             "nationality" to "US",
             "uniqueId" to 12345678L,
             "blockedUserIds" to listOf("blocked-1"),
-            "phoneNumber" to "+123",
             "email" to "a@b.com",
             "createdAt" to ts,
             "lastSeenAt" to ts
@@ -91,7 +90,6 @@ class UserRepositoryImplTest {
         assertEquals("US", user.nationality)
         assertEquals(12345678L, user.uniqueId)
         assertEquals(setOf("blocked-1"), user.blockedUserIds)
-        assertEquals("+123", user.phoneNumber)
         assertEquals("a@b.com", user.email)
     }
 
@@ -196,7 +194,10 @@ class UserRepositoryImplTest {
 
     @Test
     fun `blockUser returns Success`() = runTest {
-        every { docRef.update(any<String>(), any()) } returns Tasks.forResult(null)
+        val batch = mockk<com.google.firebase.firestore.WriteBatch>(relaxed = true)
+        every { firestore.batch() } returns batch
+        every { batch.update(any<DocumentReference>(), any<String>(), any()) } returns batch
+        every { batch.commit() } returns Tasks.forResult(null)
 
         val result = repo.blockUser("user-1", "bad-user")
 

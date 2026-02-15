@@ -1,15 +1,15 @@
 package com.shyden.shytalk.core.room
 
 import android.content.Context
-import com.google.firebase.auth.FirebaseUser
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.Seat
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.util.Constants
-import com.shyden.shytalk.data.remote.AgoraVoiceService
 import com.shyden.shytalk.data.remote.PresenceService
+import com.shyden.shytalk.data.remote.VoiceConnectionState
+import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
@@ -46,13 +46,13 @@ class ActiveRoomManagerTest {
     private lateinit var authRepository: AuthRepository
     private lateinit var userRepository: UserRepository
     private lateinit var seatRequestRepository: SeatRequestRepository
-    private lateinit var agoraVoiceService: AgoraVoiceService
+    private lateinit var voiceService: VoiceService
     private lateinit var presenceService: PresenceService
     private lateinit var context: Context
     private lateinit var manager: ActiveRoomManager
 
     private val currentUserId = "user-1"
-    private val connectionStateFlow = MutableStateFlow(AgoraVoiceService.ConnectionState.DISCONNECTED)
+    private val connectionStateFlow = MutableStateFlow(VoiceConnectionState.DISCONNECTED)
     private val presenceFlow = MutableStateFlow<Set<String>>(emptySet())
 
     @Before
@@ -64,16 +64,14 @@ class ActiveRoomManagerTest {
         authRepository = mockk(relaxed = true)
         userRepository = mockk(relaxed = true)
         seatRequestRepository = mockk(relaxed = true)
-        agoraVoiceService = mockk(relaxed = true)
+        voiceService = mockk(relaxed = true)
         presenceService = mockk(relaxed = true)
         context = mockk(relaxed = true)
 
-        every { agoraVoiceService.connectionState } returns connectionStateFlow
+        every { voiceService.connectionState } returns connectionStateFlow
         every { presenceService.observeRoomPresence(any()) } returns presenceFlow
 
-        val firebaseUser = mockk<FirebaseUser>()
-        every { firebaseUser.uid } returns currentUserId
-        every { authRepository.currentUser } returns firebaseUser
+        every { authRepository.currentUserId } returns currentUserId
 
         manager = ActiveRoomManager(
             roomRepository = roomRepository,
@@ -81,7 +79,7 @@ class ActiveRoomManagerTest {
             authRepository = authRepository,
             userRepository = userRepository,
             seatRequestRepository = seatRequestRepository,
-            agoraVoiceService = agoraVoiceService,
+            voiceService = voiceService,
             presenceService = presenceService,
             context = context
         )
@@ -235,10 +233,10 @@ class ActiveRoomManagerTest {
 
         // Owner tries seat 3 — but owner can only take seat 0
         // Use a host to test the occupied check
-        every { authRepository.currentUser?.uid } returns "host-1"
+        every { authRepository.currentUserId } returns "host-1"
         val hostManager = ActiveRoomManager(
             roomRepository, messageRepository, authRepository,
-            userRepository, seatRequestRepository, agoraVoiceService,
+            userRepository, seatRequestRepository, voiceService,
             presenceService, context
         )
         hostManager.trackRoom("room-1")
@@ -341,7 +339,7 @@ class ActiveRoomManagerTest {
         )
         manager.updateTrackedRoom(room)
 
-        manager.kickUser(0)
+        manager.kickUser("the-owner", 0)
 
         coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
     }
@@ -358,7 +356,7 @@ class ActiveRoomManagerTest {
         )
         manager.updateTrackedRoom(room)
 
-        manager.kickUser(3)
+        manager.kickUser("a-host", 3)
 
         coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
     }
@@ -467,7 +465,7 @@ class ActiveRoomManagerTest {
         manager.toggleSelfMute(3)
 
         coVerify { roomRepository.toggleMute("room-1", 3, true) }
-        coVerify { agoraVoiceService.muteLocalAudio(true) }
+        verify { voiceService.setMicrophoneEnabled(false) }
     }
 
     // --- forceMuteUser ---
@@ -542,7 +540,7 @@ class ActiveRoomManagerTest {
     }
 
     @Test
-    fun `leaveRoom - vacates seats and leaves agora`() = runTest {
+    fun `leaveRoom - vacates seats and leaves voice`() = runTest {
         manager.trackRoom("room-1")
         val seats = TestData.createSeatsWithOwner("other-owner").toMutableMap()
         seats["3"] = TestData.createTestSeat(userId = currentUserId)
@@ -556,7 +554,7 @@ class ActiveRoomManagerTest {
         manager.leaveRoom()
 
         coVerify { roomRepository.leaveSeat("room-1", 3) }
-        coVerify { agoraVoiceService.leaveChannel() }
+        coVerify { voiceService.leaveChannel() }
         coVerify { roomRepository.leaveRoom("room-1", currentUserId) }
     }
 
@@ -621,7 +619,7 @@ class ActiveRoomManagerTest {
         manager.leaveRoom()
 
         coVerify(exactly = 0) { presenceService.removePresence() }
-        coVerify(exactly = 0) { agoraVoiceService.leaveChannel() }
+        coVerify(exactly = 0) { voiceService.leaveChannel() }
     }
 
     // --- trackRoom starts connection monitor ---
@@ -650,13 +648,13 @@ class ActiveRoomManagerTest {
         manager.updateTrackedRoom(room)
 
         // Emit CONNECTED after room is set so wasEverConnected = true
-        connectionStateFlow.value = AgoraVoiceService.ConnectionState.CONNECTED
+        connectionStateFlow.value = VoiceConnectionState.CONNECTED
 
-        // Simulate Agora disconnect (WiFi off)
-        connectionStateFlow.value = AgoraVoiceService.ConnectionState.DISCONNECTED
+        // Simulate voice disconnect (WiFi off)
+        connectionStateFlow.value = VoiceConnectionState.DISCONNECTED
 
         // Advance past the grace period
-        testScheduler.advanceTimeBy(Constants.AGORA_DISCONNECT_GRACE_PERIOD_MS + 1000)
+        testScheduler.advanceTimeBy(Constants.VOICE_DISCONNECT_GRACE_PERIOD_MS + 1000)
 
         // Owner should NOT have leaveRoom called — presence system on other devices handles it
         coVerify(exactly = 0) { roomRepository.setOwnerAway(any()) }
@@ -678,17 +676,17 @@ class ActiveRoomManagerTest {
         manager.updateTrackedRoom(room)
 
         // Emit CONNECTED after room is set so wasEverConnected = true
-        connectionStateFlow.value = AgoraVoiceService.ConnectionState.CONNECTED
+        connectionStateFlow.value = VoiceConnectionState.CONNECTED
 
-        // Simulate Agora disconnect
-        connectionStateFlow.value = AgoraVoiceService.ConnectionState.DISCONNECTED
+        // Simulate voice disconnect
+        connectionStateFlow.value = VoiceConnectionState.DISCONNECTED
 
         // Advance past the grace period
-        testScheduler.advanceTimeBy(Constants.AGORA_DISCONNECT_GRACE_PERIOD_MS + 1000)
+        testScheduler.advanceTimeBy(Constants.VOICE_DISCONNECT_GRACE_PERIOD_MS + 1000)
 
         // Non-owner should have left the room
         coVerify { roomRepository.leaveSeat("room-1", 3) }
-        coVerify { agoraVoiceService.leaveChannel() }
+        coVerify { voiceService.leaveChannel() }
     }
 
     // --- presence monitor ---
@@ -799,14 +797,14 @@ class ActiveRoomManagerTest {
     // --- closeRoom ---
 
     @Test
-    fun `closeRoom - leaves agora and closes`() = runTest {
+    fun `closeRoom - leaves voice and closes`() = runTest {
         manager.trackRoom("room-1")
         val room = TestData.createTestRoom(ownerId = currentUserId)
         manager.updateTrackedRoom(room)
 
         manager.closeRoom()
 
-        verify { agoraVoiceService.leaveChannel() }
+        verify { voiceService.leaveChannel() }
         coVerify { roomRepository.closeRoom("room-1") }
         // cleanup() resets roomClosed and activeRoomId
         assertNull(manager.activeRoomId.value)
@@ -881,7 +879,7 @@ class ActiveRoomManagerTest {
         )
         manager.updateTrackedRoom(room)
 
-        manager.kickUser(3)
+        manager.kickUser("a-host", 3)
 
         coVerify { roomRepository.kickUser("room-1", "a-host", 3, any(), any()) }
     }
@@ -901,7 +899,7 @@ class ActiveRoomManagerTest {
         )
         manager.updateTrackedRoom(room)
 
-        manager.kickUser(3)
+        manager.kickUser("other-host", 3)
 
         coVerify(exactly = 0) { roomRepository.kickUser(any(), any(), any(), any(), any()) }
     }

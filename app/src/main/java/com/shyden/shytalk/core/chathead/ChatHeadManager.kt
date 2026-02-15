@@ -13,9 +13,9 @@ import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
-import coil.imageLoader
-import coil.request.ImageRequest
-import coil.transform.CircleCropTransformation
+import coil3.load
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
 import com.shyden.shytalk.R
 import kotlin.math.abs
 
@@ -33,7 +33,6 @@ class ChatHeadManager(
     private var closeZoneParams: WindowManager.LayoutParams? = null
     private var voiceWaveView: VoiceWaveView? = null
     private var isShowing = false
-    private val imageLoader get() = context.imageLoader
 
     private val density = context.resources.displayMetrics.density
     private val screenWidthPx = context.resources.displayMetrics.widthPixels
@@ -163,12 +162,9 @@ class ChatHeadManager(
             photoView.visibility = View.VISIBLE
             micIcon.visibility = View.GONE
 
-            val request = ImageRequest.Builder(context)
-                .data(ownerPhotoUrl)
-                .target(photoView)
-                .transformations(CircleCropTransformation())
-                .build()
-            imageLoader.enqueue(request)
+            photoView.load(ownerPhotoUrl) {
+                transformations(CircleCropTransformation())
+            }
         } else {
             photoView.visibility = View.GONE
             micIcon.visibility = View.VISIBLE

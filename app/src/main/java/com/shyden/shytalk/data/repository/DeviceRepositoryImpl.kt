@@ -5,9 +5,8 @@ import com.shyden.shytalk.core.util.firebaseCall
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
 
-class DeviceRepositoryImpl @Inject constructor(
+class DeviceRepositoryImpl(
     private val firestore: FirebaseFirestore
 ) : DeviceRepository {
 

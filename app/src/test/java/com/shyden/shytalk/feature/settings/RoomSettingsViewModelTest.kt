@@ -1,7 +1,5 @@
 package com.shyden.shytalk.feature.settings
 
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseUser
 import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -45,10 +43,7 @@ class RoomSettingsViewModelTest {
 
     @Before
     fun setup() {
-        val mockUser = mockk<FirebaseUser> {
-            every { uid } returns currentUserId
-        }
-        every { authRepository.currentUser } returns mockUser
+        every { authRepository.currentUserId } returns currentUserId
         every { seatRequestRepository.getPendingRequests(any()) } returns flowOf(emptyList())
     }
 
@@ -198,7 +193,7 @@ class RoomSettingsViewModelTest {
         val vm = createViewModel()
         loadRoomAsOwner(vm, requireApproval = true)
         advanceUntilIdle()
-        val request = TestData.createTestSeatRequest(createdAt = Timestamp.now())
+        val request = TestData.createTestSeatRequest(createdAt = System.currentTimeMillis())
         coEvery { seatRequestRepository.approveRequest(any(), any(), any()) } returns Resource.Success(request)
 
         vm.approveRequest(request)
@@ -226,7 +221,7 @@ class RoomSettingsViewModelTest {
         val vm = createViewModel()
         loadRoomAsHost(vm, requireApproval = false)
         advanceUntilIdle()
-        val request = TestData.createTestSeatRequest(createdAt = Timestamp.now())
+        val request = TestData.createTestSeatRequest(createdAt = System.currentTimeMillis())
         coEvery { seatRequestRepository.approveRequest(any(), any(), any()) } returns Resource.Success(request)
 
         vm.approveRequest(request)
@@ -254,7 +249,7 @@ class RoomSettingsViewModelTest {
         loadRoomAsOwner(vm)
         advanceUntilIdle()
         // Request created 10 seconds ago
-        val oldTimestamp = Timestamp(java.util.Date(System.currentTimeMillis() - 10_000L))
+        val oldTimestamp = System.currentTimeMillis() - 10_000L
         val request = TestData.createTestSeatRequest(createdAt = oldTimestamp)
         coEvery { seatRequestRepository.approveRequest(any(), any(), any()) } returns Resource.Success(request)
 

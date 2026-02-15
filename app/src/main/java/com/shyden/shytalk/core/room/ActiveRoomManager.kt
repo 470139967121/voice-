@@ -9,14 +9,15 @@ import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
-import com.shyden.shytalk.data.remote.AgoraVoiceService
+import com.shyden.shytalk.data.remote.VoiceConnectionState
+import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
 import com.shyden.shytalk.data.repository.UserRepository
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,20 +28,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class ActiveRoomManager @Inject constructor(
+class ActiveRoomManager(
     private val roomRepository: RoomRepository,
     private val messageRepository: MessageRepository,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val seatRequestRepository: SeatRequestRepository,
-    val agoraVoiceService: AgoraVoiceService,
+    val voiceService: VoiceService,
     private val presenceService: PresenceService,
-    @param:ApplicationContext private val context: Context
-) {
+    private val context: Context
+) : RoomLifecycleManager {
     companion object {
         private const val TAG = "ActiveRoomManager"
     }
@@ -72,11 +70,25 @@ class ActiveRoomManager @Inject constructor(
     val isRoomScreenVisible: StateFlow<Boolean> = _isRoomScreenVisible.asStateFlow()
 
     private val _disconnectedUserIds = MutableStateFlow<Set<String>>(emptySet())
-    val disconnectedUserIds: StateFlow<Set<String>> = _disconnectedUserIds.asStateFlow()
+    override val disconnectedUserIds: StateFlow<Set<String>> = _disconnectedUserIds.asStateFlow()
 
     private var connectionMonitorJob: Job? = null
     private var presenceMonitorJob: Job? = null
     private var isSeated = false
+
+    private val leaveSignals = mutableMapOf<String, CompletableDeferred<Unit>>()
+
+    override fun markLeaveStarted(roomId: String) {
+        leaveSignals[roomId] = CompletableDeferred()
+    }
+
+    override fun markLeaveCompleted(roomId: String) {
+        leaveSignals.remove(roomId)?.complete(Unit)
+    }
+
+    override suspend fun awaitLeaveCompletion(roomId: String) {
+        leaveSignals[roomId]?.await()
+    }
 
     var isAppInForeground: Boolean = false
 
@@ -84,17 +96,17 @@ class ActiveRoomManager @Inject constructor(
         private set
 
     val currentUserId: String
-        get() = authRepository.currentUser?.uid ?: ""
+        get() = authRepository.currentUserId ?: ""
 
-    fun isInRoom(roomId: String): Boolean = _activeRoomId.value == roomId
+    override fun isInRoom(roomId: String): Boolean = _activeRoomId.value == roomId
     fun isInAnyRoom(): Boolean = _activeRoomId.value != null
 
-    fun setRoomScreenVisible(visible: Boolean) {
+    override fun setRoomScreenVisible(visible: Boolean) {
         _isRoomScreenVisible.value = visible
     }
 
     /** Called by RoomViewModel after joining a room. Starts foreground service. */
-    fun trackRoom(roomId: String) {
+    override fun trackRoom(roomId: String) {
         _activeRoomId.value = roomId
         _roomClosed.value = false
         RoomService.start(context, roomId)
@@ -103,12 +115,12 @@ class ActiveRoomManager @Inject constructor(
     }
 
     /** Called by RoomViewModel on each room update. Keeps notification current. */
-    fun updateTrackedRoom(room: ChatRoom) {
+    override fun updateTrackedRoom(room: ChatRoom) {
         _activeRoom.value = room
     }
 
     /** Called by RoomViewModel when user explicitly leaves. Stops service. */
-    fun untrackRoom() {
+    override fun untrackRoom() {
         connectionMonitorJob?.cancel()
         presenceMonitorJob?.cancel()
         ownerAwayCountdownJob?.cancel()
@@ -177,7 +189,7 @@ class ActiveRoomManager @Inject constructor(
             roomRepository.leaveSeat(roomId, mySeatEntry.key.toInt())
         }
 
-        agoraVoiceService.leaveChannel()
+        voiceService.leaveChannel()
 
         // Non-owners leave the participant list
         if (!isOwner) {
@@ -239,7 +251,7 @@ class ActiveRoomManager @Inject constructor(
                 .catch { e -> _error.value = e.message }
                 .collect { room ->
                     if (room == null || room.state == RoomState.CLOSED) {
-                        agoraVoiceService.leaveChannel()
+                        voiceService.leaveChannel()
                         _roomClosed.value = true
                         cleanup()
                         return@collect
@@ -249,25 +261,31 @@ class ActiveRoomManager @Inject constructor(
 
                     // Detect if user was kicked
                     if (userId !in room.participantIds || userId in room.bannedUserIds) {
-                        agoraVoiceService.leaveChannel()
+                        voiceService.leaveChannel()
                         _roomClosed.value = true
                         cleanup()
                         return@collect
                     }
 
-                    // Switch Agora role based on seat status
+                    // Switch mic based on seat status (single lookup)
                     val mySeat = findMySeat(room, userId)
                     val currentlySeated = mySeat != null
-                    if (currentlySeated && !isSeated) {
-                        agoraVoiceService.setRole(true)
-                    } else if (!currentlySeated && isSeated) {
-                        agoraVoiceService.setRole(false)
+                    if (currentlySeated != isSeated) {
+                        voiceService.setMicrophoneEnabled(currentlySeated)
                     }
                     isSeated = currentlySeated
 
-                    // Sync mute state
                     if (mySeat != null) {
-                        agoraVoiceService.muteLocalAudio(mySeat.isMuted)
+                        // Sync mute state
+                        voiceService.setMicrophoneEnabled(!mySeat.isMuted)
+
+                        // Ensure connected to voice room
+                        if (!voiceService.isJoined.value && room.voiceRoomName.isNotEmpty()) {
+                            voiceService.joinRoom(room.voiceRoomName, currentUserId)
+                            if (mySeat.isMuted) {
+                                voiceService.setMicrophoneEnabled(false)
+                            }
+                        }
                     }
 
                     _activeRoom.value = room
@@ -291,13 +309,13 @@ class ActiveRoomManager @Inject constructor(
             var graceJob: Job? = null
             var wasEverConnected = false
 
-            agoraVoiceService.connectionState.collect { state ->
+            voiceService.connectionState.collect { state ->
                 val room = _activeRoom.value ?: return@collect
                 val userId = currentUserId
-                Log.d(TAG, "connectionMonitor: state=$state userId=$userId ownerId=${room.ownerId} seated=${isUserSeated(room, userId)} wasEver=$wasEverConnected")
+                val currentlySeated = room.findUserSeat(userId) != null
+                Log.d(TAG, "connectionMonitor: state=$state userId=$userId ownerId=${room.ownerId} seated=$currentlySeated wasEver=$wasEverConnected")
 
-                // Only monitor when user is seated (has an Agora connection)
-                val currentlySeated = isUserSeated(room, userId)
+                // Only monitor when user is seated (has a voice connection)
                 if (!currentlySeated) {
                     graceJob?.cancel()
                     wasEverConnected = false
@@ -305,20 +323,14 @@ class ActiveRoomManager @Inject constructor(
                 }
 
                 when (state) {
-                    AgoraVoiceService.ConnectionState.CONNECTED -> {
+                    VoiceConnectionState.CONNECTED -> {
                         wasEverConnected = true
                         graceJob?.cancel()
                     }
-                    AgoraVoiceService.ConnectionState.DISCONNECTED -> {
+                    VoiceConnectionState.DISCONNECTED -> {
                         if (!wasEverConnected) return@collect
 
                         // Owner must NOT leave from their own device on network loss.
-                        // The presence monitor on other devices will detect the
-                        // owner's absence and call removeDisconnectedUser, which
-                        // correctly transitions the room to OWNER_AWAY while
-                        // preserving seat 0.  If the owner's device queues a
-                        // leaveRoom() while offline, the Firestore writes can
-                        // overwrite the correct state when connectivity returns.
                         val isOwner = room.ownerId == userId
                         if (isOwner) {
                             Log.d(TAG, "connectionMonitor: owner disconnected — skipping leaveRoom, presence system will handle")
@@ -327,14 +339,14 @@ class ActiveRoomManager @Inject constructor(
 
                         graceJob?.cancel()
                         graceJob = scope.launch {
-                            delay(Constants.AGORA_DISCONNECT_GRACE_PERIOD_MS)
+                            delay(Constants.VOICE_DISCONNECT_GRACE_PERIOD_MS)
                             if (_activeRoomId.value != null) {
                                 leaveRoom()
                             }
                         }
                     }
-                    AgoraVoiceService.ConnectionState.RECONNECTING -> {
-                        // Wait — Agora is trying to reconnect
+                    VoiceConnectionState.RECONNECTING -> {
+                        // Wait — LiveKit is trying to reconnect
                     }
                 }
             }
@@ -386,11 +398,12 @@ class ActiveRoomManager @Inject constructor(
     }
 
     private fun handleOwnerAwayCountdown(room: ChatRoom) {
-        if (room.state == RoomState.OWNER_AWAY && room.ownerLeftAt != null) {
+        val leftAt = room.ownerLeftAt
+        if (room.state == RoomState.OWNER_AWAY && leftAt != null) {
             ownerAwayCountdownJob?.cancel()
             ownerAwayCountdownJob = scope.launch {
                 while (true) {
-                    val elapsed = System.currentTimeMillis() - room.ownerLeftAt.toDate().time
+                    val elapsed = System.currentTimeMillis() - leftAt
                     val remaining = Constants.OWNER_LEAVE_TIMEOUT_MS - elapsed
                     if (remaining <= 0) {
                         // Any remaining participant can close an expired OWNER_AWAY room
@@ -463,7 +476,7 @@ class ActiveRoomManager @Inject constructor(
 
         val newMuteState = !seat.isMuted
         roomRepository.toggleMute(roomId, seatIndex, newMuteState)
-        agoraVoiceService.muteLocalAudio(newMuteState)
+        voiceService.setMicrophoneEnabled(!newMuteState)
     }
 
     suspend fun forceMuteUser(seatIndex: Int) {
@@ -497,14 +510,12 @@ class ActiveRoomManager @Inject constructor(
         roomRepository.moveSeat(roomId, fromIndex, toIndex, targetUserId)
     }
 
-    suspend fun kickUser(seatIndex: Int, reason: String = "") {
+    suspend fun kickUser(targetUserId: String, seatIndex: Int?, reason: String = "") {
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
         val role = room.resolveRole(currentUserId)
         if (role == RoomRole.ATTENDEE) return
 
-        val seat = room.seats[seatIndex.toString()] ?: return
-        val targetUserId = seat.userId ?: return
         if (targetUserId == room.ownerId) return
         if (role == RoomRole.HOST && targetUserId in room.hostIds) return
 
@@ -551,12 +562,15 @@ class ActiveRoomManager @Inject constructor(
         val roomId = _activeRoomId.value ?: return
         val room = _activeRoom.value ?: return
         if (room.ownerId != currentUserId) return
+        // Cancel countdown immediately — don't wait for Firestore round-trip
+        ownerAwayCountdownJob?.cancel()
+        _ownerAwayRemainingMs.value = 0L
         roomRepository.setOwnerReturned(roomId, currentUserId)
     }
 
     suspend fun closeRoom() {
         val roomId = _activeRoomId.value ?: return
-        agoraVoiceService.leaveChannel()
+        voiceService.leaveChannel()
         roomRepository.closeRoom(roomId)
         _roomClosed.value = true
         cleanup()

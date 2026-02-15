@@ -5,9 +5,8 @@ import com.shyden.shytalk.core.util.firebaseCall
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
 
-class StorageRepositoryImpl @Inject constructor(
+class StorageRepositoryImpl(
     private val storage: FirebaseStorage
 ) : StorageRepository {
 

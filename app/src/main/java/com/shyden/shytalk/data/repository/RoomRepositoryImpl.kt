@@ -6,6 +6,7 @@ import com.shyden.shytalk.core.model.Seat
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.firebaseCall
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
@@ -17,9 +18,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
-import javax.inject.Inject
 
-class RoomRepositoryImpl @Inject constructor(
+class RoomRepositoryImpl(
     private val firestore: FirebaseFirestore
 ) : RoomRepository {
 
@@ -78,10 +78,11 @@ class RoomRepositoryImpl @Inject constructor(
             name = name,
             ownerId = ownerId,
             state = RoomState.ACTIVE,
-            createdAt = Timestamp.now(),
+            createdAt = currentTimeMillis(),
             participantIds = setOf(ownerId),
             seats = seats,
-            agoraChannelName = roomId
+            voiceRoomName = roomId,
+            allTimeSeatUserIds = setOf(ownerId)
         )
         roomsCollection.document(roomId).set(room.toMap()).await()
         roomId
@@ -123,6 +124,7 @@ class RoomRepositoryImpl @Inject constructor(
 
             val updates = clearUserSeats(room, userId)
             updates["seats.$seatIndex"] = Seat(userId = userId, state = SeatState.OCCUPIED).toMap()
+            updates["allTimeSeatUserIds"] = FieldValue.arrayUnion(userId)
             transaction.update(docRef, updates)
         }.await()
     }
@@ -138,12 +140,17 @@ class RoomRepositoryImpl @Inject constructor(
     }
 
     override suspend fun moveSeat(roomId: String, fromIndex: Int, toIndex: Int, userId: String): Resource<Unit> = firebaseCall("Failed to move seat") {
-        roomsCollection.document(roomId).update(
-            mapOf(
+        val docRef = roomsCollection.document(roomId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val room = snapshot.data?.let { ChatRoom.fromMap(it, snapshot.id) }
+                ?: throw Exception("Room not found")
+            val currentMuted = room.seats[fromIndex.toString()]?.isMuted ?: false
+            transaction.update(docRef, mapOf(
                 "seats.$fromIndex" to Seat.EMPTY_MAP,
-                "seats.$toIndex" to Seat(userId = userId, state = SeatState.OCCUPIED).toMap()
-            )
-        ).await()
+                "seats.$toIndex" to Seat(userId = userId, state = SeatState.OCCUPIED, isMuted = currentMuted).toMap()
+            ))
+        }.await()
     }
 
     override suspend fun kickUser(roomId: String, userId: String, seatIndex: Int?, kickerName: String, reason: String): Resource<Unit> = firebaseCall("Failed to kick user") {
@@ -169,7 +176,10 @@ class RoomRepositoryImpl @Inject constructor(
 
     override suspend fun addHost(roomId: String, userId: String): Resource<Unit> = firebaseCall("Failed to add host") {
         roomsCollection.document(roomId).update(
-            "hostIds", FieldValue.arrayUnion(userId)
+            mapOf(
+                "hostIds" to FieldValue.arrayUnion(userId),
+                "allTimeHostIds" to FieldValue.arrayUnion(userId)
+            )
         ).await()
     }
 
@@ -245,6 +255,7 @@ class RoomRepositoryImpl @Inject constructor(
             val updates = clearUserSeats(room, userId)
             updates["pendingInvites.$userId"] = FieldValue.delete()
             updates["seats.$seatIndex"] = Seat(userId = userId, state = SeatState.OCCUPIED).toMap()
+            updates["allTimeSeatUserIds"] = FieldValue.arrayUnion(userId)
             transaction.update(docRef, updates)
         }.await()
     }
@@ -377,14 +388,10 @@ class RoomRepositoryImpl @Inject constructor(
     )
 
     private fun clearUserSeats(room: ChatRoom, userId: String): MutableMap<String, Any> {
-        val updates = mutableMapOf<String, Any>()
-        for ((idx, seat) in room.seats) {
-            if (seat.isOccupiedBy(userId)) {
-                // Owner must never be removed from seat 0
-                if (idx == Constants.OWNER_SEAT_INDEX.toString() && userId == room.ownerId) continue
-                updates["seats.$idx"] = Seat.EMPTY_MAP
-            }
-        }
-        return updates
+        // Short-circuit: a user can only occupy one seat, so find it directly
+        val entry = room.findUserSeat(userId) ?: return mutableMapOf()
+        // Owner must never be removed from seat 0
+        if (entry.key == Constants.OWNER_SEAT_INDEX.toString() && userId == room.ownerId) return mutableMapOf()
+        return mutableMapOf("seats.${entry.key}" to Seat.EMPTY_MAP)
     }
 }

@@ -7,7 +7,8 @@ import java.util.Date
 
 class MessageFromMapTest {
 
-    private val ts = Timestamp(Date(1_000_000_000L))
+    private val tsMillis = 1_000_000_000L
+    private val ts = Timestamp(Date(tsMillis))
 
     @Test
     fun `fromMap parses complete valid map`() {
@@ -23,7 +24,7 @@ class MessageFromMapTest {
         assertEquals("user-1", msg.senderId)
         assertEquals("Alice", msg.senderName)
         assertEquals("Hello", msg.text)
-        assertEquals(ts, msg.createdAt)
+        assertEquals(tsMillis, msg.createdAt)
         assertEquals(MessageType.TEXT, msg.type)
     }
 
@@ -71,7 +72,7 @@ class MessageFromMapTest {
             senderId = "user-1",
             senderName = "Alice",
             text = "Hello",
-            createdAt = ts,
+            createdAt = tsMillis,
             type = MessageType.SYSTEM
         )
         val map = msg.toMap()

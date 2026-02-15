@@ -1,14 +1,7 @@
 package com.shyden.shytalk.feature.settings
 
-import android.content.Context
-import com.google.android.gms.tasks.Task
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.FirebaseFirestore
-import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
@@ -27,7 +20,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppSettingsViewModelTest {
@@ -37,34 +29,24 @@ class AppSettingsViewModelTest {
 
     private val authRepository = mockk<AuthRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
-    private val firestore = mockk<FirebaseFirestore>(relaxed = true)
-    private val context = mockk<Context>(relaxed = true)
+    private val appConfigService = mockk<AppConfigService>(relaxed = true)
 
     private val currentUserId = "current-user"
 
     @Before
     fun setup() {
-        val mockUser = mockk<FirebaseUser> {
-            every { uid } returns currentUserId
-        }
-        every { authRepository.currentUser } returns mockUser
+        every { authRepository.currentUserId } returns currentUserId
 
         // Default: user with no blocked users
         val user = TestData.createTestUser(uid = currentUserId)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-
-        // Stub cache directory
-        val tempDir = File(System.getProperty("java.io.tmpdir"), "test_cache_${System.nanoTime()}")
-        tempDir.mkdirs()
-        every { context.cacheDir } returns tempDir
     }
 
     private fun createViewModel(): AppSettingsViewModel {
         return AppSettingsViewModel(
-            context = context,
+            appConfigService = appConfigService,
             authRepository = authRepository,
-            userRepository = userRepository,
-            firestore = firestore
+            userRepository = userRepository
         )
     }
 
@@ -118,7 +100,7 @@ class AppSettingsViewModelTest {
 
     @Test
     fun `init with no auth user does not load`() = runTest {
-        every { authRepository.currentUser } returns null
+        every { authRepository.currentUserId } returns null
 
         val vm = createViewModel()
         advanceUntilIdle()

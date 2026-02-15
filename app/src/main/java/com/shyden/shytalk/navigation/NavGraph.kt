@@ -1,11 +1,28 @@
 package com.shyden.shytalk.navigation
 
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.feature.auth.GoogleSignInScreen
 import com.shyden.shytalk.feature.main.MainScreen
 import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
@@ -15,6 +32,7 @@ import com.shyden.shytalk.feature.profile.ProfileScreen
 import com.shyden.shytalk.feature.profile.ProfileSetupScreen
 import com.shyden.shytalk.feature.profile.RequiredDOBScreen
 import com.shyden.shytalk.feature.room.RoomScreen
+import org.koin.compose.koinInject
 
 @Composable
 fun NavGraph(
@@ -22,22 +40,37 @@ fun NavGraph(
     startDestination: String,
     onSignOut: () -> Unit
 ) {
+    val activeRoomManager: ActiveRoomManager = koinInject()
+
+    fun navigateToRoom(roomId: String) {
+        val currentRoomId = activeRoomManager.activeRoomId.value
+        if (currentRoomId == roomId) {
+            // Same room — pop back to it
+            navController.popBackStack(Screen.Room.createRoute(roomId), false)
+        } else {
+            // Different room (or no room) — navigate and clear the old room from back stack
+            navController.navigate(Screen.Room.createRoute(roomId)) {
+                popUpTo(Screen.Main.route) { inclusive = false }
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
-        composable(Screen.GoogleSignIn.route) {
+        composable(Screen.SignIn.route) {
             GoogleSignInScreen(
                 onAuthSuccess = { hasProfile, hasDOB ->
                     when {
                         !hasProfile -> navController.navigate(Screen.ProfileSetup.route) {
-                            popUpTo(Screen.GoogleSignIn.route) { inclusive = true }
+                            popUpTo(Screen.SignIn.route) { inclusive = true }
                         }
                         !hasDOB -> navController.navigate(Screen.RequiredDOB.route) {
-                            popUpTo(Screen.GoogleSignIn.route) { inclusive = true }
+                            popUpTo(Screen.SignIn.route) { inclusive = true }
                         }
                         else -> navController.navigate(Screen.Main.route) {
-                            popUpTo(Screen.GoogleSignIn.route) { inclusive = true }
+                            popUpTo(Screen.SignIn.route) { inclusive = true }
                         }
                     }
                 }
@@ -65,6 +98,53 @@ fun NavGraph(
         }
 
         composable(Screen.Main.route) {
+            // Request permissions once after login
+            val context = LocalContext.current
+            var notificationPermissionRequested by rememberSaveable { mutableStateOf(false) }
+            var showOverlayDialog by rememberSaveable { mutableStateOf(false) }
+
+            val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { /* granted or denied — no action needed */ }
+
+            LaunchedEffect(Unit) {
+                if (!notificationPermissionRequested) {
+                    notificationPermissionRequested = true
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    if (!Settings.canDrawOverlays(context)) {
+                        showOverlayDialog = true
+                    }
+                }
+            }
+
+            if (showOverlayDialog) {
+                AlertDialog(
+                    onDismissRequest = { showOverlayDialog = false },
+                    title = { Text("Display over other apps") },
+                    text = { Text("Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showOverlayDialog = false
+                            context.startActivity(
+                                Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                            )
+                        }) {
+                            Text("Allow")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showOverlayDialog = false }) {
+                            Text("Not now")
+                        }
+                    }
+                )
+            }
+
             MainScreen(
                 onNavigateToRoom = { roomId ->
                     navController.navigate(Screen.Room.createRoute(roomId))
@@ -77,6 +157,21 @@ fun NavGraph(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                profileContent = { modifier ->
+                    ProfileScreen(
+                        userId = null,
+                        showBackButton = false,
+                        onNavigateBack = {},
+                        onNavigateToUserProfile = { userId ->
+                            navController.navigate(Screen.UserProfile.createRoute(userId))
+                        },
+                        onNavigateToFollowList = { userId, tab ->
+                            navController.navigate(Screen.FollowList.createRoute(userId, tab))
+                        },
+                        onNavigateToRoom = { roomId -> navigateToRoom(roomId) },
+                        modifier = modifier
+                    )
                 }
             )
         }
@@ -108,7 +203,8 @@ fun NavGraph(
                 },
                 onNavigateToFollowList = { uid, tab ->
                     navController.navigate(Screen.FollowList.createRoute(uid, tab))
-                }
+                },
+                onNavigateToRoom = { roomId -> navigateToRoom(roomId) }
             )
         }
 
@@ -118,8 +214,12 @@ fun NavGraph(
                 navArgument("userId") { type = NavType.StringType },
                 navArgument("tab") { type = NavType.StringType }
             )
-        ) {
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
+            val tab = backStackEntry.arguments?.getString("tab") ?: "followers"
             FollowListScreen(
+                userId = userId,
+                tab = tab,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToUserProfile = { uid ->
                     navController.navigate(Screen.UserProfile.createRoute(uid))
@@ -135,7 +235,7 @@ fun NavGraph(
                 },
                 onSignOut = {
                     onSignOut()
-                    navController.navigate(Screen.GoogleSignIn.route) {
+                    navController.navigate(Screen.SignIn.route) {
                         popUpTo(Screen.Main.route) { inclusive = true }
                     }
                 }

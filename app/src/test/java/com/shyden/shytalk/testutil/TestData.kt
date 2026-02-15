@@ -1,6 +1,5 @@
 package com.shyden.shytalk.testutil
 
-import com.google.firebase.Timestamp
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.Message
 import com.shyden.shytalk.core.model.MessageType
@@ -10,12 +9,11 @@ import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.model.SeatRequestStatus
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
-import java.util.Date
 
 object TestData {
 
-    val BASE_TIMESTAMP = Timestamp(Date(1_000_000_000L))
-    val LATER_TIMESTAMP = Timestamp(Date(2_000_000_000L))
+    val BASE_TIMESTAMP = 1_000_000_000L
+    val LATER_TIMESTAMP = 2_000_000_000L
 
     fun createTestUser(
         uid: String = "user-1",
@@ -24,7 +22,7 @@ object TestData {
         profilePhotoUrl: String? = null,
         coverPhotoUrl: String? = null,
         uniqueId: Long = 12345L,
-        dateOfBirth: Timestamp? = null,
+        dateOfBirth: Long? = null,
         hideAge: Boolean = false
     ) = User(
         uid = uid,
@@ -65,11 +63,13 @@ object TestData {
         kickInfo: Map<String, Map<String, String>> = emptyMap(),
         pendingInvites: Map<String, String> = emptyMap(),
         seats: Map<String, Seat> = createSeatsWithOwner(ownerId),
-        agoraChannelName: String = "channel-1",
-        firstJoinTimestamps: Map<String, Timestamp> = emptyMap(),
-        createdAt: Timestamp = Timestamp.now(),
-        ownerLeftAt: Timestamp? = null,
-        closedAt: Timestamp? = null
+        voiceRoomName: String = "channel-1",
+        firstJoinTimestamps: Map<String, Long> = emptyMap(),
+        createdAt: Long = System.currentTimeMillis(),
+        ownerLeftAt: Long? = null,
+        closedAt: Long? = null,
+        allTimeHostIds: Set<String> = emptySet(),
+        allTimeSeatUserIds: Set<String> = emptySet()
     ) = ChatRoom(
         roomId = roomId,
         name = name,
@@ -82,11 +82,13 @@ object TestData {
         kickInfo = kickInfo,
         pendingInvites = pendingInvites,
         seats = seats,
-        agoraChannelName = agoraChannelName,
+        voiceRoomName = voiceRoomName,
         firstJoinTimestamps = firstJoinTimestamps,
         createdAt = createdAt,
         ownerLeftAt = ownerLeftAt,
-        closedAt = closedAt
+        closedAt = closedAt,
+        allTimeHostIds = allTimeHostIds,
+        allTimeSeatUserIds = allTimeSeatUserIds
     )
 
     fun createTestMessage(
@@ -95,7 +97,7 @@ object TestData {
         senderName: String = "Test User",
         text: String = "Hello",
         type: MessageType = MessageType.TEXT,
-        createdAt: Timestamp = BASE_TIMESTAMP
+        createdAt: Long = BASE_TIMESTAMP
     ) = Message(
         messageId = messageId,
         senderId = senderId,
@@ -111,9 +113,9 @@ object TestData {
         userName: String = "Test User",
         seatIndex: Int = 3,
         status: SeatRequestStatus = SeatRequestStatus.PENDING,
-        createdAt: Timestamp = BASE_TIMESTAMP,
+        createdAt: Long = BASE_TIMESTAMP,
         resolvedBy: String? = null,
-        resolvedAt: Timestamp? = null
+        resolvedAt: Long? = null
     ) = SeatRequest(
         requestId = requestId,
         userId = userId,
