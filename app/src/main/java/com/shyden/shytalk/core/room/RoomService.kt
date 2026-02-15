@@ -15,7 +15,6 @@ import com.shyden.shytalk.core.chathead.ChatHeadManager
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.UserRepository
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,13 +23,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
+import org.koin.android.ext.android.inject
 
-@AndroidEntryPoint
 class RoomService : Service() {
 
-    @Inject lateinit var activeRoomManager: ActiveRoomManager
-    @Inject lateinit var userRepository: UserRepository
+    private val activeRoomManager: ActiveRoomManager by inject()
+    private val userRepository: UserRepository by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var observerJob: Job? = null
@@ -40,8 +38,6 @@ class RoomService : Service() {
     private var ownerPhotoUrl: String? = null
 
     companion object {
-        const val ACTION_STOP = "com.shyden.shytalk.STOP_ROOM_SERVICE"
-
         fun start(context: Context, roomId: String) {
             val intent = Intent(context, RoomService::class.java).apply {
                 putExtra("roomId", roomId)
@@ -92,14 +88,6 @@ class RoomService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            serviceScope.launch {
-                activeRoomManager.leaveRoom()
-            }
-            stopSelf()
-            return START_NOT_STICKY
-        }
-
         val roomId = intent?.getStringExtra("roomId") ?: run {
             stopSelf()
             return START_NOT_STICKY
@@ -183,18 +171,11 @@ class RoomService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val leaveIntent = PendingIntent.getService(
-            this, 1,
-            Intent(this, RoomService::class.java).apply { action = ACTION_STOP },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         return NotificationCompat.Builder(this, Constants.ROOM_NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("In: $roomName")
-            .setContentText("Tap to return to the room")
+            .setContentTitle("You are in a LIVE room")
+            .setContentText("Tap to return")
             .setContentIntent(contentIntent)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Leave", leaveIntent)
             .setOngoing(true)
             .setSilent(true)
             .build()

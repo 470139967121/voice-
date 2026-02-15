@@ -1,16 +1,14 @@
 package com.shyden.shytalk.core.model
 
-import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Date
 
 class ChatRoomTest {
 
-    private val baseTimestamp = Timestamp(Date(1_000_000_000L))
+    private val baseTimestamp = 1_000_000_000L
 
     @Test
     fun `kickInfo round-trips through toMap and fromMap`() {
@@ -147,5 +145,88 @@ class ChatRoomTest {
         )
 
         assertNull(room.findUserSeat("user-B"))
+    }
+
+    // --- First empty seat finding (used by request seat feature) ---
+
+    @Test
+    fun `first empty seat found when some seats occupied`() {
+        val seats = ChatRoom.DEFAULT_SEATS.toMutableMap()
+        seats["0"] = Seat(userId = "owner", state = SeatState.OCCUPIED)
+        seats["1"] = Seat(userId = "user-1", state = SeatState.OCCUPIED)
+        // seat 2 is empty (from DEFAULT_SEATS)
+        val room = ChatRoom(roomId = "room-1", ownerId = "owner", seats = seats, createdAt = baseTimestamp)
+
+        val firstEmpty = room.seats.entries
+            .filter { it.value.state == SeatState.EMPTY }
+            .minByOrNull { it.key.toIntOrNull() ?: Int.MAX_VALUE }
+
+        assertNotNull(firstEmpty)
+        assertEquals("2", firstEmpty!!.key)
+    }
+
+    @Test
+    fun `no empty seat when all seats occupied`() {
+        val seats = (0 until 8).associate {
+            it.toString() to Seat(userId = "user-$it", state = SeatState.OCCUPIED)
+        }
+        val room = ChatRoom(roomId = "room-1", ownerId = "owner", seats = seats, createdAt = baseTimestamp)
+
+        val firstEmpty = room.seats.entries
+            .filter { it.value.state == SeatState.EMPTY }
+            .minByOrNull { it.key.toIntOrNull() ?: Int.MAX_VALUE }
+
+        assertNull(firstEmpty)
+    }
+
+    // --- showRequestSeat condition logic ---
+
+    @Test
+    fun `showRequestSeat true when user not seated and seating unlocked`() {
+        val seats = ChatRoom.DEFAULT_SEATS.toMutableMap()
+        seats["0"] = Seat(userId = "owner", state = SeatState.OCCUPIED)
+        val room = ChatRoom(
+            roomId = "room-1", ownerId = "owner", seats = seats,
+            requireApproval = false, createdAt = baseTimestamp
+        )
+        val currentUserId = "attendee-1"
+
+        val isSeated = room.seats.values.any { it.isOccupiedBy(currentUserId) }
+        val showRequestSeat = !isSeated && !room.requireApproval
+
+        assertTrue(showRequestSeat)
+    }
+
+    @Test
+    fun `showRequestSeat false when user is seated`() {
+        val seats = ChatRoom.DEFAULT_SEATS.toMutableMap()
+        seats["0"] = Seat(userId = "owner", state = SeatState.OCCUPIED)
+        seats["3"] = Seat(userId = "attendee-1", state = SeatState.OCCUPIED)
+        val room = ChatRoom(
+            roomId = "room-1", ownerId = "owner", seats = seats,
+            requireApproval = false, createdAt = baseTimestamp
+        )
+        val currentUserId = "attendee-1"
+
+        val isSeated = room.seats.values.any { it.isOccupiedBy(currentUserId) }
+        val showRequestSeat = !isSeated && !room.requireApproval
+
+        assertEquals(false, showRequestSeat)
+    }
+
+    @Test
+    fun `showRequestSeat false when seating is locked`() {
+        val seats = ChatRoom.DEFAULT_SEATS.toMutableMap()
+        seats["0"] = Seat(userId = "owner", state = SeatState.OCCUPIED)
+        val room = ChatRoom(
+            roomId = "room-1", ownerId = "owner", seats = seats,
+            requireApproval = true, createdAt = baseTimestamp
+        )
+        val currentUserId = "attendee-1"
+
+        val isSeated = room.seats.values.any { it.isOccupiedBy(currentUserId) }
+        val showRequestSeat = !isSeated && !room.requireApproval
+
+        assertEquals(false, showRequestSeat)
     }
 }

@@ -4,6 +4,7 @@ import com.shyden.shytalk.core.model.SeatRequest
 import com.shyden.shytalk.core.model.SeatRequestStatus
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.firebaseCall
+import com.shyden.shytalk.core.util.currentTimeMillis
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -11,9 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
-import javax.inject.Inject
 
-class SeatRequestRepositoryImpl @Inject constructor(
+class SeatRequestRepositoryImpl(
     private val firestore: FirebaseFirestore
 ) : SeatRequestRepository {
 
@@ -58,7 +58,7 @@ class SeatRequestRepositoryImpl @Inject constructor(
             userName = userName,
             seatIndex = seatIndex,
             status = SeatRequestStatus.PENDING,
-            createdAt = Timestamp.now()
+            createdAt = currentTimeMillis()
         )
         requestsCollection(roomId).document(requestId).set(request.toMap()).await()
     }

@@ -8,7 +8,8 @@ import java.util.Date
 
 class SeatRequestFromMapTest {
 
-    private val ts = Timestamp(Date(1_000_000_000L))
+    private val tsMillis = 1_000_000_000L
+    private val ts = Timestamp(Date(tsMillis))
 
     @Test
     fun `fromMap parses complete valid map`() {
@@ -27,9 +28,9 @@ class SeatRequestFromMapTest {
         assertEquals("Alice", req.userName)
         assertEquals(3, req.seatIndex)
         assertEquals(SeatRequestStatus.PENDING, req.status)
-        assertEquals(ts, req.createdAt)
+        assertEquals(tsMillis, req.createdAt)
         assertEquals("admin", req.resolvedBy)
-        assertEquals(ts, req.resolvedAt)
+        assertEquals(tsMillis, req.resolvedAt)
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.shyden.shytalk.data.remote.FirebasePresenceService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -30,7 +31,7 @@ class PresenceServiceTest {
         database = mockk(relaxed = true)
         rootRef = mockk(relaxed = true)
         every { database.getReference(any<String>()) } returns rootRef
-        presenceService = PresenceService(database)
+        presenceService = FirebasePresenceService(database)
     }
 
     @Test

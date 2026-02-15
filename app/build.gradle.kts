@@ -2,8 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
-    alias(libs.plugins.hilt)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.play.publisher)
 }
 
@@ -24,14 +22,20 @@ android {
         applicationId = "com.shyden.shytalk"
         minSdk = 28
         targetSdk = 36
-        versionCode = 25
-        versionName = "0.25"
+        versionCode = 26
+        versionName = "0.26"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
             debugSymbolLevel = "SYMBOL_TABLE"
         }
+
+        buildConfigField(
+            "String",
+            "LIVEKIT_SERVER_URL",
+            "\"${System.getenv("LIVEKIT_URL") ?: ""}\""
+        )
     }
 
     signingConfigs {
@@ -73,6 +77,9 @@ android {
 }
 
 dependencies {
+    // Shared KMP module
+    implementation(project(":shared"))
+
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -92,10 +99,9 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // Hilt
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.android.compiler)
-    implementation(libs.hilt.navigation.compose)
+    // Koin
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose.viewmodel)
 
     // Firebase
     implementation(platform(libs.firebase.bom))
@@ -114,14 +120,15 @@ dependencies {
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.google.id)
 
-    // Coil
-    implementation(libs.coil.compose)
+    // Coil (comes transitively from :shared, but app-specific screens still need it)
+    implementation(libs.coil3.compose)
+    implementation(libs.coil3.gif)
 
     // Image Cropper
     implementation(libs.android.image.cropper)
 
-    // Agora
-    implementation(libs.agora.rtc)
+    // LiveKit
+    implementation(libs.livekit.android)
 
     // Testing
     testImplementation(libs.junit)

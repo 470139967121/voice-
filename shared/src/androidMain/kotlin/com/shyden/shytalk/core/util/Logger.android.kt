@@ -1,0 +1,7 @@
+package com.shyden.shytalk.core.util
+
+import android.util.Log
+
+actual fun logD(tag: String, message: String) { Log.d(tag, message) }
+actual fun logW(tag: String, message: String, throwable: Throwable?) { Log.w(tag, message, throwable) }
+actual fun logE(tag: String, message: String, throwable: Throwable?) { Log.e(tag, message, throwable) }

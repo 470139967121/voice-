@@ -44,18 +44,18 @@ class UserToMapTest {
         assertNull(map["coverPhotoUrl"])
         assertNull(map["description"])
         assertNull(map["nationality"])
-        assertNull(map["phoneNumber"])
         assertNull(map["email"])
     }
 
     @Test
-    fun `toMap preserves Timestamp values`() {
-        val ts = Timestamp(Date(1_500_000_000_000L))
-        val user = User(uid = "u1", displayName = "X", createdAt = ts, lastSeenAt = ts)
+    fun `toMap preserves timestamp values`() {
+        val millis = 1_500_000_000_000L
+        val expectedTs = Timestamp(Date(millis))
+        val user = User(uid = "u1", displayName = "X", createdAt = millis, lastSeenAt = millis)
         val map = user.toMap()
 
-        assertEquals(ts, map["createdAt"])
-        assertEquals(ts, map["lastSeenAt"])
+        assertEquals(expectedTs, map["createdAt"])
+        assertEquals(expectedTs, map["lastSeenAt"])
     }
 
     @Test
@@ -78,8 +78,8 @@ class UserToMapTest {
             "uid", "displayName", "avatarUrl", "profilePhotoUrl", "coverPhotoUrl",
             "description", "nationality", "uniqueId", "blockedUserIds",
             "followingIds", "followerIds", "dateOfBirth", "hideFollowing",
-            "hideOnlineStatus", "hideAge", "phoneNumber", "email",
-            "createdAt", "lastSeenAt"
+            "hideOnlineStatus", "hideAge", "email",
+            "currentRoomId", "createdAt", "lastSeenAt"
         )
         val user = TestData.createTestUser()
         assertEquals(expectedKeys, user.toMap().keys)
@@ -105,10 +105,11 @@ class UserToMapTest {
 
     @Test
     fun `toMap includes dateOfBirth when set`() {
-        val dob = Timestamp(Date(946684800000L)) // 2000-01-01
-        val user = User(dateOfBirth = dob)
+        val dobMillis = 946684800000L // 2000-01-01
+        val expectedTs = Timestamp(Date(dobMillis))
+        val user = User(dateOfBirth = dobMillis)
         val map = user.toMap()
-        assertEquals(dob, map["dateOfBirth"])
+        assertEquals(expectedTs, map["dateOfBirth"])
     }
 
     @Test
@@ -134,7 +135,6 @@ class UserToMapTest {
         assertEquals(false, user.hideFollowing)
         assertEquals(false, user.hideOnlineStatus)
         assertEquals(false, user.hideAge)
-        assertNull(user.phoneNumber)
         assertNull(user.email)
     }
 
@@ -150,7 +150,6 @@ class UserToMapTest {
             nationality = "US",
             uniqueId = 42L,
             blockedUserIds = setOf("x"),
-            phoneNumber = "+1234567890",
             email = "test@example.com",
             createdAt = TestData.BASE_TIMESTAMP,
             lastSeenAt = TestData.LATER_TIMESTAMP
@@ -166,9 +165,8 @@ class UserToMapTest {
         assertEquals(user.nationality, map["nationality"])
         assertEquals(user.uniqueId, map["uniqueId"])
         assertEquals(user.blockedUserIds.toList(), map["blockedUserIds"])
-        assertEquals(user.phoneNumber, map["phoneNumber"])
         assertEquals(user.email, map["email"])
-        assertEquals(user.createdAt, map["createdAt"])
-        assertEquals(user.lastSeenAt, map["lastSeenAt"])
+        assertEquals(Timestamp(Date(user.createdAt)), map["createdAt"])
+        assertEquals(Timestamp(Date(user.lastSeenAt)), map["lastSeenAt"])
     }
 }

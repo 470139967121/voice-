@@ -19,9 +19,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://download.agora.io/sdk/release") }
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
 rootProject.name = "ShyTalk"
 include(":app")
+include(":shared")

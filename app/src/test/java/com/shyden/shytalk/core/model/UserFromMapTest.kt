@@ -10,7 +10,8 @@ import java.util.Date
 
 class UserFromMapTest {
 
-    private val ts = Timestamp(Date(1_000_000_000L))
+    private val tsMillis = 1_000_000_000L
+    private val ts = Timestamp(Date(tsMillis))
 
     @Test
     fun `fromMap parses complete valid map`() {
@@ -23,7 +24,6 @@ class UserFromMapTest {
             "nationality" to "US",
             "uniqueId" to 12345L,
             "blockedUserIds" to listOf("user-2", "user-3"),
-            "phoneNumber" to "+1234567890",
             "email" to "alice@example.com",
             "createdAt" to ts,
             "lastSeenAt" to ts
@@ -38,10 +38,9 @@ class UserFromMapTest {
         assertEquals("US", user.nationality)
         assertEquals(12345L, user.uniqueId)
         assertEquals(setOf("user-2", "user-3"), user.blockedUserIds)
-        assertEquals("+1234567890", user.phoneNumber)
         assertEquals("alice@example.com", user.email)
-        assertEquals(ts, user.createdAt)
-        assertEquals(ts, user.lastSeenAt)
+        assertEquals(tsMillis, user.createdAt)
+        assertEquals(tsMillis, user.lastSeenAt)
     }
 
     @Test
@@ -56,7 +55,6 @@ class UserFromMapTest {
         assertNull(user.nationality)
         assertEquals(0L, user.uniqueId)
         assertEquals(emptySet<String>(), user.blockedUserIds)
-        assertNull(user.phoneNumber)
         assertNull(user.email)
     }
 
@@ -127,10 +125,11 @@ class UserFromMapTest {
 
     @Test
     fun `fromMap parses dateOfBirth`() {
-        val dob = Timestamp(Date(946684800000L))
+        val dobMillis = 946684800000L
+        val dob = Timestamp(Date(dobMillis))
         val map = mapOf<String, Any?>("dateOfBirth" to dob)
         val user = User.fromMap(map, "uid")
-        assertEquals(dob, user.dateOfBirth)
+        assertEquals(dobMillis, user.dateOfBirth)
     }
 
     @Test
@@ -164,14 +163,13 @@ class UserFromMapTest {
             nationality = "US",
             uniqueId = 12345L,
             blockedUserIds = setOf("user-2", "user-3"),
-            dateOfBirth = ts,
+            dateOfBirth = tsMillis,
             hideFollowing = true,
             hideOnlineStatus = true,
             hideAge = true,
-            phoneNumber = "+1234567890",
             email = "alice@example.com",
-            createdAt = ts,
-            lastSeenAt = ts
+            createdAt = tsMillis,
+            lastSeenAt = tsMillis
         )
         val roundtripped = User.fromMap(original.toMap(), "user-1")
         assertEquals(original, roundtripped)

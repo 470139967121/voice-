@@ -1,16 +1,10 @@
 package com.shyden.shytalk.feature.profile
 
-import android.content.ContentResolver
-import android.content.Context
-import android.net.Uri
-import androidx.lifecycle.SavedStateHandle
-import com.google.firebase.auth.FirebaseUser
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
-import com.google.firebase.Timestamp
 import com.shyden.shytalk.testutil.TestData
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -27,7 +21,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.io.ByteArrayInputStream
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModelTest {
@@ -38,32 +31,18 @@ class ProfileViewModelTest {
     private val authRepository = mockk<AuthRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val storageRepository = mockk<StorageRepository>(relaxed = true)
-    private val context = mockk<Context>(relaxed = true)
-    private val contentResolver = mockk<ContentResolver>(relaxed = true)
 
     private val currentUserId = "current-user"
     private val otherUserId = "other-user"
 
     @Before
     fun setup() {
-        val mockUser = mockk<FirebaseUser> {
-            every { uid } returns currentUserId
-            every { phoneNumber } returns "+1234567890"
-            every { email } returns "test@example.com"
-        }
-        every { authRepository.currentUser } returns mockUser
-        every { context.contentResolver } returns contentResolver
+        every { authRepository.currentUserId } returns currentUserId
+        every { authRepository.currentUserEmail } returns "test@example.com"
     }
 
-    private fun createViewModel(targetUserId: String? = null): ProfileViewModel {
-        val savedStateHandle = if (targetUserId != null) {
-            SavedStateHandle(mapOf("userId" to targetUserId))
-        } else {
-            SavedStateHandle()
-        }
+    private fun createViewModel(): ProfileViewModel {
         return ProfileViewModel(
-            savedStateHandle = savedStateHandle,
-            context = context,
             authRepository = authRepository,
             userRepository = userRepository,
             storageRepository = storageRepository
@@ -80,7 +59,7 @@ class ProfileViewModelTest {
 
     @Test
     fun `init with no auth user sets empty currentUserId`() {
-        every { authRepository.currentUser } returns null
+        every { authRepository.currentUserId } returns null
         val vm = createViewModel()
         assertEquals("", vm.uiState.value.currentUserId)
     }
@@ -237,7 +216,7 @@ class ProfileViewModelTest {
 
     @Test
     fun `loadProfile - no auth user does nothing`() = runTest {
-        every { authRepository.currentUser } returns null
+        every { authRepository.currentUserId } returns null
 
         val vm = createViewModel()
         vm.loadProfile(null)
@@ -253,7 +232,7 @@ class ProfileViewModelTest {
         coEvery { userRepository.createOrUpdateUser(any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
-        vm.saveProfile("My Name", Timestamp(java.util.Date(946684800000L)))
+        vm.saveProfile("My Name", 946684800000L)
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.profileSaved)
@@ -266,7 +245,7 @@ class ProfileViewModelTest {
         coEvery { userRepository.createOrUpdateUser(any()) } returns Resource.Error("save failed")
 
         val vm = createViewModel()
-        vm.saveProfile("My Name", Timestamp(java.util.Date(946684800000L)))
+        vm.saveProfile("My Name", 946684800000L)
         advanceUntilIdle()
 
         assertEquals("save failed", vm.uiState.value.error)
@@ -275,10 +254,10 @@ class ProfileViewModelTest {
 
     @Test
     fun `saveProfile - no auth user does nothing`() = runTest {
-        every { authRepository.currentUser } returns null
+        every { authRepository.currentUserId } returns null
 
         val vm = createViewModel()
-        vm.saveProfile("My Name", Timestamp(java.util.Date(946684800000L)))
+        vm.saveProfile("My Name", 946684800000L)
         advanceUntilIdle()
 
         coVerify(exactly = 0) { userRepository.createOrUpdateUser(any()) }
@@ -373,9 +352,6 @@ class ProfileViewModelTest {
     fun `uploadProfilePhoto - success updates user`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        val uri = mockk<Uri>()
-        val imageBytes = byteArrayOf(1, 2, 3)
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(imageBytes)
         coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://photo.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
@@ -383,7 +359,7 @@ class ProfileViewModelTest {
         vm.loadProfile(null)
         advanceUntilIdle()
 
-        vm.uploadProfilePhoto(uri)
+        vm.uploadProfilePhoto(byteArrayOf(1, 2, 3))
         advanceUntilIdle()
 
         assertEquals("https://photo.url", vm.uiState.value.user?.profilePhotoUrl)
@@ -392,12 +368,10 @@ class ProfileViewModelTest {
 
     @Test
     fun `uploadProfilePhoto - upload error sets error`() = runTest {
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1))
         coEvery { storageRepository.uploadImage(any(), any(), any()) } returns Resource.Error("upload failed")
 
         val vm = createViewModel()
-        vm.uploadProfilePhoto(uri)
+        vm.uploadProfilePhoto(byteArrayOf(1))
         advanceUntilIdle()
 
         assertEquals("upload failed", vm.uiState.value.error)
@@ -406,29 +380,14 @@ class ProfileViewModelTest {
 
     @Test
     fun `uploadProfilePhoto - save url error sets error`() = runTest {
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1))
         coEvery { storageRepository.uploadImage(any(), any(), any()) } returns Resource.Success("https://url")
         coEvery { userRepository.updateProfile(any(), any()) } returns Resource.Error("save failed")
 
         val vm = createViewModel()
-        vm.uploadProfilePhoto(uri)
+        vm.uploadProfilePhoto(byteArrayOf(1))
         advanceUntilIdle()
 
         assertNotNull(vm.uiState.value.error)
-        assertFalse(vm.uiState.value.isUploadingPhoto)
-    }
-
-    @Test
-    fun `uploadProfilePhoto - null inputStream sets error`() = runTest {
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns null
-
-        val vm = createViewModel()
-        vm.uploadProfilePhoto(uri)
-        advanceUntilIdle()
-
-        assertEquals("Failed to read image", vm.uiState.value.error)
         assertFalse(vm.uiState.value.isUploadingPhoto)
     }
 
@@ -437,8 +396,6 @@ class ProfileViewModelTest {
         val oldUrl = "https://firebase.storage/old-profile.jpg"
         val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = oldUrl)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1, 2))
         coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://new.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
@@ -446,7 +403,7 @@ class ProfileViewModelTest {
         vm.loadProfile(null)
         advanceUntilIdle()
 
-        vm.uploadProfilePhoto(uri)
+        vm.uploadProfilePhoto(byteArrayOf(1, 2))
         advanceUntilIdle()
 
         coVerify { storageRepository.deleteImageByUrl(oldUrl) }
@@ -456,8 +413,6 @@ class ProfileViewModelTest {
     fun `uploadProfilePhoto - no old photo skips delete`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = null)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1, 2))
         coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://new.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
@@ -465,7 +420,7 @@ class ProfileViewModelTest {
         vm.loadProfile(null)
         advanceUntilIdle()
 
-        vm.uploadProfilePhoto(uri)
+        vm.uploadProfilePhoto(byteArrayOf(1, 2))
         advanceUntilIdle()
 
         coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
@@ -476,15 +431,13 @@ class ProfileViewModelTest {
         val oldUrl = "https://firebase.storage/old-profile.jpg"
         val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = oldUrl)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1))
         coEvery { storageRepository.uploadImage(any(), any(), any()) } returns Resource.Error("upload failed")
 
         val vm = createViewModel()
         vm.loadProfile(null)
         advanceUntilIdle()
 
-        vm.uploadProfilePhoto(uri)
+        vm.uploadProfilePhoto(byteArrayOf(1))
         advanceUntilIdle()
 
         coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
@@ -495,8 +448,6 @@ class ProfileViewModelTest {
         val oldUrl = "https://firebase.storage/old-profile.jpg"
         val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = oldUrl)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1))
         coEvery { storageRepository.uploadImage(any(), any(), any()) } returns Resource.Success("https://new.url")
         coEvery { userRepository.updateProfile(any(), any()) } returns Resource.Error("save failed")
 
@@ -504,7 +455,7 @@ class ProfileViewModelTest {
         vm.loadProfile(null)
         advanceUntilIdle()
 
-        vm.uploadProfilePhoto(uri)
+        vm.uploadProfilePhoto(byteArrayOf(1))
         advanceUntilIdle()
 
         coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
@@ -516,8 +467,6 @@ class ProfileViewModelTest {
     fun `uploadCoverPhoto - success updates user`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1, 2))
         coEvery { storageRepository.uploadImage(currentUserId, "cover_photos", any()) } returns Resource.Success("https://cover.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
@@ -525,7 +474,7 @@ class ProfileViewModelTest {
         vm.loadProfile(null)
         advanceUntilIdle()
 
-        vm.uploadCoverPhoto(uri)
+        vm.uploadCoverPhoto(byteArrayOf(1, 2))
         advanceUntilIdle()
 
         assertEquals("https://cover.url", vm.uiState.value.user?.coverPhotoUrl)
@@ -537,8 +486,6 @@ class ProfileViewModelTest {
         val oldUrl = "https://firebase.storage/old-cover.jpg"
         val user = TestData.createTestUser(uid = currentUserId, coverPhotoUrl = oldUrl)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1, 2))
         coEvery { storageRepository.uploadImage(currentUserId, "cover_photos", any()) } returns Resource.Success("https://new-cover.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
@@ -546,7 +493,7 @@ class ProfileViewModelTest {
         vm.loadProfile(null)
         advanceUntilIdle()
 
-        vm.uploadCoverPhoto(uri)
+        vm.uploadCoverPhoto(byteArrayOf(1, 2))
         advanceUntilIdle()
 
         coVerify { storageRepository.deleteImageByUrl(oldUrl) }
@@ -554,12 +501,10 @@ class ProfileViewModelTest {
 
     @Test
     fun `uploadCoverPhoto - upload error sets error`() = runTest {
-        val uri = mockk<Uri>()
-        every { contentResolver.openInputStream(uri) } returns ByteArrayInputStream(byteArrayOf(1))
         coEvery { storageRepository.uploadImage(any(), any(), any()) } returns Resource.Error("cover upload failed")
 
         val vm = createViewModel()
-        vm.uploadCoverPhoto(uri)
+        vm.uploadCoverPhoto(byteArrayOf(1))
         advanceUntilIdle()
 
         assertEquals("cover upload failed", vm.uiState.value.error)
@@ -649,7 +594,7 @@ class ProfileViewModelTest {
 
     @Test
     fun `loadProfile - online when lastSeenAt is recent`() = runTest {
-        val recentTs = Timestamp(java.util.Date(System.currentTimeMillis() - 60_000L))
+        val recentTs = System.currentTimeMillis() - 60_000L
         val user = TestData.createTestUser(uid = currentUserId).copy(lastSeenAt = recentTs)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
 
@@ -662,7 +607,7 @@ class ProfileViewModelTest {
 
     @Test
     fun `loadProfile - offline when lastSeenAt is old`() = runTest {
-        val oldTs = Timestamp(java.util.Date(System.currentTimeMillis() - 600_000L))
+        val oldTs = System.currentTimeMillis() - 600_000L
         val user = TestData.createTestUser(uid = currentUserId).copy(lastSeenAt = oldTs)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
 
@@ -675,7 +620,7 @@ class ProfileViewModelTest {
 
     @Test
     fun `loadProfile - hidden online status shows offline`() = runTest {
-        val recentTs = Timestamp(java.util.Date(System.currentTimeMillis() - 60_000L))
+        val recentTs = System.currentTimeMillis() - 60_000L
         val user = TestData.createTestUser(uid = currentUserId).copy(
             lastSeenAt = recentTs,
             hideOnlineStatus = true

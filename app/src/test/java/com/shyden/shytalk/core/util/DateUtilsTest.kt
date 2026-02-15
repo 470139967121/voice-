@@ -1,12 +1,10 @@
 package com.shyden.shytalk.core.util
 
-import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Calendar
-import java.util.Date
 
 class DateUtilsTest {
 
@@ -18,7 +16,7 @@ class DateUtilsTest {
             set(Calendar.MONTH, Calendar.JANUARY)
             set(Calendar.DAY_OF_MONTH, 1)
         }
-        val age = calculateAge(Timestamp(birth.time))
+        val age = calculateAge(birth.timeInMillis)
         // If today is after Jan 1, age is 25; if today IS Jan 1, still 25
         assertTrue(age >= 25)
     }
@@ -31,7 +29,7 @@ class DateUtilsTest {
             set(Calendar.MONTH, Calendar.DECEMBER)
             set(Calendar.DAY_OF_MONTH, 31)
         }
-        val age = calculateAge(Timestamp(birth.time))
+        val age = calculateAge(birth.timeInMillis)
         // Birthday hasn't happened yet this year (unless today is Dec 31)
         if (today.get(Calendar.MONTH) == Calendar.DECEMBER && today.get(Calendar.DAY_OF_MONTH) == 31) {
             assertEquals(20, age)
@@ -42,7 +40,7 @@ class DateUtilsTest {
 
     @Test
     fun `calculateAge for today returns 0`() {
-        val age = calculateAge(Timestamp(Date()))
+        val age = calculateAge(System.currentTimeMillis())
         assertEquals(0, age)
     }
 

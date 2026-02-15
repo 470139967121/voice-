@@ -39,16 +39,17 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `currentUser returns auth currentUser`() {
+    fun `currentUserId returns uid when signed in`() {
         val user = mockk<FirebaseUser>()
+        every { user.uid } returns "test-uid"
         every { auth.currentUser } returns user
-        assertEquals(user, repo.currentUser)
+        assertEquals("test-uid", repo.currentUserId)
     }
 
     @Test
-    fun `currentUser returns null when not signed in`() {
+    fun `currentUserId returns null when not signed in`() {
         every { auth.currentUser } returns null
-        assertNull(repo.currentUser)
+        assertNull(repo.currentUserId)
     }
 
     @Test
@@ -64,8 +65,9 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `signInWithGoogleIdToken returns Success on valid user`() = runTest {
+    fun `signInWithGoogleIdToken returns Success with uid`() = runTest {
         val user = mockk<FirebaseUser>()
+        every { user.uid } returns "signed-in-uid"
         val authResult = mockk<AuthResult> { every { this@mockk.user } returns user }
         val credential = mockk<AuthCredential>()
         every { GoogleAuthProvider.getCredential("token123", null) } returns credential
@@ -74,7 +76,7 @@ class AuthRepositoryImplTest {
         val result = repo.signInWithGoogleIdToken("token123")
 
         assertTrue(result is Resource.Success)
-        assertEquals(user, (result as Resource.Success).data)
+        assertEquals("signed-in-uid", (result as Resource.Success).data)
     }
 
     @Test
@@ -100,6 +102,14 @@ class AuthRepositoryImplTest {
 
         assertTrue(result is Resource.Error)
         assertTrue((result as Resource.Error).message.contains("Network error"))
+    }
+
+    @Test
+    fun `signInWithAppleIdToken returns Error on Android`() = runTest {
+        val result = repo.signInWithAppleIdToken("token", "nonce")
+
+        assertTrue(result is Resource.Error)
+        assertEquals("Apple Sign-In is not supported on Android", (result as Resource.Error).message)
     }
 
     @Test

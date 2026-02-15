@@ -13,9 +13,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
-import javax.inject.Inject
 
-class UserRepositoryImpl @Inject constructor(
+class UserRepositoryImpl(
     private val firestore: FirebaseFirestore
 ) : UserRepository {
 
@@ -75,8 +74,15 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun blockUser(userId: String, blockedUserId: String): Resource<Unit> = firebaseCall("Failed to block user") {
-        usersCollection.document(userId)
-            .update("blockedUserIds", FieldValue.arrayUnion(blockedUserId)).await()
+        val batch = firestore.batch()
+        // Add to blocked list
+        batch.update(usersCollection.document(userId), "blockedUserIds", FieldValue.arrayUnion(blockedUserId))
+        // Remove follow connections in both directions
+        batch.update(usersCollection.document(userId), "followingIds", FieldValue.arrayRemove(blockedUserId))
+        batch.update(usersCollection.document(userId), "followerIds", FieldValue.arrayRemove(blockedUserId))
+        batch.update(usersCollection.document(blockedUserId), "followingIds", FieldValue.arrayRemove(userId))
+        batch.update(usersCollection.document(blockedUserId), "followerIds", FieldValue.arrayRemove(userId))
+        batch.commit().await()
     }
 
     override suspend fun unblockUser(userId: String, blockedUserId: String): Resource<Unit> = firebaseCall("Failed to unblock user") {
@@ -118,7 +124,7 @@ class UserRepositoryImpl @Inject constructor(
                             doc.data?.let { User.fromMap(it, doc.id) }
                         }
                     }
-                }.awaitAll().flatten()
+                }.awaitAll().flatMap { it }
             }
         }
 }

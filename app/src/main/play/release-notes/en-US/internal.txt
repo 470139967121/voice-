@@ -1,10 +1,8 @@
-v0.25 - Disconnect dimming & mute preservation
+v0.26 - Request a seat & room improvements
 
-- Disconnected users' seats dim in real time
-- Mute state preserved through disconnect/reconnect
-- Cloud Function preserves owner mute during OWNER_AWAY
-- Grace period prevents false disconnects
-- Deduplicated room-close logic across repository
-- Removed debug stack-trace logging
-- Batched UI state updates for fewer recompositions
-- Memoized per-seat computations in seat grid
+- Tap an empty seat to request sitting when seats are open
+- Seat icons now stay perfectly circular on all devices
+- User profiles only open when tapping their avatar
+- Cleaner room closed screen with just profile icons
+- Simplified toolbar when a room ends
+- Performance improvements throughout the app

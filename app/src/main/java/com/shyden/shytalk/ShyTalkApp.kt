@@ -3,41 +3,36 @@ package com.shyden.shytalk
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import coil.ImageLoader
-import coil.ImageLoaderFactory
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
+import coil3.gif.AnimatedImageDecoder
+import coil3.memory.MemoryCache
+import coil3.request.crossfade
+import com.shyden.shytalk.core.di.appModule
 import com.shyden.shytalk.core.util.Constants
-import dagger.hilt.android.HiltAndroidApp
-import okhttp3.Cache
-import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.startKoin
 
-@HiltAndroidApp
-class ShyTalkApp : Application(), ImageLoaderFactory {
+class ShyTalkApp : Application(), SingletonImageLoader.Factory {
 
-    override fun newImageLoader(): ImageLoader {
+    override fun newImageLoader(context: PlatformContext): ImageLoader {
         return ImageLoader.Builder(this)
             .memoryCache {
-                MemoryCache.Builder(this)
-                    .maxSizePercent(0.25)
+                MemoryCache.Builder()
+                    .maxSizePercent(this@ShyTalkApp, 0.25)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(cacheDir.resolve("image_cache"))
+                    .directory(cacheDir.resolve("image_cache").toOkioPath())
                     .maxSizeBytes(50L * 1024 * 1024)
                     .build()
             }
-            .okHttpClient {
-                OkHttpClient.Builder()
-                    .cache(Cache(cacheDir.resolve("http_cache"), 25L * 1024 * 1024))
-                    .addNetworkInterceptor { chain ->
-                        chain.proceed(chain.request()).newBuilder()
-                            .removeHeader("Pragma")
-                            .header("Cache-Control", "public, max-age=86400, immutable")
-                            .build()
-                    }
-                    .build()
+            .components {
+                add(AnimatedImageDecoder.Factory())
             }
             .crossfade(true)
             .build()
@@ -45,6 +40,12 @@ class ShyTalkApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+
+        startKoin {
+            androidContext(this@ShyTalkApp)
+            modules(appModule)
+        }
+
         val channel = NotificationChannel(
             Constants.ROOM_NOTIFICATION_CHANNEL_ID,
             "Voice Room",

@@ -65,11 +65,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.shyden.shytalk.core.util.calculateAge
 import com.shyden.shytalk.core.util.countryNameForCode
 import com.shyden.shytalk.core.util.flagEmojiForCode
@@ -83,8 +84,9 @@ fun ProfileScreen(
     onNavigateToUserProfile: ((String) -> Unit)? = null,
     onNavigateToFollowList: ((String, String) -> Unit)? = null,
     onNavigateToSettings: (() -> Unit)? = null,
+    onNavigateToRoom: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -106,11 +108,19 @@ fun ProfileScreen(
     // Photo picking + cropping
     var pendingCropType by remember { mutableStateOf<String?>(null) }
 
+    val imageContext = LocalContext.current
     val cropLauncher = rememberLauncherForActivityResult(CropContract()) { uri ->
         if (uri != null) {
-            when (pendingCropType) {
-                "profile" -> viewModel.uploadProfilePhoto(uri)
-                "cover" -> viewModel.uploadCoverPhoto(uri)
+            val imageData = try {
+                imageContext.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            } catch (_: Exception) {
+                null
+            }
+            if (imageData != null) {
+                when (pendingCropType) {
+                    "profile" -> viewModel.uploadProfilePhoto(imageData)
+                    "cover" -> viewModel.uploadCoverPhoto(imageData)
+                }
             }
         }
     }
@@ -171,6 +181,7 @@ fun ProfileScreen(
                     else viewModel.followUser(targetId)
                 },
                 onNavigateToFollowList = onNavigateToFollowList,
+                onNavigateToRoom = onNavigateToRoom,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier.fillMaxSize()
             )
@@ -216,6 +227,7 @@ fun ProfileScreen(
                     else viewModel.followUser(targetId)
                 },
                 onNavigateToFollowList = onNavigateToFollowList,
+                onNavigateToRoom = onNavigateToRoom,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxSize()
@@ -323,6 +335,7 @@ private fun ProfileContent(
     onBlockToggle: () -> Unit,
     onFollowToggle: () -> Unit = {},
     onNavigateToFollowList: ((String, String) -> Unit)? = null,
+    onNavigateToRoom: ((String) -> Unit)? = null,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -377,19 +390,20 @@ private fun ProfileContent(
             .verticalScroll(rememberScrollState())
     ) {
         // Cover photo area
+        val coverUrl = user.coverPhotoUrl
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(180.dp)
                 .then(
-                    if (user.coverPhotoUrl != null && !uiState.isEditing)
-                        Modifier.clickable { onTapPhoto(user.coverPhotoUrl) }
+                    if (coverUrl != null && !uiState.isEditing)
+                        Modifier.clickable { onTapPhoto(coverUrl) }
                     else Modifier
                 )
         ) {
-            if (user.coverPhotoUrl != null) {
+            if (coverUrl != null) {
                 AsyncImage(
-                    model = user.coverPhotoUrl,
+                    model = coverUrl,
                     contentDescription = "Cover photo",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -432,6 +446,7 @@ private fun ProfileContent(
         }
 
         // Profile photo (overlapping cover)
+        val activeRoomId = uiState.activeRoomId
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -439,7 +454,14 @@ private fun ProfileContent(
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            Box {
+            Box(
+                modifier = Modifier
+                    .then(
+                        if (activeRoomId != null && onNavigateToRoom != null)
+                            Modifier.clickable { onNavigateToRoom(activeRoomId) }
+                        else Modifier
+                    )
+            ) {
                 val photoUrl = user.photoUrl
                 if (photoUrl != null) {
                     AsyncImage(
@@ -449,7 +471,7 @@ private fun ProfileContent(
                             .size(100.dp)
                             .clip(CircleShape)
                             .then(
-                                if (!uiState.isEditing)
+                                if (!uiState.isEditing && activeRoomId == null)
                                     Modifier.clickable { onTapPhoto(photoUrl) }
                                 else Modifier
                             ),
@@ -468,6 +490,13 @@ private fun ProfileContent(
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
+                }
+
+                // Voice room indicator overlay
+                if (activeRoomId != null) {
+                    VoiceWaveOverlay(
+                        modifier = Modifier.size(100.dp).clip(CircleShape)
+                    )
                 }
 
                 // Camera overlay for editing profile photo
@@ -546,9 +575,10 @@ private fun ProfileContent(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val natCode = editNationality
                         Text(
-                            text = if (editNationality != null) {
-                                "${flagEmojiForCode(editNationality)} ${countryNameForCode(editNationality) ?: editNationality}"
+                            text = if (natCode != null) {
+                                "${flagEmojiForCode(natCode)} ${countryNameForCode(natCode) ?: natCode}"
                             } else {
                                 "Select nationality"
                             },
@@ -625,10 +655,10 @@ private fun ProfileContent(
                     )
                 }
 
-                if (user.nationality != null) {
+                user.nationality?.let { nat ->
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${flagEmojiForCode(user.nationality)} ${countryNameForCode(user.nationality) ?: ""}",
+                        text = "${flagEmojiForCode(nat)} ${countryNameForCode(nat) ?: ""}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -644,10 +674,10 @@ private fun ProfileContent(
                     )
                 }
 
-                if (!user.description.isNullOrBlank()) {
+                user.description?.takeIf { it.isNotBlank() }?.let { desc ->
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = user.description,
+                        text = desc,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -4,7 +4,7 @@ import com.shyden.shytalk.core.model.Message
 import com.shyden.shytalk.core.model.MessageType
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.firebaseCall
-import com.google.firebase.Timestamp
+import com.shyden.shytalk.core.util.currentTimeMillis
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
@@ -13,9 +13,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
-import javax.inject.Inject
 
-class MessageRepositoryImpl @Inject constructor(
+class MessageRepositoryImpl(
     private val firestore: FirebaseFirestore
 ) : MessageRepository {
 
@@ -52,7 +51,7 @@ class MessageRepositoryImpl @Inject constructor(
             senderId = senderId,
             senderName = senderName,
             text = text,
-            createdAt = Timestamp.now(),
+            createdAt = currentTimeMillis(),
             type = type
         )
         messagesCollection(roomId).document(messageId).set(message.toMap()).await()

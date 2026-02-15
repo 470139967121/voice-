@@ -1,21 +1,15 @@
 package com.shyden.shytalk
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.firestore.FirebaseFirestore
 import com.shyden.shytalk.core.room.ActiveRoomManager
@@ -29,28 +23,20 @@ import com.shyden.shytalk.feature.update.ForceUpdateScreen
 import com.shyden.shytalk.navigation.NavGraph
 import com.shyden.shytalk.navigation.Screen
 import com.shyden.shytalk.ui.theme.ShyTalkTheme
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
+import org.koin.android.ext.android.inject
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var authRepository: AuthRepository
-
-    @Inject
-    lateinit var userRepository: UserRepository
-
-    @Inject
-    lateinit var activeRoomManager: ActiveRoomManager
+    private val authRepository: AuthRepository by inject()
+    private val userRepository: UserRepository by inject()
+    private val activeRoomManager: ActiveRoomManager by inject()
 
     private val _navigateToRoom = mutableStateOf<String?>(null)
 
     companion object {
         private const val PREFS_NAME = "shytalk_prefs"
         private const val KEY_PRIVACY_ACCEPTED = "privacy_policy_accepted"
-        private const val KEY_OVERLAY_PERMISSION_ASKED = "overlay_permission_asked"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,7 +52,6 @@ class MainActivity : ComponentActivity() {
                 }
                 var updateRequired by remember { mutableStateOf(false) }
                 var checkComplete by remember { mutableStateOf(false) }
-                var showOverlayDialog by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     try {
@@ -81,44 +66,6 @@ class MainActivity : ComponentActivity() {
                         updateRequired = false
                     }
                     checkComplete = true
-                }
-
-                // Prompt for overlay permission when entering a room
-                val activeRoomId by activeRoomManager.activeRoomId.collectAsStateWithLifecycle()
-                LaunchedEffect(activeRoomId) {
-                    if (activeRoomId != null &&
-                        !Settings.canDrawOverlays(this@MainActivity) &&
-                        !prefs.getBoolean(KEY_OVERLAY_PERMISSION_ASKED, false)
-                    ) {
-                        showOverlayDialog = true
-                        prefs.edit().putBoolean(KEY_OVERLAY_PERMISSION_ASKED, true).apply()
-                    }
-                }
-
-                if (showOverlayDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showOverlayDialog = false },
-                        title = { Text("Display over other apps") },
-                        text = { Text("Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.") },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                showOverlayDialog = false
-                                startActivity(
-                                    Intent(
-                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                        Uri.parse("package:$packageName")
-                                    )
-                                )
-                            }) {
-                                Text("Allow")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showOverlayDialog = false }) {
-                                Text("Not now")
-                            }
-                        }
-                    )
                 }
 
                 when {
@@ -154,7 +101,7 @@ class MainActivity : ComponentActivity() {
 
                             NavGraph(
                                 navController = navController,
-                                startDestination = Screen.GoogleSignIn.route,
+                                startDestination = Screen.SignIn.route,
                                 onSignOut = { authRepository.signOut() }
                             )
                         }
@@ -170,7 +117,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         activeRoomManager.isAppInForeground = true
-        authRepository.currentUser?.uid?.let { uid ->
+        authRepository.currentUserId?.let { uid ->
             CoroutineScope(Dispatchers.IO).launch { userRepository.updateLastSeen(uid) }
         }
     }

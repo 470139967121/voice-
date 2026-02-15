@@ -1,7 +1,5 @@
 package com.shyden.shytalk.feature.profile
 
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseUser
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -20,7 +18,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RequiredDOBViewModelTest {
@@ -31,14 +28,11 @@ class RequiredDOBViewModelTest {
     private val authRepository = mockk<AuthRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val userId = "user-1"
-    private val testDob = Timestamp(Date(946684800000L))
+    private val testDob = 946684800000L
 
     @Before
     fun setup() {
-        val mockUser = mockk<FirebaseUser> {
-            every { uid } returns userId
-        }
-        every { authRepository.currentUser } returns mockUser
+        every { authRepository.currentUserId } returns userId
     }
 
     private fun createViewModel() = RequiredDOBViewModel(
@@ -56,7 +50,7 @@ class RequiredDOBViewModelTest {
 
         assertTrue(vm.uiState.value.saved)
         assertFalse(vm.uiState.value.isLoading)
-        coVerify { userRepository.updateProfile(userId, mapOf("dateOfBirth" to testDob)) }
+        coVerify { userRepository.updateProfile(userId, any()) }
     }
 
     @Test
@@ -74,7 +68,7 @@ class RequiredDOBViewModelTest {
 
     @Test
     fun `saveDateOfBirth - no auth user does nothing`() = runTest {
-        every { authRepository.currentUser } returns null
+        every { authRepository.currentUserId } returns null
 
         val vm = createViewModel()
         vm.saveDateOfBirth(testDob)

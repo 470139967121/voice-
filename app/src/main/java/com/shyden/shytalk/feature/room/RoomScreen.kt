@@ -25,7 +25,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -45,15 +44,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import com.shyden.shytalk.R
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.Icon
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.model.RoomRole
@@ -75,7 +79,7 @@ fun RoomScreen(
     roomId: String,
     onNavigateBack: () -> Unit,
     onNavigateToUserProfile: (String) -> Unit = {},
-    viewModel: RoomViewModel = hiltViewModel()
+    viewModel: RoomViewModel = koinViewModel { parametersOf(roomId) }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -261,25 +265,50 @@ fun RoomScreen(
         uiState.seatUsers + uiState.participantUsers
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            RoomToolbar(
-                roomName = uiState.room?.name ?: "Room",
-                participantCount = uiState.room?.participantIds?.size ?: 0,
-                roomExpiryRemainingMs = uiState.roomExpiryRemainingMs,
-                onBack = { onNavigateBack() },
-                onTogglePeople = { showParticipantPanel = !showParticipantPanel },
-                onRoomNameClick = { showRoomNameDialog = true }
-            )
-        }
-    ) { padding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Animated GIF background (full screen, behind toolbar)
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(R.raw.room_background)
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Semi-transparent scrim so text remains readable over the GIF
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-        ) {
-            val closedSummary = uiState.roomClosedSummary
+                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f))
+        )
+
+        Scaffold(
+            containerColor = Color.Transparent,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                if (!uiState.roomClosed) {
+                    RoomToolbar(
+                        roomName = uiState.room?.name ?: "Room",
+                        participantCount = uiState.room?.participantIds?.size ?: 0,
+                        roomExpiryRemainingMs = uiState.roomExpiryRemainingMs,
+                        onBack = { onNavigateBack() },
+                        onTogglePeople = { showParticipantPanel = !showParticipantPanel },
+                        onRoomNameClick = { showRoomNameDialog = true }
+                    )
+                }
+            }
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                val closedSummary = uiState.roomClosedSummary
             if (uiState.roomClosed && closedSummary != null) {
                 RoomClosedSummaryPanel(
                     summary = closedSummary,
@@ -331,15 +360,20 @@ fun RoomScreen(
                     }
 
                     // Seat Grid (upper portion — only occupied seats)
+                    val isCurrentUserSeated = uiState.currentUserId in seatedUserIds
+                    val showRequestSeat = !isCurrentUserSeated
+                        && uiState.room?.requireApproval != true
+
                     SeatGrid(
                         seats = uiState.room?.seats ?: emptyMap(),
                         currentUserId = uiState.currentUserId,
                         currentRole = uiState.currentRole,
                         ownerId = uiState.room?.ownerId ?: "",
                         hostIds = uiState.room?.hostIds ?: emptySet(),
-                        speakingUids = uiState.speakingUids,
+                        speakingUserIds = uiState.speakingUserIds,
                         seatUsers = uiState.seatUsers,
                         disconnectedUserIds = uiState.disconnectedUserIds,
+                        showRequestSeat = showRequestSeat,
                         onSeatClick = { seatIndex ->
                             val seat = uiState.room?.seats?.get(seatIndex.toString())
                             if (seat?.userId == uiState.currentUserId) {
@@ -356,39 +390,6 @@ fun RoomScreen(
                             .weight(1f)
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     )
-
-                    // Seat status derived from the already-computed seatedUserIds
-                    val isSeated = uiState.currentUserId in seatedUserIds
-
-                    val hasEmptySeats = remember(room?.seats) {
-                        room?.seats?.values?.any { it.state != SeatState.OCCUPIED } ?: false
-                    }
-
-                    if (!isSeated && hasEmptySeats) {
-                        OutlinedButton(
-                            onClick = {
-                                // Find first empty non-owner seat
-                                val emptySeatIndex = (1 until Constants.MAX_SEATS).firstOrNull { i ->
-                                    val seat = uiState.room?.seats?.get(i.toString())
-                                    seat != null && seat.state != SeatState.OCCUPIED
-                                }
-                                if (emptySeatIndex != null) {
-                                    viewModel.takeSeat(emptySeatIndex)
-                                }
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.PersonAdd,
-                                contentDescription = null,
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                            Text("Request a Seat")
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    HorizontalDivider()
 
                     // Chat Panel (lower portion)
                     ChatPanel(
@@ -563,6 +564,10 @@ fun RoomScreen(
                 val canModerate = isNotSelf && isTargetSeated && isHostOrOwner
                     && (isOwner || targetRole == RoomRole.ATTENDEE)
                     && userId != uiState.room?.ownerId
+                // Kick is allowed even for unseated users
+                val canKick = isNotSelf && isHostOrOwner
+                    && (isOwner || targetRole == RoomRole.ATTENDEE)
+                    && userId != uiState.room?.ownerId
 
                 UserCardPopup(
                     user = user,
@@ -594,8 +599,8 @@ fun RoomScreen(
                         && targetSeatIndex != Constants.OWNER_SEAT_INDEX) {
                         { viewModel.removeFromSeat(targetSeatIndex) }
                     } else null,
-                    onKickFromRoom = if (canModerate && targetSeatIndex != null) {
-                        { reason -> viewModel.kickUser(targetSeatIndex, reason) }
+                    onKickFromRoom = if (canKick) {
+                        { reason -> viewModel.kickUser(userId, targetSeatIndex, reason) }
                     } else null,
                     onMoveSeat = if (canModerate && targetSeatIndex != null && emptySeats.isNotEmpty()
                         && targetSeatIndex != Constants.OWNER_SEAT_INDEX) {
@@ -613,6 +618,7 @@ fun RoomScreen(
                     onDismiss = { showUserCardForId = null }
                 )
             }
+        }
         }
     }
 }
