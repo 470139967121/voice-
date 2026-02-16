@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onValueDeleted } = require("firebase-functions/v2/database");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
@@ -177,3 +177,7 @@ exports.onPresenceRemoved = onValueDeleted(
     }
   }
 );
+
+// --- Admin API ---
+const adminApp = require("./admin");
+exports.adminApi = onRequest({ region: "asia-southeast1" }, adminApp);

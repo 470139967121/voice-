@@ -1,38 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(\"C:/Users/saste/AppData/Local/Programs/Android Studio/jbr/bin/java.exe\" -version)",
-      "Bash(JAVA_HOME=\"/c/Users/saste/AppData/Local/Programs/Android Studio/jbr\" ./gradlew.bat:*)",
       "WebSearch",
-      "Bash(.\\\\gradlew.bat assembleDebug:*)",
-      "Bash(cmd /c \"gradlew.bat assembleDebug\")",
-      "Bash(cmd.exe /c \"gradlew.bat assembleDebug 2>&1\")",
-      "Bash(C:/Users/saste/AndroidStudioProjects/ShyTalk/gradlew.bat assembleDebug)",
-      "Bash(xargs:*)",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:mvnrepository.com)",
-      "WebFetch(domain:central.sonatype.com)",
-      "Bash(C:/Users/saste/AndroidStudioProjects/ShyTalk/gradlew.bat:*)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nRework seat approval system and add invite-to-seat feature\n\nAttendees now always require approval to sit. The \"Lock Seating\" toggle\ncontrols whether hosts can self-seat and invite \\(OFF\\) or only the owner\ncan invite \\(ON\\). Owners/hosts can invite participants who accept via a\nbanner and are auto-seated in the first empty seat.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit:*)",
-      "Bash(cmd /c \"gradlew.bat assembleDebug 2>&1\")",
-      "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\saste\\\\AndroidStudioProjects\\\\ShyTalk\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\*.apk 2>&1\")",
-      "Bash(powershell.exe:*)",
-      "WebFetch(domain:developers.google.com)",
-      "Bash(find:*)",
-      "Bash(./gradlew assembleDebug:*)",
-      "Bash(git push:*)",
-      "Bash(git checkout:*)",
-      "Bash(git branch:*)",
-      "Bash(Restricted\" dialog with support contact info.\n\n- Add DeviceRepository interface and Firestore implementation\n- Provide @Named\\(\"deviceId\"\\) via ANDROID_ID in AppModule\n- Add device binding checks to AuthViewModel \\(checkAuthState + signInWithGoogle\\)\n- Add AlertDialog to GoogleSignInScreen for device-locked state\n- Always route through GoogleSignIn on app launch for binding verification\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(gh pr merge:*)",
-      "Bash(keytool:*)",
-      "Bash(./gradlew clean bundleRelease:*)",
-      "Bash(.gradlew assembleDebug:*)",
-      "Bash(Policy\" link on the user''s own profile screen.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(gh api:*)",
-      "WebFetch(domain:shydenmcm.github.io)"
+      "WebFetch",
+      "Bash"
     ]
   }
 }

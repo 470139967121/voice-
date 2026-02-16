@@ -55,6 +55,12 @@ data class RoomClosedSummary(
     val totalVisitors: Int
 )
 
+sealed class SeatActionStatus {
+    data object Idle : SeatActionStatus()
+    data class Loading(val message: String) : SeatActionStatus()
+    data class Success(val message: String) : SeatActionStatus()
+}
+
 data class RoomUiState(
     val room: ChatRoom? = null,
     val messages: List<Message> = emptyList(),
@@ -82,7 +88,8 @@ data class RoomUiState(
     val pendingRequestsForPanel: List<SeatRequest> = emptyList(),
     val kickedByName: String? = null,
     val kickReason: String? = null,
-    val disconnectedUserIds: Set<String> = emptySet()
+    val disconnectedUserIds: Set<String> = emptySet(),
+    val seatActionStatus: SeatActionStatus = SeatActionStatus.Idle
 )
 
 class RoomViewModel(
@@ -117,6 +124,7 @@ class RoomViewModel(
     private var lastParticipantIds: Set<String> = emptySet()
     private var lastOwnerAwayState: Pair<RoomState, Long?>? = null
     private var lastFilteredMessages: List<Message> = emptyList()
+    private var seatActionResetJob: Job? = null
 
     // Message flood protection
     private val recentMessageTimestamps = ArrayDeque<Long>()
@@ -606,52 +614,83 @@ class RoomViewModel(
         }
     }
 
-    fun takeSeat(seatIndex: Int) {
+    private fun withSeatAction(
+        loadingMessage: String,
+        successMessage: String,
+        action: suspend () -> Resource<Unit>
+    ) {
         viewModelScope.launch {
-            val userId = _uiState.value.currentUserId
-            val room = _uiState.value.room ?: return@launch
-            val role = _uiState.value.currentRole
-
-            // Owner is locked to seat 0
-            if (role == RoomRole.OWNER && seatIndex != Constants.OWNER_SEAT_INDEX) return@launch
-            // Non-owners cannot take the owner seat
-            if (seatIndex == Constants.OWNER_SEAT_INDEX && role != RoomRole.OWNER) return@launch
-
-            val seat = room.seats[seatIndex.toString()] ?: return@launch
-            if (seat.state == SeatState.OCCUPIED) return@launch
-
-            // When seats are locked, attendees cannot request
-            if (role == RoomRole.ATTENDEE && room.requireApproval) {
-                _uiState.update { it.copy(error = "Seats are locked. You cannot request to sit until the room owner allows it.") }
-                return@launch
+            _uiState.update { it.copy(seatActionStatus = SeatActionStatus.Loading(loadingMessage)) }
+            try {
+                when (val result = action()) {
+                    is Resource.Success -> {
+                        seatActionResetJob?.cancel()
+                        _uiState.update { it.copy(seatActionStatus = SeatActionStatus.Success(successMessage)) }
+                        seatActionResetJob = viewModelScope.launch {
+                            delay(1500L)
+                            _uiState.update { it.copy(seatActionStatus = SeatActionStatus.Idle) }
+                        }
+                    }
+                    is Resource.Error -> {
+                        _uiState.update { it.copy(seatActionStatus = SeatActionStatus.Idle, error = result.message) }
+                    }
+                    is Resource.Loading -> {}
+                }
+            } catch (e: Exception) {
+                logE(TAG, "Seat action failed", e)
+                _uiState.update { it.copy(seatActionStatus = SeatActionStatus.Idle, error = e.message ?: "Action failed") }
             }
+        }
+    }
 
-            // Attendees need approval via seat request
-            if (role == RoomRole.ATTENDEE) {
+    fun takeSeat(seatIndex: Int) {
+        val userId = _uiState.value.currentUserId
+        val room = _uiState.value.room ?: return
+        val role = _uiState.value.currentRole
+
+        // Owner is locked to seat 0
+        if (role == RoomRole.OWNER && seatIndex != Constants.OWNER_SEAT_INDEX) return
+        // Non-owners cannot take the owner seat
+        if (seatIndex == Constants.OWNER_SEAT_INDEX && role != RoomRole.OWNER) return
+
+        val seat = room.seats[seatIndex.toString()] ?: return
+        if (seat.state == SeatState.OCCUPIED) return
+
+        // When seats are locked, attendees cannot request
+        if (role == RoomRole.ATTENDEE && room.requireApproval) {
+            _uiState.update { it.copy(error = "Seats are locked. You cannot request to sit until the room owner allows it.") }
+            return
+        }
+
+        // Attendees need approval via seat request
+        if (role == RoomRole.ATTENDEE) {
+            withSeatAction("Sending request...", "Request sent") {
                 seatRequestRepository.createRequest(
                     roomId = roomId,
                     userId = userId,
                     userName = _uiState.value.currentUserName,
                     seatIndex = seatIndex
                 )
-                return@launch
             }
+            return
+        }
 
-            // Hosts can only self-seat when requireApproval is OFF
-            if (role == RoomRole.HOST && room.requireApproval) return@launch
+        // Hosts can only self-seat when requireApproval is OFF
+        if (role == RoomRole.HOST && room.requireApproval) return
 
+        withSeatAction("Taking seat...", "Seated") {
             roomRepository.takeSeat(roomId, seatIndex, userId)
         }
     }
 
     fun leaveSeat(seatIndex: Int) {
-        viewModelScope.launch {
-            val userId = _uiState.value.currentUserId
-            val room = _uiState.value.room ?: return@launch
+        val userId = _uiState.value.currentUserId
+        val room = _uiState.value.room ?: return
 
-            // Owner cannot leave seat 1
-            if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) return@launch
+        // Owner cannot leave seat 0
+        if (seatIndex == Constants.OWNER_SEAT_INDEX && room.ownerId == userId) return
 
+        withSeatAction("Leaving seat...", "Left seat") {
             roomRepository.leaveSeat(roomId, seatIndex)
         }
     }
@@ -678,15 +717,21 @@ class RoomViewModel(
     }
 
     fun toggleSelfMute(seatIndex: Int) {
-        viewModelScope.launch {
-            val room = _uiState.value.room ?: return@launch
-            val seat = room.seats[seatIndex.toString()] ?: return@launch
-            val userId = _uiState.value.currentUserId
-            if (seat.userId != userId) return@launch
+        val room = _uiState.value.room ?: return
+        val seat = room.seats[seatIndex.toString()] ?: return
+        val userId = _uiState.value.currentUserId
+        if (seat.userId != userId) return
 
-            val newMuteState = !seat.isMuted
-            roomRepository.toggleMute(roomId, seatIndex, newMuteState)
-            voiceService.setMicrophoneEnabled(!newMuteState)
+        val newMuteState = !seat.isMuted
+        val loadingMsg = if (newMuteState) "Muting..." else "Unmuting..."
+        val successMsg = if (newMuteState) "Muted" else "Unmuted"
+
+        withSeatAction(loadingMsg, successMsg) {
+            val result = roomRepository.toggleMute(roomId, seatIndex, newMuteState)
+            if (result is Resource.Success) {
+                voiceService.setMicrophoneEnabled(!newMuteState)
+            }
+            result
         }
     }
 
@@ -790,17 +835,17 @@ class RoomViewModel(
 
     fun acceptInvite() {
         dismissCurrentNotification()
-        viewModelScope.launch {
-            val userId = _uiState.value.currentUserId
-            val room = _uiState.value.room ?: return@launch
-            if (room.pendingInvites[userId] == null) return@launch
+        val userId = _uiState.value.currentUserId
+        val room = _uiState.value.room ?: return
+        if (room.pendingInvites[userId] == null) return
 
-            // Find first empty seat (skip owner seat)
-            val emptySeatIndex = (1 until Constants.MAX_SEATS).firstOrNull { i ->
-                val seat = room.seats[i.toString()]
-                seat != null && seat.state != SeatState.OCCUPIED
-            } ?: return@launch
+        // Find first empty seat (skip owner seat)
+        val emptySeatIndex = (1 until Constants.MAX_SEATS).firstOrNull { i ->
+            val seat = room.seats[i.toString()]
+            seat != null && seat.state != SeatState.OCCUPIED
+        } ?: return
 
+        withSeatAction("Accepting invite...", "Seated") {
             roomRepository.acceptInvite(roomId, userId, emptySeatIndex)
         }
     }
@@ -1211,25 +1256,25 @@ class RoomViewModel(
     }
 
     fun acceptApprovedRequest(request: SeatRequest) {
-        viewModelScope.launch {
-            val room = _uiState.value.room ?: return@launch
-            val userId = _uiState.value.currentUserId
-            val seat = room.seats[request.seatIndex.toString()]
-            val seatIndex = if (seat?.state == SeatState.OCCUPIED) {
-                // Original seat taken, find next available (skip owner seat)
-                (1 until Constants.MAX_SEATS).firstOrNull { i ->
-                    val s = room.seats[i.toString()]
-                    s != null && s.state != SeatState.OCCUPIED
-                }
-            } else {
-                request.seatIndex
+        val room = _uiState.value.room ?: return
+        val userId = _uiState.value.currentUserId
+        val seat = room.seats[request.seatIndex.toString()]
+        val seatIndex = if (seat?.state == SeatState.OCCUPIED) {
+            // Original seat taken, find next available (skip owner seat)
+            (1 until Constants.MAX_SEATS).firstOrNull { i ->
+                val s = room.seats[i.toString()]
+                s != null && s.state != SeatState.OCCUPIED
             }
-            if (seatIndex != null) {
+        } else {
+            request.seatIndex
+        }
+        dismissCurrentNotification()
+        if (seatIndex != null) {
+            withSeatAction("Taking seat...", "Seated") {
                 roomRepository.takeSeat(roomId, seatIndex, userId)
-            } else {
-                _uiState.update { it.copy(error = "No seats available") }
             }
-            dismissCurrentNotification()
+        } else {
+            _uiState.update { it.copy(error = "No seats available") }
         }
     }
 
@@ -1256,6 +1301,7 @@ class RoomViewModel(
         super.onCleared()
         ownerAwayCountdownJob?.cancel()
         roomExpiryCountdownJob?.cancel()
+        seatActionResetJob?.cancel()
         userCache.clear()
         // DO NOT call presenceService.removePresence() or voiceService.leaveChannel()
         // Voice/presence survive ViewModel destruction; explicit leaveRoom() handles cleanup.

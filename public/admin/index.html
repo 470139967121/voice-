@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShyTalk Admin</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242837;
+    --border: #2e3348;
+    --text: #e4e6f0;
+    --text2: #9498b0;
+    --accent: #6c5ce7;
+    --accent-hover: #7c6ff7;
+    --danger: #e74c3c;
+    --success: #2ecc71;
+    --warning: #f39c12;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* --- Screens --- */
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* --- Loading --- */
+  #loading-screen {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* --- Login --- */
+  #login-screen {
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    width: 360px;
+    max-width: 90vw;
+  }
+
+  .login-box h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 20px;
+  }
+
+  .login-box input {
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+
+  .login-box input:focus { border-color: var(--accent); }
+
+  .login-box button {
+    width: 100%;
+    padding: 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .login-box button:hover { background: var(--accent-hover); }
+
+  .login-error {
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: 8px;
+    text-align: center;
+    min-height: 18px;
+  }
+
+  /* --- Dashboard --- */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header h1 { font-size: 18px; }
+
+  .header button {
+    padding: 6px 16px;
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .header button:hover { color: var(--text); border-color: var(--text2); }
+
+  .main-content {
+    flex: 1;
+    padding: 24px;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* --- Search --- */
+  .search-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .search-bar input {
+    flex: 1;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  .search-bar input:focus { border-color: var(--accent); }
+
+  .search-bar button {
+    padding: 10px 20px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .search-bar button:hover { background: var(--accent-hover); }
+  .search-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* --- User form --- */
+  #user-form { display: none; }
+  #user-form.visible { display: block; }
+
+  .form-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .form-section h3 {
+    font-size: 14px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+  }
+
+  .field-group {
+    margin-bottom: 14px;
+  }
+
+  .field-group:last-child { margin-bottom: 0; }
+
+  .field-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .field-row input,
+  .field-row textarea,
+  .field-row select {
+    flex: 1;
+  }
+
+  .field-group input,
+  .field-group textarea,
+  .field-group select {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+  }
+
+  .field-group input:focus,
+  .field-group textarea:focus,
+  .field-group select:focus {
+    border-color: var(--accent);
+  }
+
+  .field-group textarea { resize: vertical; min-height: 60px; }
+
+  .field-group input.modified,
+  .field-group textarea.modified,
+  .field-group select.modified {
+    border-color: var(--warning);
+  }
+
+  .btn-clear {
+    padding: 8px 10px;
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .btn-clear:hover { border-color: var(--danger); color: var(--danger); }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .checkbox-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+  }
+
+  .checkbox-row label {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 0;
+    font-weight: normal;
+    cursor: pointer;
+  }
+
+  .uid-display {
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    font-size: 13px;
+    font-family: monospace;
+  }
+
+  /* --- Save bar --- */
+  .save-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  .save-bar button {
+    padding: 10px 28px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .save-bar button:hover { background: var(--accent-hover); }
+  .save-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .save-info {
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  /* --- Toast --- */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #fff;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 400px;
+  }
+  .toast.visible { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  /* --- Read-only badge --- */
+  .readonly-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text2);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+
+  /* --- List widget --- */
+  .list-widget {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+    overflow: hidden;
+  }
+
+  .list-widget.modified { border-color: var(--warning); }
+
+  .list-items {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+
+  .list-items:empty::after {
+    content: "No items";
+    display: block;
+    padding: 10px 12px;
+    color: var(--text2);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  .list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .list-item:hover { background: rgba(255,255,255,0.03); }
+
+  .list-item-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .list-item-remove {
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .list-item-remove:hover { color: var(--danger); background: rgba(231,76,60,0.1); }
+
+  .list-add {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-top: 1px solid var(--border);
+  }
+
+  .list-add input {
+    flex: 1;
+    padding: 6px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .list-add input:focus { border-color: var(--accent); }
+
+  .list-add button {
+    padding: 6px 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .list-add button:hover { background: var(--accent-hover); }
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading-screen" class="screen active">
+  <div class="spinner"></div>
+</div>
+
+<!-- Login Screen -->
+<div id="login-screen" class="screen">
+  <div class="login-box">
+    <h2>ShyTalk Admin</h2>
+    <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+    <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+    <button id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- Dashboard Screen -->
+<div id="dashboard-screen" class="screen">
+  <div class="header">
+    <h1>ShyTalk Admin</h1>
+    <button id="signout-btn">Sign Out</button>
+  </div>
+
+  <div class="main-content">
+    <div class="search-bar">
+      <input type="number" id="search-uid" placeholder="Enter ShyTalk User ID">
+      <button id="search-btn">Search</button>
+    </div>
+
+    <div id="user-form">
+      <!-- Identity -->
+      <div class="form-section">
+        <h3>Identity</h3>
+        <div class="field-group">
+          <label>UID <span class="readonly-badge">READ ONLY</span></label>
+          <div class="uid-display" id="field-uid"></div>
+        </div>
+        <div class="field-group">
+          <label>Display Name</label>
+          <input type="text" data-field="displayName">
+        </div>
+        <div class="field-group">
+          <label>Email</label>
+          <div class="field-row">
+            <input type="text" data-field="email" id="email-input">
+            <button class="btn-clear" id="email-toggle" type="button">Show</button>
+            <button class="btn-clear" data-clear="email">Clear</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Unique ID</label>
+          <input type="number" data-field="uniqueId">
+        </div>
+        <div class="field-group">
+          <label>User Type</label>
+          <select data-field="userType">
+            <option value="MEMBER">MEMBER</option>
+            <option value="SHYTALK_OFFICIAL">SHYTALK_OFFICIAL</option>
+            <option value="MC_SINGER">MC_SINGER</option>
+            <option value="MC_EVENT_HOST">MC_EVENT_HOST</option>
+            <option value="TEACHER">TEACHER</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Nationality</label>
+          <div class="field-row">
+            <select data-field="nationality" id="nationality-select"></select>
+            <button class="btn-clear" data-clear="nationality">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile -->
+      <div class="form-section">
+        <h3>Profile</h3>
+        <div class="field-group">
+          <label>Description</label>
+          <div class="field-row">
+            <textarea data-field="description" rows="3"></textarea>
+            <button class="btn-clear" data-clear="description">Clear</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Profile Photo URL</label>
+          <div class="field-row">
+            <input type="text" data-field="profilePhotoUrl">
+            <button class="btn-clear" data-clear="profilePhotoUrl">Clear</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Cover Photo URL</label>
+          <div class="field-row">
+            <input type="text" data-field="coverPhotoUrl">
+            <button class="btn-clear" data-clear="coverPhotoUrl">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Privacy -->
+      <div class="form-section">
+        <h3>Privacy</h3>
+        <div class="checkbox-row">
+          <input type="checkbox" id="cb-hideFollowing" data-field="hideFollowing">
+          <label for="cb-hideFollowing">Hide Following</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="cb-hideOnlineStatus" data-field="hideOnlineStatus">
+          <label for="cb-hideOnlineStatus">Hide Online Status</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="cb-hideAge" data-field="hideAge">
+          <label for="cb-hideAge">Hide Age</label>
+        </div>
+      </div>
+
+      <!-- Timestamps -->
+      <div class="form-section">
+        <h3>Timestamps</h3>
+        <div class="field-group">
+          <label>Date of Birth</label>
+          <div class="field-row">
+            <input type="datetime-local" data-field="dateOfBirth">
+            <button class="btn-clear" data-clear="dateOfBirth">Clear</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Created At <span class="readonly-badge">READ ONLY</span></label>
+          <div class="uid-display" id="field-createdAt"></div>
+        </div>
+        <div class="field-group">
+          <label>Last Seen At <span class="readonly-badge">READ ONLY</span></label>
+          <div class="uid-display" id="field-lastSeenAt"></div>
+        </div>
+      </div>
+
+
+      <!-- Lists -->
+      <div class="form-section">
+        <h3>Lists</h3>
+        <div class="field-group">
+          <label>Blocked Users</label>
+          <div class="list-widget" id="list-blockedUserIds">
+            <div class="list-items"></div>
+            <div class="list-add">
+              <input type="number" placeholder="ShyTalk User ID">
+              <button type="button">Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Following</label>
+          <div class="list-widget" id="list-followingIds">
+            <div class="list-items"></div>
+            <div class="list-add">
+              <input type="number" placeholder="ShyTalk User ID">
+              <button type="button">Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Followers</label>
+          <div class="list-widget" id="list-followerIds">
+            <div class="list-items"></div>
+            <div class="list-add">
+              <input type="number" placeholder="ShyTalk User ID">
+              <button type="button">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save -->
+      <div class="save-bar">
+        <button id="save-btn">Save Changes</button>
+        <span class="save-info" id="save-info"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // --- Firebase SDK (CDN) ---
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+    from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+  // --- Config ---
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDuJ6or7WuLTzby9g-MaOrqDYcYCu_qSAo",
+    authDomain: "shytalk-7ba69.firebaseapp.com",
+    projectId: "shytalk-7ba69"
+  };
+
+  // UPDATE THIS after first deploy with the actual Cloud Function URL
+  const API_BASE = "https://adminapi-4luvb5abra-as.a.run.app";
+
+  const app = initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(app);
+
+  // --- DOM refs ---
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  const screens = { loading: $("#loading-screen"), login: $("#login-screen"), dashboard: $("#dashboard-screen") };
+  const loginEmail = $("#login-email");
+  const loginPassword = $("#login-password");
+  const loginBtn = $("#login-btn");
+  const loginError = $("#login-error");
+  const signoutBtn = $("#signout-btn");
+  const searchUid = $("#search-uid");
+  const searchBtn = $("#search-btn");
+  const userForm = $("#user-form");
+  const fieldUid = $("#field-uid");
+  const saveBtn = $("#save-btn");
+  const saveInfo = $("#save-info");
+  const toast = $("#toast");
+
+  // --- State ---
+  let currentUser = null;    // Firebase auth user
+  let loadedData = {};       // Original user data from API (list fields stored as uniqueIds for display)
+  let rawListData = {};      // Original Firebase UIDs for list fields (for diffing on save)
+  let currentUid = null;     // UID of the user being edited
+  let listWidgetData = {};   // Current items for each list widget: { field: ["123 (Name)", ...] }
+  let emailRevealed = false; // Whether email field is unmasked
+
+  // --- Screens ---
+  function showScreen(name) {
+    Object.values(screens).forEach((s) => s.classList.remove("active"));
+    screens[name].classList.add("active");
+  }
+
+  // --- Toast ---
+  let toastTimer;
+  function showToast(msg, type = "success") {
+    clearTimeout(toastTimer);
+    toast.textContent = msg;
+    toast.className = `toast ${type} visible`;
+    toastTimer = setTimeout(() => toast.classList.remove("visible"), 4000);
+  }
+
+  // --- Auth ---
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      // Check admin claim (client-side UX only)
+      const tokenResult = await user.getIdTokenResult();
+      if (tokenResult.claims.admin !== true) {
+        showToast("This account does not have admin privileges", "error");
+        await signOut(auth);
+        showScreen("login");
+        return;
+      }
+      currentUser = user;
+      showScreen("dashboard");
+    } else {
+      currentUser = null;
+      showScreen("login");
+    }
+  });
+
+  loginBtn.addEventListener("click", async () => {
+    loginError.textContent = "";
+    const email = loginEmail.value.trim();
+    const pass = loginPassword.value;
+    if (!email || !pass) { loginError.textContent = "Enter email and password"; return; }
+
+    loginBtn.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (err) {
+      loginError.textContent = err.message;
+    }
+    loginBtn.disabled = false;
+  });
+
+  // Allow Enter to submit login
+  loginPassword.addEventListener("keydown", (e) => { if (e.key === "Enter") loginBtn.click(); });
+  loginEmail.addEventListener("keydown", (e) => { if (e.key === "Enter") loginPassword.focus(); });
+
+  signoutBtn.addEventListener("click", async () => {
+    await signOut(auth);
+    userForm.classList.remove("visible");
+    searchUid.value = "";
+  });
+
+  // --- API helper ---
+  async function apiCall(method, path, body) {
+    const token = await currentUser.getIdToken();
+    const opts = {
+      method,
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${API_BASE}${path}`, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+
+  // --- Nationality dropdown ---
+  const COUNTRY_CODES = [
+    "AF","AL","DZ","AD","AO","AG","AR","AM","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BT","BO","BA","BW","BR","BN","BG","BF","BI","CV","KH","CM","CA","CF","TD","CL","CN","CO","KM","CG","CD","CR","CI","HR","CU","CY","CZ","DK","DJ","DM","DO","EC","EG","SV","GQ","ER","EE","SZ","ET","FJ","FI","FR","GA","GM","GE","DE","GH","GR","GD","GT","GN","GW","GY","HT","HN","HU","IS","IN","ID","IR","IQ","IE","IL","IT","JM","JP","JO","KZ","KE","KI","KP","KR","KW","KG","LA","LV","LB","LS","LR","LY","LI","LT","LU","MG","MW","MY","MV","ML","MT","MH","MR","MU","MX","FM","MD","MC","MN","ME","MA","MZ","MM","NA","NR","NP","NL","NZ","NI","NE","NG","MK","NO","OM","PK","PW","PA","PG","PY","PE","PH","PL","PT","QA","RO","RU","RW","KN","LC","VC","WS","SM","ST","SA","SN","RS","SC","SL","SG","SK","SI","SB","SO","ZA","SS","ES","LK","SD","SR","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TO","TT","TN","TR","TM","TV","UG","UA","AE","GB","US","UY","UZ","VU","VE","VN","YE","ZM","ZW"
+  ];
+  function codeToFlag(code) {
+    return String.fromCodePoint(...[...code].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  }
+  const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
+  const nationalitySelect = $("#nationality-select");
+  // "None" option
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = "\u2014 None \u2014";
+  nationalitySelect.appendChild(noneOpt);
+  for (const code of COUNTRY_CODES) {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = `${codeToFlag(code)} \u2014 ${countryNames.of(code)}`;
+    nationalitySelect.appendChild(opt);
+  }
+
+  // --- Email toggle ---
+  const emailInput = $("#email-input");
+  const emailToggle = $("#email-toggle");
+  let realEmail = "";
+
+  function maskEmail(email) {
+    if (!email) return "";
+    const [local, domain] = email.split("@");
+    if (!domain) return email;
+    const visible = local.slice(0, 2);
+    return `${visible}${"*".repeat(Math.max(local.length - 2, 0))}@${domain}`;
+  }
+
+  emailToggle.addEventListener("click", () => {
+    emailRevealed = !emailRevealed;
+    emailToggle.textContent = emailRevealed ? "Hide" : "Show";
+    emailInput.value = emailRevealed ? realEmail : maskEmail(realEmail);
+    emailInput.readOnly = !emailRevealed;
+  });
+
+  emailInput.addEventListener("input", () => {
+    if (emailRevealed) {
+      realEmail = emailInput.value;
+      updateFieldHighlight("email");
+      updateSaveInfo();
+    }
+  });
+
+  // --- List widget helpers ---
+  function getListWidget(field) {
+    const map = { blockedUserIds: "list-blockedUserIds", followingIds: "list-followingIds", followerIds: "list-followerIds" };
+    return $(`#${map[field]}`);
+  }
+
+  function renderListWidget(field) {
+    const widget = getListWidget(field);
+    if (!widget) return;
+    const container = widget.querySelector(".list-items");
+    container.innerHTML = "";
+    const items = listWidgetData[field] || [];
+    for (let i = 0; i < items.length; i++) {
+      const div = document.createElement("div");
+      div.className = "list-item";
+      const span = document.createElement("span");
+      span.className = "list-item-text";
+      span.textContent = items[i];
+      div.appendChild(span);
+      const btn = document.createElement("button");
+      btn.className = "list-item-remove";
+      btn.textContent = "\u00d7";
+      btn.addEventListener("click", () => {
+        listWidgetData[field].splice(i, 1);
+        renderListWidget(field);
+        updateListHighlight(field);
+        updateSaveInfo();
+      });
+      div.appendChild(btn);
+      container.appendChild(div);
+    }
+    updateListHighlight(field);
+  }
+
+  function updateListHighlight(field) {
+    const widget = getListWidget(field);
+    if (!widget) return;
+    const current = (listWidgetData[field] || []).map((s) => s.replace(/\s*\(.*\)$/, ""));
+    const original = Array.isArray(loadedData[field])
+      ? loadedData[field].map((s) => String(s).replace(/\s*\(.*\)$/, ""))
+      : [];
+    const changed = !valuesEqual(current, original);
+    widget.classList.toggle("modified", changed);
+  }
+
+  // Wire up list widget add buttons
+  for (const field of ["blockedUserIds", "followingIds", "followerIds"]) {
+    const widget = getListWidget(field);
+    if (!widget) continue;
+    const addInput = widget.querySelector(".list-add input");
+    const addBtn = widget.querySelector(".list-add button");
+
+    const doAdd = () => {
+      const val = addInput.value.trim();
+      if (!val) return;
+      if (!listWidgetData[field]) listWidgetData[field] = [];
+      // Prevent duplicates (compare numeric ID part)
+      const exists = listWidgetData[field].some((item) => item.replace(/\s*\(.*\)$/, "") === val);
+      if (exists) { showToast("Already in list", "error"); return; }
+      listWidgetData[field].push(val);
+      addInput.value = "";
+      renderListWidget(field);
+      updateSaveInfo();
+    };
+
+    addBtn.addEventListener("click", doAdd);
+    addInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doAdd(); });
+  }
+
+  // --- Field helpers ---
+  const ARRAY_FIELDS = ["blockedUserIds", "followingIds", "followerIds"];
+  const BOOLEAN_FIELDS = ["hideFollowing", "hideOnlineStatus", "hideAge"];
+  const TIMESTAMP_FIELDS = ["dateOfBirth", "createdAt", "lastSeenAt"];
+  const NULLABLE_FIELDS = [
+    "avatarUrl", "profilePhotoUrl", "coverPhotoUrl", "description",
+    "nationality", "email", "dateOfBirth"
+  ];
+
+  function isoToLocal(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    // Format as YYYY-MM-DDThh:mm for datetime-local input
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function getFieldEl(name) {
+    return document.querySelector(`[data-field="${name}"]`);
+  }
+
+  async function populateForm(data) {
+    currentUid = data.uid;
+    fieldUid.textContent = data.uid || "";
+
+    // Collect all Firebase UIDs from list fields to resolve in one batch
+    const allUids = new Set();
+    for (const field of ARRAY_FIELDS) {
+      const arr = data[field];
+      if (Array.isArray(arr)) arr.forEach((uid) => allUids.add(uid));
+    }
+
+    // Resolve Firebase UIDs -> ShyTalk uniqueIds + displayNames
+    let uidToInfo = {};
+    if (allUids.size > 0) {
+      try {
+        const result = await apiCall("POST", "/api/resolve/uids-to-uniqueIds", { uids: [...allUids] });
+        uidToInfo = result.mapping;
+      } catch (err) {
+        console.error("Failed to resolve UIDs:", err);
+      }
+    }
+
+    // Save raw Firebase UID arrays for save-time conversion
+    rawListData = {};
+    for (const field of ARRAY_FIELDS) {
+      rawListData[field] = Array.isArray(data[field]) ? [...data[field]] : [];
+    }
+
+    // Replace Firebase UIDs with "uniqueId (displayName)" for display
+    for (const field of ARRAY_FIELDS) {
+      if (Array.isArray(data[field])) {
+        data[field] = data[field].map((uid) => {
+          const info = uidToInfo[uid];
+          if (info && info.uniqueId != null) {
+            const name = info.displayName ? ` (${info.displayName})` : "";
+            return `${info.uniqueId}${name}`;
+          }
+          return uid;
+        });
+      }
+    }
+
+    loadedData = { ...data };
+
+    // Populate list widgets
+    for (const field of ARRAY_FIELDS) {
+      listWidgetData[field] = Array.isArray(data[field]) ? [...data[field]] : [];
+      renderListWidget(field);
+    }
+
+    // Populate regular fields
+    for (const el of $$("[data-field]")) {
+      const field = el.dataset.field;
+      const val = data[field];
+
+      el.classList.remove("modified");
+
+      if (ARRAY_FIELDS.includes(field)) continue; // handled by list widgets
+      if (BOOLEAN_FIELDS.includes(field)) {
+        el.checked = val === true;
+      } else if (TIMESTAMP_FIELDS.includes(field)) {
+        el.value = isoToLocal(val);
+      } else if (field === "uniqueId") {
+        el.value = val ?? 0;
+      } else if (field === "email") {
+        realEmail = val ?? "";
+        emailRevealed = false;
+        emailToggle.textContent = "Show";
+        emailInput.value = maskEmail(realEmail);
+        emailInput.readOnly = true;
+      } else {
+        el.value = val ?? "";
+      }
+    }
+
+    // Read-only timestamps
+    $("#field-createdAt").textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : "—";
+    $("#field-lastSeenAt").textContent = data.lastSeenAt ? new Date(data.lastSeenAt).toLocaleString() : "—";
+
+    saveInfo.textContent = "";
+    userForm.classList.add("visible");
+  }
+
+  // --- Track modifications ---
+  function getFieldValue(field) {
+    // List fields are stored in listWidgetData, not in DOM elements
+    if (ARRAY_FIELDS.includes(field)) {
+      const items = listWidgetData[field] || [];
+      return items.map((s) => s.replace(/\s*\(.*\)$/, "").trim()).filter(Boolean);
+    }
+
+    if (field === "email") return realEmail || null;
+
+    const el = getFieldEl(field);
+    if (!el) return undefined;
+
+    if (BOOLEAN_FIELDS.includes(field)) return el.checked;
+    if (TIMESTAMP_FIELDS.includes(field)) {
+      if (!el.value) return null;
+      return new Date(el.value).toISOString();
+    }
+    if (field === "uniqueId") {
+      const n = Number(el.value);
+      return Number.isFinite(n) ? n : 0;
+    }
+    return el.value || null;
+  }
+
+  function getOriginalValue(field) {
+    const val = loadedData[field];
+    if (BOOLEAN_FIELDS.includes(field)) return val === true;
+    if (ARRAY_FIELDS.includes(field)) {
+      return Array.isArray(val) ? val.map((s) => s.replace(/\s*\(.*\)$/, "")) : [];
+    }
+    if (TIMESTAMP_FIELDS.includes(field)) return val || null;
+    if (field === "uniqueId") return val ?? 0;
+    return val ?? null;
+  }
+
+  function valuesEqual(a, b) {
+    if (Array.isArray(a) && Array.isArray(b)) {
+      return a.length === b.length && a.every((v, i) => v === b[i]);
+    }
+    return a === b;
+  }
+
+  function getModifiedFields() {
+    const modified = {};
+
+    // Check regular form fields
+    for (const el of $$("[data-field]")) {
+      const field = el.dataset.field;
+      if (ARRAY_FIELDS.includes(field)) continue; // handled separately
+      const current = getFieldValue(field);
+      const original = getOriginalValue(field);
+
+      if (TIMESTAMP_FIELDS.includes(field)) {
+        const truncate = (iso) => iso ? iso.slice(0, 16) : null;
+        if (truncate(current) !== truncate(original)) modified[field] = current;
+      } else if (!valuesEqual(current, original)) {
+        modified[field] = current;
+      }
+    }
+
+    // Check list widget fields
+    for (const field of ARRAY_FIELDS) {
+      const current = getFieldValue(field);
+      const original = getOriginalValue(field);
+      if (!valuesEqual(current, original)) {
+        modified[field] = current;
+      }
+    }
+
+    return modified;
+  }
+
+  // Mark modified fields visually
+  document.addEventListener("input", (e) => {
+    const el = e.target;
+    const field = el.dataset?.field;
+    if (!field) return;
+    updateFieldHighlight(field);
+    updateSaveInfo();
+  });
+
+  document.addEventListener("change", (e) => {
+    const el = e.target;
+    const field = el.dataset?.field;
+    if (!field) return;
+    updateFieldHighlight(field);
+    updateSaveInfo();
+  });
+
+  function updateFieldHighlight(field) {
+    if (ARRAY_FIELDS.includes(field)) {
+      updateListHighlight(field);
+      return;
+    }
+
+    const el = getFieldEl(field);
+    if (!el) return;
+    const current = getFieldValue(field);
+    const original = getOriginalValue(field);
+
+    if (TIMESTAMP_FIELDS.includes(field)) {
+      const truncate = (iso) => iso ? iso.slice(0, 16) : null;
+      el.classList.toggle("modified", truncate(current) !== truncate(original));
+    } else {
+      el.classList.toggle("modified", !valuesEqual(current, original));
+    }
+  }
+
+  function updateSaveInfo() {
+    const count = Object.keys(getModifiedFields()).length;
+    saveInfo.textContent = count > 0 ? `${count} field${count > 1 ? "s" : ""} modified` : "";
+  }
+
+  // --- Clear buttons ---
+  for (const btn of $$("[data-clear]")) {
+    btn.addEventListener("click", () => {
+      const field = btn.dataset.clear;
+      if (field === "email") {
+        realEmail = "";
+        emailInput.value = "";
+        emailRevealed = true;
+        emailToggle.textContent = "Hide";
+        emailInput.readOnly = false;
+        updateFieldHighlight("email");
+        updateSaveInfo();
+        return;
+      }
+      const el = getFieldEl(field);
+      if (!el) return;
+      el.value = "";
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+
+  // --- Search ---
+  searchBtn.addEventListener("click", doSearch);
+  searchUid.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+
+  async function doSearch() {
+    const query = searchUid.value.trim();
+    if (!query) return;
+
+    searchBtn.disabled = true;
+    searchBtn.textContent = "Searching...";
+    userForm.classList.remove("visible");
+
+    try {
+      const data = await apiCall("GET", `/api/search/uniqueId/${query}`);
+      populateForm(data);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+
+    searchBtn.disabled = false;
+    searchBtn.textContent = "Search";
+  }
+
+  // --- Save ---
+  saveBtn.addEventListener("click", async () => {
+    const modified = getModifiedFields();
+    const count = Object.keys(modified).length;
+
+    if (count === 0) {
+      showToast("No changes to save", "error");
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+
+    try {
+      // Convert ShyTalk uniqueIds back to Firebase UIDs for list fields
+      const listFieldsToResolve = ARRAY_FIELDS.filter((f) => f in modified);
+      if (listFieldsToResolve.length > 0) {
+        const allUniqueIds = new Set();
+        for (const field of listFieldsToResolve) {
+          modified[field].forEach((v) => {
+            const n = Number(v);
+            if (Number.isFinite(n)) allUniqueIds.add(n);
+          });
+        }
+
+        let uniqueIdToUid = {};
+        if (allUniqueIds.size > 0) {
+          const result = await apiCall("POST", "/api/resolve/uniqueIds-to-uids", { uniqueIds: [...allUniqueIds] });
+          uniqueIdToUid = result.mapping;
+        }
+
+        for (const field of listFieldsToResolve) {
+          modified[field] = modified[field].map((v) => {
+            const n = Number(v);
+            const resolved = Number.isFinite(n) ? uniqueIdToUid[n] : undefined;
+            if (!resolved) throw new Error(`Could not resolve ShyTalk ID "${v}" to a user`);
+            return resolved;
+          });
+        }
+      }
+
+      const result = await apiCall("PATCH", `/api/user/${currentUid}`, modified);
+      showToast(`Saved ${result.updatedFields.length} field(s)`);
+
+      // Update local state so highlights reset
+      for (const [k, v] of Object.entries(modified)) {
+        if (ARRAY_FIELDS.includes(k)) {
+          // Store display versions (with names) for comparison
+          loadedData[k] = [...(listWidgetData[k] || [])];
+        } else {
+          loadedData[k] = getFieldValue(k);
+        }
+      }
+
+      // Reset highlights
+      for (const el of $$("[data-field]")) {
+        el.classList.remove("modified");
+      }
+      for (const field of ARRAY_FIELDS) {
+        updateListHighlight(field);
+      }
+      updateSaveInfo();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Changes";
+  });
+</script>
+</body>
+</html>
