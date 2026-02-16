@@ -208,20 +208,6 @@ fun MessageBubble(
                         )
                     }
                 }
-
-                if (canInvite) {
-                    IconButton(
-                        onClick = onInvite,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Mic,
-                            contentDescription = "Invite to mic",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
             }
         }
     }

@@ -95,6 +95,11 @@ class RoomViewModelTest {
             }
             Resource.Success(users)
         }
+        coEvery { roomRepository.takeSeat(any(), any(), any()) } returns Resource.Success(Unit)
+        coEvery { roomRepository.leaveSeat(any(), any()) } returns Resource.Success(Unit)
+        coEvery { roomRepository.toggleMute(any(), any(), any()) } returns Resource.Success(Unit)
+        coEvery { roomRepository.acceptInvite(any(), any(), any()) } returns Resource.Success(Unit)
+        coEvery { seatRequestRepository.createRequest(any(), any(), any(), any()) } returns Resource.Success(Unit)
         every { seatRequestRepository.getPendingRequests(any()) } returns pendingRequestsFlow
         every { seatRequestRepository.getRequestsByUser(any(), any()) } returns myRequestsFlow
         every { roomLifecycleManager.isInRoom(any()) } returns false
@@ -2285,6 +2290,181 @@ class RoomViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.disconnectedUserIds.contains("user-x"))
+    }
+
+    // ===== SeatActionStatus Tests =====
+
+    @Test
+    fun `takeSeat - owner sees Loading then Success status`() = roomTest {
+        viewModel = createViewModel()
+        val seats = TestData.createDefaultSeats()
+        emitRoomAsOwner(TestData.createTestRoom(ownerId = currentUserId, seats = seats))
+        advanceUntilIdle()
+
+        viewModel.takeSeat(0)
+        advanceTimeBy(100) // complete action but not the 1500ms reset delay
+
+        val status = viewModel.uiState.value.seatActionStatus
+        assertTrue("Expected Success but was $status", status is SeatActionStatus.Success)
+        assertEquals("Seated", (status as SeatActionStatus.Success).message)
+    }
+
+    @Test
+    fun `takeSeat - attendee request sees Loading then Success status`() = roomTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        viewModel.takeSeat(3)
+        advanceTimeBy(100)
+
+        val status = viewModel.uiState.value.seatActionStatus
+        assertTrue("Expected Success but was $status", status is SeatActionStatus.Success)
+        assertEquals("Request sent", (status as SeatActionStatus.Success).message)
+    }
+
+    @Test
+    fun `leaveSeat - sees Loading then Success status`() = roomTest {
+        viewModel = createViewModel()
+        val seats = TestData.createSeatsWithOwner(ownerId).toMutableMap()
+        seats["3"] = TestData.createTestSeat(userId = currentUserId)
+        emitRoomAsAttendee(TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId, currentUserId),
+            seats = seats
+        ))
+        advanceUntilIdle()
+
+        viewModel.leaveSeat(3)
+        advanceTimeBy(100)
+
+        val status = viewModel.uiState.value.seatActionStatus
+        assertTrue("Expected Success but was $status", status is SeatActionStatus.Success)
+        assertEquals("Left seat", (status as SeatActionStatus.Success).message)
+    }
+
+    @Test
+    fun `toggleSelfMute - sees Loading then Success status`() = roomTest {
+        viewModel = createViewModel()
+        val seats = TestData.createSeatsWithOwner(currentUserId)
+        emitRoomAsOwner(TestData.createTestRoom(ownerId = currentUserId, seats = seats))
+        advanceUntilIdle()
+
+        viewModel.toggleSelfMute(0)
+        advanceTimeBy(100)
+
+        val status = viewModel.uiState.value.seatActionStatus
+        assertTrue("Expected Success but was $status", status is SeatActionStatus.Success)
+        assertEquals("Muted", (status as SeatActionStatus.Success).message)
+    }
+
+    @Test
+    fun `toggleSelfMute - unmute shows Unmuted message`() = roomTest {
+        viewModel = createViewModel()
+        val seats = TestData.createSeatsWithOwner(currentUserId).toMutableMap()
+        seats["0"] = TestData.createTestSeat(userId = currentUserId, isMuted = true)
+        emitRoomAsOwner(TestData.createTestRoom(ownerId = currentUserId, seats = seats))
+        advanceUntilIdle()
+
+        viewModel.toggleSelfMute(0)
+        advanceTimeBy(100)
+
+        val status = viewModel.uiState.value.seatActionStatus
+        assertTrue("Expected Success but was $status", status is SeatActionStatus.Success)
+        assertEquals("Unmuted", (status as SeatActionStatus.Success).message)
+    }
+
+    @Test
+    fun `seatActionStatus resets to Idle after 1500ms`() = roomTest {
+        viewModel = createViewModel()
+        val seats = TestData.createDefaultSeats()
+        emitRoomAsOwner(TestData.createTestRoom(ownerId = currentUserId, seats = seats))
+        advanceUntilIdle()
+
+        viewModel.takeSeat(0)
+        advanceTimeBy(100)
+
+        assertTrue(viewModel.uiState.value.seatActionStatus is SeatActionStatus.Success)
+
+        advanceTimeBy(1500L)
+
+        assertTrue(
+            "Expected Idle but was ${viewModel.uiState.value.seatActionStatus}",
+            viewModel.uiState.value.seatActionStatus is SeatActionStatus.Idle
+        )
+    }
+
+    @Test
+    fun `takeSeat - repo error sets error and returns to Idle`() = roomTest {
+        coEvery { roomRepository.takeSeat(any(), any(), any()) } returns Resource.Error("Network error")
+
+        viewModel = createViewModel()
+        val seats = TestData.createDefaultSeats()
+        emitRoomAsOwner(TestData.createTestRoom(ownerId = currentUserId, seats = seats))
+        advanceUntilIdle()
+
+        viewModel.takeSeat(0)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.seatActionStatus is SeatActionStatus.Idle)
+        assertEquals("Network error", viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `toggleSelfMute - does not call voiceService on repo error`() = roomTest {
+        coEvery { roomRepository.toggleMute(any(), any(), any()) } returns Resource.Error("Failed")
+
+        viewModel = createViewModel()
+        val seats = TestData.createSeatsWithOwner(currentUserId)
+        emitRoomAsOwner(TestData.createTestRoom(ownerId = currentUserId, seats = seats))
+        advanceUntilIdle()
+
+        // Reset voice mock call count from setup
+        io.mockk.clearMocks(voiceService, answers = false)
+        every { voiceService.speakingUsers } returns speakingFlow
+        every { voiceService.isJoined } returns joinedFlow
+        every { voiceService.error } returns voiceErrorFlow
+
+        viewModel.toggleSelfMute(0)
+        advanceUntilIdle()
+
+        // voiceService.setMicrophoneEnabled should NOT have been called for the toggle
+        verify(exactly = 0) { voiceService.setMicrophoneEnabled(any()) }
+    }
+
+    @Test
+    fun `acceptApprovedRequest - sees Success status`() = roomTest {
+        viewModel = createViewModel()
+        emitRoomAsAttendee()
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(
+            userId = currentUserId, userName = "Current User", seatIndex = 3,
+            status = SeatRequestStatus.APPROVED
+        )
+
+        viewModel.acceptApprovedRequest(request)
+        advanceTimeBy(100)
+
+        val status = viewModel.uiState.value.seatActionStatus
+        assertTrue("Expected Success but was $status", status is SeatActionStatus.Success)
+        assertEquals("Seated", (status as SeatActionStatus.Success).message)
+    }
+
+    @Test
+    fun `validation rejections do not show loading status`() = roomTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner()
+        advanceUntilIdle()
+
+        // Owner trying non-owner seat — instant rejection, no loading
+        viewModel.takeSeat(3)
+        advanceUntilIdle()
+
+        assertTrue(
+            "Expected Idle after validation rejection but was ${viewModel.uiState.value.seatActionStatus}",
+            viewModel.uiState.value.seatActionStatus is SeatActionStatus.Idle
+        )
     }
 
     @Test

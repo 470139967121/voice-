@@ -23,6 +23,7 @@ data class User(
     val email: String? = null,
     val currentRoomId: String? = null,
     val createdAt: Long = currentTimeMillis(),
+    val userType: UserType = UserType.MEMBER,
     val lastSeenAt: Long = currentTimeMillis()
 ) {
     /** Resolved photo URL: prefers profilePhotoUrl, falls back to avatarUrl. */
@@ -46,6 +47,7 @@ data class User(
         "hideAge" to hideAge,
         "email" to email,
         "currentRoomId" to currentRoomId,
+        "userType" to userType.name,
         "createdAt" to millisToTimestamp(createdAt),
         "lastSeenAt" to millisToTimestamp(lastSeenAt)
     )
@@ -72,6 +74,9 @@ data class User(
             hideAge = map["hideAge"] as? Boolean ?: false,
             email = map["email"] as? String,
             currentRoomId = map["currentRoomId"] as? String,
+            userType = (map["userType"] as? String)?.let {
+                try { UserType.valueOf(it) } catch (_: Exception) { UserType.MEMBER }
+            } ?: UserType.MEMBER,
             createdAt = timestampToMillis(map["createdAt"]),
             lastSeenAt = timestampToMillis(map["lastSeenAt"])
         )

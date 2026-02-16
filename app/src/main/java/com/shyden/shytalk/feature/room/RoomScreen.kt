@@ -69,6 +69,7 @@ import com.shyden.shytalk.feature.room.components.ParticipantInfo
 import com.shyden.shytalk.feature.room.components.ParticipantListPanel
 import com.shyden.shytalk.feature.room.components.RoomClosedSummaryPanel
 import com.shyden.shytalk.feature.room.components.RoomNotificationOverlay
+import com.shyden.shytalk.feature.room.components.SeatActionFeedback
 import com.shyden.shytalk.feature.room.components.RoomToolbar
 import com.shyden.shytalk.feature.room.components.SeatGrid
 import com.shyden.shytalk.feature.room.components.UserCardPopup
@@ -169,6 +170,17 @@ fun RoomScreen(
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
         }
+    }
+
+    LaunchedEffect(uiState.seatActionStatus) {
+        val status = uiState.seatActionStatus
+        if (status is SeatActionStatus.Success) {
+            snackbarHostState.showSnackbar(status.message)
+        }
+    }
+
+    if (uiState.seatActionStatus is SeatActionStatus.Loading) {
+        SeatActionFeedback(message = (uiState.seatActionStatus as SeatActionStatus.Loading).message)
     }
 
     // Block warning dialogs
