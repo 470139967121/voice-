@@ -22,6 +22,19 @@ fun isAtLeast13(dateOfBirthMillis: Long): Boolean {
     return calculateAge(dateOfBirthMillis) >= 13
 }
 
+fun formatRelativeTime(timestampMs: Long): String {
+    val diffMs = currentTimeMillis() - timestampMs
+    val minutes = diffMs / 60_000
+    val hours = minutes / 60
+    val days = hours / 24
+    return when {
+        minutes < 1 -> "just now"
+        minutes < 60 -> "$minutes min${if (minutes != 1L) "s" else ""} ago"
+        hours < 24 -> "$hours hour${if (hours != 1L) "s" else ""} ago"
+        else -> "$days day${if (days != 1L) "s" else ""} ago"
+    }
+}
+
 fun formatDateForDisplay(millis: Long): String {
     val tz = TimeZone.currentSystemDefault()
     val date = Instant.fromEpochMilliseconds(millis).toLocalDateTime(tz).date

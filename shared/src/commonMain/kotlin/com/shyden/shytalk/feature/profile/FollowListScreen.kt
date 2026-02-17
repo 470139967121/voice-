@@ -54,6 +54,7 @@ import androidx.compose.runtime.collectAsState
 import coil3.compose.AsyncImage
 import com.shyden.shytalk.core.model.ProfileVisitor
 import com.shyden.shytalk.core.model.User
+import com.shyden.shytalk.core.util.formatRelativeTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -384,8 +385,11 @@ private fun StalkerUserRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            val agoText = remember(visitor.lastVisitedAt) {
+                formatRelativeTime(visitor.lastVisitedAt)
+            }
             Text(
-                text = "Visited ${visitor.visitCount} time${if (visitor.visitCount != 1L) "s" else ""} in the last 3 months",
+                text = "Stalked you $agoText, ${visitor.visitCount} time${if (visitor.visitCount != 1L) "s" else ""} in the last 3 months",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

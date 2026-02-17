@@ -76,4 +76,48 @@ class DateUtilsTest {
         }
         assertFalse(isAtLeast13(cal.timeInMillis))
     }
+
+    // ===== formatRelativeTime =====
+
+    @Test
+    fun `formatRelativeTime - just now for less than 1 minute ago`() {
+        val ts = System.currentTimeMillis() - 30_000L // 30 seconds ago
+        assertEquals("just now", formatRelativeTime(ts))
+    }
+
+    @Test
+    fun `formatRelativeTime - singular minute`() {
+        val ts = System.currentTimeMillis() - 90_000L // 1.5 minutes ago
+        assertEquals("1 min ago", formatRelativeTime(ts))
+    }
+
+    @Test
+    fun `formatRelativeTime - plural minutes`() {
+        val ts = System.currentTimeMillis() - 5 * 60_000L // 5 minutes ago
+        assertEquals("5 mins ago", formatRelativeTime(ts))
+    }
+
+    @Test
+    fun `formatRelativeTime - singular hour`() {
+        val ts = System.currentTimeMillis() - 90 * 60_000L // 1.5 hours ago
+        assertEquals("1 hour ago", formatRelativeTime(ts))
+    }
+
+    @Test
+    fun `formatRelativeTime - plural hours`() {
+        val ts = System.currentTimeMillis() - 5 * 3600_000L // 5 hours ago
+        assertEquals("5 hours ago", formatRelativeTime(ts))
+    }
+
+    @Test
+    fun `formatRelativeTime - singular day`() {
+        val ts = System.currentTimeMillis() - 36 * 3600_000L // 1.5 days ago
+        assertEquals("1 day ago", formatRelativeTime(ts))
+    }
+
+    @Test
+    fun `formatRelativeTime - plural days`() {
+        val ts = System.currentTimeMillis() - 3 * 24 * 3600_000L // 3 days ago
+        assertEquals("3 days ago", formatRelativeTime(ts))
+    }
 }
