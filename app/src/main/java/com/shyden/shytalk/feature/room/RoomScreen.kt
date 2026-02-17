@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -44,21 +43,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import com.shyden.shytalk.R
+import com.shyden.shytalk.ui.components.CnyRoomBackground
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material3.Icon
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.RoomState
@@ -282,17 +275,10 @@ fun RoomScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Animated GIF background (full screen, behind toolbar)
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(R.raw.room_background)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        // Animated CNY Canvas background
+        CnyRoomBackground(modifier = Modifier.fillMaxSize())
 
-        // Semi-transparent scrim so text remains readable over the GIF
+        // Semi-transparent scrim so text remains readable
         Box(
             modifier = Modifier
                 .fillMaxSize()

@@ -74,6 +74,8 @@ import coil3.compose.AsyncImage
 import com.shyden.shytalk.core.util.calculateAge
 import com.shyden.shytalk.core.util.countryNameForCode
 import com.shyden.shytalk.core.util.flagEmojiForCode
+import com.shyden.shytalk.ui.theme.CnyGold
+import com.shyden.shytalk.ui.theme.SpeakingGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -534,6 +536,16 @@ private fun ProfileContent(
             }
         }
 
+        // CNY badge
+        Text(
+            text = "\uD83D\uDC0E 2026",
+            style = MaterialTheme.typography.labelSmall,
+            color = CnyGold,
+            modifier = Modifier
+                .offset(y = (-40).dp)
+                .padding(start = 130.dp)
+        )
+
         // Profile info section
         Column(
             modifier = Modifier
@@ -641,7 +653,7 @@ private fun ProfileContent(
                             modifier = Modifier
                                 .size(10.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF4CAF50))
+                                .background(SpeakingGreen)
                         )
                     }
                 }

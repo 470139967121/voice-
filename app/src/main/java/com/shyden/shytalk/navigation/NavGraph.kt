@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.feature.auth.GoogleSignInScreen
+import com.shyden.shytalk.feature.home.LunarNewYearScreen
 import com.shyden.shytalk.feature.main.MainScreen
 import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
 import com.shyden.shytalk.feature.settings.AppSettingsScreen
@@ -158,6 +159,9 @@ fun NavGraph(
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
                 },
+                onNavigateToLunarNewYear = {
+                    navController.navigate(Screen.LunarNewYear.route)
+                },
                 profileContent = { modifier ->
                     ProfileScreen(
                         userId = null,
@@ -239,6 +243,12 @@ fun NavGraph(
                         popUpTo(Screen.Main.route) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable(Screen.LunarNewYear.route) {
+            LunarNewYearScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
