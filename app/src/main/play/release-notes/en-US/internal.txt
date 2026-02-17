@@ -1,11 +1,10 @@
 v0.29 - Chinese New Year 2026 celebration
 
-- Full CNY Year of the Horse festive UI overhaul with animated backgrounds
-- Lightweight Canvas-based room background replaces heavy GIF asset
-- Enhanced sign-in screen with festive decorations and greetings
-- CNY banner on home screen links to new Lunar New Year education page
-- Gold-bordered room cards with lantern corner decorations
-- Red-gold gradient decoration strip on navigation bar
-- New Lunar New Year web page with zodiac, traditions & cultural info
-- Landing page enhanced with galloping horse animation and sparkles
-- Performance optimizations: pre-computed colors, cached gradients, removed unused imports
+- Full CNY Year of the Horse festive UI overhaul
+- Animated Canvas room background replaces heavy GIF
+- Festive sign-in screen with CNY greetings
+- CNY banner links to new Lunar New Year education page
+- Gold-bordered room cards with lantern decorations
+- Red-gold gradient strip on navigation bar
+- Enhanced landing page with galloping horse animation
+- Performance: cached gradients, pre-computed colors
