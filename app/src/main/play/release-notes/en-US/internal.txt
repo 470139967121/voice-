@@ -1,11 +1,8 @@
-v0.32 - Seat safety, chathead UX & bug fixes
+v0.33 - Profile Stalkers
 
-- Seat race condition fixed: no more duplicate seats from simultaneous moves
-- Chathead X shows confirmation dialog when app is open
-- Chathead show/hide race condition fixed
-- Owner dimmed during OWNER_AWAY countdown
-- Dimming persists through seat moves
-- Seat grid fills top row of 4 first
-- Invite hidden for seated/absent users
-- JOIN message avatars persist after re-entry
-- Following tab now first on connections page
+- See who visited your profile in the last 3 months
+- New "Stalkers" stat on your profile with red badge for new visitors
+- Third "Stalkers" tab on Connections page shows visit counts
+- Badge pulses to draw attention to new stalkers
+- Badge clears when you open the Stalkers tab
+- Profile stats layout: labels now appear above numbers

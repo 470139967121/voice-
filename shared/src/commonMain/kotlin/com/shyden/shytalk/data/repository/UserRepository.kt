@@ -1,5 +1,6 @@
 package com.shyden.shytalk.data.repository
 
+import com.shyden.shytalk.core.model.ProfileVisitor
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -22,5 +23,8 @@ interface UserRepository {
     suspend fun unfollowUser(currentUserId: String, targetUserId: String): Resource<Unit>
     suspend fun getUsers(userIds: List<String>): Resource<List<User>>
     suspend fun removeFollower(userId: String, followerId: String): Resource<Unit>
+    suspend fun recordProfileVisit(profileUserId: String, visitorId: String): Resource<Unit>
+    suspend fun getStalkers(profileUserId: String): Resource<List<ProfileVisitor>>
+    suspend fun markStalkersViewed(userId: String): Resource<Unit>
     fun observeUsers(userIds: Set<String>): Flow<User>
 }

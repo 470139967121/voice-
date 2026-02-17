@@ -4,6 +4,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -36,6 +41,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,6 +70,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -489,13 +497,13 @@ private fun ProfileContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = if (followingHidden) "-" else "${uiState.followingCount}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
                             text = if (followingHidden) "Following (Private)" else "Following",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = if (followingHidden) "-" else "${uiState.followingCount}",
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                     Column(
@@ -505,14 +513,59 @@ private fun ProfileContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "${uiState.followerCount}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
                             text = "Followers",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Text(
+                            text = "${uiState.followerCount}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    if (isOwn) {
+                        Column(
+                            modifier = Modifier.clickable {
+                                onNavigateToFollowList?.invoke(user.uid, "stalkers")
+                            },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            BadgedBox(
+                                badge = {
+                                    if (uiState.newStalkerCount > 0) {
+                                        val pulse = rememberInfiniteTransition(label = "stalkerBadge")
+                                        val scale by pulse.animateFloat(
+                                            initialValue = 1f,
+                                            targetValue = 1.3f,
+                                            animationSpec = infiniteRepeatable(
+                                                animation = tween(1000),
+                                                repeatMode = RepeatMode.Reverse
+                                            ),
+                                            label = "stalkerScale"
+                                        )
+                                        Badge(
+                                            modifier = Modifier
+                                                .offset(y = (-4).dp)
+                                                .graphicsLayer {
+                                                    scaleX = scale
+                                                    scaleY = scale
+                                                }
+                                        ) {
+                                            Text("${uiState.newStalkerCount}")
+                                        }
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = "Stalkers",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "${uiState.stalkerCount}",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
                     }
                 }
             }

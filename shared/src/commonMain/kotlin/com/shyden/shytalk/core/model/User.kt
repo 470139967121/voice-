@@ -25,7 +25,10 @@ data class User(
     val lastRoomName: String? = null,
     val createdAt: Long = currentTimeMillis(),
     val userType: UserType = UserType.MEMBER,
-    val lastSeenAt: Long = currentTimeMillis()
+    val lastSeenAt: Long = currentTimeMillis(),
+    val stalkerCount: Long = 0,
+    val newStalkerCount: Long = 0,
+    val stalkersLastViewedAt: Long = 0
 ) {
     /** Resolved photo URL: prefers profilePhotoUrl, falls back to avatarUrl. */
     val photoUrl: String? get() = profilePhotoUrl ?: avatarUrl
@@ -51,7 +54,10 @@ data class User(
         "lastRoomName" to lastRoomName,
         "userType" to userType.name,
         "createdAt" to millisToTimestamp(createdAt),
-        "lastSeenAt" to millisToTimestamp(lastSeenAt)
+        "lastSeenAt" to millisToTimestamp(lastSeenAt),
+        "stalkerCount" to stalkerCount,
+        "newStalkerCount" to newStalkerCount,
+        "stalkersLastViewedAt" to millisToTimestamp(stalkersLastViewedAt)
     )
 
     companion object {
@@ -81,7 +87,10 @@ data class User(
                 try { UserType.valueOf(it) } catch (_: Exception) { UserType.MEMBER }
             } ?: UserType.MEMBER,
             createdAt = timestampToMillis(map["createdAt"]),
-            lastSeenAt = timestampToMillis(map["lastSeenAt"])
+            lastSeenAt = timestampToMillis(map["lastSeenAt"]),
+            stalkerCount = (map["stalkerCount"] as? Long) ?: 0,
+            newStalkerCount = (map["newStalkerCount"] as? Long) ?: 0,
+            stalkersLastViewedAt = map["stalkersLastViewedAt"]?.let { timestampToMillis(it) } ?: 0
         )
     }
 }

@@ -749,4 +749,89 @@ class ProfileViewModelTest {
         assertEquals(2, vm.uiState.value.followerCount)
         assertEquals(3, vm.uiState.value.followingCount)
     }
+
+    // ===== Stalker tracking =====
+
+    @Test
+    fun `loadProfile - own profile sets stalker counts from user`() = runTest {
+        val user = TestData.createTestUser(
+            uid = currentUserId,
+            stalkerCount = 10,
+            newStalkerCount = 3
+        )
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        assertEquals(10, vm.uiState.value.stalkerCount)
+        assertEquals(3, vm.uiState.value.newStalkerCount)
+    }
+
+    @Test
+    fun `loadProfile - own profile with zero stalker counts`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        assertEquals(0, vm.uiState.value.stalkerCount)
+        assertEquals(0, vm.uiState.value.newStalkerCount)
+    }
+
+    @Test
+    fun `loadProfile - other user records profile visit`() = runTest {
+        val user = TestData.createTestUser(uid = otherUserId)
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+        coEvery { userRepository.recordProfileVisit(otherUserId, currentUserId) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        coVerify { userRepository.recordProfileVisit(otherUserId, currentUserId) }
+    }
+
+    @Test
+    fun `loadProfile - own profile does NOT record visit`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { userRepository.recordProfileVisit(any(), any()) }
+    }
+
+    @Test
+    fun `loadProfile - blocked by target does NOT record visit`() = runTest {
+        val user = TestData.createTestUser(uid = otherUserId, blockedUserIds = setOf(currentUserId))
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { userRepository.recordProfileVisit(any(), any()) }
+    }
+
+    @Test
+    fun `loadProfile - other user does NOT set stalker counts`() = runTest {
+        val user = TestData.createTestUser(uid = otherUserId, stalkerCount = 5, newStalkerCount = 2)
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        assertEquals(0, vm.uiState.value.stalkerCount)
+        assertEquals(0, vm.uiState.value.newStalkerCount)
+    }
 }

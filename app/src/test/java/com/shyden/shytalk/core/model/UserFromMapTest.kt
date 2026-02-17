@@ -169,9 +169,60 @@ class UserFromMapTest {
             hideAge = true,
             email = "alice@example.com",
             createdAt = tsMillis,
-            lastSeenAt = tsMillis
+            lastSeenAt = tsMillis,
+            stalkerCount = 5,
+            newStalkerCount = 2,
+            stalkersLastViewedAt = tsMillis
         )
         val roundtripped = User.fromMap(original.toMap(), "user-1")
         assertEquals(original, roundtripped)
+    }
+
+    // ===== Stalker fields =====
+
+    @Test
+    fun `fromMap parses stalkerCount`() {
+        val map = mapOf<String, Any?>("stalkerCount" to 10L)
+        val user = User.fromMap(map, "uid")
+        assertEquals(10L, user.stalkerCount)
+    }
+
+    @Test
+    fun `fromMap defaults stalkerCount to 0 when missing`() {
+        val user = User.fromMap(emptyMap(), "uid")
+        assertEquals(0L, user.stalkerCount)
+    }
+
+    @Test
+    fun `fromMap parses newStalkerCount`() {
+        val map = mapOf<String, Any?>("newStalkerCount" to 3L)
+        val user = User.fromMap(map, "uid")
+        assertEquals(3L, user.newStalkerCount)
+    }
+
+    @Test
+    fun `fromMap defaults newStalkerCount to 0 when missing`() {
+        val user = User.fromMap(emptyMap(), "uid")
+        assertEquals(0L, user.newStalkerCount)
+    }
+
+    @Test
+    fun `fromMap parses stalkersLastViewedAt`() {
+        val map = mapOf<String, Any?>("stalkersLastViewedAt" to ts)
+        val user = User.fromMap(map, "uid")
+        assertEquals(tsMillis, user.stalkersLastViewedAt)
+    }
+
+    @Test
+    fun `fromMap defaults stalkersLastViewedAt to 0 when missing`() {
+        val user = User.fromMap(emptyMap(), "uid")
+        assertEquals(0L, user.stalkersLastViewedAt)
+    }
+
+    @Test
+    fun `fromMap defaults stalkersLastViewedAt to 0 when null`() {
+        val map = mapOf<String, Any?>("stalkersLastViewedAt" to null)
+        val user = User.fromMap(map, "uid")
+        assertEquals(0L, user.stalkersLastViewedAt)
     }
 }
