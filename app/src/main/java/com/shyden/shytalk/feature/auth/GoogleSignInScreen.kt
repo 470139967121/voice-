@@ -177,8 +177,8 @@ fun GoogleSignInScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = CnyGold
+                            containerColor = CnyGold,
+                            contentColor = Color.Black
                         )
                     ) {
                         Text("Sign in with Google")
