@@ -66,10 +66,10 @@ class UserToMapTest {
     }
 
     @Test
-    fun `toMap contains exactly 21 keys`() {
+    fun `toMap contains exactly 24 keys`() {
         val user = TestData.createTestUser()
         val map = user.toMap()
-        assertEquals(21, map.size)
+        assertEquals(24, map.size)
     }
 
     @Test
@@ -79,7 +79,8 @@ class UserToMapTest {
             "description", "nationality", "uniqueId", "blockedUserIds",
             "followingIds", "followerIds", "dateOfBirth", "hideFollowing",
             "hideOnlineStatus", "hideAge", "email",
-            "currentRoomId", "lastRoomName", "userType", "createdAt", "lastSeenAt"
+            "currentRoomId", "lastRoomName", "userType", "createdAt", "lastSeenAt",
+            "stalkerCount", "newStalkerCount", "stalkersLastViewedAt"
         )
         val user = TestData.createTestUser()
         assertEquals(expectedKeys, user.toMap().keys)
@@ -136,6 +137,26 @@ class UserToMapTest {
         assertEquals(false, user.hideOnlineStatus)
         assertEquals(false, user.hideAge)
         assertNull(user.email)
+        assertEquals(0L, user.stalkerCount)
+        assertEquals(0L, user.newStalkerCount)
+        assertEquals(0L, user.stalkersLastViewedAt)
+    }
+
+    @Test
+    fun `toMap includes stalker fields`() {
+        val user = User(stalkerCount = 5, newStalkerCount = 2, stalkersLastViewedAt = TestData.BASE_TIMESTAMP)
+        val map = user.toMap()
+        assertEquals(5L, map["stalkerCount"])
+        assertEquals(2L, map["newStalkerCount"])
+        assertEquals(Timestamp(Date(TestData.BASE_TIMESTAMP)), map["stalkersLastViewedAt"])
+    }
+
+    @Test
+    fun `toMap defaults stalker fields to zero`() {
+        val user = User()
+        val map = user.toMap()
+        assertEquals(0L, map["stalkerCount"])
+        assertEquals(0L, map["newStalkerCount"])
     }
 
     @Test

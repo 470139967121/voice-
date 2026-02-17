@@ -26,4 +26,7 @@ object Constants {
     const val FLOOD_COOLDOWN_MS = 1_000L       // 1 second between messages
     const val FLOOD_WINDOW_MS = 10_000L        // 10 second sliding window
     const val FLOOD_MAX_MESSAGES = 5           // max 5 messages per window
+
+    // Profile stalkers
+    const val STALKER_EXPIRY_MS = 90L * 24 * 60 * 60 * 1000 // 3 months
 }

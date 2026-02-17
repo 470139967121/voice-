@@ -1,12 +1,17 @@
 package com.shyden.shytalk.data.repository
 
+import com.shyden.shytalk.core.model.ProfileVisitor
 import com.shyden.shytalk.core.model.User
+import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.firebaseCall
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
+import java.util.Date
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -170,6 +175,59 @@ class UserRepositoryImpl(
                     }
                 }.awaitAll().flatMap { it }
             }
+        }
+
+    override suspend fun recordProfileVisit(profileUserId: String, visitorId: String): Resource<Unit> =
+        firebaseCall("Failed to record visit") {
+            val stalkerRef = usersCollection.document(profileUserId)
+                .collection("stalkers").document(visitorId)
+            val userRef = usersCollection.document(profileUserId)
+
+            val existing = stalkerRef.get().await().exists()
+            val batch = firestore.batch()
+
+            val stalkerData = mutableMapOf<String, Any>(
+                "visitorId" to visitorId,
+                "visitCount" to FieldValue.increment(1),
+                "lastVisitedAt" to FieldValue.serverTimestamp()
+            )
+            if (!existing) {
+                stalkerData["firstVisitedAt"] = FieldValue.serverTimestamp()
+            }
+            batch.set(stalkerRef, stalkerData, SetOptions.merge())
+
+            val countUpdates = mutableMapOf<String, Any>(
+                "newStalkerCount" to FieldValue.increment(1)
+            )
+            if (!existing) {
+                countUpdates["stalkerCount"] = FieldValue.increment(1)
+            }
+            batch.update(userRef, countUpdates)
+
+            batch.commit().await()
+        }
+
+    override suspend fun getStalkers(profileUserId: String): Resource<List<ProfileVisitor>> =
+        firebaseCall("Failed to load stalkers") {
+            val cutoff = Timestamp(Date(System.currentTimeMillis() - Constants.STALKER_EXPIRY_MS))
+            val snapshot = usersCollection.document(profileUserId)
+                .collection("stalkers")
+                .whereGreaterThan("lastVisitedAt", cutoff)
+                .orderBy("lastVisitedAt", Query.Direction.DESCENDING)
+                .get().await()
+            snapshot.documents.mapNotNull { doc ->
+                doc.data?.let { ProfileVisitor.fromMap(it) }
+            }
+        }
+
+    override suspend fun markStalkersViewed(userId: String): Resource<Unit> =
+        firebaseCall("Failed to mark stalkers viewed") {
+            usersCollection.document(userId).update(
+                mapOf(
+                    "newStalkerCount" to 0,
+                    "stalkersLastViewedAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
         }
 
     override fun observeUsers(userIds: Set<String>): Flow<User> {

@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.ProfileVisitor
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -27,10 +28,13 @@ data class FollowListUiState(
     val currentUserFollowerIds: Set<String> = emptySet(),
     val currentUserBlockedIds: Set<String> = emptySet(),
     val followingHidden: Boolean = false,
-    val pendingRemoveFollowerId: String? = null
+    val pendingRemoveFollowerId: String? = null,
+    val stalkers: List<ProfileVisitor> = emptyList(),
+    val stalkerUsers: Map<String, User> = emptyMap(),
+    val stalkersLastViewedAt: Long = 0
 )
 
-enum class FollowTab { FOLLOWERS, FOLLOWING }
+enum class FollowTab { FOLLOWING, FOLLOWERS, STALKERS }
 
 class FollowListViewModel(
     private val profileUserId: String,
@@ -44,7 +48,11 @@ class FollowListViewModel(
 
     init {
         val currentUid = authRepository.currentUserId ?: ""
-        val tab = if (initialTab == "following") FollowTab.FOLLOWING else FollowTab.FOLLOWERS
+        val tab = when (initialTab) {
+            "following" -> FollowTab.FOLLOWING
+            "stalkers" -> FollowTab.STALKERS
+            else -> FollowTab.FOLLOWERS
+        }
         _uiState.value = FollowListUiState(
             profileUserId = profileUserId,
             currentUserId = currentUid,
@@ -70,6 +78,11 @@ class FollowListViewModel(
 
     fun selectTab(tab: FollowTab) {
         _uiState.update { it.copy(selectedTab = tab) }
+        if (tab == FollowTab.STALKERS && _uiState.value.isOwnList) {
+            viewModelScope.launch {
+                userRepository.markStalkersViewed(_uiState.value.profileUserId)
+            }
+        }
     }
 
     private fun loadData() {
@@ -113,6 +126,29 @@ class FollowListViewModel(
                 }
             } else emptyMap()
 
+            // Load stalkers if viewing own list
+            var stalkerList: List<ProfileVisitor> = emptyList()
+            var stalkerUserMap: Map<String, User> = emptyMap()
+            var stalkersLastViewed = 0L
+            if (_uiState.value.isOwnList) {
+                stalkersLastViewed = profileUser.stalkersLastViewedAt
+                when (val stalkersResult = userRepository.getStalkers(profileUserId)) {
+                    is Resource.Success -> {
+                        stalkerList = stalkersResult.data
+                        val visitorIds = stalkerList.map { it.visitorId }
+                        if (visitorIds.isNotEmpty()) {
+                            when (val usersResult = userRepository.getUsers(visitorIds)) {
+                                is Resource.Success -> {
+                                    stalkerUserMap = usersResult.data.associateBy { it.uid }
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+                    else -> {}
+                }
+            }
+
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -121,8 +157,16 @@ class FollowListViewModel(
                     currentUserFollowingIds = myFollowingIds,
                     currentUserFollowerIds = myFollowerIds,
                     currentUserBlockedIds = myBlockedIds,
-                    followingHidden = isFollowingHidden
+                    followingHidden = isFollowingHidden,
+                    stalkers = stalkerList,
+                    stalkerUsers = stalkerUserMap,
+                    stalkersLastViewedAt = stalkersLastViewed
                 )
+            }
+
+            // If initial tab is stalkers, mark as viewed immediately
+            if (_uiState.value.selectedTab == FollowTab.STALKERS && _uiState.value.isOwnList) {
+                userRepository.markStalkersViewed(profileUserId)
             }
         }
     }

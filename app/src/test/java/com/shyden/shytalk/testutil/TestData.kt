@@ -3,6 +3,7 @@ package com.shyden.shytalk.testutil
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.Message
 import com.shyden.shytalk.core.model.MessageType
+import com.shyden.shytalk.core.model.ProfileVisitor
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.Seat
 import com.shyden.shytalk.core.model.SeatRequest
@@ -26,7 +27,10 @@ object TestData {
         hideAge: Boolean = false,
         followerIds: Set<String> = emptySet(),
         followingIds: Set<String> = emptySet(),
-        hideFollowing: Boolean = false
+        hideFollowing: Boolean = false,
+        stalkerCount: Long = 0,
+        newStalkerCount: Long = 0,
+        stalkersLastViewedAt: Long = 0
     ) = User(
         uid = uid,
         displayName = displayName,
@@ -39,8 +43,23 @@ object TestData {
         followerIds = followerIds,
         followingIds = followingIds,
         hideFollowing = hideFollowing,
+        stalkerCount = stalkerCount,
+        newStalkerCount = newStalkerCount,
+        stalkersLastViewedAt = stalkersLastViewedAt,
         createdAt = BASE_TIMESTAMP,
         lastSeenAt = BASE_TIMESTAMP
+    )
+
+    fun createTestProfileVisitor(
+        visitorId: String = "visitor-1",
+        visitCount: Long = 1,
+        lastVisitedAt: Long = LATER_TIMESTAMP,
+        firstVisitedAt: Long = BASE_TIMESTAMP
+    ) = ProfileVisitor(
+        visitorId = visitorId,
+        visitCount = visitCount,
+        lastVisitedAt = lastVisitedAt,
+        firstVisitedAt = firstVisitedAt
     )
 
     fun createTestSeat(

@@ -1,5 +1,6 @@
 package com.shyden.shytalk.feature.profile
 
+import com.shyden.shytalk.core.model.ProfileVisitor
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -15,6 +16,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -241,5 +243,174 @@ class FollowListViewModelTest {
 
         vm.clearError()
         assertNull(vm.uiState.value.error)
+    }
+
+    // ===== Stalkers Tab Tests =====
+
+    private fun setupProfileWithStalkers() {
+        val profileUser = TestData.createTestUser(
+            uid = currentUserId,
+            displayName = "Current User",
+            followerIds = setOf("follower-a"),
+            followingIds = setOf("following-1"),
+            stalkersLastViewedAt = 1_500_000_000L
+        )
+        val stalkerA = TestData.createTestProfileVisitor(
+            visitorId = "stalker-a",
+            visitCount = 3,
+            lastVisitedAt = 2_000_000_000L
+        )
+        val stalkerB = TestData.createTestProfileVisitor(
+            visitorId = "stalker-b",
+            visitCount = 1,
+            lastVisitedAt = 1_800_000_000L
+        )
+        val stalkerUserA = TestData.createTestUser(uid = "stalker-a", displayName = "Stalker A")
+        val stalkerUserB = TestData.createTestUser(uid = "stalker-b", displayName = "Stalker B")
+
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(profileUser)
+        coEvery { userRepository.getUsers(match { it.containsAll(listOf("follower-a", "following-1")) }) } returns
+            Resource.Success(listOf(
+                TestData.createTestUser(uid = "follower-a", displayName = "Follower A"),
+                TestData.createTestUser(uid = "following-1", displayName = "Following 1")
+            ))
+        coEvery { userRepository.getStalkers(currentUserId) } returns Resource.Success(listOf(stalkerA, stalkerB))
+        coEvery { userRepository.getUsers(match { it.containsAll(listOf("stalker-a", "stalker-b")) }) } returns
+            Resource.Success(listOf(stalkerUserA, stalkerUserB))
+        coEvery { userRepository.markStalkersViewed(currentUserId) } returns Resource.Success(Unit)
+    }
+
+    @Test
+    fun `initial tab stalkers`() = runTest {
+        setupProfileWithStalkers()
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        assertEquals(FollowTab.STALKERS, vm.uiState.value.selectedTab)
+    }
+
+    @Test
+    fun `stalkers loaded for own list`() = runTest {
+        setupProfileWithStalkers()
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        assertEquals(2, vm.uiState.value.stalkers.size)
+        assertEquals("stalker-a", vm.uiState.value.stalkers[0].visitorId)
+        assertEquals(3L, vm.uiState.value.stalkers[0].visitCount)
+    }
+
+    @Test
+    fun `stalker users resolved`() = runTest {
+        setupProfileWithStalkers()
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        assertEquals("Stalker A", vm.uiState.value.stalkerUsers["stalker-a"]?.displayName)
+        assertEquals("Stalker B", vm.uiState.value.stalkerUsers["stalker-b"]?.displayName)
+    }
+
+    @Test
+    fun `stalkersLastViewedAt set from profile user`() = runTest {
+        setupProfileWithStalkers()
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        assertEquals(1_500_000_000L, vm.uiState.value.stalkersLastViewedAt)
+    }
+
+    @Test
+    fun `selectTab STALKERS calls markStalkersViewed for own list`() = runTest {
+        setupProfileWithStalkers()
+        val vm = createViewModel(initialTab = "followers")
+        advanceUntilIdle()
+
+        vm.selectTab(FollowTab.STALKERS)
+        advanceUntilIdle()
+
+        coVerify { userRepository.markStalkersViewed(currentUserId) }
+    }
+
+    @Test
+    fun `selectTab FOLLOWERS does NOT call markStalkersViewed`() = runTest {
+        setupProfileWithStalkers()
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        // Reset verify counts
+        vm.selectTab(FollowTab.FOLLOWERS)
+        advanceUntilIdle()
+
+        // markStalkersViewed may have been called once for initial stalkers tab, but not for FOLLOWERS
+        coVerify(atMost = 1) { userRepository.markStalkersViewed(any()) }
+    }
+
+    @Test
+    fun `stalkers not loaded for other users list`() = runTest {
+        val otherUser = "other-user"
+        val profileUser = TestData.createTestUser(
+            uid = otherUser,
+            displayName = "Other",
+            followerIds = setOf("follower-a")
+        )
+        coEvery { userRepository.getUser(otherUser) } returns Resource.Success(profileUser)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(
+            TestData.createTestUser(uid = currentUserId)
+        )
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(
+            listOf(TestData.createTestUser(uid = "follower-a", displayName = "Alice"))
+        )
+
+        val vm = createViewModel(profileUid = otherUser)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.stalkers.isEmpty())
+        assertFalse(vm.uiState.value.isOwnList)
+        coVerify(exactly = 0) { userRepository.getStalkers(any()) }
+    }
+
+    @Test
+    fun `selectTab STALKERS on other user list does NOT call markStalkersViewed`() = runTest {
+        val otherUser = "other-user"
+        val profileUser = TestData.createTestUser(uid = otherUser, displayName = "Other")
+        coEvery { userRepository.getUser(otherUser) } returns Resource.Success(profileUser)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(
+            TestData.createTestUser(uid = currentUserId)
+        )
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(emptyList())
+
+        val vm = createViewModel(profileUid = otherUser)
+        advanceUntilIdle()
+
+        vm.selectTab(FollowTab.STALKERS)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { userRepository.markStalkersViewed(any()) }
+    }
+
+    @Test
+    fun `initial stalkers tab calls markStalkersViewed`() = runTest {
+        setupProfileWithStalkers()
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        coVerify { userRepository.markStalkersViewed(currentUserId) }
+    }
+
+    @Test
+    fun `getStalkers error keeps empty list`() = runTest {
+        val profileUser = TestData.createTestUser(
+            uid = currentUserId,
+            displayName = "Current User"
+        )
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(profileUser)
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(emptyList())
+        coEvery { userRepository.getStalkers(currentUserId) } returns Resource.Error("network error")
+
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.stalkers.isEmpty())
+        assertTrue(vm.uiState.value.stalkerUsers.isEmpty())
     }
 }
