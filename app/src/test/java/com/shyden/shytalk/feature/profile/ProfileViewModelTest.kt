@@ -636,6 +636,63 @@ class ProfileViewModelTest {
         assertFalse(vm.uiState.value.isOnline)
     }
 
+    // ===== activeRoomId gated by online status =====
+
+    @Test
+    fun `loadProfile - offline user with currentRoomId has null activeRoomId`() = runTest {
+        val oldTs = System.currentTimeMillis() - 600_000L
+        val user = TestData.createTestUser(uid = otherUserId).copy(
+            lastSeenAt = oldTs,
+            currentRoomId = "room-123"
+        )
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isOnline)
+        assertNull(vm.uiState.value.activeRoomId)
+    }
+
+    @Test
+    fun `loadProfile - online user with currentRoomId has activeRoomId set`() = runTest {
+        val recentTs = System.currentTimeMillis() - 60_000L
+        val user = TestData.createTestUser(uid = otherUserId).copy(
+            lastSeenAt = recentTs,
+            currentRoomId = "room-123"
+        )
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isOnline)
+        assertEquals("room-123", vm.uiState.value.activeRoomId)
+    }
+
+    @Test
+    fun `loadProfile - hidden online status with currentRoomId has null activeRoomId`() = runTest {
+        val recentTs = System.currentTimeMillis() - 60_000L
+        val user = TestData.createTestUser(uid = otherUserId).copy(
+            lastSeenAt = recentTs,
+            hideOnlineStatus = true,
+            currentRoomId = "room-123"
+        )
+        coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(user)
+        coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+
+        val vm = createViewModel()
+        vm.loadProfile(otherUserId)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isOnline)
+        assertNull(vm.uiState.value.activeRoomId)
+    }
+
     // ===== hideFollowing =====
 
     @Test

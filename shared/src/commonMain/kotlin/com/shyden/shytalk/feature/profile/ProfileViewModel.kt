@@ -59,10 +59,14 @@ class ProfileViewModel(
                 val currentUser = _uiState.value.user ?: return@collect
                 if (updatedUser.uid == currentUser.uid) {
                     _uiState.update { state ->
+                        val isOnline = !updatedUser.hideOnlineStatus &&
+                            (currentTimeMillis() - updatedUser.lastSeenAt) < Constants.ONLINE_THRESHOLD_MS
                         state.copy(
                             user = updatedUser,
                             followerCount = updatedUser.followerIds.size,
                             followingCount = updatedUser.followingIds.size,
+                            isOnline = isOnline,
+                            activeRoomId = if (isOnline) updatedUser.currentRoomId else null,
                             stalkerCount = if (state.isOwnProfile) updatedUser.stalkerCount.toInt() else state.stalkerCount,
                             newStalkerCount = if (state.isOwnProfile) updatedUser.newStalkerCount.toInt() else state.newStalkerCount
                         )
@@ -112,7 +116,7 @@ class ProfileViewModel(
                                 followingCount = followingCount,
                                 isOnline = isOnline,
                                 hideFollowing = user.hideFollowing,
-                                activeRoomId = user.currentRoomId
+                                activeRoomId = if (isOnline) user.currentRoomId else null
                             )
                         }
                         // Record profile visit (fire-and-forget)
@@ -130,7 +134,7 @@ class ProfileViewModel(
                                 followingCount = followingCount,
                                 isOnline = isOnline,
                                 hideFollowing = user.hideFollowing,
-                                activeRoomId = user.currentRoomId,
+                                activeRoomId = if (isOnline) user.currentRoomId else null,
                                 stalkerCount = user.stalkerCount.toInt(),
                                 newStalkerCount = user.newStalkerCount.toInt()
                             )

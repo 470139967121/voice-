@@ -1,8 +1,5 @@
-v0.33 - Profile Stalkers
+v0.34 - Bug Fixes & Stalker UX
 
-- See who visited your profile in the last 3 months
-- New "Stalkers" stat on your profile with red badge for new visitors
-- Third "Stalkers" tab on Connections page shows visit counts
-- Badge pulses to draw attention to new stalkers
-- Badge clears when you open the Stalkers tab
-- Profile stats layout: labels now appear above numbers
+- Fixed voice room indicator showing on offline users' profile photos
+- Stalkers tab now shows "Stalked you X ago, X time(s) in last 3 months"
+- Voice room overlay only appears when the user is actually online
