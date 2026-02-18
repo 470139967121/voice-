@@ -73,15 +73,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.R
+import com.shyden.shytalk.core.model.PmPrivacy
 import com.shyden.shytalk.core.model.User
 
-private enum class SettingsPage { Main, BlockedUsers, Account, Privacy, Permissions, About }
+private enum class SettingsPage { Main, BlockedUsers, Account, Privacy, Notifications, Permissions, About }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPrivacyPolicy: () -> Unit,
+    onNavigateToCommunityStandards: () -> Unit = {},
+    onNavigateToTermsAndConditions: () -> Unit = {},
     onSignOut: () -> Unit,
     viewModel: AppSettingsViewModel = koinViewModel()
 ) {
@@ -144,6 +147,22 @@ fun AppSettingsScreen(
                 onToggleHideFollowing = { viewModel.toggleHideFollowing() },
                 onToggleHideOnlineStatus = { viewModel.toggleHideOnlineStatus() },
                 onToggleHideAge = { viewModel.toggleHideAge() },
+                onSetPmPrivacy = { viewModel.setPmPrivacy(it) },
+                snackbarHostState = snackbarHostState
+            )
+            SettingsPage.Notifications -> NotificationsPage(
+                uiState = uiState,
+                onBack = { currentPageName = SettingsPage.Main.name },
+                onTogglePmNotifications = { viewModel.togglePmNotifications() },
+                onTogglePmSound = { viewModel.togglePmSound() },
+                onTogglePmPreview = { viewModel.togglePmPreview() },
+                onTogglePmTimestamps = { viewModel.togglePmTimestamps() },
+                onTogglePmDateSeparators = { viewModel.togglePmDateSeparators() },
+                onToggleDnd = { viewModel.toggleDnd() },
+                onSetDndStartHour = { viewModel.setDndStartHour(it) },
+                onSetDndStartMinute = { viewModel.setDndStartMinute(it) },
+                onSetDndEndHour = { viewModel.setDndEndHour(it) },
+                onSetDndEndMinute = { viewModel.setDndEndMinute(it) },
                 snackbarHostState = snackbarHostState
             )
             SettingsPage.Permissions -> PermissionsPage(
@@ -154,6 +173,8 @@ fun AppSettingsScreen(
                 uiState = uiState,
                 onBack = { currentPageName = SettingsPage.Main.name },
                 onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
+                onNavigateToCommunityStandards = onNavigateToCommunityStandards,
+                onNavigateToTermsAndConditions = onNavigateToTermsAndConditions,
                 onCheckForUpdates = { viewModel.checkForUpdates() },
                 onClearCache = { viewModel.clearCache() },
                 snackbarHostState = snackbarHostState
@@ -279,6 +300,12 @@ private fun SettingsMainPage(
                 icon = Icons.Default.Lock,
                 title = "Privacy",
                 onClick = { onNavigateToPage(SettingsPage.Privacy) }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsMenuItem(
+                icon = Icons.Default.Notifications,
+                title = "Notifications",
+                onClick = { onNavigateToPage(SettingsPage.Notifications) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsMenuItem(
@@ -517,6 +544,7 @@ private fun PrivacyPage(
     onToggleHideFollowing: () -> Unit,
     onToggleHideOnlineStatus: () -> Unit,
     onToggleHideAge: () -> Unit,
+    onSetPmPrivacy: (PmPrivacy) -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
     SettingsSubPage(
@@ -549,6 +577,183 @@ private fun PrivacyPage(
                 checked = uiState.hideAge,
                 onCheckedChange = { onToggleHideAge() }
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // PM Privacy
+            Text(
+                text = "Who can message me",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Control who can send you private messages.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PmPrivacy.entries.forEach { privacy ->
+                val label = when (privacy) {
+                    PmPrivacy.EVERYONE -> "Everyone"
+                    PmPrivacy.FOLLOWERS_ONLY -> "People I follow"
+                    PmPrivacy.NO_ONE -> "No one"
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSetPmPrivacy(privacy) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.RadioButton(
+                        selected = uiState.pmPrivacy == privacy,
+                        onClick = { onSetPmPrivacy(privacy) }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ===== Notifications Page =====
+
+@Composable
+private fun NotificationsPage(
+    uiState: AppSettingsUiState,
+    onBack: () -> Unit,
+    onTogglePmNotifications: () -> Unit,
+    onTogglePmSound: () -> Unit,
+    onTogglePmPreview: () -> Unit,
+    onTogglePmTimestamps: () -> Unit,
+    onTogglePmDateSeparators: () -> Unit,
+    onToggleDnd: () -> Unit,
+    onSetDndStartHour: (Int) -> Unit,
+    onSetDndStartMinute: (Int) -> Unit,
+    onSetDndEndHour: (Int) -> Unit,
+    onSetDndEndMinute: (Int) -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    SettingsSubPage(
+        title = "Notifications",
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
+    ) { modifier ->
+        Column(
+            modifier = modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Private Messages",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            SettingsSwitch(
+                title = "PM Notifications",
+                description = "Receive notifications for new private messages.",
+                checked = uiState.pmNotificationsEnabled,
+                onCheckedChange = { onTogglePmNotifications() }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            SettingsSwitch(
+                title = "Notification Sound",
+                description = "Play a sound when a new message arrives.",
+                checked = uiState.pmSoundEnabled,
+                onCheckedChange = { onTogglePmSound() }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            SettingsSwitch(
+                title = "Message Preview",
+                description = "Show message text in notifications.",
+                checked = uiState.pmNotificationPreview,
+                onCheckedChange = { onTogglePmPreview() }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Chat Display",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            SettingsSwitch(
+                title = "Show Timestamps",
+                description = "Display message timestamps in chat.",
+                checked = uiState.pmShowTimestamps,
+                onCheckedChange = { onTogglePmTimestamps() }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            SettingsSwitch(
+                title = "Show Date Separators",
+                description = "Show date labels between messages on different days.",
+                checked = uiState.pmShowDateSeparators,
+                onCheckedChange = { onTogglePmDateSeparators() }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Do Not Disturb",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            SettingsSwitch(
+                title = "Enable Do Not Disturb",
+                description = "Silence all PM notifications during the scheduled time.",
+                checked = uiState.dndEnabled,
+                onCheckedChange = { onToggleDnd() }
+            )
+            if (uiState.dndEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Start",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = String.format("%02d:%02d", uiState.dndStartHour, uiState.dndStartMinute),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "End",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = String.format("%02d:%02d", uiState.dndEndHour, uiState.dndEndMinute),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -715,6 +920,8 @@ private fun AboutPage(
     uiState: AppSettingsUiState,
     onBack: () -> Unit,
     onNavigateToPrivacyPolicy: () -> Unit,
+    onNavigateToCommunityStandards: () -> Unit,
+    onNavigateToTermsAndConditions: () -> Unit,
     onCheckForUpdates: () -> Unit,
     onClearCache: () -> Unit,
     snackbarHostState: SnackbarHostState
@@ -803,6 +1010,34 @@ private fun AboutPage(
             ) {
                 Text(
                     text = "Privacy Policy",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            // Community Standards
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToCommunityStandards() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Community Standards",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            // Terms & Conditions
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToTermsAndConditions() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Terms & Conditions",
                     style = MaterialTheme.typography.bodyLarge
                 )
             }

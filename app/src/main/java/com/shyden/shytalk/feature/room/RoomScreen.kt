@@ -67,6 +67,7 @@ import com.shyden.shytalk.feature.room.components.SeatActionFeedback
 import com.shyden.shytalk.feature.room.components.RoomToolbar
 import com.shyden.shytalk.feature.room.components.SeatGrid
 import com.shyden.shytalk.feature.room.components.UserCardPopup
+import com.shyden.shytalk.feature.messaging.PmBottomSheet
 import com.shyden.shytalk.feature.settings.RoomSettingsSheet
 
 @Composable
@@ -74,6 +75,7 @@ fun RoomScreen(
     roomId: String,
     onNavigateBack: () -> Unit,
     onNavigateToUserProfile: (String) -> Unit = {},
+    onNavigateToChat: (String) -> Unit = {},
     viewModel: RoomViewModel = koinViewModel { parametersOf(roomId) }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -82,6 +84,8 @@ fun RoomScreen(
     var showUserCardForId by remember(roomId) { mutableStateOf<String?>(null) }
     var showParticipantPanel by remember(roomId) { mutableStateOf(false) }
     var showRoomNameDialog by remember(roomId) { mutableStateOf(false) }
+    var showPmSheet by remember(roomId) { mutableStateOf(false) }
+    var pmSheetPreOpenUserId by remember(roomId) { mutableStateOf<String?>(null) }
 
     // Track room screen visibility for chathead
     DisposableEffect(Unit) {
@@ -321,7 +325,11 @@ fun RoomScreen(
                         roomExpiryRemainingMs = uiState.roomExpiryRemainingMs,
                         onBack = { onNavigateBack() },
                         onTogglePeople = { showParticipantPanel = !showParticipantPanel },
-                        onRoomNameClick = { showRoomNameDialog = true }
+                        onRoomNameClick = { showRoomNameDialog = true },
+                        onToggleMessages = {
+                            pmSheetPreOpenUserId = null
+                            showPmSheet = true
+                        }
                     )
                 }
             }
@@ -626,6 +634,13 @@ fun RoomScreen(
                         showUserCardForId = null
                         onNavigateToUserProfile(userId)
                     },
+                    onMessage = if (userId != uiState.currentUserId) {
+                        {
+                            showUserCardForId = null
+                            pmSheetPreOpenUserId = userId
+                            showPmSheet = true
+                        }
+                    } else null,
                     onBlock = {
                         viewModel.blockUser(userId)
                         showUserCardForId = null
@@ -675,6 +690,17 @@ fun RoomScreen(
                     onDismiss = { showUserCardForId = null }
                 )
             }
+        }
+
+        // PM Bottom Sheet
+        if (showPmSheet) {
+            PmBottomSheet(
+                onDismiss = {
+                    showPmSheet = false
+                    pmSheetPreOpenUserId = null
+                },
+                preOpenUserId = pmSheetPreOpenUserId
+            )
         }
         }
     }

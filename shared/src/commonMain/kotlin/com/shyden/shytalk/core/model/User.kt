@@ -35,7 +35,22 @@ data class User(
     val suspensionEndDate: Long? = null,
     val suspensionCanAppeal: Boolean = false,
     val suspendedBy: String? = null,
-    val suspensionAppealStatus: String? = null
+    val suspensionAppealStatus: String? = null,
+    // Private messaging
+    val fcmTokens: List<String> = emptyList(),
+    val pmNotificationsEnabled: Boolean = true,
+    val pmPrivacy: PmPrivacy = PmPrivacy.EVERYONE,
+    val pmSoundEnabled: Boolean = true,
+    val pmShowTimestamps: Boolean = true,
+    val pmShowDateSeparators: Boolean = true,
+    val pmNotificationPreview: Boolean = true,
+    val acceptedLegalVersion: Int = 0,
+    // Do Not Disturb
+    val dndEnabled: Boolean = false,
+    val dndStartHour: Int = 22,
+    val dndStartMinute: Int = 0,
+    val dndEndHour: Int = 8,
+    val dndEndMinute: Int = 0
 ) {
     val isActivelySuspended: Boolean
         get() {
@@ -78,7 +93,20 @@ data class User(
         "suspensionEndDate" to suspensionEndDate?.let { millisToTimestamp(it) },
         "suspensionCanAppeal" to suspensionCanAppeal,
         "suspendedBy" to suspendedBy,
-        "suspensionAppealStatus" to suspensionAppealStatus
+        "suspensionAppealStatus" to suspensionAppealStatus,
+        "fcmTokens" to fcmTokens,
+        "pmNotificationsEnabled" to pmNotificationsEnabled,
+        "pmPrivacy" to pmPrivacy.name,
+        "pmSoundEnabled" to pmSoundEnabled,
+        "pmShowTimestamps" to pmShowTimestamps,
+        "pmShowDateSeparators" to pmShowDateSeparators,
+        "pmNotificationPreview" to pmNotificationPreview,
+        "acceptedLegalVersion" to acceptedLegalVersion,
+        "dndEnabled" to dndEnabled,
+        "dndStartHour" to dndStartHour,
+        "dndStartMinute" to dndStartMinute,
+        "dndEndHour" to dndEndHour,
+        "dndEndMinute" to dndEndMinute
     )
 
     companion object {
@@ -118,7 +146,23 @@ data class User(
             suspensionEndDate = map["suspensionEndDate"]?.let { timestampToMillis(it) },
             suspensionCanAppeal = map["suspensionCanAppeal"] as? Boolean ?: false,
             suspendedBy = map["suspendedBy"] as? String,
-            suspensionAppealStatus = map["suspensionAppealStatus"] as? String
+            suspensionAppealStatus = map["suspensionAppealStatus"] as? String,
+            fcmTokens = (map["fcmTokens"] as? List<*>)
+                ?.filterIsInstance<String>() ?: emptyList(),
+            pmNotificationsEnabled = map["pmNotificationsEnabled"] as? Boolean ?: true,
+            pmPrivacy = (map["pmPrivacy"] as? String)?.let {
+                try { PmPrivacy.valueOf(it) } catch (_: Exception) { PmPrivacy.EVERYONE }
+            } ?: PmPrivacy.EVERYONE,
+            pmSoundEnabled = map["pmSoundEnabled"] as? Boolean ?: true,
+            pmShowTimestamps = map["pmShowTimestamps"] as? Boolean ?: true,
+            pmShowDateSeparators = map["pmShowDateSeparators"] as? Boolean ?: true,
+            pmNotificationPreview = map["pmNotificationPreview"] as? Boolean ?: true,
+            acceptedLegalVersion = (map["acceptedLegalVersion"] as? Long)?.toInt() ?: 0,
+            dndEnabled = map["dndEnabled"] as? Boolean ?: false,
+            dndStartHour = (map["dndStartHour"] as? Long)?.toInt() ?: 22,
+            dndStartMinute = (map["dndStartMinute"] as? Long)?.toInt() ?: 0,
+            dndEndHour = (map["dndEndHour"] as? Long)?.toInt() ?: 8,
+            dndEndMinute = (map["dndEndMinute"] as? Long)?.toInt() ?: 0
         )
     }
 }

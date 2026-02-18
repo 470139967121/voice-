@@ -21,6 +21,14 @@ import com.shyden.shytalk.data.repository.DeviceRepository
 import com.shyden.shytalk.data.repository.DeviceRepositoryImpl
 import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.MessageRepositoryImpl
+import com.shyden.shytalk.data.repository.NotificationRepository
+import com.shyden.shytalk.data.repository.NotificationRepositoryImpl
+import com.shyden.shytalk.data.repository.PrivateMessageRepository
+import com.shyden.shytalk.data.repository.PrivateMessageRepositoryImpl
+import com.shyden.shytalk.data.repository.ReportRepository
+import com.shyden.shytalk.data.repository.ReportRepositoryImpl
+import com.shyden.shytalk.data.repository.TypingRepository
+import com.shyden.shytalk.data.repository.TypingRepositoryImpl
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.RoomRepositoryImpl
 import com.shyden.shytalk.data.repository.SeatRequestRepository
@@ -31,6 +39,9 @@ import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.data.repository.UserRepositoryImpl
 import com.shyden.shytalk.feature.auth.AuthViewModel
 import com.shyden.shytalk.feature.home.HomeViewModel
+import com.shyden.shytalk.feature.messaging.ConversationListViewModel
+import com.shyden.shytalk.feature.messaging.PrivateChatViewModel
+import com.shyden.shytalk.feature.messaging.ReportReviewViewModel
 import com.shyden.shytalk.feature.profile.FollowListViewModel
 import com.shyden.shytalk.feature.profile.ProfileViewModel
 import com.shyden.shytalk.feature.profile.RequiredDOBViewModel
@@ -70,6 +81,10 @@ val appModule = module {
     singleOf(::SeatRequestRepositoryImpl) bind SeatRequestRepository::class
     singleOf(::StorageRepositoryImpl) bind StorageRepository::class
     singleOf(::DeviceRepositoryImpl) bind DeviceRepository::class
+    singleOf(::PrivateMessageRepositoryImpl) bind PrivateMessageRepository::class
+    singleOf(::ReportRepositoryImpl) bind ReportRepository::class
+    singleOf(::TypingRepositoryImpl) bind TypingRepository::class
+    singleOf(::NotificationRepositoryImpl) bind NotificationRepository::class
 
     // ActiveRoomManager
     single { ActiveRoomManager(get(), get(), get(), get(), get(), get(), get(), androidContext()) }
@@ -84,4 +99,7 @@ val appModule = module {
     viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { AppSettingsViewModel(get(), get(), get()) }
     viewModel { RoomSettingsViewModel(get(), get(), get(), get()) }
+    viewModel { ConversationListViewModel(get(), get(), get()) }
+    viewModel { params -> PrivateChatViewModel(params[0], get(), get(), get(), get(), get()) }
+    viewModel { ReportReviewViewModel(get(), get()) }
 }

@@ -35,11 +35,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
+import androidx.compose.material.icons.filled.Share
+import android.content.Intent
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -96,6 +99,7 @@ fun ProfileScreen(
     onNavigateToFollowList: ((String, String) -> Unit)? = null,
     onNavigateToSettings: (() -> Unit)? = null,
     onNavigateToRoom: ((String) -> Unit)? = null,
+    onNavigateToChat: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = koinViewModel()
 ) {
@@ -193,6 +197,7 @@ fun ProfileScreen(
                 },
                 onNavigateToFollowList = onNavigateToFollowList,
                 onNavigateToRoom = onNavigateToRoom,
+                onNavigateToChat = onNavigateToChat,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier.fillMaxSize()
             )
@@ -210,6 +215,21 @@ fun ProfileScreen(
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        val context = LocalContext.current
+                        IconButton(onClick = {
+                            val user = uiState.user ?: return@IconButton
+                            val shareText = "Check out ${user.displayName}'s profile on ShyTalk!\nhttps://shytalk.shyden.co.uk/profile/${user.uid}"
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Share Profile"))
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share profile")
                         }
                     }
                 )
@@ -239,6 +259,7 @@ fun ProfileScreen(
                 },
                 onNavigateToFollowList = onNavigateToFollowList,
                 onNavigateToRoom = onNavigateToRoom,
+                onNavigateToChat = onNavigateToChat,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxSize()
@@ -347,6 +368,7 @@ private fun ProfileContent(
     onFollowToggle: () -> Unit = {},
     onNavigateToFollowList: ((String, String) -> Unit)? = null,
     onNavigateToRoom: ((String) -> Unit)? = null,
+    onNavigateToChat: ((String) -> Unit)? = null,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -853,24 +875,39 @@ private fun ProfileContent(
                     }
 
                 } else {
-                    // Follow/Unfollow button for other users
-                    if (uiState.isFollowingTarget) {
-                        OutlinedButton(
-                            onClick = onFollowToggle,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.PersonRemove, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Unfollow")
+                    // Follow/Unfollow + Message buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (uiState.isFollowingTarget) {
+                            OutlinedButton(
+                                onClick = onFollowToggle,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.PersonRemove, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Unfollow")
+                            }
+                        } else {
+                            Button(
+                                onClick = onFollowToggle,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Follow")
+                            }
                         }
-                    } else {
-                        Button(
-                            onClick = onFollowToggle,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Follow")
+                        if (onNavigateToChat != null) {
+                            OutlinedButton(
+                                onClick = { onNavigateToChat(user.uid) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Message")
+                            }
                         }
                     }
 

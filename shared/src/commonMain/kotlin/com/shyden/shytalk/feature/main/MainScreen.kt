@@ -8,10 +8,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -38,6 +42,7 @@ import com.shyden.shytalk.ui.theme.CnyGold
 
 enum class BottomNavTab(val label: String) {
     Rooms("Rooms"),
+    Messages("Messages"),
     Profile("Profile")
 }
 
@@ -49,6 +54,8 @@ fun MainScreen(
     onNavigateToFollowList: (String, String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToLunarNewYear: () -> Unit = {},
+    messagesContent: @Composable (Modifier) -> Unit = {},
+    totalUnreadCount: Long = 0,
     profileContent: @Composable (Modifier) -> Unit
 ) {
     var selectedTabName by rememberSaveable { mutableStateOf(BottomNavTab.Rooms.name) }
@@ -70,6 +77,7 @@ fun MainScreen(
                         Text(
                             when (selectedTab) {
                                 BottomNavTab.Rooms -> "\uD83D\uDC0E\uD83C\uDFEE"
+                                BottomNavTab.Messages -> "Messages"
                                 BottomNavTab.Profile -> "Profile"
                             }
                         )
@@ -100,6 +108,27 @@ fun MainScreen(
                     label = { Text("Rooms") }
                 )
                 NavigationBarItem(
+                    selected = selectedTab == BottomNavTab.Messages,
+                    onClick = { selectedTabName = BottomNavTab.Messages.name },
+                    icon = {
+                        BadgedBox(
+                            badge = {
+                                if (totalUnreadCount > 0) {
+                                    Badge {
+                                        Text(
+                                            if (totalUnreadCount > 99) "99+"
+                                            else "$totalUnreadCount"
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null)
+                        }
+                    },
+                    label = { Text("Messages") }
+                )
+                NavigationBarItem(
                     selected = selectedTab == BottomNavTab.Profile,
                     onClick = { selectedTabName = BottomNavTab.Profile.name },
                     icon = { Icon(Icons.Default.Person, contentDescription = null) },
@@ -127,6 +156,13 @@ fun MainScreen(
                     showCreateDialog = showCreateDialog,
                     onDismissCreateDialog = { showCreateDialog = false },
                     modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                )
+            }
+            BottomNavTab.Messages -> {
+                messagesContent(
+                    Modifier
                         .fillMaxSize()
                         .padding(padding)
                 )

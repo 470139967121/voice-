@@ -1,5 +1,13 @@
-v0.34 - Bug Fixes & Stalker UX
+v0.36 - Private Messaging System
 
-- Fixed voice room indicator showing on offline users' profile photos
-- Stalkers tab now shows "Stalked you X ago, X time(s) in last 3 months"
-- Voice room overlay only appears when the user is actually online
+- Private messaging with text, images, replies, reactions, and stickers
+- Message editing with 15-minute window and edit history
+- Conversation list with pinning, muting, hiding, and silent mode
+- Read receipts and typing indicators
+- Message search within conversations
+- PM privacy controls: Everyone, Followers Only, No One
+- Content moderation filter and spam protection
+- Message reporting system
+- Push notifications for new messages
+- Group chat support with admin controls
+- Dark mode fix for legal acceptance screen

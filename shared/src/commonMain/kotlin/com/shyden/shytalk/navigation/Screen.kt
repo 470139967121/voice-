@@ -17,4 +17,11 @@ sealed class Screen(val route: String) {
     data object PrivacyPolicy : Screen("privacy_policy")
     data object LunarNewYear : Screen("lunar_new_year")
     data object Settings : Screen("settings")
+    data object PrivateChat : Screen("chat/{otherUserId}") {
+        fun createRoute(otherUserId: String) = "chat/$otherUserId"
+    }
+    data object CommunityStandards : Screen("community_standards")
+    data object TermsAndConditions : Screen("terms_and_conditions")
+    data object LegalAcceptance : Screen("legal_acceptance")
+    data object ReportReview : Screen("report_review")
 }

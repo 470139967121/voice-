@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,7 +33,9 @@ fun RoomToolbar(
     roomExpiryRemainingMs: Long = 0L,
     onBack: () -> Unit,
     onTogglePeople: () -> Unit,
-    onRoomNameClick: () -> Unit = {}
+    onRoomNameClick: () -> Unit = {},
+    onToggleMessages: (() -> Unit)? = null,
+    unreadMessageCount: Long = 0
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -73,6 +76,15 @@ fun RoomToolbar(
             }
         },
         actions = {
+            if (onToggleMessages != null) {
+                IconButton(onClick = onToggleMessages) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = "Messages",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
             IconButton(onClick = onTogglePeople) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

@@ -46,11 +46,20 @@ class ShyTalkApp : Application(), SingletonImageLoader.Factory {
             modules(appModule)
         }
 
+        val notificationManager = getSystemService(NotificationManager::class.java)
+
         val channel = NotificationChannel(
             Constants.ROOM_NOTIFICATION_CHANNEL_ID,
             "Voice Room",
             NotificationManager.IMPORTANCE_LOW
         ).apply { description = "Active voice room notification" }
-        getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
+        notificationManager?.createNotificationChannel(channel)
+
+        val pmChannel = NotificationChannel(
+            Constants.PM_NOTIFICATION_CHANNEL_ID,
+            "Private Messages",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply { description = "Notifications for private messages" }
+        notificationManager?.createNotificationChannel(pmChannel)
     }
 }

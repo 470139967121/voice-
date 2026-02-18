@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.PmPrivacy
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.remote.AppConfigService
@@ -27,6 +28,17 @@ data class AppSettingsUiState(
     val hideFollowing: Boolean = false,
     val hideOnlineStatus: Boolean = false,
     val hideAge: Boolean = false,
+    val pmPrivacy: PmPrivacy = PmPrivacy.EVERYONE,
+    val pmNotificationsEnabled: Boolean = true,
+    val pmSoundEnabled: Boolean = true,
+    val pmNotificationPreview: Boolean = true,
+    val pmShowTimestamps: Boolean = true,
+    val pmShowDateSeparators: Boolean = true,
+    val dndEnabled: Boolean = false,
+    val dndStartHour: Int = 22,
+    val dndStartMinute: Int = 0,
+    val dndEndHour: Int = 8,
+    val dndEndMinute: Int = 0,
     val cacheCleared: Boolean = false,
     val updateCheckResult: UpdateCheckResult? = null,
     val isCheckingUpdate: Boolean = false
@@ -66,7 +78,18 @@ class AppSettingsViewModel(
                             blockedUsers = blockedUsers,
                             hideFollowing = user.hideFollowing,
                             hideOnlineStatus = user.hideOnlineStatus,
-                            hideAge = user.hideAge
+                            hideAge = user.hideAge,
+                            pmPrivacy = user.pmPrivacy,
+                            pmNotificationsEnabled = user.pmNotificationsEnabled,
+                            pmSoundEnabled = user.pmSoundEnabled,
+                            pmNotificationPreview = user.pmNotificationPreview,
+                            pmShowTimestamps = user.pmShowTimestamps,
+                            pmShowDateSeparators = user.pmShowDateSeparators,
+                            dndEnabled = user.dndEnabled,
+                            dndStartHour = user.dndStartHour,
+                            dndStartMinute = user.dndStartMinute,
+                            dndEndHour = user.dndEndHour,
+                            dndEndMinute = user.dndEndMinute
                         )
                     }
                 }
@@ -111,6 +134,20 @@ class AppSettingsViewModel(
         applyOptimistic = { value -> _uiState.update { it.copy(hideOnlineStatus = value) } }
     )
 
+    fun setPmPrivacy(privacy: PmPrivacy) {
+        val oldValue = _uiState.value.pmPrivacy
+        _uiState.update { it.copy(pmPrivacy = privacy) }
+        viewModelScope.launch {
+            when (userRepository.updateProfile(currentUserId, mapOf("pmPrivacy" to privacy.name))) {
+                is Resource.Success -> {}
+                is Resource.Error -> {
+                    _uiState.update { it.copy(pmPrivacy = oldValue, error = "Failed to update privacy setting") }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
     fun toggleHideAge() = togglePrivacySetting(
         key = "hideAge",
         currentValue = _uiState.value.hideAge,
@@ -133,6 +170,65 @@ class AppSettingsViewModel(
                 }
                 is Resource.Loading -> {}
             }
+        }
+    }
+
+    fun togglePmNotifications() = togglePrivacySetting(
+        key = "pmNotificationsEnabled",
+        currentValue = _uiState.value.pmNotificationsEnabled,
+        applyOptimistic = { value -> _uiState.update { it.copy(pmNotificationsEnabled = value) } }
+    )
+
+    fun togglePmSound() = togglePrivacySetting(
+        key = "pmSoundEnabled",
+        currentValue = _uiState.value.pmSoundEnabled,
+        applyOptimistic = { value -> _uiState.update { it.copy(pmSoundEnabled = value) } }
+    )
+
+    fun togglePmPreview() = togglePrivacySetting(
+        key = "pmNotificationPreview",
+        currentValue = _uiState.value.pmNotificationPreview,
+        applyOptimistic = { value -> _uiState.update { it.copy(pmNotificationPreview = value) } }
+    )
+
+    fun togglePmTimestamps() = togglePrivacySetting(
+        key = "pmShowTimestamps",
+        currentValue = _uiState.value.pmShowTimestamps,
+        applyOptimistic = { value -> _uiState.update { it.copy(pmShowTimestamps = value) } }
+    )
+
+    fun togglePmDateSeparators() = togglePrivacySetting(
+        key = "pmShowDateSeparators",
+        currentValue = _uiState.value.pmShowDateSeparators,
+        applyOptimistic = { value -> _uiState.update { it.copy(pmShowDateSeparators = value) } }
+    )
+
+    fun toggleDnd() = togglePrivacySetting(
+        key = "dndEnabled",
+        currentValue = _uiState.value.dndEnabled,
+        applyOptimistic = { value -> _uiState.update { it.copy(dndEnabled = value) } }
+    )
+
+    fun setDndStartHour(hour: Int) = updateNumericSetting("dndStartHour", hour) {
+        _uiState.update { it.copy(dndStartHour = hour) }
+    }
+
+    fun setDndStartMinute(minute: Int) = updateNumericSetting("dndStartMinute", minute) {
+        _uiState.update { it.copy(dndStartMinute = minute) }
+    }
+
+    fun setDndEndHour(hour: Int) = updateNumericSetting("dndEndHour", hour) {
+        _uiState.update { it.copy(dndEndHour = hour) }
+    }
+
+    fun setDndEndMinute(minute: Int) = updateNumericSetting("dndEndMinute", minute) {
+        _uiState.update { it.copy(dndEndMinute = minute) }
+    }
+
+    private fun updateNumericSetting(key: String, value: Int, applyOptimistic: () -> Unit) {
+        applyOptimistic()
+        viewModelScope.launch {
+            userRepository.updateProfile(currentUserId, mapOf(key to value))
         }
     }
 
