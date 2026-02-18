@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.EventSeat
 import androidx.compose.material.icons.filled.Mic
@@ -54,6 +55,7 @@ fun UserCardPopup(
     onBlock: () -> Unit,
     onUnblock: () -> Unit,
     onDismiss: () -> Unit,
+    onMessage: (() -> Unit)? = null,
     onInvite: (() -> Unit)? = null,
     // Moderation actions (null = not available)
     onMuteToggle: (() -> Unit)? = null,
@@ -173,6 +175,22 @@ fun UserCardPopup(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(if (isBlocked) "Unblock" else "Block")
                         }
+                    }
+                }
+
+                if (!isSelf && onMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onMessage,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Chat,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Message")
                     }
                 }
 

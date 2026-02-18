@@ -1,0 +1,211 @@
+package com.shyden.shytalk.feature.messaging
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
+import org.koin.compose.viewmodel.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ConversationListScreen(
+    onNavigateToChat: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: ConversationListViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showSearch by remember { mutableStateOf(false) }
+    var contextMenuConversationId by remember { mutableStateOf<String?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf<String?>(null) }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        // Search bar
+        AnimatedVisibility(
+            visible = showSearch,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            OutlinedTextField(
+                value = uiState.searchQuery,
+                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                placeholder = { Text("Search conversations...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                singleLine = true,
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    IconButton(onClick = {
+                        viewModel.onSearchQueryChanged("")
+                        showSearch = false
+                    }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close search")
+                    }
+                }
+            )
+        }
+
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            val conversations = viewModel.getFilteredConversations()
+
+            if (conversations.isEmpty()) {
+                // Empty state
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Chat,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = if (uiState.searchQuery.isNotBlank()) "No matches found" else "No messages yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (uiState.searchQuery.isBlank()) {
+                            Text(
+                                text = "Start a conversation from someone's\nprofile or user card in a room",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(
+                        items = conversations,
+                        key = { it.conversation.conversationId }
+                    ) { conversationWithUser ->
+                        val cId = conversationWithUser.conversation.conversationId
+                        Box {
+                            ConversationListItem(
+                                otherUser = conversationWithUser.otherUser,
+                                lastMessageText = conversationWithUser.conversation.lastMessage?.text,
+                                lastMessageType = conversationWithUser.conversation.lastMessage?.type,
+                                lastMessageAt = conversationWithUser.conversation.lastMessageAt,
+                                unreadCount = conversationWithUser.settings?.unreadCount ?: 0,
+                                isMuted = conversationWithUser.settings?.isMuted == true,
+                                isPinned = conversationWithUser.settings?.isPinned == true,
+                                onClick = {
+                                    val otherUserId = conversationWithUser.conversation.otherUserId(viewModel.currentUserId) ?: return@ConversationListItem
+                                    onNavigateToChat(otherUserId)
+                                },
+                                modifier = Modifier.combinedClickable(
+                                    onClick = {
+                                        val otherUserId = conversationWithUser.conversation.otherUserId(viewModel.currentUserId) ?: return@combinedClickable
+                                        onNavigateToChat(otherUserId)
+                                    },
+                                    onLongClick = {
+                                        contextMenuConversationId = cId
+                                    }
+                                )
+                            )
+
+                            // Context menu
+                            DropdownMenu(
+                                expanded = contextMenuConversationId == cId,
+                                onDismissRequest = { contextMenuConversationId = null },
+                                offset = DpOffset(x = 200.dp, y = 0.dp)
+                            ) {
+                                val isPinned = conversationWithUser.settings?.isPinned == true
+                                DropdownMenuItem(
+                                    text = { Text(if (isPinned) "Unpin" else "Pin") },
+                                    onClick = {
+                                        contextMenuConversationId = null
+                                        viewModel.pinConversation(cId)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete Conversation") },
+                                    onClick = {
+                                        contextMenuConversationId = null
+                                        showDeleteConfirm = cId
+                                    }
+                                )
+                            }
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(start = 80.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    // Delete confirmation dialog
+    showDeleteConfirm?.let { conversationId ->
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = null },
+            title = { Text("Delete Conversation") },
+            text = { Text("This will remove the conversation from your list. Messages are preserved and will reappear if the other person messages you again.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.hideConversation(conversationId)
+                    showDeleteConfirm = null
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}

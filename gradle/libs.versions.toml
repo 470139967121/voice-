@@ -61,6 +61,7 @@ firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore
 firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
 firebase-database = { group = "com.google.firebase", name = "firebase-database" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
 # Coroutines
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }

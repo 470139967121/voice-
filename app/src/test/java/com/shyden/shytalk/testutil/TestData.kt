@@ -1,8 +1,13 @@
 package com.shyden.shytalk.testutil
 
 import com.shyden.shytalk.core.model.ChatRoom
+import com.shyden.shytalk.core.model.Conversation
+import com.shyden.shytalk.core.model.ConversationPreview
+import com.shyden.shytalk.core.model.ConversationSettings
 import com.shyden.shytalk.core.model.Message
 import com.shyden.shytalk.core.model.MessageType
+import com.shyden.shytalk.core.model.PrivateMessage
+import com.shyden.shytalk.core.model.PrivateMessageType
 import com.shyden.shytalk.core.model.ProfileVisitor
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.Seat
@@ -164,5 +169,97 @@ object TestData {
         createdAt = createdAt,
         resolvedBy = resolvedBy,
         resolvedAt = resolvedAt
+    )
+
+    fun createTestPrivateMessage(
+        messageId: String = "pm-1",
+        senderId: String = "user-1",
+        senderName: String = "Test User",
+        text: String = "Hello PM",
+        imageUrls: List<String> = emptyList(),
+        type: PrivateMessageType = PrivateMessageType.TEXT,
+        createdAt: Long = BASE_TIMESTAMP,
+        editedAt: Long? = null,
+        editCount: Long = 0,
+        readBy: List<String> = emptyList(),
+        replyToMessageId: String? = null,
+        replyToText: String? = null,
+        replyToSenderName: String? = null,
+        reactions: Map<String, List<String>> = emptyMap()
+    ) = PrivateMessage(
+        messageId = messageId,
+        senderId = senderId,
+        senderName = senderName,
+        text = text,
+        imageUrls = imageUrls,
+        type = type,
+        createdAt = createdAt,
+        editedAt = editedAt,
+        editCount = editCount,
+        readBy = readBy,
+        replyToMessageId = replyToMessageId,
+        replyToText = replyToText,
+        replyToSenderName = replyToSenderName,
+        reactions = reactions
+    )
+
+    fun createTestConversation(
+        conversationId: String = "conv-1",
+        participantIds: List<String> = listOf("user-1", "user-2"),
+        lastMessage: ConversationPreview? = null,
+        lastMessageAt: Long = BASE_TIMESTAMP,
+        createdAt: Long = BASE_TIMESTAMP,
+        isGroup: Boolean = false,
+        groupName: String? = null,
+        groupPhotoUrl: String? = null,
+        groupAdminIds: List<String> = emptyList(),
+        createdBy: String? = null
+    ) = Conversation(
+        conversationId = conversationId,
+        participantIds = participantIds,
+        lastMessage = lastMessage,
+        lastMessageAt = lastMessageAt,
+        createdAt = createdAt,
+        isGroup = isGroup,
+        groupName = groupName,
+        groupPhotoUrl = groupPhotoUrl,
+        groupAdminIds = groupAdminIds,
+        createdBy = createdBy
+    )
+
+    fun createTestConversationPreview(
+        text: String = "Last msg",
+        senderId: String = "user-1",
+        senderName: String = "Test User",
+        createdAt: Long = BASE_TIMESTAMP,
+        type: String = "TEXT"
+    ) = ConversationPreview(
+        text = text,
+        senderId = senderId,
+        senderName = senderName,
+        createdAt = createdAt,
+        type = type
+    )
+
+    fun createTestConversationSettings(
+        userId: String = "user-1",
+        isMuted: Boolean = false,
+        isHidden: Boolean = false,
+        hiddenAt: Long? = null,
+        isPinned: Boolean = false,
+        isSilent: Boolean = false,
+        lastReadMessageId: String = "",
+        lastReadAt: Long = 0,
+        unreadCount: Long = 0
+    ) = ConversationSettings(
+        userId = userId,
+        isMuted = isMuted,
+        isHidden = isHidden,
+        hiddenAt = hiddenAt,
+        isPinned = isPinned,
+        isSilent = isSilent,
+        lastReadMessageId = lastReadMessageId,
+        lastReadAt = lastReadAt,
+        unreadCount = unreadCount
     )
 }

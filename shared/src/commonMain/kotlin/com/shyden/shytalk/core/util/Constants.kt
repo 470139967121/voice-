@@ -29,4 +29,18 @@ object Constants {
 
     // Profile stalkers
     const val STALKER_EXPIRY_MS = 90L * 24 * 60 * 60 * 1000 // 3 months
+
+    // Private messaging
+    const val PM_NOTIFICATION_CHANNEL_ID = "pm_notification_channel"
+    const val MAX_PM_MESSAGE_LENGTH = 2000
+    const val PM_IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024L // 5 MB
+    const val PM_MAX_IMAGES_PER_MESSAGE = 10
+    const val PM_MESSAGES_PAGE_SIZE = 50
+    const val PM_EDIT_WINDOW_MS = 900_000L // 15 minutes
+    const val TYPING_DEBOUNCE_MS = 5_000L // 5 seconds
+
+    // PM flood protection
+    const val PM_FLOOD_COOLDOWN_MS = 1_000L
+    const val PM_FLOOD_WINDOW_MS = 10_000L
+    const val PM_FLOOD_MAX_MESSAGES = 5
 }

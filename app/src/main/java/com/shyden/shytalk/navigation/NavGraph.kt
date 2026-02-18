@@ -13,9 +13,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -27,9 +29,21 @@ import androidx.navigation.navArgument
 import com.google.firebase.firestore.FirebaseFirestore
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.google.firebase.messaging.FirebaseMessaging
+import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.data.repository.NotificationRepository
+import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.feature.auth.GoogleSignInScreen
 import com.shyden.shytalk.feature.home.LunarNewYearScreen
+import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
+import com.shyden.shytalk.feature.legal.CommunityStandardsScreen
+import com.shyden.shytalk.feature.legal.LegalAcceptanceScreen
+import com.shyden.shytalk.feature.legal.TermsAndConditionsScreen
 import com.shyden.shytalk.feature.main.MainScreen
+import com.shyden.shytalk.feature.messaging.ConversationListScreen
+import com.shyden.shytalk.feature.messaging.ConversationListViewModel
+import com.shyden.shytalk.feature.messaging.PrivateChatScreen
+import com.shyden.shytalk.feature.messaging.ReportReviewScreen
 import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
 import com.shyden.shytalk.feature.settings.AppSettingsScreen
 import com.shyden.shytalk.feature.profile.FollowListScreen
@@ -37,6 +51,8 @@ import com.shyden.shytalk.feature.profile.ProfileScreen
 import com.shyden.shytalk.feature.profile.ProfileSetupScreen
 import com.shyden.shytalk.feature.profile.RequiredDOBScreen
 import com.shyden.shytalk.feature.room.RoomScreen
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import org.koin.compose.koinInject
 
 @Composable
@@ -138,12 +154,46 @@ fun NavGraph(
         composable(Screen.Main.route) {
             // Request permissions once after login
             val context = LocalContext.current
+            val userRepository: UserRepository = koinInject()
+            val notificationRepository: NotificationRepository = koinInject()
+            val scope = rememberCoroutineScope()
             var notificationPermissionRequested by rememberSaveable { mutableStateOf(false) }
             var showOverlayDialog by rememberSaveable { mutableStateOf(false) }
+            var legalCheckDone by rememberSaveable { mutableStateOf(false) }
 
             val notificationPermissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission()
             ) { /* granted or denied — no action needed */ }
+
+            // Legal acceptance check
+            LaunchedEffect(Unit) {
+                if (!legalCheckDone) {
+                    val userId = authRepository.currentUserId
+                    if (userId != null) {
+                        when (val result = userRepository.getUser(userId)) {
+                            is Resource.Success -> {
+                                if (result.data.acceptedLegalVersion < CURRENT_LEGAL_VERSION) {
+                                    navController.navigate(Screen.LegalAcceptance.route)
+                                    return@LaunchedEffect
+                                }
+                            }
+                            else -> {}
+                        }
+                    }
+                    legalCheckDone = true
+                }
+            }
+
+            // Save FCM token on login
+            LaunchedEffect(Unit) {
+                val userId = authRepository.currentUserId ?: return@LaunchedEffect
+                try {
+                    val token = FirebaseMessaging.getInstance().token.await()
+                    notificationRepository.saveFcmToken(userId, token)
+                } catch (_: Exception) {
+                    // Token save failed — will retry on next app launch
+                }
+            }
 
             LaunchedEffect(Unit) {
                 if (!notificationPermissionRequested) {
@@ -183,6 +233,8 @@ fun NavGraph(
                 )
             }
 
+            val conversationListViewModel: ConversationListViewModel = koinInject()
+
             MainScreen(
                 onNavigateToRoom = { roomId ->
                     navController.navigate(Screen.Room.createRoute(roomId))
@@ -199,6 +251,15 @@ fun NavGraph(
                 onNavigateToLunarNewYear = {
                     navController.navigate(Screen.LunarNewYear.route)
                 },
+                messagesContent = { modifier ->
+                    ConversationListScreen(
+                        onNavigateToChat = { otherUserId ->
+                            navController.navigate(Screen.PrivateChat.createRoute(otherUserId))
+                        },
+                        modifier = modifier
+                    )
+                },
+                totalUnreadCount = conversationListViewModel.uiState.collectAsState().value.totalUnreadCount,
                 profileContent = { modifier ->
                     ProfileScreen(
                         userId = null,
@@ -211,6 +272,9 @@ fun NavGraph(
                             navController.navigate(Screen.FollowList.createRoute(userId, tab))
                         },
                         onNavigateToRoom = { roomId -> navigateToRoom(roomId) },
+                        onNavigateToChat = { otherUserId ->
+                            navController.navigate(Screen.PrivateChat.createRoute(otherUserId))
+                        },
                         modifier = modifier
                     )
                 }
@@ -227,6 +291,9 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToUserProfile = { userId ->
                     navController.navigate(Screen.UserProfile.createRoute(userId))
+                },
+                onNavigateToChat = { otherUserId ->
+                    navController.navigate(Screen.PrivateChat.createRoute(otherUserId))
                 }
             )
         }
@@ -245,7 +312,24 @@ fun NavGraph(
                 onNavigateToFollowList = { uid, tab ->
                     navController.navigate(Screen.FollowList.createRoute(uid, tab))
                 },
-                onNavigateToRoom = { roomId -> navigateToRoom(roomId) }
+                onNavigateToRoom = { roomId -> navigateToRoom(roomId) },
+                onNavigateToChat = { otherUserId ->
+                    navController.navigate(Screen.PrivateChat.createRoute(otherUserId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.PrivateChat.route,
+            arguments = listOf(navArgument("otherUserId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val otherUserId = backStackEntry.arguments?.getString("otherUserId") ?: return@composable
+            PrivateChatScreen(
+                otherUserId = otherUserId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToUserProfile = { uid ->
+                    navController.navigate(Screen.UserProfile.createRoute(uid))
+                }
             )
         }
 
@@ -269,12 +353,31 @@ fun NavGraph(
         }
 
         composable(Screen.Settings.route) {
+            val settingsNotificationRepo: NotificationRepository = koinInject()
+            val settingsScope = rememberCoroutineScope()
+
             AppSettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPrivacyPolicy = {
                     navController.navigate(Screen.PrivacyPolicy.route)
                 },
+                onNavigateToCommunityStandards = {
+                    navController.navigate(Screen.CommunityStandards.route)
+                },
+                onNavigateToTermsAndConditions = {
+                    navController.navigate(Screen.TermsAndConditions.route)
+                },
                 onSignOut = {
+                    // Remove FCM token before signing out
+                    val signOutUserId = authRepository.currentUserId
+                    if (signOutUserId != null) {
+                        settingsScope.launch {
+                            try {
+                                val token = FirebaseMessaging.getInstance().token.await()
+                                settingsNotificationRepo.removeFcmToken(signOutUserId, token)
+                            } catch (_: Exception) {}
+                        }
+                    }
                     onSignOut()
                     navController.navigate(Screen.SignIn.route) {
                         popUpTo(Screen.Main.route) { inclusive = true }
@@ -294,6 +397,51 @@ fun NavGraph(
                 onAccept = { navController.popBackStack() },
                 onDecline = { navController.popBackStack() },
                 showActions = false
+            )
+        }
+
+        composable(Screen.CommunityStandards.route) {
+            CommunityStandardsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.TermsAndConditions.route) {
+            TermsAndConditionsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.LegalAcceptance.route) {
+            val legalUserRepository: UserRepository = koinInject()
+            val legalScope = rememberCoroutineScope()
+
+            LegalAcceptanceScreen(
+                onAccept = {
+                    legalScope.launch {
+                        val userId = authRepository.currentUserId ?: return@launch
+                        legalUserRepository.updateProfile(
+                            userId,
+                            mapOf("acceptedLegalVersion" to CURRENT_LEGAL_VERSION)
+                        )
+                        navController.popBackStack()
+                    }
+                },
+                onViewPrivacyPolicy = {
+                    navController.navigate(Screen.PrivacyPolicy.route)
+                },
+                onViewCommunityStandards = {
+                    navController.navigate(Screen.CommunityStandards.route)
+                },
+                onViewTerms = {
+                    navController.navigate(Screen.TermsAndConditions.route)
+                }
+            )
+        }
+
+        composable(Screen.ReportReview.route) {
+            ReportReviewScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

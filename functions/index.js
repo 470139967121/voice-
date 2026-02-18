@@ -294,6 +294,122 @@ exports.onUserSuspended = onDocumentUpdated(
   }
 );
 
+// --- PM Notification on new message ---
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
+
+exports.sendPmNotification = onDocumentCreated(
+  { document: "conversations/{conversationId}/messages/{messageId}", region: "asia-southeast1" },
+  async (event) => {
+    const message = event.data.data();
+    const conversationId = event.params.conversationId;
+
+    if (!message || !message.senderId) return;
+
+    const db = getFirestore();
+
+    // Get conversation to find the other participant
+    const convDoc = await db.collection("conversations").doc(conversationId).get();
+    if (!convDoc.exists) return;
+
+    const conv = convDoc.data();
+    const recipientId = (conv.participantIds || []).find((id) => id !== message.senderId);
+    if (!recipientId) return;
+
+    // Check recipient's notification settings
+    const recipientDoc = await db.collection("users").doc(recipientId).get();
+    if (!recipientDoc.exists) return;
+
+    const recipient = recipientDoc.data();
+    if (recipient.pmNotificationsEnabled === false) return;
+
+    // Check DND schedule
+    if (recipient.dndEnabled) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentTime = currentHour * 60 + currentMinute;
+      const startTime = (recipient.dndStartHour || 22) * 60 + (recipient.dndStartMinute || 0);
+      const endTime = (recipient.dndEndHour || 8) * 60 + (recipient.dndEndMinute || 0);
+
+      let isDnd = false;
+      if (startTime <= endTime) {
+        isDnd = currentTime >= startTime && currentTime < endTime;
+      } else {
+        // Wraps midnight (e.g. 22:00 - 08:00)
+        isDnd = currentTime >= startTime || currentTime < endTime;
+      }
+      if (isDnd) return;
+    }
+
+    // Check if conversation is muted
+    const settingsDoc = await db
+      .collection("conversations")
+      .doc(conversationId)
+      .collection("settings")
+      .doc(recipientId)
+      .get();
+
+    if (settingsDoc.exists) {
+      const settings = settingsDoc.data();
+      if (settings.isMuted || settings.isSilent) return;
+    }
+
+    // Get sender info
+    const senderDoc = await db.collection("users").doc(message.senderId).get();
+    const senderName = senderDoc.exists ? senderDoc.data().displayName || "Someone" : "Someone";
+
+    // Build notification body
+    const showPreview = recipient.pmNotificationPreview !== false;
+    let body;
+    if (showPreview) {
+      body = message.type === "IMAGE" ? "Sent an image" : (message.text || "").substring(0, 100);
+    } else {
+      body = "New message";
+    }
+
+    // Send to all FCM tokens
+    const tokens = recipient.fcmTokens || [];
+    if (tokens.length === 0) return;
+
+    const payload = {
+      notification: {
+        title: senderName,
+        body: body,
+      },
+      data: {
+        type: "pm",
+        otherUserId: message.senderId,
+        conversationId: conversationId,
+      },
+    };
+
+    const tokensToRemove = [];
+    await Promise.all(
+      tokens.map(async (token) => {
+        try {
+          await getMessaging().send({ ...payload, token });
+        } catch (err) {
+          if (
+            err.code === "messaging/invalid-registration-token" ||
+            err.code === "messaging/registration-token-not-registered"
+          ) {
+            tokensToRemove.push(token);
+          }
+        }
+      })
+    );
+
+    // Clean up invalid tokens
+    if (tokensToRemove.length > 0) {
+      await db.collection("users").doc(recipientId).update({
+        fcmTokens: FieldValue.arrayRemove(...tokensToRemove),
+      });
+      console.log(`Removed ${tokensToRemove.length} invalid FCM tokens for ${recipientId}`);
+    }
+  }
+);
+
 // --- Admin API ---
 const adminApp = require("./admin");
 exports.adminApi = onRequest({ region: "asia-southeast1" }, adminApp);

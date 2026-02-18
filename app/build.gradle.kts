@@ -22,8 +22,8 @@ android {
         applicationId = "com.shyden.shytalk"
         minSdk = 28
         targetSdk = 36
-        versionCode = 35
-        versionName = "0.35"
+        versionCode = 36
+        versionName = "0.36"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -110,6 +110,7 @@ dependencies {
     implementation(libs.firebase.functions)
     implementation(libs.firebase.storage)
     implementation(libs.firebase.database)
+    implementation(libs.firebase.messaging)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
