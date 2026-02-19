@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, Timestamp, FieldValue } = require("firebase-admin/firestore");
+const { getStorage } = require("firebase-admin/storage");
 
 const app = express();
 
@@ -391,6 +392,81 @@ app.get("/api/appeals", async (req, res) => {
       return tb - ta;
     });
 
+    // Enrich each appeal with user suspension info and reports
+    const userIds = [...new Set(appeals.map((a) => a.userId).filter(Boolean))];
+    const userMap = {};
+    for (let i = 0; i < userIds.length; i += 30) {
+      const batch = userIds.slice(i, i + 30);
+      const refs = batch.map((uid) => db.collection("users").doc(uid));
+      const docs = await db.getAll(...refs);
+      for (const doc of docs) {
+        if (doc.exists) {
+          const ud = doc.data();
+          const convertTs = (v) => v && typeof v.toDate === "function" ? v.toDate().toISOString() : v;
+          userMap[doc.id] = {
+            displayName: ud.displayName || "",
+            profilePhotoUrl: ud.profilePhotoUrl || null,
+            uniqueId: ud.uniqueId || 0,
+            suspensionReason: ud.suspensionReason || null,
+            suspensionStartDate: convertTs(ud.suspensionStartDate),
+            suspensionEndDate: convertTs(ud.suspensionEndDate),
+            suspendedBy: ud.suspendedBy || null,
+            preSuspension: ud._preSuspension || null,
+          };
+        }
+      }
+    }
+
+    // Fetch reports for each user
+    const reportsMap = {};
+    for (const uid of userIds) {
+      try {
+        const reportsSnap = await db.collection("reports")
+          .where("reportedUserId", "==", uid)
+          .orderBy("timestamp", "desc")
+          .limit(20)
+          .get();
+        reportsMap[uid] = reportsSnap.docs.map((doc) => {
+          const rd = doc.data();
+          for (const [key, val] of Object.entries(rd)) {
+            if (val && typeof val.toDate === "function") {
+              rd[key] = val.toDate().toISOString();
+            }
+          }
+          return { reportId: doc.id, ...rd };
+        });
+      } catch (e) {
+        // If composite index doesn't exist, fall back without ordering
+        const reportsSnap = await db.collection("reports")
+          .where("reportedUserId", "==", uid)
+          .limit(20)
+          .get();
+        reportsMap[uid] = reportsSnap.docs.map((doc) => {
+          const rd = doc.data();
+          for (const [key, val] of Object.entries(rd)) {
+            if (val && typeof val.toDate === "function") {
+              rd[key] = val.toDate().toISOString();
+            }
+          }
+          return { reportId: doc.id, ...rd };
+        });
+      }
+    }
+
+    // Attach user info and reports to each appeal
+    for (const appeal of appeals) {
+      const userInfo = userMap[appeal.userId];
+      if (userInfo) {
+        appeal.userInfo = userInfo;
+        // Use original name from preSuspension if available
+        if (userInfo.preSuspension) {
+          appeal.originalDisplayName = userInfo.preSuspension.displayName;
+          appeal.originalProfilePhotoUrl = userInfo.preSuspension.profilePhotoUrl;
+        }
+      }
+      appeal.reports = reportsMap[appeal.userId] || [];
+    }
+
     return res.json({ appeals });
   } catch (err) {
     console.error("GET /api/appeals error:", err);
@@ -448,6 +524,1238 @@ app.patch("/api/appeals/:id", async (req, res) => {
   } catch (err) {
     console.error("PATCH /api/appeals/:id error:", err);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- GCS Helper ---
+function computeDisplayScore(floor, lastDeductionAt) {
+  if (lastDeductionAt == null) return Math.min(100, floor);
+  const now = Date.now();
+  const deductionTime = lastDeductionAt.toDate ? lastDeductionAt.toDate().getTime() : new Date(lastDeductionAt).getTime();
+  const monthsSince = (now - deductionTime) / (30 * 24 * 60 * 60 * 1000);
+  return Math.min(100, Math.floor(floor + 2 * monthsSince));
+}
+
+// --- Timestamp Formatting Helper ---
+function formatTimestamp(firestoreTimestamp) {
+  if (!firestoreTimestamp) return "an unknown date";
+  const date = firestoreTimestamp.toDate ? firestoreTimestamp.toDate() : new Date(firestoreTimestamp);
+  if (isNaN(date.getTime())) return "an unknown date";
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = date.getUTCDate();
+  const month = months[date.getUTCMonth()];
+  const year = date.getUTCFullYear();
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${day} ${month} ${year} at ${hours}:${minutes} UTC`;
+}
+
+// --- Audit Log Helper ---
+async function writeAuditLog(db, { adminUid, action, targetUserId, reportId, severity, note }) {
+  await db.collection("admin_audit_log").add({
+    adminUid,
+    action,
+    targetUserId: targetUserId || null,
+    reportId: reportId || null,
+    severity: severity || null,
+    note: note || null,
+    timestamp: Timestamp.now(),
+  });
+}
+
+// --- sendSystemPm (imported from index.js at runtime) ---
+async function sendSystemPm(recipientUid, text) {
+  // Re-implement inline to avoid circular dependency with index.js
+  const SYSTEM_UID = "SHYTALK_SYSTEM";
+  const SYSTEM_NAME = "ShyTalk";
+  const db = getFirestore();
+
+  const systemUserRef = db.collection("users").doc(SYSTEM_UID);
+  const systemDoc = await systemUserRef.get();
+  if (!systemDoc.exists) {
+    await systemUserRef.set({
+      displayName: SYSTEM_NAME,
+      userType: "SYSTEM",
+      profilePhotoUrl: "https://firebasestorage.googleapis.com/v0/b/shytalk-7ba69.firebasestorage.app/o/system%2Fshytalk_icon.webp?alt=media&token=30b0256e-3bd6-4cae-ac50-31b596df98e8",
+      uniqueId: 0,
+      createdAt: FieldValue.serverTimestamp(),
+      lastSeenAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Use deterministic ID matching app's Conversation.generateId()
+  const participantIds = [SYSTEM_UID, recipientUid].sort();
+  const conversationId = participantIds.join("_");
+  const convRef = db.collection("conversations").doc(conversationId);
+  const convDoc = await convRef.get();
+
+  const lastMessagePreview = {
+    text: text.substring(0, 100),
+    senderId: SYSTEM_UID,
+    senderName: SYSTEM_NAME,
+    createdAt: FieldValue.serverTimestamp(),
+    type: "TEXT",
+  };
+
+  if (!convDoc.exists) {
+    await convRef.set({
+      participantIds,
+      isGroup: false,
+      createdAt: FieldValue.serverTimestamp(),
+      lastMessage: lastMessagePreview,
+      lastMessageAt: FieldValue.serverTimestamp(),
+    });
+    // Create default settings for both participants
+    const settingsCol = convRef.collection("settings");
+    await settingsCol.doc(SYSTEM_UID).set({ unreadCount: 0, isMuted: false, isPinned: false, isHidden: false });
+    await settingsCol.doc(recipientUid).set({ unreadCount: 0, isMuted: false, isPinned: false, isHidden: false });
+  }
+
+  const msgRef = convRef.collection("messages").doc();
+  await msgRef.set({
+    senderId: SYSTEM_UID,
+    senderName: SYSTEM_NAME,
+    text,
+    type: "TEXT",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  await convRef.update({
+    lastMessage: lastMessagePreview,
+    lastMessageAt: FieldValue.serverTimestamp(),
+  });
+}
+
+// --- GET /api/reports ---
+app.get("/api/reports", async (req, res) => {
+  try {
+    const status = req.query.status || "pending";
+    const search = req.query.search || null;
+    const userId = req.query.userId || null;
+
+    if (!["pending", "resolved", "archived"].includes(status)) {
+      return res.status(400).json({ error: "status must be pending, resolved, or archived" });
+    }
+
+    const db = getFirestore();
+    const collection = status === "archived" ? "reports_archive" : "reports";
+
+    let query = db.collection(collection).where("status", "==", status === "archived" ? "resolved" : status);
+
+    if (userId) {
+      query = query.where("reportedUserId", "==", userId);
+    }
+
+    const snapshot = await query.limit(200).get();
+
+    // Group by reportedUserId
+    const grouped = {};
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      // Convert timestamps
+      for (const [key, val] of Object.entries(data)) {
+        if (val && typeof val.toDate === "function") {
+          data[key] = val.toDate().toISOString();
+        }
+      }
+      data.reportId = doc.id;
+
+      const reportedUid = data.reportedUserId;
+      if (!grouped[reportedUid]) {
+        grouped[reportedUid] = { uid: reportedUid, reports: [] };
+      }
+      grouped[reportedUid].reports.push(data);
+    }
+
+    // Fetch user docs for all reported users
+    const reportedUids = Object.keys(grouped);
+    for (let i = 0; i < reportedUids.length; i += 30) {
+      const batch = reportedUids.slice(i, i + 30);
+      const refs = batch.map((uid) => db.collection("users").doc(uid));
+      const docs = await db.getAll(...refs);
+      for (const doc of docs) {
+        if (doc.exists && grouped[doc.id]) {
+          const userData = doc.data();
+          // For suspended users, show original name/photo from _preSuspension
+          const preSus = userData._preSuspension;
+          grouped[doc.id].displayName = (preSus && preSus.displayName) || userData.displayName || "";
+          grouped[doc.id].uniqueId = userData.uniqueId || 0;
+          grouped[doc.id].profilePhotoUrl = (preSus && preSus.profilePhotoUrl) || userData.profilePhotoUrl || null;
+          grouped[doc.id].warningCount = userData.warningCount || 0;
+          grouped[doc.id].isSuspended = userData.isSuspended || false;
+
+          const floor = userData.goodCharacterScore ?? 100;
+          const lastDeduction = userData.goodCharacterLastDeductionAt || null;
+          grouped[doc.id].gcs = {
+            floor,
+            displayScore: computeDisplayScore(floor, lastDeduction),
+            lastDeductionAt: lastDeduction && typeof lastDeduction.toDate === "function"
+              ? lastDeduction.toDate().toISOString() : lastDeduction,
+          };
+        }
+      }
+    }
+
+    // Enrich reporter info for reports missing reporterName (backfill old reports)
+    const allReporterUids = new Set();
+    for (const group of Object.values(grouped)) {
+      for (const r of group.reports) {
+        if (!r.reporterName && r.reporterId) allReporterUids.add(r.reporterId);
+      }
+    }
+    const reporterUids = [...allReporterUids];
+    const reporterMap = {};
+    for (let i = 0; i < reporterUids.length; i += 30) {
+      const batch = reporterUids.slice(i, i + 30);
+      const refs = batch.map((uid) => db.collection("users").doc(uid));
+      const docs = await db.getAll(...refs);
+      for (const doc of docs) {
+        if (doc.exists) {
+          const d = doc.data();
+          reporterMap[doc.id] = { name: d.displayName || "", uniqueId: d.uniqueId || 0 };
+        }
+      }
+    }
+    // Backfill reporter names
+    for (const group of Object.values(grouped)) {
+      for (const r of group.reports) {
+        if (!r.reporterName && reporterMap[r.reporterId]) {
+          r.reporterName = reporterMap[r.reporterId].name;
+          r.reporterUniqueId = reporterMap[r.reporterId].uniqueId;
+        }
+      }
+    }
+
+    let users = Object.values(grouped);
+
+    // Search filter
+    if (search) {
+      const searchNum = Number(search);
+      users = users.filter((u) => {
+        if (Number.isFinite(searchNum) && u.uniqueId === searchNum) return true;
+        // Also check reporter uniqueIds
+        return u.reports.some((r) => {
+          if (r.reporterUniqueId === searchNum) return true;
+          return false;
+        });
+      });
+    }
+
+    // Sort by most recent report first (newest at top)
+    users.sort((a, b) => {
+      const aLatest = a.reports.reduce((max, r) => {
+        const t = r.timestamp ? new Date(r.timestamp).getTime() : 0;
+        return t > max ? t : max;
+      }, 0);
+      const bLatest = b.reports.reduce((max, r) => {
+        const t = r.timestamp ? new Date(r.timestamp).getTime() : 0;
+        return t > max ? t : max;
+      }, 0);
+      return bLatest - aLatest;
+    });
+
+    // Sort reports within each user (most recent first) and count
+    users.forEach((u) => {
+      u.reports.sort((a, b) => {
+        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return bTime - aTime;
+      });
+      u.reportCount = u.reports.length;
+    });
+
+    // Fetch active review locks
+    const locksSnap = await db.collection("report_locks").get();
+    const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+    const lockMap = {};
+    for (const lockDoc of locksSnap.docs) {
+      const ld = lockDoc.data();
+      const lockTime = ld.timestamp?.toDate?.()?.getTime() || 0;
+      if (lockTime > fiveMinAgo) {
+        lockMap[lockDoc.id] = {
+          adminUid: ld.adminUid,
+          displayName: ld.displayName || "Admin",
+          lockedAt: ld.timestamp?.toDate?.()?.toISOString(),
+        };
+      }
+    }
+    users.forEach((u) => { u.lock = lockMap[u.uid] || null; });
+
+    return res.json({ users });
+  } catch (err) {
+    console.error("GET /api/reports error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- GET /api/conversations/:id/messages ---
+// Fetch messages from a conversation for admin review
+app.get("/api/conversations/:id/messages", async (req, res) => {
+  try {
+    const conversationId = req.params.id;
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const db = getFirestore();
+
+    const snapshot = await db.collection("conversations").doc(conversationId)
+      .collection("messages")
+      .orderBy("timestamp", "desc")
+      .limit(limit)
+      .get();
+
+    const messages = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      // Convert timestamps
+      for (const [key, val] of Object.entries(data)) {
+        if (val && typeof val.toDate === "function") {
+          data[key] = val.toDate().toISOString();
+        }
+      }
+      data.messageId = doc.id;
+      return data;
+    }).reverse(); // chronological order
+
+    return res.json({ messages });
+  } catch (err) {
+    console.error("GET /api/conversations/:id/messages error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- POST /api/reports/:id/resolve ---
+app.post("/api/reports/:id/resolve", async (req, res) => {
+  try {
+    const { action, severity, adminNote, suspensionDays, canAppeal } = req.body;
+
+    if (!["warn", "suspend", "dismiss"].includes(action)) {
+      return res.status(400).json({ error: "action must be warn, suspend, or dismiss" });
+    }
+    if (action !== "dismiss" && (typeof severity !== "number" || severity < 1 || severity > 5)) {
+      return res.status(400).json({ error: "severity must be 1-5 for warn/suspend" });
+    }
+
+    const db = getFirestore();
+    const reportRef = db.collection("reports").doc(req.params.id);
+    const reportDoc = await reportRef.get();
+    if (!reportDoc.exists) {
+      return res.status(404).json({ error: "Report not found" });
+    }
+    const report = reportDoc.data();
+    if (report.status !== "pending") {
+      return res.status(400).json({ error: "Report is already resolved" });
+    }
+
+    const reportedUserId = report.reportedUserId;
+    const reporterId = report.reporterId;
+    const reportType = (report.reason && report.reason.toLowerCase() !== "other") ? report.reason : "a policy violation";
+
+    // Update report status
+    await reportRef.update({
+      status: "resolved",
+      resolvedAction: action,
+      resolvedBy: req.admin.uid,
+      resolvedAt: Timestamp.now(),
+      severity: action !== "dismiss" ? severity : null,
+      adminNote: adminNote || null,
+    });
+
+    let autoEscalateSuggested = false;
+
+    if (action === "warn" || action === "suspend") {
+      // GCS deduction
+      const userRef = db.collection("users").doc(reportedUserId);
+      const userDoc = await userRef.get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        const currentFloor = userData.goodCharacterScore ?? 100;
+        const lastDeduction = userData.goodCharacterLastDeductionAt || null;
+        const currentDisplay = computeDisplayScore(currentFloor, lastDeduction);
+        const deduction = severity * 5;
+        const newFloor = Math.max(0, currentDisplay - deduction);
+
+        const updates = {
+          goodCharacterScore: newFloor,
+          goodCharacterLastDeductionAt: Timestamp.now(),
+        };
+
+        if (action === "warn") {
+          updates.warningCount = FieldValue.increment(1);
+          updates.hasActiveWarning = true;
+          updates.warningReason = reportType;
+          updates.warningIssuedAt = Timestamp.now();
+
+          const newWarningCount = (userData.warningCount || 0) + 1;
+          if (newWarningCount >= 5) {
+            autoEscalateSuggested = true;
+          }
+
+          // Revoke tokens to force logout
+          try {
+            await getAuth().revokeRefreshTokens(reportedUserId);
+          } catch (err) {
+            console.error(`Failed to revoke tokens for ${reportedUserId}:`, err);
+          }
+        }
+
+        await userRef.update(updates);
+      }
+
+      // Suspend action
+      if (action === "suspend") {
+        let endDate = null;
+        if (suspensionDays && suspensionDays > 0) {
+          endDate = new Date(Date.now() + suspensionDays * 86400000).toISOString();
+        }
+
+        // Reuse the suspend endpoint logic
+        const userRef2 = db.collection("users").doc(reportedUserId);
+        const userDoc2 = await userRef2.get();
+        if (userDoc2.exists) {
+          const userData2 = userDoc2.data();
+          const preSuspension = {
+            displayName: userData2.displayName || "",
+            profilePhotoUrl: userData2.profilePhotoUrl || null,
+            coverPhotoUrl: userData2.coverPhotoUrl || null,
+          };
+
+          await userRef2.update({
+            isSuspended: true,
+            suspensionReason: reportType,
+            suspensionStartDate: Timestamp.now(),
+            suspensionEndDate: endDate ? Timestamp.fromDate(new Date(endDate)) : null,
+            suspensionCanAppeal: canAppeal === true,
+            suspendedBy: req.admin.uid,
+            _preSuspension: preSuspension,
+          });
+        }
+      }
+    }
+
+    // Send system PMs
+    const reporterName = report.reporterName || "there";
+    const reportedUserName = report.reportedUserName || "a user";
+    const reportedUserUniqueId = report.reportedUserUniqueId || "unknown";
+    const reportDate = formatTimestamp(report.timestamp);
+    const evidenceLine = (Array.isArray(report.evidenceUrls) && report.evidenceUrls.length > 0)
+      ? " Your attached evidence was reviewed as part of our investigation."
+      : "";
+
+    if (action === "warn") {
+      await sendSystemPm(reporterId,
+        `Hi ${reporterName},\n\nWe've reviewed your report against ${reportedUserName} (ID: ${reportedUserUniqueId}), submitted on ${reportDate} regarding ${reportType}.${evidenceLine}\n\nAction has been taken against this user. If they continue to violate our Community Guidelines (available in Settings > About), please don't hesitate to report them again. You can also block them from their profile if you'd prefer not to interact with them.\n\nThank you for helping keep ShyTalk safe.`);
+      await sendSystemPm(reportedUserId,
+        `Your account has been reviewed for ${reportType}. Please ensure your behaviour follows our community guidelines.`);
+    } else if (action === "suspend") {
+      await sendSystemPm(reporterId,
+        `Hi ${reporterName},\n\nWe've reviewed your report against ${reportedUserName} (ID: ${reportedUserUniqueId}), submitted on ${reportDate} regarding ${reportType}.${evidenceLine}\n\nThe reported user has been suspended. If you encounter similar issues with other users, please report them — it helps us keep the community safe. You can review our Community Guidelines in Settings > About.\n\nThank you for your report.`);
+      // Suspended user already gets the suspension notice on login, no PM needed
+    } else if (action === "dismiss") {
+      await sendSystemPm(reporterId,
+        `Hi ${reporterName},\n\nWe've reviewed your report against ${reportedUserName} (ID: ${reportedUserUniqueId}), submitted on ${reportDate} regarding ${reportType}.${evidenceLine}\n\nAfter careful investigation, no action was taken at this time. This may be because the reported behaviour didn't meet the threshold for action under our Community Guidelines (available in Settings > About), but your report has been noted. If this user's behaviour continues or escalates, please report them again.\n\nThank you for bringing this to our attention.`);
+    }
+
+    // Audit log
+    await writeAuditLog(db, {
+      adminUid: req.admin.uid,
+      action: `report_${action}`,
+      targetUserId: reportedUserId,
+      reportId: req.params.id,
+      severity: action !== "dismiss" ? severity : null,
+      note: adminNote,
+    });
+
+    return res.json({ success: true, autoEscalateSuggested });
+  } catch (err) {
+    console.error("POST /api/reports/:id/resolve error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- POST /api/reports/resolve-all/:reportedUserId ---
+app.post("/api/reports/resolve-all/:reportedUserId", async (req, res) => {
+  try {
+    const { action, severity, adminNote, suspensionDays, canAppeal } = req.body;
+    const reportedUserId = req.params.reportedUserId;
+
+    if (!["warn", "suspend", "dismiss"].includes(action)) {
+      return res.status(400).json({ error: "action must be warn, suspend, or dismiss" });
+    }
+    if (action !== "dismiss" && (typeof severity !== "number" || severity < 1 || severity > 5)) {
+      return res.status(400).json({ error: "severity must be 1-5 for warn/suspend" });
+    }
+
+    const db = getFirestore();
+
+    // Get all pending reports for this user
+    const reportsSnap = await db.collection("reports")
+      .where("reportedUserId", "==", reportedUserId)
+      .where("status", "==", "pending")
+      .get();
+
+    if (reportsSnap.empty) {
+      return res.status(404).json({ error: "No pending reports found for this user" });
+    }
+
+    // Resolve all reports
+    const batch = db.batch();
+    const reportIds = [];
+    let reportType = "a policy violation";
+    let reporterId = null;
+
+    for (const doc of reportsSnap.docs) {
+      reportIds.push(doc.id);
+      const data = doc.data();
+      if (!reporterId) reporterId = data.reporterId;
+      if (data.reason && data.reason.toLowerCase() !== "other") reportType = data.reason;
+
+      batch.update(doc.ref, {
+        status: "resolved",
+        resolvedAction: action,
+        resolvedBy: req.admin.uid,
+        resolvedAt: Timestamp.now(),
+        severity: action !== "dismiss" ? severity : null,
+        adminNote: adminNote || null,
+      });
+    }
+    await batch.commit();
+
+    let autoEscalateSuggested = false;
+
+    // Single GCS deduction for all reports
+    if (action === "warn" || action === "suspend") {
+      const userRef = db.collection("users").doc(reportedUserId);
+      const userDoc = await userRef.get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        const currentFloor = userData.goodCharacterScore ?? 100;
+        const lastDeduction = userData.goodCharacterLastDeductionAt || null;
+        const currentDisplay = computeDisplayScore(currentFloor, lastDeduction);
+        const deduction = severity * 5;
+        const newFloor = Math.max(0, currentDisplay - deduction);
+
+        const updates = {
+          goodCharacterScore: newFloor,
+          goodCharacterLastDeductionAt: Timestamp.now(),
+        };
+
+        if (action === "warn") {
+          updates.warningCount = FieldValue.increment(1);
+          updates.hasActiveWarning = true;
+          updates.warningReason = reportType;
+          updates.warningIssuedAt = Timestamp.now();
+
+          if ((userData.warningCount || 0) + 1 >= 5) {
+            autoEscalateSuggested = true;
+          }
+
+          try {
+            await getAuth().revokeRefreshTokens(reportedUserId);
+          } catch (err) {
+            console.error(`Failed to revoke tokens: ${err}`);
+          }
+        }
+
+        await userRef.update(updates);
+      }
+
+      if (action === "suspend") {
+        let endDate = null;
+        if (suspensionDays && suspensionDays > 0) {
+          endDate = new Date(Date.now() + suspensionDays * 86400000).toISOString();
+        }
+
+        const userRef2 = db.collection("users").doc(reportedUserId);
+        const userDoc2 = await userRef2.get();
+        if (userDoc2.exists) {
+          const userData2 = userDoc2.data();
+          await userRef2.update({
+            isSuspended: true,
+            suspensionReason: reportType,
+            suspensionStartDate: Timestamp.now(),
+            suspensionEndDate: endDate ? Timestamp.fromDate(new Date(endDate)) : null,
+            suspensionCanAppeal: canAppeal === true,
+            suspendedBy: req.admin.uid,
+            _preSuspension: {
+              displayName: userData2.displayName || "",
+              profilePhotoUrl: userData2.profilePhotoUrl || null,
+              coverPhotoUrl: userData2.coverPhotoUrl || null,
+            },
+          });
+        }
+      }
+    }
+
+    // System PMs (send to each unique reporter + reported user)
+    const sentReporters = new Set();
+    for (const doc of reportsSnap.docs) {
+      const data = doc.data();
+      const rid = data.reporterId;
+      if (!rid || sentReporters.has(rid)) continue;
+      sentReporters.add(rid);
+
+      const rName = data.reporterName || "there";
+      const ruName = data.reportedUserName || "a user";
+      const ruId = data.reportedUserUniqueId || "unknown";
+      const rDate = formatTimestamp(data.timestamp);
+      const rType = (data.reason && data.reason.toLowerCase() !== "other") ? data.reason : "a policy violation";
+      const eLine = (Array.isArray(data.evidenceUrls) && data.evidenceUrls.length > 0)
+        ? " Your attached evidence was reviewed as part of our investigation."
+        : "";
+
+      if (action === "warn") {
+        await sendSystemPm(rid,
+          `Hi ${rName},\n\nWe've reviewed your report against ${ruName} (ID: ${ruId}), submitted on ${rDate} regarding ${rType}.${eLine}\n\nAction has been taken against this user. If they continue to violate our Community Guidelines (available in Settings > About), please don't hesitate to report them again. You can also block them from their profile if you'd prefer not to interact with them.\n\nThank you for helping keep ShyTalk safe.`);
+      } else if (action === "suspend") {
+        await sendSystemPm(rid,
+          `Hi ${rName},\n\nWe've reviewed your report against ${ruName} (ID: ${ruId}), submitted on ${rDate} regarding ${rType}.${eLine}\n\nThe reported user has been suspended. If you encounter similar issues with other users, please report them — it helps us keep the community safe. You can review our Community Guidelines in Settings > About.\n\nThank you for your report.`);
+      } else if (action === "dismiss") {
+        await sendSystemPm(rid,
+          `Hi ${rName},\n\nWe've reviewed your report against ${ruName} (ID: ${ruId}), submitted on ${rDate} regarding ${rType}.${eLine}\n\nAfter careful investigation, no action was taken at this time. This may be because the reported behaviour didn't meet the threshold for action under our Community Guidelines (available in Settings > About), but your report has been noted. If this user's behaviour continues or escalates, please report them again.\n\nThank you for bringing this to our attention.`);
+      }
+    }
+    // Warn PM to the reported user
+    if (action === "warn") {
+      await sendSystemPm(reportedUserId,
+        `Your account has been reviewed for ${reportType}. Please ensure your behaviour follows our community guidelines.`);
+    }
+
+    // Audit log
+    await writeAuditLog(db, {
+      adminUid: req.admin.uid,
+      action: `bulk_report_${action}`,
+      targetUserId: reportedUserId,
+      reportId: reportIds.join(","),
+      severity: action !== "dismiss" ? severity : null,
+      note: adminNote,
+    });
+
+    return res.json({ success: true, resolvedCount: reportIds.length, autoEscalateSuggested });
+  } catch (err) {
+    console.error("POST /api/reports/resolve-all error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- POST /api/user/:uid/reset-gcs ---
+app.post("/api/user/:uid/reset-gcs", async (req, res) => {
+  try {
+    const db = getFirestore();
+    const userRef = db.collection("users").doc(req.params.uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await userRef.update({
+      goodCharacterScore: 100,
+      goodCharacterLastDeductionAt: null,
+      warningCount: 0,
+    });
+
+    await writeAuditLog(db, {
+      adminUid: req.admin.uid,
+      action: "reset_gcs",
+      targetUserId: req.params.uid,
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("POST /api/user/:uid/reset-gcs error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- Review lock endpoints ---
+app.post("/api/report-locks/:reportedUserId/lock", async (req, res) => {
+  try {
+    const db = getFirestore();
+    const lockRef = db.collection("report_locks").doc(req.params.reportedUserId);
+    const lockDoc = await lockRef.get();
+
+    if (lockDoc.exists) {
+      const lockData = lockDoc.data();
+      const lockAge = Date.now() - (lockData.timestamp?.toDate?.()?.getTime() || 0);
+      // Lock expires after 5 minutes
+      if (lockAge < 5 * 60 * 1000 && lockData.adminUid !== req.admin.uid) {
+        return res.json({
+          locked: true,
+          lockedBy: lockData.displayName || "Another admin",
+          lockedAt: lockData.timestamp?.toDate?.()?.toISOString(),
+        });
+      }
+    }
+
+    await lockRef.set({
+      adminUid: req.admin.uid,
+      displayName: req.admin.name || req.admin.email || "Admin",
+      timestamp: Timestamp.now(),
+    });
+
+    return res.json({ locked: false });
+  } catch (err) {
+    console.error("POST /api/report-locks/:id/lock error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.delete("/api/report-locks/:reportedUserId", async (req, res) => {
+  try {
+    const db = getFirestore();
+    await db.collection("report_locks").doc(req.params.reportedUserId).delete();
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE /api/report-locks error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- GET /api/reports/export ---
+app.get("/api/reports/export", async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ error: "from and to query params required (ISO dates)" });
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
+
+    const db = getFirestore();
+    const snapshot = await db.collection("reports")
+      .where("status", "==", "resolved")
+      .where("resolvedAt", ">=", Timestamp.fromDate(fromDate))
+      .where("resolvedAt", "<=", Timestamp.fromDate(toDate))
+      .limit(5000)
+      .get();
+
+    const header = "Report ID,Reporter,Reported User,Type,Reason,Action Taken,Severity,Admin Note,Created At,Resolved At";
+    const rows = snapshot.docs.map((doc) => {
+      const d = doc.data();
+      const escape = (v) => `"${String(v || "").replace(/"/g, '""')}"`;
+      const ts = (v) => v && typeof v.toDate === "function" ? v.toDate().toISOString() : (v || "");
+      return [
+        escape(doc.id),
+        escape(d.reporterName),
+        escape(d.reportedUserName),
+        escape(d.type),
+        escape(d.reason),
+        escape(d.resolvedAction),
+        d.severity || "",
+        escape(d.adminNote),
+        escape(ts(d.timestamp)),
+        escape(ts(d.resolvedAt)),
+      ].join(",");
+    });
+
+    const csv = [header, ...rows].join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="reports_${from}_${to}.csv"`);
+    return res.send(csv);
+  } catch (err) {
+    console.error("GET /api/reports/export error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- GET /api/reports/stats ---
+app.get("/api/reports/stats", async (req, res) => {
+  try {
+    const db = getFirestore();
+    const period = req.query.period || "7d";
+
+    let daysBack = 7;
+    if (period === "30d") daysBack = 30;
+    else if (period === "all") daysBack = 3650;
+
+    const cutoff = new Date(Date.now() - daysBack * 86400000);
+
+    const pendingSnap = await db.collection("reports").where("status", "==", "pending").get();
+    const pendingCount = pendingSnap.size;
+
+    // Resolved today
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const resolvedTodaySnap = await db.collection("reports")
+      .where("status", "==", "resolved")
+      .where("resolvedAt", ">=", Timestamp.fromDate(todayStart))
+      .get();
+
+    // Average response time in the period
+    const resolvedInPeriodSnap = await db.collection("reports")
+      .where("status", "==", "resolved")
+      .where("resolvedAt", ">=", Timestamp.fromDate(cutoff))
+      .limit(500)
+      .get();
+
+    let totalResponseMs = 0;
+    let countWithTimes = 0;
+    for (const doc of resolvedInPeriodSnap.docs) {
+      const d = doc.data();
+      if (d.timestamp && d.resolvedAt) {
+        const created = d.timestamp.toDate ? d.timestamp.toDate().getTime() : new Date(d.timestamp).getTime();
+        const resolved = d.resolvedAt.toDate ? d.resolvedAt.toDate().getTime() : new Date(d.resolvedAt).getTime();
+        if (resolved > created) {
+          totalResponseMs += resolved - created;
+          countWithTimes++;
+        }
+      }
+    }
+
+    const avgResponseHours = countWithTimes > 0
+      ? Math.round(totalResponseMs / countWithTimes / 3600000 * 10) / 10
+      : null;
+
+    // Active reviewers (locks in last 5 min)
+    const locksSnap = await db.collection("report_locks").get();
+    const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+    const activeReviewers = locksSnap.docs.filter((doc) => {
+      const data = doc.data();
+      const lockTime = data.timestamp?.toDate?.()?.getTime() || 0;
+      return lockTime > fiveMinAgo;
+    }).length;
+
+    return res.json({
+      pendingCount,
+      resolvedToday: resolvedTodaySnap.size,
+      avgResponseHours,
+      activeReviewers,
+    });
+  } catch (err) {
+    console.error("GET /api/reports/stats error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- POST /api/cleanup/system-conversations ---
+// One-off: delete duplicate system conversations with auto-generated IDs
+app.post("/api/cleanup/system-conversations", async (req, res) => {
+  try {
+    const db = getFirestore();
+    const snap = await db.collection("conversations")
+      .where("participantIds", "array-contains", "SHYTALK_SYSTEM")
+      .get();
+
+    const deleted = [];
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const parts = data.participantIds || [];
+      const otherUid = parts.find(id => id !== "SHYTALK_SYSTEM");
+      const expectedId = [otherUid, "SHYTALK_SYSTEM"].sort().join("_");
+
+      if (doc.id !== expectedId) {
+        // Delete subcollections first
+        const msgSnap = await doc.ref.collection("messages").get();
+        const settingsSnap = await doc.ref.collection("settings").get();
+        const batch = db.batch();
+        msgSnap.docs.forEach(d => batch.delete(d.ref));
+        settingsSnap.docs.forEach(d => batch.delete(d.ref));
+        batch.delete(doc.ref);
+        await batch.commit();
+        deleted.push(doc.id);
+      }
+    }
+
+    // Also delete empty deterministic-ID conversations
+    const remainSnap = await db.collection("conversations")
+      .where("participantIds", "array-contains", "SHYTALK_SYSTEM")
+      .get();
+
+    for (const doc of remainSnap.docs) {
+      const msgSnap = await doc.ref.collection("messages").limit(1).get();
+      if (msgSnap.empty) {
+        const settingsSnap = await doc.ref.collection("settings").get();
+        const batch = db.batch();
+        settingsSnap.docs.forEach(d => batch.delete(d.ref));
+        batch.delete(doc.ref);
+        await batch.commit();
+        deleted.push(doc.id + " (empty)");
+      }
+    }
+
+    return res.json({ deleted, count: deleted.length });
+  } catch (err) {
+    console.error("Cleanup error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- POST /api/user/:uid/warn --- Direct warning without a report ---
+app.post("/api/user/:uid/warn", async (req, res) => {
+  try {
+    const { reason, severity, adminNote } = req.body;
+    const uid = req.params.uid;
+
+    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+      return res.status(400).json({ error: "reason is required" });
+    }
+    if (typeof severity !== "number" || severity < 1 || severity > 5) {
+      return res.status(400).json({ error: "severity must be 1-5" });
+    }
+
+    const db = getFirestore();
+    const userRef = db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userData = userDoc.data();
+    const reportType = reason.toLowerCase() !== "other" ? reason : "a policy violation";
+
+    // GCS deduction
+    const currentFloor = userData.goodCharacterScore ?? 100;
+    const lastDeduction = userData.goodCharacterLastDeductionAt || null;
+    const currentDisplay = computeDisplayScore(currentFloor, lastDeduction);
+    const deduction = severity * 5;
+    const newFloor = Math.max(0, currentDisplay - deduction);
+
+    const updates = {
+      goodCharacterScore: newFloor,
+      goodCharacterLastDeductionAt: Timestamp.now(),
+      warningCount: FieldValue.increment(1),
+      hasActiveWarning: true,
+      warningReason: reportType,
+      warningIssuedAt: Timestamp.now(),
+    };
+
+    await userRef.update(updates);
+
+    const newWarningCount = (userData.warningCount || 0) + 1;
+    let autoEscalateSuggested = false;
+    if (newWarningCount >= 5) {
+      autoEscalateSuggested = true;
+    }
+
+    // Revoke tokens to force logout
+    try {
+      await getAuth().revokeRefreshTokens(uid);
+    } catch (err) {
+      console.error(`Failed to revoke tokens for ${uid}:`, err);
+    }
+
+    // Send system PM
+    await sendSystemPm(uid,
+      `Your account has been reviewed for ${reportType}. Please ensure your behaviour follows our community guidelines.`);
+
+    // Audit log
+    await writeAuditLog(db, {
+      adminUid: req.admin.uid,
+      action: "direct_warn",
+      targetUserId: uid,
+      reportId: null,
+      severity,
+      note: adminNote || null,
+    });
+
+    return res.json({
+      success: true,
+      autoEscalateSuggested,
+      newGCS: newFloor,
+      warningCount: newWarningCount,
+    });
+  } catch (err) {
+    console.error("POST /api/user/:uid/warn error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- Storage helpers ---
+function extractStoragePath(url) {
+  if (!url) return null;
+  const match = url.match(/\/o\/(.+?)\?/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function deleteStorageFolder(prefix) {
+  const bucket = getStorage().bucket();
+  const [files] = await bucket.getFiles({ prefix });
+  let deleted = 0;
+  for (const file of files) {
+    await file.delete();
+    deleted++;
+  }
+  return deleted;
+}
+
+async function auditStorageFolder(prefix) {
+  const bucket = getStorage().bucket();
+  const [files] = await bucket.getFiles({ prefix });
+  let totalBytes = 0;
+  for (const file of files) {
+    const [metadata] = await file.getMetadata();
+    totalBytes += parseInt(metadata.size || "0", 10);
+  }
+  return { files: files.length, bytes: totalBytes };
+}
+
+// --- POST /api/cleanup/all-system-conversations ---
+// Delete ALL conversations with SHYTALK_SYSTEM (and their subcollections)
+app.post("/api/cleanup/all-system-conversations", async (req, res) => {
+  try {
+    const db = getFirestore();
+    const snap = await db.collection("conversations")
+      .where("participantIds", "array-contains", "SHYTALK_SYSTEM")
+      .get();
+
+    let deleted = 0;
+    const storagePaths = [];
+    const bucket = getStorage().bucket();
+    for (const doc of snap.docs) {
+      const msgSnap = await doc.ref.collection("messages").get();
+      // Collect storage paths from messages with imageUrls
+      for (const msgDoc of msgSnap.docs) {
+        const urls = msgDoc.data().imageUrls || [];
+        for (const url of urls) {
+          const match = url.match(/\/o\/(.+?)\?/);
+          if (match) storagePaths.push(decodeURIComponent(match[1]));
+        }
+      }
+      const settingsSnap = await doc.ref.collection("settings").get();
+      const batch = db.batch();
+      msgSnap.docs.forEach(d => batch.delete(d.ref));
+      settingsSnap.docs.forEach(d => batch.delete(d.ref));
+      batch.delete(doc.ref);
+      await batch.commit();
+      deleted++;
+    }
+
+    // Delete collected storage files
+    let storageFilesDeleted = 0;
+    for (const path of storagePaths) {
+      try {
+        await bucket.file(path).delete();
+        storageFilesDeleted++;
+      } catch (_) { /* file may already be gone */ }
+    }
+
+    await writeAuditLog(db, {
+      adminUid: req.admin.uid,
+      action: "cleanup_all_system_conversations",
+      note: `Deleted ${deleted} system conversations, ${storageFilesDeleted} storage files`,
+    });
+
+    return res.json({ success: true, deleted, storageFilesDeleted });
+  } catch (err) {
+    console.error("Cleanup all system conversations error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- POST /api/cleanup/all-reports ---
+// Delete all reports, archived reports, and report locks
+app.post("/api/cleanup/all-reports", async (req, res) => {
+  try {
+    const db = getFirestore();
+    let deleted = 0;
+
+    // Delete from reports collection
+    const reportsSnap = await db.collection("reports").get();
+    for (let i = 0; i < reportsSnap.docs.length; i += 500) {
+      const batch = db.batch();
+      reportsSnap.docs.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      deleted += Math.min(500, reportsSnap.docs.length - i);
+    }
+
+    // Delete from reports_archive collection
+    const archiveSnap = await db.collection("reports_archive").get();
+    for (let i = 0; i < archiveSnap.docs.length; i += 500) {
+      const batch = db.batch();
+      archiveSnap.docs.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    }
+    const archivedCount = archiveSnap.docs.length;
+
+    // Delete all report locks
+    const locksSnap = await db.collection("report_locks").get();
+    if (!locksSnap.empty) {
+      const batch = db.batch();
+      locksSnap.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    }
+
+    // Delete report evidence files from Storage
+    const storageFilesDeleted = await deleteStorageFolder("report_evidence/");
+
+    await writeAuditLog(db, {
+      adminUid: req.admin.uid,
+      action: "cleanup_all_reports",
+      note: `Deleted ${deleted} reports, ${archivedCount} archived, ${locksSnap.docs.length} locks, ${storageFilesDeleted} storage files`,
+    });
+
+    return res.json({
+      success: true,
+      reports: deleted,
+      archived: archivedCount,
+      locks: locksSnap.docs.length,
+      storageFilesDeleted,
+    });
+  } catch (err) {
+    console.error("Cleanup all reports error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- POST /api/cleanup/all-warnings ---
+// Reset warning fields on ALL users who have active warnings
+app.post("/api/cleanup/all-warnings", async (req, res) => {
+  try {
+    const db = getFirestore();
+    const snap = await db.collection("users")
+      .where("warningCount", ">", 0)
+      .get();
+
+    let cleared = 0;
+    for (let i = 0; i < snap.docs.length; i += 500) {
+      const batch = db.batch();
+      snap.docs.slice(i, i + 500).forEach(doc => {
+        batch.update(doc.ref, {
+          warningCount: 0,
+          hasActiveWarning: false,
+          warningReason: null,
+          warningIssuedAt: null,
+          goodCharacterScore: 100,
+          goodCharacterLastDeductionAt: null,
+        });
+      });
+      await batch.commit();
+      cleared += Math.min(500, snap.docs.length - i);
+    }
+
+    // Also clear any users with hasActiveWarning but warningCount == 0
+    const activeSnap = await db.collection("users")
+      .where("hasActiveWarning", "==", true)
+      .get();
+
+    let extraCleared = 0;
+    for (const doc of activeSnap.docs) {
+      await doc.ref.update({
+        hasActiveWarning: false,
+        warningReason: null,
+        warningIssuedAt: null,
+      });
+      extraCleared++;
+    }
+
+    await writeAuditLog(db, {
+      adminUid: req.admin.uid,
+      action: "cleanup_all_warnings",
+      note: `Cleared warnings on ${cleared + extraCleared} users`,
+    });
+
+    return res.json({ success: true, cleared: cleared + extraCleared });
+  } catch (err) {
+    console.error("Cleanup all warnings error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- GET /api/storage/audit ---
+// Audit all storage folders: file counts and total sizes
+app.get("/api/storage/audit", async (req, res) => {
+  try {
+    const folders = ["pm_images/", "stickers/", "report_evidence/", "profile_photos/", "cover_photos/"];
+    const results = {};
+    for (const folder of folders) {
+      results[folder.replace("/", "")] = await auditStorageFolder(folder);
+    }
+    return res.json({ success: true, ...results });
+  } catch (err) {
+    console.error("GET /api/storage/audit error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- POST /api/cleanup/orphaned-storage ---
+// Smart cross-referencing: delete only files not referenced in Firestore
+app.post("/api/cleanup/orphaned-storage", async (req, res) => {
+  try {
+    const db = getFirestore();
+    const referencedPaths = new Set();
+
+    // Hardcoded system asset
+    referencedPaths.add("system/shytalk_icon.webp");
+
+    // Users → profilePhotoUrl, coverPhotoUrl, _preSuspension.*
+    const usersSnap = await db.collection("users").get();
+    for (const doc of usersSnap.docs) {
+      const data = doc.data();
+      for (const url of [
+        data.profilePhotoUrl,
+        data.coverPhotoUrl,
+        data._preSuspension && data._preSuspension.profilePhotoUrl,
+        data._preSuspension && data._preSuspension.coverPhotoUrl,
+      ]) {
+        const p = extractStoragePath(url);
+        if (p) referencedPaths.add(p);
+      }
+    }
+
+    // Conversations → groupPhotoUrl + messages (IMAGE → imageUrls, STICKER → stickerUrl)
+    const convsSnap = await db.collection("conversations").get();
+    for (const doc of convsSnap.docs) {
+      const data = doc.data();
+      const gp = extractStoragePath(data.groupPhotoUrl);
+      if (gp) referencedPaths.add(gp);
+
+      const imageSnap = await doc.ref.collection("messages").where("type", "==", "IMAGE").get();
+      for (const msgDoc of imageSnap.docs) {
+        for (const url of (msgDoc.data().imageUrls || [])) {
+          const p = extractStoragePath(url);
+          if (p) referencedPaths.add(p);
+        }
+      }
+
+      const stickerSnap = await doc.ref.collection("messages").where("type", "==", "STICKER").get();
+      for (const msgDoc of stickerSnap.docs) {
+        const p = extractStoragePath(msgDoc.data().stickerUrl);
+        if (p) referencedPaths.add(p);
+      }
+    }
+
+    // Reports + archive → evidenceUrls[]
+    for (const col of ["reports", "reports_archive"]) {
+      const snap = await db.collection(col).get();
+      for (const doc of snap.docs) {
+        for (const url of (doc.data().evidenceUrls || [])) {
+          const p = extractStoragePath(url);
+          if (p) referencedPaths.add(p);
+        }
+      }
+    }
+
+    // List and delete orphaned files across all storage folders
+    const bucket = getStorage().bucket();
+    const folders = ["pm_images/", "stickers/", "report_evidence/", "profile_photos/", "cover_photos/", "group_photos/"];
+    const results = {};
+    let totalDeleted = 0;
+
+    for (const folder of folders) {
+      const [files] = await bucket.getFiles({ prefix: folder });
+      let deleted = 0;
+      for (const file of files) {
+        if (!referencedPaths.has(file.name)) {
+          await file.delete();
+          deleted++;
+        }
+      }
+      results[folder.replace("/", "")] = { total: files.length, deleted };
+      totalDeleted += deleted;
+    }
+
+    await writeAuditLog(db, {
+      adminUid: req.admin.uid,
+      action: "cleanup_orphaned_storage",
+      note: `Smart cleanup: ${totalDeleted} orphaned files deleted`,
+    });
+
+    return res.json({ success: true, totalDeleted, results });
+  } catch (err) {
+    console.error("POST /api/cleanup/orphaned-storage error:", err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
