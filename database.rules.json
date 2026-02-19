@@ -1,5 +1,13 @@
 {
   "rules": {
+    "typing": {
+      "$conversationId": {
+        ".read": "auth != null",
+        "$userId": {
+          ".write": "auth != null && auth.uid == $userId"
+        }
+      }
+    },
     "presence": {
       "$roomId": {
         ".read": "auth != null",

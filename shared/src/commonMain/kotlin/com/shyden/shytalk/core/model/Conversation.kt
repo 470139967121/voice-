@@ -41,7 +41,13 @@ data class Conversation(
     val groupName: String? = null,
     val groupPhotoUrl: String? = null,
     val groupAdminIds: List<String> = emptyList(),
-    val createdBy: String? = null
+    val groupModIds: List<String> = emptyList(),
+    val groupDescription: String? = null,
+    val createdBy: String? = null,
+    val isClosed: Boolean = false,
+    val permissions: GroupPermissions = GroupPermissions(),
+    val systemMessageConfig: SystemMessageConfig = SystemMessageConfig(),
+    val modNotifyMode: String = "ALL_ADMINS"
 ) {
     val isOneOnOne: Boolean get() = !isGroup
 
@@ -51,6 +57,17 @@ data class Conversation(
     fun isAdmin(userId: String): Boolean =
         groupAdminIds.contains(userId) || createdBy == userId
 
+    fun isMod(userId: String): Boolean = groupModIds.contains(userId)
+
+    fun isModOrAbove(userId: String): Boolean = isMod(userId) || isAdmin(userId)
+
+    fun roleOf(userId: String): GroupRole = when {
+        createdBy == userId -> GroupRole.OWNER
+        isAdmin(userId) -> GroupRole.ADMIN
+        isMod(userId) -> GroupRole.MOD
+        else -> GroupRole.MEMBER
+    }
+
     fun toMap(): Map<String, Any?> = buildMap {
         put("conversationId", conversationId)
         put("participantIds", participantIds)
@@ -58,11 +75,17 @@ data class Conversation(
         put("lastMessageAt", millisToTimestamp(lastMessageAt))
         put("createdAt", millisToTimestamp(createdAt))
         put("isGroup", isGroup)
+        put("isClosed", isClosed)
         if (isGroup) {
             put("groupName", groupName)
             put("groupPhotoUrl", groupPhotoUrl)
             put("groupAdminIds", groupAdminIds)
+            put("groupModIds", groupModIds)
+            put("groupDescription", groupDescription)
             put("createdBy", createdBy)
+            put("permissions", permissions.toMap())
+            put("systemMessageConfig", systemMessageConfig.toMap())
+            put("modNotifyMode", modNotifyMode)
         }
     }
 
@@ -70,6 +93,7 @@ data class Conversation(
         fun generateId(uid1: String, uid2: String): String =
             listOf(uid1, uid2).sorted().joinToString("_")
 
+        @Suppress("UNCHECKED_CAST")
         fun fromMap(map: Map<String, Any?>, conversationId: String): Conversation = Conversation(
             conversationId = conversationId,
             participantIds = (map["participantIds"] as? List<*>)
@@ -86,7 +110,18 @@ data class Conversation(
             groupPhotoUrl = map["groupPhotoUrl"] as? String,
             groupAdminIds = (map["groupAdminIds"] as? List<*>)
                 ?.filterIsInstance<String>() ?: emptyList(),
-            createdBy = map["createdBy"] as? String
+            groupModIds = (map["groupModIds"] as? List<*>)
+                ?.filterIsInstance<String>() ?: emptyList(),
+            groupDescription = map["groupDescription"] as? String,
+            createdBy = map["createdBy"] as? String,
+            isClosed = map["isClosed"] as? Boolean ?: false,
+            permissions = (map["permissions"] as? Map<String, Any?>)?.let {
+                GroupPermissions.fromMap(it)
+            } ?: GroupPermissions(),
+            systemMessageConfig = (map["systemMessageConfig"] as? Map<String, Any?>)?.let {
+                SystemMessageConfig.fromMap(it)
+            } ?: SystemMessageConfig(),
+            modNotifyMode = map["modNotifyMode"] as? String ?: "ALL_ADMINS"
         )
     }
 }

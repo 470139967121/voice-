@@ -48,7 +48,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
@@ -624,6 +626,7 @@ private fun PrivacyPage(
 
 // ===== Notifications Page =====
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NotificationsPage(
     uiState: AppSettingsUiState,
@@ -719,9 +722,14 @@ private fun NotificationsPage(
                 onCheckedChange = { onToggleDnd() }
             )
             if (uiState.dndEnabled) {
+                var showStartTimePicker by remember { mutableStateOf(false) }
+                var showEndTimePicker by remember { mutableStateOf(false) }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showStartTimePicker = true },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -737,7 +745,9 @@ private fun NotificationsPage(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showEndTimePicker = true },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -749,6 +759,50 @@ private fun NotificationsPage(
                         text = String.format("%02d:%02d", uiState.dndEndHour, uiState.dndEndMinute),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                if (showStartTimePicker) {
+                    val startState = rememberTimePickerState(
+                        initialHour = uiState.dndStartHour,
+                        initialMinute = uiState.dndStartMinute
+                    )
+                    AlertDialog(
+                        onDismissRequest = { showStartTimePicker = false },
+                        title = { Text("DND Start Time") },
+                        text = { TimePicker(state = startState) },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                onSetDndStartHour(startState.hour)
+                                onSetDndStartMinute(startState.minute)
+                                showStartTimePicker = false
+                            }) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showStartTimePicker = false }) { Text("Cancel") }
+                        }
+                    )
+                }
+
+                if (showEndTimePicker) {
+                    val endState = rememberTimePickerState(
+                        initialHour = uiState.dndEndHour,
+                        initialMinute = uiState.dndEndMinute
+                    )
+                    AlertDialog(
+                        onDismissRequest = { showEndTimePicker = false },
+                        title = { Text("DND End Time") },
+                        text = { TimePicker(state = endState) },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                onSetDndEndHour(endState.hour)
+                                onSetDndEndMinute(endState.minute)
+                                showEndTimePicker = false
+                            }) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showEndTimePicker = false }) { Text("Cancel") }
+                        }
                     )
                 }
             }

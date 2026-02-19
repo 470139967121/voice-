@@ -242,4 +242,211 @@ class ConversationFromMapTest {
         val group = Conversation(isGroup = true)
         assertFalse(group.isOneOnOne)
     }
+
+    @Test
+    fun `fromMap parses isClosed true`() {
+        val map = mapOf<String, Any?>("isClosed" to true)
+        val conv = Conversation.fromMap(map, "conv-1")
+        assertTrue(conv.isClosed)
+    }
+
+    @Test
+    fun `fromMap defaults isClosed to false when missing`() {
+        val conv = Conversation.fromMap(emptyMap(), "conv-1")
+        assertFalse(conv.isClosed)
+    }
+
+    @Test
+    fun `toMap includes isClosed`() {
+        val conv = Conversation(conversationId = "conv-1", isClosed = true, lastMessageAt = tsMillis, createdAt = tsMillis)
+        val map = conv.toMap()
+        assertEquals(true, map["isClosed"])
+    }
+
+    // ===== New fields: groupModIds, groupDescription, permissions, systemMessageConfig, modNotifyMode =====
+
+    @Test
+    fun `fromMap parses group with new fields`() {
+        val permissionsMap = mapOf<String, Any?>(
+            "whoCanSend" to "MODS_AND_ABOVE",
+            "whoCanAddMembers" to "EVERYONE",
+            "whoCanEditInfo" to "MODS_AND_ABOVE"
+        )
+        val sysConfigMap = mapOf<String, Any?>(
+            "showJoins" to false,
+            "showLeaves" to true,
+            "showRoleChanges" to false,
+            "showPermissionChanges" to true
+        )
+        val map = mapOf<String, Any?>(
+            "isGroup" to true,
+            "groupModIds" to listOf("mod-1", "mod-2"),
+            "groupDescription" to "A cool group",
+            "permissions" to permissionsMap,
+            "systemMessageConfig" to sysConfigMap,
+            "modNotifyMode" to "OWNER_ONLY",
+            "lastMessageAt" to ts,
+            "createdAt" to ts
+        )
+        val conv = Conversation.fromMap(map, "conv-g")
+
+        assertEquals(listOf("mod-1", "mod-2"), conv.groupModIds)
+        assertEquals("A cool group", conv.groupDescription)
+        assertEquals(GroupPermissions.PermissionLevel.MODS_AND_ABOVE, conv.permissions.whoCanSend)
+        assertEquals(GroupPermissions.PermissionLevel.EVERYONE, conv.permissions.whoCanAddMembers)
+        assertFalse(conv.systemMessageConfig.showJoins)
+        assertTrue(conv.systemMessageConfig.showLeaves)
+        assertEquals("OWNER_ONLY", conv.modNotifyMode)
+    }
+
+    @Test
+    fun `fromMap defaults new fields when missing`() {
+        val conv = Conversation.fromMap(emptyMap(), "conv-1")
+
+        assertEquals(emptyList<String>(), conv.groupModIds)
+        assertNull(conv.groupDescription)
+        assertEquals(GroupPermissions(), conv.permissions)
+        assertEquals(SystemMessageConfig(), conv.systemMessageConfig)
+        assertEquals("ALL_ADMINS", conv.modNotifyMode)
+    }
+
+    @Test
+    fun `fromMap filters non-string items from groupModIds`() {
+        val map = mapOf<String, Any?>(
+            "groupModIds" to listOf("mod-1", 42, null, "mod-2")
+        )
+        val conv = Conversation.fromMap(map, "conv-1")
+        assertEquals(listOf("mod-1", "mod-2"), conv.groupModIds)
+    }
+
+    @Test
+    fun `toMap includes new group fields for group conversations`() {
+        val group = Conversation(
+            conversationId = "conv-g",
+            isGroup = true,
+            groupModIds = listOf("mod-1"),
+            groupDescription = "Description",
+            permissions = GroupPermissions(
+                whoCanSend = GroupPermissions.PermissionLevel.MODS_AND_ABOVE
+            ),
+            systemMessageConfig = SystemMessageConfig(showJoins = false),
+            modNotifyMode = "OWNER_ONLY",
+            lastMessageAt = tsMillis,
+            createdAt = tsMillis
+        )
+        val map = group.toMap()
+        assertEquals(listOf("mod-1"), map["groupModIds"])
+        assertEquals("Description", map["groupDescription"])
+        assertTrue(map.containsKey("permissions"))
+        assertTrue(map.containsKey("systemMessageConfig"))
+        assertEquals("OWNER_ONLY", map["modNotifyMode"])
+    }
+
+    @Test
+    fun `toMap omits new group fields for 1-on-1`() {
+        val oneOnOne = Conversation(
+            conversationId = "conv-1",
+            isGroup = false,
+            lastMessageAt = tsMillis,
+            createdAt = tsMillis
+        )
+        val map = oneOnOne.toMap()
+        assertFalse(map.containsKey("groupModIds"))
+        assertFalse(map.containsKey("groupDescription"))
+        assertFalse(map.containsKey("permissions"))
+        assertFalse(map.containsKey("systemMessageConfig"))
+        assertFalse(map.containsKey("modNotifyMode"))
+    }
+
+    @Test
+    fun `fromMap of toMap round-trip for group with all new fields`() {
+        val original = Conversation(
+            conversationId = "conv-g",
+            participantIds = listOf("user-1", "user-2", "user-3"),
+            lastMessageAt = tsMillis,
+            createdAt = tsMillis,
+            isGroup = true,
+            groupName = "Full Group",
+            groupAdminIds = listOf("user-1"),
+            groupModIds = listOf("user-2"),
+            groupDescription = "A test group",
+            createdBy = "user-1",
+            permissions = GroupPermissions(
+                whoCanSend = GroupPermissions.PermissionLevel.MODS_AND_ABOVE,
+                whoCanAddMembers = GroupPermissions.PermissionLevel.EVERYONE,
+                whoCanEditInfo = GroupPermissions.PermissionLevel.MODS_AND_ABOVE
+            ),
+            systemMessageConfig = SystemMessageConfig(
+                showJoins = false,
+                showLeaves = true,
+                showRoleChanges = false,
+                showPermissionChanges = true
+            ),
+            modNotifyMode = "OWNER_ONLY"
+        )
+        val roundtripped = Conversation.fromMap(original.toMap(), "conv-g")
+        assertEquals(original, roundtripped)
+    }
+
+    // ===== roleOf / isMod / isModOrAbove =====
+
+    @Test
+    fun `isMod checks groupModIds`() {
+        val conv = Conversation(
+            isGroup = true,
+            groupModIds = listOf("mod-1", "mod-2")
+        )
+        assertTrue(conv.isMod("mod-1"))
+        assertTrue(conv.isMod("mod-2"))
+        assertFalse(conv.isMod("user-99"))
+    }
+
+    @Test
+    fun `isModOrAbove returns true for mods admins and owner`() {
+        val conv = Conversation(
+            isGroup = true,
+            groupAdminIds = listOf("admin-1"),
+            groupModIds = listOf("mod-1"),
+            createdBy = "owner-1"
+        )
+        assertTrue(conv.isModOrAbove("owner-1"))
+        assertTrue(conv.isModOrAbove("admin-1"))
+        assertTrue(conv.isModOrAbove("mod-1"))
+        assertFalse(conv.isModOrAbove("member-1"))
+    }
+
+    @Test
+    fun `roleOf returns correct role for each participant type`() {
+        val conv = Conversation(
+            isGroup = true,
+            groupAdminIds = listOf("admin-1"),
+            groupModIds = listOf("mod-1"),
+            createdBy = "owner-1"
+        )
+        assertEquals(GroupRole.OWNER, conv.roleOf("owner-1"))
+        assertEquals(GroupRole.ADMIN, conv.roleOf("admin-1"))
+        assertEquals(GroupRole.MOD, conv.roleOf("mod-1"))
+        assertEquals(GroupRole.MEMBER, conv.roleOf("random-user"))
+    }
+
+    @Test
+    fun `roleOf prioritises owner over admin`() {
+        // owner is also in groupAdminIds
+        val conv = Conversation(
+            isGroup = true,
+            groupAdminIds = listOf("user-1"),
+            createdBy = "user-1"
+        )
+        assertEquals(GroupRole.OWNER, conv.roleOf("user-1"))
+    }
+
+    @Test
+    fun `GroupRole enum has exactly four values`() {
+        val values = GroupRole.entries
+        assertEquals(4, values.size)
+        assertEquals(GroupRole.OWNER, values[0])
+        assertEquals(GroupRole.ADMIN, values[1])
+        assertEquals(GroupRole.MOD, values[2])
+        assertEquals(GroupRole.MEMBER, values[3])
+    }
 }

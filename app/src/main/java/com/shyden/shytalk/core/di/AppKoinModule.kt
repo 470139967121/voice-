@@ -7,6 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.core.room.RoomLifecycleManager
+import com.shyden.shytalk.data.local.StickerStorage
 import com.shyden.shytalk.data.remote.LiveKitTokenService
 import com.shyden.shytalk.data.remote.LiveKitVoiceService
 import com.shyden.shytalk.data.remote.AndroidAppConfigService
@@ -40,6 +41,8 @@ import com.shyden.shytalk.data.repository.UserRepositoryImpl
 import com.shyden.shytalk.feature.auth.AuthViewModel
 import com.shyden.shytalk.feature.home.HomeViewModel
 import com.shyden.shytalk.feature.messaging.ConversationListViewModel
+import com.shyden.shytalk.feature.messaging.GroupSetupViewModel
+import com.shyden.shytalk.feature.messaging.NewMessageViewModel
 import com.shyden.shytalk.feature.messaging.PrivateChatViewModel
 import com.shyden.shytalk.feature.messaging.ReportReviewViewModel
 import com.shyden.shytalk.feature.profile.FollowListViewModel
@@ -85,6 +88,7 @@ val appModule = module {
     singleOf(::ReportRepositoryImpl) bind ReportRepository::class
     singleOf(::TypingRepositoryImpl) bind TypingRepository::class
     singleOf(::NotificationRepositoryImpl) bind NotificationRepository::class
+    single { StickerStorage(androidContext()) }
 
     // ActiveRoomManager
     single { ActiveRoomManager(get(), get(), get(), get(), get(), get(), get(), androidContext()) }
@@ -93,13 +97,28 @@ val appModule = module {
     // ViewModels
     viewModel { AuthViewModel(get(), get(), get(), get(named("deviceId"))) }
     viewModel { HomeViewModel(get(), get(), get()) }
-    viewModel { ProfileViewModel(get(), get(), get(), get()) }
+    viewModel { ProfileViewModel(get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }
     viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }
-    viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { AppSettingsViewModel(get(), get(), get()) }
     viewModel { RoomSettingsViewModel(get(), get(), get(), get()) }
     viewModel { ConversationListViewModel(get(), get(), get()) }
-    viewModel { params -> PrivateChatViewModel(params[0], get(), get(), get(), get(), get()) }
+    viewModel { params ->
+        val values = params.values
+        PrivateChatViewModel(
+            otherUserId = (values.getOrNull(0) as? String) ?: "",
+            pmRepository = get(),
+            userRepository = get(),
+            authRepository = get(),
+            typingRepository = get(),
+            reportRepository = get(),
+            storageRepository = get(),
+            stickerStorage = get(),
+            initialConversationId = values.getOrNull(1) as? String
+        )
+    }
     viewModel { ReportReviewViewModel(get(), get()) }
+    viewModel { NewMessageViewModel(get(), get(), get()) }
+    viewModel { params -> GroupSetupViewModel(params[0], get(), get(), get(), get()) }
 }

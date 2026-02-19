@@ -8,6 +8,7 @@ import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.ReportRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -39,14 +40,18 @@ data class ProfileUiState(
     val activeRoomId: String? = null,
     val stalkerCount: Int = 0,
     val newStalkerCount: Int = 0,
-    val isTargetSuspended: Boolean = false
+    val isTargetSuspended: Boolean = false,
+    val isSubmittingReport: Boolean = false,
+    val reportSubmitted: Boolean = false,
+    val reportError: String? = null
 )
 
 class ProfileViewModel(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val storageRepository: StorageRepository,
-    private val roomRepository: RoomRepository
+    private val roomRepository: RoomRepository,
+    private val reportRepository: ReportRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -403,5 +408,65 @@ class ProfileViewModel(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    fun reportUser(
+        reason: String,
+        description: String,
+        evidenceImages: List<Pair<ByteArray, String>> = emptyList()
+    ) {
+        val currentUid = authRepository.currentUserId ?: return
+        val targetUser = _uiState.value.user ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingReport = true, reportError = null) }
+
+            val currentUser = when (val r = userRepository.getUser(currentUid)) {
+                is Resource.Success -> r.data
+                else -> {
+                    _uiState.update { it.copy(isSubmittingReport = false, reportError = "Could not submit report") }
+                    return@launch
+                }
+            }
+
+            // Upload evidence
+            val evidenceUrls = mutableListOf<String>()
+            for ((bytes, mimeType) in evidenceImages) {
+                when (val r = storageRepository.uploadImage(
+                    currentUser.uid, "report_evidence", bytes, mimeType
+                )) {
+                    is Resource.Success -> evidenceUrls.add(r.data)
+                    is Resource.Error -> {
+                        _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to upload evidence") }
+                        return@launch
+                    }
+                    is Resource.Loading -> {}
+                }
+            }
+
+            when (reportRepository.reportUser(
+                reporterId = currentUser.uid,
+                reporterName = currentUser.displayName,
+                reporterUniqueId = currentUser.uniqueId,
+                reportedUserId = targetUser.uid,
+                reportedUserName = targetUser.displayName,
+                reportedUserUniqueId = targetUser.uniqueId,
+                conversationId = "",
+                reason = reason,
+                description = description,
+                evidenceUrls = evidenceUrls
+            )) {
+                is Resource.Success -> {
+                    _uiState.update { it.copy(isSubmittingReport = false, reportSubmitted = true) }
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to submit report") }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun clearReportSubmitted() {
+        _uiState.update { it.copy(reportSubmitted = false, reportError = null) }
     }
 }

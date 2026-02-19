@@ -146,7 +146,7 @@
 
 ---
 
-## Phase 7: Conversation Settings (Mute, Silent, Pin)
+## Phase 7: Conversation Settings (Mute, Pin)
 
 ### TC-7.1: Mute conversation
 - [ ] Open chat overflow menu (3 dots)
@@ -154,11 +154,7 @@
 - [ ] Verify menu now shows "Unmute Notifications"
 - [ ] Have User B send a message — verify NO notification on User A
 
-### TC-7.2: Silent mode
-- [ ] Tap "Silent Mode" from overflow menu
-- [ ] Verify menu now shows "Disable Silent Mode"
-
-### TC-7.3: Pin conversation
+### TC-7.2: Pin conversation
 - [ ] Tap "Pin" from overflow menu
 - [ ] Go to conversation list
 - [ ] Verify pinned conversation appears at top

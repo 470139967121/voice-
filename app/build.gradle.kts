@@ -22,8 +22,8 @@ android {
         applicationId = "com.shyden.shytalk"
         minSdk = 28
         targetSdk = 36
-        versionCode = 36
-        versionName = "0.36"
+        versionCode = 37
+        versionName = "0.37"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

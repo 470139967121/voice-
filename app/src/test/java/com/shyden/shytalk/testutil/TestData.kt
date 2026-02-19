@@ -4,6 +4,7 @@ import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.Conversation
 import com.shyden.shytalk.core.model.ConversationPreview
 import com.shyden.shytalk.core.model.ConversationSettings
+import com.shyden.shytalk.core.model.GroupPermissions
 import com.shyden.shytalk.core.model.Message
 import com.shyden.shytalk.core.model.MessageType
 import com.shyden.shytalk.core.model.PrivateMessage
@@ -185,7 +186,9 @@ object TestData {
         replyToMessageId: String? = null,
         replyToText: String? = null,
         replyToSenderName: String? = null,
-        reactions: Map<String, List<String>> = emptyMap()
+        reactions: Map<String, List<String>> = emptyMap(),
+        roomInviteId: String? = null,
+        roomInviteName: String? = null
     ) = PrivateMessage(
         messageId = messageId,
         senderId = senderId,
@@ -200,7 +203,9 @@ object TestData {
         replyToMessageId = replyToMessageId,
         replyToText = replyToText,
         replyToSenderName = replyToSenderName,
-        reactions = reactions
+        reactions = reactions,
+        roomInviteId = roomInviteId,
+        roomInviteName = roomInviteName
     )
 
     fun createTestConversation(
@@ -213,7 +218,12 @@ object TestData {
         groupName: String? = null,
         groupPhotoUrl: String? = null,
         groupAdminIds: List<String> = emptyList(),
-        createdBy: String? = null
+        groupModIds: List<String> = emptyList(),
+        groupDescription: String? = null,
+        createdBy: String? = null,
+        isClosed: Boolean = false,
+        permissions: GroupPermissions = GroupPermissions(),
+        modNotifyMode: String = "ALL_ADMINS"
     ) = Conversation(
         conversationId = conversationId,
         participantIds = participantIds,
@@ -224,7 +234,12 @@ object TestData {
         groupName = groupName,
         groupPhotoUrl = groupPhotoUrl,
         groupAdminIds = groupAdminIds,
-        createdBy = createdBy
+        groupModIds = groupModIds,
+        groupDescription = groupDescription,
+        createdBy = createdBy,
+        isClosed = isClosed,
+        permissions = permissions,
+        modNotifyMode = modNotifyMode
     )
 
     fun createTestConversationPreview(
@@ -247,7 +262,6 @@ object TestData {
         isHidden: Boolean = false,
         hiddenAt: Long? = null,
         isPinned: Boolean = false,
-        isSilent: Boolean = false,
         lastReadMessageId: String = "",
         lastReadAt: Long = 0,
         unreadCount: Long = 0
@@ -257,7 +271,6 @@ object TestData {
         isHidden = isHidden,
         hiddenAt = hiddenAt,
         isPinned = isPinned,
-        isSilent = isSilent,
         lastReadMessageId = lastReadMessageId,
         lastReadAt = lastReadAt,
         unreadCount = unreadCount

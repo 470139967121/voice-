@@ -20,7 +20,6 @@ class ConversationSettingsFromMapTest {
             "isHidden" to true,
             "hiddenAt" to ts,
             "isPinned" to true,
-            "isSilent" to true,
             "lastReadMessageId" to "msg-5",
             "lastReadAt" to ts,
             "unreadCount" to 3L
@@ -32,7 +31,6 @@ class ConversationSettingsFromMapTest {
         assertTrue(settings.isHidden)
         assertEquals(tsMillis, settings.hiddenAt)
         assertTrue(settings.isPinned)
-        assertTrue(settings.isSilent)
         assertEquals("msg-5", settings.lastReadMessageId)
         assertEquals(tsMillis, settings.lastReadAt)
         assertEquals(3L, settings.unreadCount)
@@ -47,7 +45,6 @@ class ConversationSettingsFromMapTest {
         assertFalse(settings.isHidden)
         assertNull(settings.hiddenAt)
         assertFalse(settings.isPinned)
-        assertFalse(settings.isSilent)
         assertEquals("", settings.lastReadMessageId)
         assertEquals(0L, settings.lastReadAt)
         assertEquals(0L, settings.unreadCount)
@@ -81,7 +78,6 @@ class ConversationSettingsFromMapTest {
             isHidden = true,
             hiddenAt = tsMillis,
             isPinned = false,
-            isSilent = true,
             lastReadMessageId = "msg-10",
             lastReadAt = tsMillis,
             unreadCount = 5
@@ -98,7 +94,6 @@ class ConversationSettingsFromMapTest {
             isHidden = false,
             hiddenAt = null,
             isPinned = true,
-            isSilent = false,
             lastReadMessageId = "",
             lastReadAt = 0,
             unreadCount = 0

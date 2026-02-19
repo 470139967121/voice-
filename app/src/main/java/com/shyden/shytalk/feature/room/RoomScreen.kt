@@ -67,8 +67,12 @@ import com.shyden.shytalk.feature.room.components.SeatActionFeedback
 import com.shyden.shytalk.feature.room.components.RoomToolbar
 import com.shyden.shytalk.feature.room.components.SeatGrid
 import com.shyden.shytalk.feature.room.components.UserCardPopup
+import androidx.activity.result.PickVisualMediaRequest
+import com.shyden.shytalk.feature.messaging.ConversationListViewModel
 import com.shyden.shytalk.feature.messaging.PmBottomSheet
+import com.shyden.shytalk.feature.messaging.PrivateChatViewModel
 import com.shyden.shytalk.feature.settings.RoomSettingsSheet
+import org.koin.compose.koinInject
 
 @Composable
 fun RoomScreen(
@@ -79,6 +83,8 @@ fun RoomScreen(
     viewModel: RoomViewModel = koinViewModel { parametersOf(roomId) }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val conversationListViewModel: ConversationListViewModel = koinInject()
+    val convListState by conversationListViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showSettings by remember(roomId) { mutableStateOf(false) }
     var showUserCardForId by remember(roomId) { mutableStateOf<String?>(null) }
@@ -86,6 +92,71 @@ fun RoomScreen(
     var showRoomNameDialog by remember(roomId) { mutableStateOf(false) }
     var showPmSheet by remember(roomId) { mutableStateOf(false) }
     var pmSheetPreOpenUserId by remember(roomId) { mutableStateOf<String?>(null) }
+    var pmImageResultHandler by remember { mutableStateOf<((List<ByteArray>) -> Unit)?>(null) }
+    var pmStickerResultHandler by remember { mutableStateOf<((ByteArray) -> Unit)?>(null) }
+    val reportEvidenceList = remember { mutableListOf<Pair<ByteArray, String>>() }
+    var reportEvidenceVersion by remember { mutableStateOf(0) }
+    var isCompressingEvidence by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val evidenceScope = rememberCoroutineScope()
+
+    val reportEvidencePickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+            if (mimeType.startsWith("video/")) {
+                isCompressingEvidence = true
+                evidenceScope.launch {
+                    val result = com.shyden.shytalk.core.util.VideoCompressor.compressVideo(
+                        context, uri, Constants.EVIDENCE_VIDEO_TARGET_BYTES, mimeType
+                    )
+                    isCompressingEvidence = false
+                    if (result != null && result.first.size <= Constants.EVIDENCE_MAX_SIZE_BYTES) {
+                        reportEvidenceList.add(result)
+                        reportEvidenceVersion++
+                    } else {
+                        snackbarHostState.showSnackbar("Video is too large to upload. Please use a shorter clip.")
+                    }
+                }
+            } else {
+                val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+                if (bytes != null) {
+                    if (bytes.size <= Constants.EVIDENCE_MAX_SIZE_BYTES) {
+                        reportEvidenceList.add(bytes to mimeType)
+                        reportEvidenceVersion++
+                    } else {
+                        evidenceScope.launch {
+                            snackbarHostState.showSnackbar("File is too large. Maximum size is 10 MB.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val pmImagePickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(10)
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val bytesList = uris.mapNotNull { uri ->
+                context.contentResolver.openInputStream(uri)?.readBytes()
+            }
+            pmImageResultHandler?.invoke(bytesList)
+        }
+    }
+
+    val pmStickerPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+            if (bytes != null) {
+                pmStickerResultHandler?.invoke(bytes)
+            }
+        }
+    }
 
     // Track room screen visibility for chathead
     DisposableEffect(Unit) {
@@ -94,7 +165,6 @@ fun RoomScreen(
     }
 
     // Audio permission handling
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -174,6 +244,16 @@ fun RoomScreen(
         val status = uiState.seatActionStatus
         if (status is SeatActionStatus.Success) {
             snackbarHostState.showSnackbar(status.message)
+        }
+    }
+
+    LaunchedEffect(uiState.reportSubmitted) {
+        if (uiState.reportSubmitted) {
+            showUserCardForId = null
+            reportEvidenceList.clear()
+            reportEvidenceVersion++
+            snackbarHostState.showSnackbar("Thank you for your report. We will review it shortly.")
+            viewModel.clearReportSubmitted()
         }
     }
 
@@ -326,10 +406,7 @@ fun RoomScreen(
                         onBack = { onNavigateBack() },
                         onTogglePeople = { showParticipantPanel = !showParticipantPanel },
                         onRoomNameClick = { showRoomNameDialog = true },
-                        onToggleMessages = {
-                            pmSheetPreOpenUserId = null
-                            showPmSheet = true
-                        }
+                        onSettings = { showSettings = true }
                     )
                 }
             }
@@ -460,7 +537,11 @@ fun RoomScreen(
                         onInviteUser = { senderId, senderName ->
                             viewModel.inviteFromMessage(senderId, senderName)
                         },
-                        onSettings = { showSettings = true },
+                        onToggleMessages = {
+                            pmSheetPreOpenUserId = null
+                            showPmSheet = true
+                        },
+                        unreadCount = convListState.totalUnreadCount.toInt(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
@@ -687,7 +768,31 @@ fun RoomScreen(
                         { viewModel.removeHost(userId) }
                     } else null,
                     isHost = targetRole == RoomRole.HOST,
-                    onDismiss = { showUserCardForId = null }
+                    onReportUser = if (userId != uiState.currentUserId) {
+                        { reason, description ->
+                            viewModel.reportUser(userId, reason, description, reportEvidenceList.toList())
+                        }
+                    } else null,
+                    evidenceItems = reportEvidenceList.map { it.first }.also { _ -> reportEvidenceVersion },
+                    onAddEvidence = {
+                        reportEvidencePickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                        )
+                    },
+                    onRemoveEvidence = { index ->
+                        if (index in reportEvidenceList.indices) {
+                            reportEvidenceList.removeAt(index)
+                            reportEvidenceVersion++
+                        }
+                    },
+                    isSubmittingReport = uiState.isSubmittingReport,
+                    isCompressingEvidence = isCompressingEvidence,
+                    reportError = uiState.reportError,
+                    onDismiss = {
+                        showUserCardForId = null
+                        reportEvidenceList.clear()
+                        reportEvidenceVersion++
+                    }
                 )
             }
         }
@@ -699,7 +804,21 @@ fun RoomScreen(
                     showPmSheet = false
                     pmSheetPreOpenUserId = null
                 },
-                preOpenUserId = pmSheetPreOpenUserId
+                preOpenUserId = pmSheetPreOpenUserId,
+                onPickImages = { vm ->
+                    pmImageResultHandler = { bytesList -> vm.uploadAndSendImages(bytesList) }
+                    pmImagePickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onPickStickerImage = { vm ->
+                    pmStickerResultHandler = { bytes -> vm.addStickerFromImage(bytes) }
+                    pmStickerPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                activeRoomId = roomId,
+                activeRoomName = uiState.room?.name
             )
         }
         }

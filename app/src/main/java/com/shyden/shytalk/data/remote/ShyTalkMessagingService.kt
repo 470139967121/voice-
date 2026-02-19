@@ -50,7 +50,9 @@ class ShyTalkMessagingService : FirebaseMessagingService() {
     private fun handlePmNotification(data: Map<String, String>) {
         val senderName = data["senderName"] ?: "Someone"
         val messageText = data["messageText"] ?: "New message"
-        val otherUserId = data["senderId"] ?: return
+        val senderId = data["senderId"] ?: return
+        val conversationId = data["conversationId"] ?: return
+        val isGroup = data["isGroup"]?.toBooleanStrictOrNull() ?: false
         val showPreview = data["showPreview"]?.toBooleanStrictOrNull() ?: true
 
         ensureNotificationChannel()
@@ -58,10 +60,12 @@ class ShyTalkMessagingService : FirebaseMessagingService() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("navigateTo", "chat")
-            putExtra("otherUserId", otherUserId)
+            putExtra("otherUserId", senderId)
+            putExtra("conversationId", conversationId)
+            putExtra("isGroup", isGroup)
         }
         val pendingIntent = PendingIntent.getActivity(
-            this, otherUserId.hashCode(), intent,
+            this, conversationId.hashCode(), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -77,7 +81,7 @@ class ShyTalkMessagingService : FirebaseMessagingService() {
             .build()
 
         val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager?.notify(otherUserId.hashCode(), notification)
+        notificationManager?.notify(conversationId.hashCode(), notification)
     }
 
     private fun ensureNotificationChannel() {

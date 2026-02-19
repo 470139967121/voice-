@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,8 +35,7 @@ fun RoomToolbar(
     onBack: () -> Unit,
     onTogglePeople: () -> Unit,
     onRoomNameClick: () -> Unit = {},
-    onToggleMessages: (() -> Unit)? = null,
-    unreadMessageCount: Long = 0
+    onSettings: () -> Unit = {}
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -49,7 +49,10 @@ fun RoomToolbar(
                 ) {
                     Text(
                         text = roomName,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
@@ -76,14 +79,12 @@ fun RoomToolbar(
             }
         },
         actions = {
-            if (onToggleMessages != null) {
-                IconButton(onClick = onToggleMessages) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = "Messages",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+            IconButton(onClick = onSettings) {
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = "Room settings",
+                    modifier = Modifier.size(20.dp)
+                )
             }
             IconButton(onClick = onTogglePeople) {
                 Row(

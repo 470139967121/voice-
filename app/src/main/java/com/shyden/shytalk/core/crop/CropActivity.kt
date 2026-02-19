@@ -6,8 +6,12 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.canhub.cropper.CropImageView
 import com.shyden.shytalk.R
 import java.io.File
@@ -18,9 +22,17 @@ class CropActivity : AppCompatActivity(), CropImageView.OnCropImageCompleteListe
     private var quality: Int = 80
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.parseColor("#FF444444"))
+        )
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.parseColor("#FF444444")
         setContentView(R.layout.activity_crop)
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
 
         cropImageView = findViewById(R.id.cropImageView)
 

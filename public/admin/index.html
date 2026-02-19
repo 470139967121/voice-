@@ -239,6 +239,22 @@
   .field-group textarea.modified,
   .field-group select.modified {
     border-color: var(--warning);
+    background: rgba(243, 156, 18, 0.08);
+  }
+
+  /* Highlight the label when its sibling input is modified */
+  .field-group:has(.modified) > label {
+    color: var(--warning);
+  }
+
+  /* Checkbox row highlighting */
+  .checkbox-row:has(input.modified) {
+    background: rgba(243, 156, 18, 0.08);
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  .checkbox-row:has(input.modified) label {
+    color: var(--warning);
   }
 
   .btn-clear {
@@ -352,7 +368,15 @@
     overflow: hidden;
   }
 
-  .list-widget.modified { border-color: var(--warning); }
+  .list-widget.modified {
+    border-color: var(--warning);
+    background: rgba(243, 156, 18, 0.08);
+  }
+
+  /* Highlight list widget label */
+  .field-group:has(.list-widget.modified) > label {
+    color: var(--warning);
+  }
 
   .list-items {
     max-height: 180px;
@@ -582,6 +606,728 @@
   }
   .appeal-card .btn-approve { background: var(--success); }
   .appeal-card .btn-reject { background: var(--danger); }
+
+  .appeal-card .appeal-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .appeal-card .appeal-profile img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .appeal-card .appeal-profile .placeholder-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--text2);
+  }
+
+  .appeal-card .appeal-suspension-info {
+    background: rgba(231,76,60,0.08);
+    border: 1px solid rgba(231,76,60,0.2);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .appeal-card .appeal-suspension-info strong {
+    color: var(--danger);
+  }
+
+  .appeal-card .appeal-reports {
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .appeal-card .appeal-reports summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    user-select: none;
+  }
+
+  .appeal-card .appeal-reports summary:hover {
+    color: var(--text);
+  }
+
+  .appeal-card .appeal-report-item {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  .appeal-card .appeal-report-item .report-reason {
+    font-weight: 600;
+    color: var(--warning);
+    margin-bottom: 4px;
+  }
+
+  .appeal-card .appeal-report-item .report-meta {
+    color: var(--text2);
+    margin-bottom: 4px;
+  }
+
+  .appeal-card .appeal-report-item .report-description {
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .appeal-card .appeal-report-item .report-evidence {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    color: var(--text2);
+    font-style: italic;
+  }
+
+  .evidence-grid { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .evidence-thumb { position: relative; width: 80px; height: 80px; border-radius: 6px; border: 1px solid var(--border); overflow: hidden; cursor: pointer; flex-shrink: 0; }
+  .evidence-thumb img, .evidence-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .evidence-thumb .video-badge { position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #fff; font-size: 10px; padding: 1px 4px; border-radius: 3px; pointer-events: none; }
+  .evidence-lightbox { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; }
+  .evidence-lightbox-close { position: absolute; top: 16px; right: 16px; color: #fff; font-size: 28px; cursor: pointer; z-index: 10000; background: none; border: none; line-height: 1; }
+  .evidence-lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+  .evidence-lightbox video { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+
+  /* --- Maintenance Panel --- */
+  #maintenance-panel { display: none; }
+  #maintenance-panel.visible { display: block; }
+
+  .maintenance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .maintenance-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .maintenance-card h3 { margin: 0 0 8px; }
+  .maintenance-card p { color: var(--text2); font-size: 14px; margin: 0 0 16px; }
+
+  .maintenance-card button {
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    width: 100%;
+  }
+  .maintenance-card button:hover { background: #c0392b; }
+  .maintenance-card button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .maintenance-result {
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    display: none;
+  }
+  .maintenance-result.success { display: block; background: #1a3a1a; color: #4caf50; }
+  .maintenance-result.error { display: block; background: #3a1a1a; color: #e74c3c; }
+
+  /* --- Reports Panel --- */
+  #reports-panel { display: none; }
+  #reports-panel.visible { display: block; }
+
+  .stats-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+  }
+
+  .stat-card .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .stat-card .stat-label {
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  .report-search {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .report-search input {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .report-search input:focus { border-color: var(--accent); }
+
+  .report-search button,
+  .export-btn {
+    padding: 8px 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .report-search button:hover, .export-btn:hover { background: var(--accent-hover); }
+
+  .report-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .report-card.selected {
+    border-color: var(--accent);
+  }
+
+  .report-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .report-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--surface2);
+    object-fit: cover;
+  }
+
+  .report-user-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .report-user-name {
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .report-user-name:hover { color: var(--accent); }
+
+  .report-user-id {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .gcs-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .gcs-green { background: rgba(46,204,113,0.15); color: #2ecc71; }
+  .gcs-yellow { background: rgba(241,196,15,0.15); color: #f1c40f; }
+  .gcs-orange { background: rgba(243,156,18,0.15); color: #f39c12; }
+  .gcs-red { background: rgba(231,76,60,0.15); color: #e74c3c; }
+  .gcs-darkred { background: rgba(192,57,43,0.15); color: #c0392b; }
+
+  .report-count-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(231,76,60,0.15);
+    color: var(--danger);
+  }
+
+  .review-lock-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    background: rgba(243,156,18,0.15);
+    color: var(--warning);
+    white-space: nowrap;
+  }
+  .takeover-btn {
+    padding: 1px 6px;
+    margin-left: 4px;
+    background: var(--warning);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+  }
+  .takeover-btn:hover { opacity: 0.85; }
+
+  .report-list {
+    margin-bottom: 12px;
+  }
+
+  .report-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .report-item-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .report-item-reporter {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .report-item-date {
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .report-item-type {
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .report-item-text {
+    font-size: 12px;
+    color: var(--text2);
+    white-space: pre-wrap;
+  }
+
+  .report-item-context {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text2);
+    border-left: 3px solid var(--accent);
+  }
+
+  .console-links {
+    margin-top: 4px;
+    font-size: 11px;
+  }
+  .console-links a {
+    color: var(--accent);
+    text-decoration: none;
+    margin-right: 12px;
+    cursor: pointer;
+  }
+  .console-links a:hover { text-decoration: underline; }
+
+  /* Inline conversation viewer */
+  .conv-viewer {
+    margin-top: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 12px;
+  }
+  .conv-viewer-loading {
+    text-align: center;
+    padding: 16px;
+    color: var(--text2);
+    font-size: 12px;
+  }
+  .conv-msg {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    max-width: 85%;
+  }
+  .conv-msg.highlighted {
+    border: 2px solid #ef4444;
+    background: rgba(239, 68, 68, 0.1) !important;
+  }
+  .conv-msg-sender {
+    font-weight: 600;
+    font-size: 11px;
+    margin-bottom: 2px;
+    color: var(--accent);
+  }
+  .conv-msg-text {
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .conv-msg-time {
+    font-size: 10px;
+    color: var(--text2);
+    margin-top: 2px;
+    text-align: right;
+  }
+  .conv-msg-left {
+    background: var(--surface2);
+    margin-right: auto;
+  }
+  .conv-msg-right {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    margin-left: auto;
+  }
+  .conv-msg-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 6px;
+    margin-top: 4px;
+    cursor: pointer;
+  }
+  .conv-msg-sticker {
+    max-width: 120px;
+    max-height: 120px;
+    margin-top: 4px;
+  }
+  .conv-msg-type-badge {
+    font-size: 10px;
+    color: var(--text2);
+    font-style: italic;
+  }
+
+  .report-action-form {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .action-row label {
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 600;
+    min-width: 60px;
+  }
+
+  .action-row select,
+  .action-row input[type="number"],
+  .action-row textarea {
+    padding: 6px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+  }
+  .action-row select:focus,
+  .action-row input:focus,
+  .action-row textarea:focus { border-color: var(--accent); }
+
+  .action-row textarea {
+    flex: 1;
+    min-height: 40px;
+    resize: vertical;
+  }
+
+  .severity-radio {
+    display: flex;
+    gap: 4px;
+  }
+
+  .severity-radio label {
+    padding: 4px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text2);
+    min-width: auto;
+  }
+
+  .severity-radio input { display: none; }
+  .severity-radio input:checked + label {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(108,92,231,0.1);
+  }
+
+  .suspension-fields {
+    display: none;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .suspension-fields.visible { display: flex; }
+
+  .resolve-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .resolve-buttons button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .btn-resolve { background: var(--accent); }
+  .btn-resolve:hover { background: var(--accent-hover); }
+  .btn-resolve-all { background: var(--warning); color: #000; }
+  .btn-resolve-all:hover { opacity: 0.9; }
+
+  .show-all-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 0;
+  }
+  .show-all-btn:hover { text-decoration: underline; }
+
+  /* Tab badge */
+  .tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* Confirmation dialog */
+  .confirm-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+
+  .confirm-dialog {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+  }
+
+  .confirm-dialog h3 {
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+
+  .confirm-dialog p {
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: var(--text2);
+  }
+
+  .confirm-dialog .confirm-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .confirm-dialog button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .confirm-cancel {
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border) !important;
+  }
+
+  .confirm-ok {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* Export date range */
+  .export-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .export-controls input[type="date"] {
+    padding: 6px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .export-controls input:focus { border-color: var(--accent); }
+
+  .period-toggle {
+    display: flex;
+    gap: 4px;
+  }
+
+  .period-toggle button {
+    padding: 4px 10px;
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .period-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* GCS section in Users tab */
+  .gcs-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .gcs-section .gcs-score {
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .gcs-section .gcs-details {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .btn-reset-gcs {
+    padding: 6px 12px;
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .btn-reset-gcs:hover { border-color: var(--warning); color: var(--warning); }
+
+  .btn-warn {
+    padding: 10px 20px;
+    background: var(--warning);
+    color: #1a1a1a;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .btn-warn:hover { opacity: 0.9; }
+  .btn-warn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Report history in Users tab */
+  .report-history {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .report-history-item {
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .report-history-item:last-child { border-bottom: none; }
+
+  .escalation-alert {
+    background: rgba(231,76,60,0.1);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--danger);
+  }
+
+  .shortcut-hint {
+    font-size: 10px;
+    color: var(--text2);
+    opacity: 0.6;
+    margin-left: 4px;
+  }
 </style>
 </head>
 <body>
@@ -609,6 +1355,8 @@
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-users">Users</button>
       <button class="tab-btn" id="tab-appeals">Appeals</button>
+      <button class="tab-btn" id="tab-reports">Reports</button>
+      <button class="tab-btn" id="tab-maintenance">Maintenance</button>
     </div>
     <button id="signout-btn">Sign Out</button>
   </div>
@@ -709,6 +1457,16 @@
       <div class="form-section" id="suspension-section" style="display:none;">
         <h3>Suspension</h3>
         <div id="suspension-status" class="suspension-status not-suspended">Not Suspended</div>
+        <div id="pre-suspension-info" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Original Profile (before suspension)</div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <img id="pre-suspension-photo" src="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;display:none;" />
+            <div>
+              <div id="pre-suspension-name" style="font-weight:600;"></div>
+              <div id="pre-suspension-cover" style="font-size:12px;color:var(--text2);display:none;">Has cover photo</div>
+            </div>
+          </div>
+        </div>
         <div class="field-group">
           <label>Reason</label>
           <textarea id="suspend-reason" rows="2" placeholder="Reason for suspension"></textarea>
@@ -732,6 +1490,49 @@
           <button type="button" class="btn-suspend" id="suspend-btn">Suspend User</button>
           <button type="button" class="btn-unsuspend" id="unsuspend-btn" style="display:none;">Unsuspend User</button>
         </div>
+      </div>
+
+      <!-- GCS -->
+      <div class="form-section" id="gcs-section" style="display:none;">
+        <h3>Good Character Score</h3>
+        <div class="gcs-section">
+          <span class="gcs-badge" id="gcs-badge-user"></span>
+          <div class="gcs-details">
+            <div>Floor: <span id="gcs-floor">100</span> | Warnings: <span id="gcs-warnings">0</span></div>
+            <div>Last deduction: <span id="gcs-last-deduction">Never</span></div>
+          </div>
+          <button type="button" class="btn-reset-gcs" id="reset-gcs-btn">Reset GCS</button>
+        </div>
+      </div>
+
+      <!-- Direct Warning -->
+      <div class="form-section" id="direct-warn-section" style="display:none;">
+        <h3>Issue Warning</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <select id="direct-warn-reason" style="padding:8px;background:var(--surface);color:var(--text1);border:1px solid var(--border);border-radius:6px;">
+            <option value="">Select reason...</option>
+            <option value="Spam">Spam</option>
+            <option value="Harassment">Harassment</option>
+            <option value="Inappropriate Content">Inappropriate Content</option>
+            <option value="Other">Other</option>
+          </select>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="color:var(--text2);font-size:13px;">Severity:</span>
+            <label style="color:var(--text2);font-size:13px;cursor:pointer;"><input type="radio" name="direct-warn-severity" value="1"> 1 (-5)</label>
+            <label style="color:var(--text2);font-size:13px;cursor:pointer;"><input type="radio" name="direct-warn-severity" value="2"> 2 (-10)</label>
+            <label style="color:var(--text2);font-size:13px;cursor:pointer;"><input type="radio" name="direct-warn-severity" value="3" checked> 3 (-15)</label>
+            <label style="color:var(--text2);font-size:13px;cursor:pointer;"><input type="radio" name="direct-warn-severity" value="4"> 4 (-20)</label>
+            <label style="color:var(--text2);font-size:13px;cursor:pointer;"><input type="radio" name="direct-warn-severity" value="5"> 5 (-25)</label>
+          </div>
+          <textarea id="direct-warn-note" rows="2" placeholder="Admin note (optional)" style="padding:8px;background:var(--surface);color:var(--text1);border:1px solid var(--border);border-radius:6px;resize:vertical;font-family:inherit;"></textarea>
+          <button type="button" id="direct-warn-btn" class="btn-warn" style="align-self:flex-start;">Issue Warning</button>
+        </div>
+      </div>
+
+      <!-- Report History -->
+      <div class="form-section" id="report-history-section" style="display:none;">
+        <h3>Report History</h3>
+        <div class="report-history" id="report-history-list"></div>
       </div>
 
       <!-- Timestamps -->
@@ -806,6 +1607,81 @@
       </div>
       <div id="appeals-list"></div>
     </div>
+
+    <!-- Reports Panel -->
+    <div id="reports-panel">
+      <!-- Stats bar -->
+      <div class="stats-bar" id="reports-stats-bar">
+        <div class="stat-card"><div class="stat-value" id="stat-pending">0</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-resolved-today">0</div><div class="stat-label">Resolved Today</div></div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-avg-response">-</div>
+          <div class="stat-label">Avg Response
+            <span class="period-toggle">
+              <button class="active" data-period="7d">7d</button>
+              <button data-period="30d">30d</button>
+              <button data-period="all">All</button>
+            </span>
+          </div>
+        </div>
+        <div class="stat-card"><div class="stat-value" id="stat-reviewers">0</div><div class="stat-label">Active Reviewers</div></div>
+      </div>
+
+      <!-- Search + Export -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <div class="report-search" style="flex:1;margin-bottom:0;">
+          <input type="number" id="report-search-input" placeholder="Search by unique ID...">
+          <button id="report-search-btn">Search</button>
+        </div>
+        <div class="export-controls" style="margin-bottom:0;">
+          <input type="date" id="export-from">
+          <span style="color:var(--text2);font-size:12px;">to</span>
+          <input type="date" id="export-to">
+          <button class="export-btn" id="export-csv-btn">Export CSV</button>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-bar" id="report-filter-bar">
+        <button class="tab-btn active" data-report-filter="pending">Pending</button>
+        <button class="tab-btn" data-report-filter="resolved">Resolved</button>
+        <button class="tab-btn" data-report-filter="archived">Archived</button>
+      </div>
+
+      <!-- Report cards list -->
+      <div id="reports-list"></div>
+    </div>
+
+    <div id="maintenance-panel">
+      <h2 style="margin-bottom: 16px;">Maintenance</h2>
+      <div class="maintenance-grid">
+        <div class="maintenance-card">
+          <h3>System Messages</h3>
+          <p>Delete all conversations with SHYTALK_SYSTEM, including their messages, settings subcollections, and associated images from Storage.</p>
+          <button id="clear-system-msgs-btn">Clear All System Messages</button>
+          <div class="maintenance-result" id="clear-system-msgs-result"></div>
+        </div>
+        <div class="maintenance-card">
+          <h3>Reports</h3>
+          <p>Delete all reports (pending, resolved, archived), report locks, and report evidence files from Storage.</p>
+          <button id="clear-reports-btn">Clear All Reports</button>
+          <div class="maintenance-result" id="clear-reports-result"></div>
+        </div>
+        <div class="maintenance-card">
+          <h3>Warnings</h3>
+          <p>Reset warning count, active warning, and Good Character Score to 100 for all users.</p>
+          <button id="clear-warnings-btn">Clear All Warnings</button>
+          <div class="maintenance-result" id="clear-warnings-result"></div>
+        </div>
+        <div class="maintenance-card">
+          <h3>Storage</h3>
+          <p>Audit storage usage and purge orphaned files (PM images, stickers, report evidence). Profile and cover photos are not affected.</p>
+          <button id="audit-storage-btn">Audit Storage</button>
+          <button id="purge-storage-btn" style="margin-top:8px;">Purge Orphaned Files</button>
+          <div class="maintenance-result" id="storage-result"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -817,6 +1693,8 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
     from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+  import { getFirestore as getClientFirestore, collection, query, where, onSnapshot, getDocs }
+    from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
   // --- Config ---
   const FIREBASE_CONFIG = {
@@ -830,6 +1708,7 @@
 
   const app = initializeApp(FIREBASE_CONFIG);
   const auth = getAuth(app);
+  const clientDb = getClientFirestore(app);
 
   // --- DOM refs ---
   const $ = (sel) => document.querySelector(sel);
@@ -856,6 +1735,59 @@
   let currentUid = null;     // UID of the user being edited
   let listWidgetData = {};   // Current items for each list widget: { field: ["123 (Name)", ...] }
   let emailRevealed = false; // Whether email field is unmasked
+
+  // --- Evidence helpers ---
+  function isVideoUrl(url) {
+    return /\.(mp4|mov|webm|avi|mkv|3gp)(\?|$)/i.test(url) ||
+      url.toLowerCase().includes("content-type%3dvideo") ||
+      url.toLowerCase().includes("contenttype%3dvideo");
+  }
+
+  function renderEvidence(evidenceUrls) {
+    if (!evidenceUrls || evidenceUrls.length === 0) return "";
+    const thumbs = evidenceUrls.map(url => {
+      const escaped = escapeHtml(url);
+      if (isVideoUrl(url)) {
+        return `<div class="evidence-thumb" data-evidence-url="${escaped}" data-evidence-type="video">
+          <video src="${escaped}" muted preload="metadata"></video>
+          <span class="video-badge">&#9654;</span>
+        </div>`;
+      }
+      return `<div class="evidence-thumb" data-evidence-url="${escaped}" data-evidence-type="image">
+        <img src="${escaped}" alt="Evidence">
+      </div>`;
+    }).join("");
+    return `<div class="evidence-grid">${thumbs}</div>`;
+  }
+
+  function openEvidenceLightbox(url, type) {
+    const existing = document.querySelector(".evidence-lightbox");
+    if (existing) existing.remove();
+    const overlay = document.createElement("div");
+    overlay.className = "evidence-lightbox";
+    const content = type === "video"
+      ? `<video src="${escapeHtml(url)}" controls autoplay style="max-width:90vw;max-height:90vh;border-radius:8px;"></video>`
+      : `<img src="${escapeHtml(url)}" style="max-width:90vw;max-height:90vh;border-radius:8px;" alt="Evidence">`;
+    overlay.innerHTML = `<button class="evidence-lightbox-close">&times;</button>${content}`;
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    overlay.querySelector(".evidence-lightbox-close").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    const onKey = (e) => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); } };
+    document.addEventListener("keydown", onKey);
+    // Video error fallback — show message + open-in-new-tab link for broken uploads
+    if (type === "video") {
+      const video = overlay.querySelector("video");
+      if (video) {
+        video.addEventListener("error", () => {
+          video.replaceWith(Object.assign(document.createElement("div"), {
+            style: "color:#fff;text-align:center;padding:32px;",
+            innerHTML: `<p style="margin-bottom:12px;">This video could not be played.</p><a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="color:#4fc3f7;">Open in new tab</a>`
+          }));
+        });
+      }
+    }
+  }
 
   // --- Screens ---
   function showScreen(name) {
@@ -885,6 +1817,23 @@
       }
       currentUser = user;
       showScreen("dashboard");
+      // Restore saved tab and report filter
+      const savedTab = localStorage.getItem("admin_tab");
+      if (savedTab && ["users", "appeals", "reports", "maintenance"].includes(savedTab)) {
+        switchTab(savedTab);
+      }
+      const savedReportFilter = localStorage.getItem("admin_report_filter");
+      if (savedReportFilter && ["pending", "resolved", "archived"].includes(savedReportFilter)) {
+        currentReportFilter = savedReportFilter;
+        for (const btn of $$("[data-report-filter]")) {
+          btn.classList.toggle("active", btn.dataset.reportFilter === savedReportFilter);
+        }
+      }
+      const savedSearch = localStorage.getItem("admin_report_search");
+      if (savedSearch) {
+        reportSearchInput.value = savedSearch;
+        reportSearchQuery = savedSearch;
+      }
     } else {
       currentUser = null;
       showScreen("login");
@@ -1388,26 +2337,34 @@
   // --- Tab switching ---
   const tabUsers = $("#tab-users");
   const tabAppeals = $("#tab-appeals");
+  const tabReports = $("#tab-reports");
+  const tabMaintenance = $("#tab-maintenance");
   const appealsPanel = $("#appeals-panel");
+  const reportsPanel = $("#reports-panel");
+  const maintenancePanel = $("#maintenance-panel");
+  let currentTab = "users";
 
-  tabUsers.addEventListener("click", () => {
-    tabUsers.classList.add("active");
-    tabAppeals.classList.remove("active");
-    // Show search bar + user form, hide appeals
-    $(".search-bar").style.display = "";
-    userForm.style.display = "";
-    appealsPanel.classList.remove("visible");
-  });
+  function switchTab(tab) {
+    currentTab = tab;
+    localStorage.setItem("admin_tab", tab);
+    tabUsers.classList.toggle("active", tab === "users");
+    tabAppeals.classList.toggle("active", tab === "appeals");
+    tabReports.classList.toggle("active", tab === "reports");
+    tabMaintenance.classList.toggle("active", tab === "maintenance");
+    $(".search-bar").style.display = tab === "users" ? "" : "none";
+    userForm.style.display = tab === "users" ? "" : "none";
+    appealsPanel.classList.toggle("visible", tab === "appeals");
+    reportsPanel.classList.toggle("visible", tab === "reports");
+    maintenancePanel.classList.toggle("visible", tab === "maintenance");
 
-  tabAppeals.addEventListener("click", () => {
-    tabAppeals.classList.add("active");
-    tabUsers.classList.remove("active");
-    // Hide search bar + user form, show appeals
-    $(".search-bar").style.display = "none";
-    userForm.style.display = "none";
-    appealsPanel.classList.add("visible");
-    loadAppeals("pending");
-  });
+    if (tab === "appeals") loadAppeals("pending");
+    if (tab === "reports") { loadReports(); loadReportStats(); }
+  }
+
+  tabUsers.addEventListener("click", () => switchTab("users"));
+  tabAppeals.addEventListener("click", () => switchTab("appeals"));
+  tabReports.addEventListener("click", () => switchTab("reports"));
+  tabMaintenance.addEventListener("click", () => switchTab("maintenance"));
 
   // --- Suspension section ---
   const suspensionSection = $("#suspension-section");
@@ -1421,6 +2378,11 @@
   function populateSuspensionSection(data) {
     suspensionSection.style.display = "block";
 
+    const preSuspensionInfo = $("#pre-suspension-info");
+    const preSuspensionPhoto = $("#pre-suspension-photo");
+    const preSuspensionName = $("#pre-suspension-name");
+    const preSuspensionCover = $("#pre-suspension-cover");
+
     if (data.isSuspended) {
       const since = data.suspensionStartDate ? new Date(data.suspensionStartDate).toLocaleString() : "unknown";
       const until = data.suspensionEndDate ? new Date(data.suspensionEndDate).toLocaleString() : "permanent";
@@ -1429,11 +2391,31 @@
       suspensionStatus.textContent = `Suspended since ${since}, until ${until}. Reason: ${reason}`;
       suspendBtn.style.display = "none";
       unsuspendBtn.style.display = "";
+
+      // Show original profile data from _preSuspension
+      if (data._preSuspension) {
+        preSuspensionInfo.style.display = "block";
+        preSuspensionName.textContent = data._preSuspension.displayName || "Unknown";
+        if (data._preSuspension.profilePhotoUrl) {
+          preSuspensionPhoto.src = data._preSuspension.profilePhotoUrl;
+          preSuspensionPhoto.style.display = "block";
+        } else {
+          preSuspensionPhoto.style.display = "none";
+        }
+        if (data._preSuspension.coverPhotoUrl) {
+          preSuspensionCover.style.display = "block";
+        } else {
+          preSuspensionCover.style.display = "none";
+        }
+      } else {
+        preSuspensionInfo.style.display = "none";
+      }
     } else {
       suspensionStatus.className = "suspension-status not-suspended";
       suspensionStatus.textContent = "Not Suspended";
       suspendBtn.style.display = "";
       unsuspendBtn.style.display = "none";
+      preSuspensionInfo.style.display = "none";
     }
 
     suspendReason.value = "";
@@ -1550,12 +2532,75 @@
         const card = document.createElement("div");
         card.className = "appeal-card";
         const date = appeal.submittedAt ? new Date(appeal.submittedAt).toLocaleString() : "";
+        const userInfo = appeal.userInfo || {};
+        const originalName = appeal.originalDisplayName || appeal.userDisplayName || userInfo.displayName || "Unknown";
+        const originalPhoto = appeal.originalProfilePhotoUrl || null;
+        const uniqueId = appeal.userUniqueId || userInfo.uniqueId || "?";
+
+        // Profile section with original name/photo
+        const profileHtml = `
+          <div class="appeal-profile">
+            ${originalPhoto
+              ? `<img src="${escapeHtml(originalPhoto)}" alt="${escapeHtml(originalName)}">`
+              : `<div class="placeholder-avatar">?</div>`}
+            <div>
+              <div style="font-weight:600;font-size:14px;">#${uniqueId} — ${escapeHtml(originalName)}</div>
+              ${userInfo.displayName && userInfo.displayName !== originalName
+                ? `<div style="font-size:11px;color:var(--text2);">Current name: ${escapeHtml(userInfo.displayName)}</div>`
+                : ""}
+            </div>
+          </div>`;
+
+        // Suspension info section
+        let suspensionHtml = "";
+        if (userInfo.suspensionReason) {
+          const since = userInfo.suspensionStartDate ? new Date(userInfo.suspensionStartDate).toLocaleString() : "unknown";
+          const until = userInfo.suspensionEndDate ? new Date(userInfo.suspensionEndDate).toLocaleString() : "permanent";
+          suspensionHtml = `
+            <div class="appeal-suspension-info">
+              <strong>Reason:</strong> ${escapeHtml(userInfo.suspensionReason)}<br>
+              <strong>Since:</strong> ${since}<br>
+              <strong>Until:</strong> ${until}
+            </div>`;
+        }
+
+        // Reports section
+        const reports = appeal.reports || [];
+        let reportsHtml = "";
+        if (reports.length > 0) {
+          const reportItems = reports.map((r) => {
+            const reportDate = r.timestamp ? new Date(r.timestamp).toLocaleString() : "";
+            const reporterName = r.reporterName || "Unknown";
+            const reporterUid = r.reporterUniqueId || "";
+            const reportStatus = r.status === "resolved" ? `(${r.resolvedAction || "resolved"})` : `(${r.status})`;
+            return `
+              <div class="appeal-report-item">
+                <div class="report-reason">${escapeHtml(r.reason || "Unknown reason")} ${reportStatus}</div>
+                <div class="report-meta">
+                  Reported by: #${reporterUid} ${escapeHtml(reporterName)} | ${reportDate}
+                  ${r.type === "message" ? " | Type: Message report" : ""}
+                </div>
+                ${r.description ? `<div class="report-description">${escapeHtml(r.description)}</div>` : ""}
+                ${r.messageText ? `<div class="report-evidence">Reported message: "${escapeHtml(r.messageText)}"</div>` : ""}
+                ${renderEvidence(r.evidenceUrls)}
+                ${r.adminNote ? `<div style="margin-top:4px;font-size:11px;color:var(--text2);">Admin note: ${escapeHtml(r.adminNote)}</div>` : ""}
+              </div>`;
+          }).join("");
+
+          reportsHtml = `
+            <div class="appeal-reports">
+              <details>
+                <summary>Reports & Evidence (${reports.length})</summary>
+                ${reportItems}
+              </details>
+            </div>`;
+        }
+
         card.innerHTML = `
-          <div class="appeal-header">
-            <span class="appeal-user">#${appeal.userUniqueId || "?"} — ${appeal.userDisplayName || "Unknown"}</span>
-            <span class="appeal-date">${date}</span>
-          </div>
+          ${profileHtml}
+          ${suspensionHtml}
           <div class="appeal-text">${escapeHtml(appeal.appealText || "")}</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">Submitted: ${date}</div>
           ${status === "pending" ? `
           <div class="appeal-actions">
             <input type="text" placeholder="Admin note (optional)" data-note-for="${appeal.id}">
@@ -1566,6 +2611,7 @@
             ${appeal.adminNote ? `Note: ${escapeHtml(appeal.adminNote)}` : ""}
             ${appeal.reviewedAt ? `Reviewed: ${new Date(appeal.reviewedAt).toLocaleString()}` : ""}
           </div>`}
+          ${reportsHtml}
         `;
         appealsList.appendChild(card);
       }
@@ -1591,6 +2637,14 @@
           btn.disabled = false;
         });
       }
+
+      // Wire up evidence thumbnail clicks in appeals
+      for (const thumb of appealsList.querySelectorAll(".evidence-thumb:not([data-wired])")) {
+        thumb.dataset.wired = "1";
+        thumb.addEventListener("click", () => {
+          openEvidenceLightbox(thumb.dataset.evidenceUrl, thumb.dataset.evidenceType);
+        });
+      }
     } catch (err) {
       appealsList.innerHTML = `<div style="color:var(--danger);font-size:13px;">${err.message}</div>`;
     }
@@ -1601,6 +2655,896 @@
     div.textContent = str;
     return div.innerHTML;
   }
+
+  // --- GCS Helpers ---
+  function gcsClass(score) {
+    if (score >= 80) return "gcs-green";
+    if (score >= 60) return "gcs-yellow";
+    if (score >= 40) return "gcs-orange";
+    if (score >= 20) return "gcs-red";
+    return "gcs-darkred";
+  }
+
+  function gcsEmoji(score) {
+    if (score >= 80) return "\u{1F60A}";
+    if (score >= 60) return "\u{1F610}";
+    if (score >= 40) return "\u{1F61F}";
+    if (score >= 20) return "\u{1F620}";
+    return "\u{1F621}";
+  }
+
+  function computeDisplayScore(floor, lastDeductionAt) {
+    if (!lastDeductionAt) return Math.min(100, floor);
+    const deductionTime = new Date(lastDeductionAt).getTime();
+    const monthsSince = (Date.now() - deductionTime) / (30 * 24 * 60 * 60 * 1000);
+    return Math.min(100, Math.floor(floor + 2 * monthsSince));
+  }
+
+  // --- GCS section in Users tab ---
+  const gcsSection = $("#gcs-section");
+  const gcsBadgeUser = $("#gcs-badge-user");
+  const gcsFloor = $("#gcs-floor");
+  const gcsWarnings = $("#gcs-warnings");
+  const gcsLastDeduction = $("#gcs-last-deduction");
+  const resetGcsBtn = $("#reset-gcs-btn");
+  const reportHistorySection = $("#report-history-section");
+  const reportHistoryList = $("#report-history-list");
+
+  function populateGcsSection(data) {
+    gcsSection.style.display = "block";
+    const floor = data.goodCharacterScore ?? 100;
+    const lastDeduction = data.goodCharacterLastDeductionAt || null;
+    const display = computeDisplayScore(floor, lastDeduction);
+    gcsBadgeUser.className = `gcs-badge ${gcsClass(display)}`;
+    gcsBadgeUser.textContent = `${gcsEmoji(display)} ${display}`;
+    gcsFloor.textContent = floor;
+    gcsWarnings.textContent = data.warningCount || 0;
+    gcsLastDeduction.textContent = lastDeduction ? new Date(lastDeduction).toLocaleString() : "Never";
+  }
+
+  resetGcsBtn.addEventListener("click", async () => {
+    if (!currentUid) return;
+    if (!confirm("Reset this user's GCS to 100 and clear all warnings?")) return;
+    try {
+      await apiCall("POST", `/api/user/${currentUid}/reset-gcs`);
+      showToast("GCS reset to 100");
+      const data = await apiCall("GET", `/api/user/${currentUid}`);
+      populateGcsSection(data);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+
+  async function loadReportHistory(uid) {
+    reportHistorySection.style.display = "block";
+    reportHistoryList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+    try {
+      const result = await apiCall("GET", `/api/reports?status=resolved&userId=${uid}`);
+      const allReports = result.users.flatMap((u) => u.reports);
+      if (allReports.length === 0) {
+        reportHistoryList.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;">No report history</div>';
+        return;
+      }
+      reportHistoryList.innerHTML = "";
+      for (const r of allReports.slice(0, 10)) {
+        const div = document.createElement("div");
+        div.className = "report-history-item";
+        div.innerHTML = `
+          <strong>${escapeHtml(r.reason || "Unknown")}</strong> — ${escapeHtml(r.resolvedAction || "?")}
+          ${r.severity ? `(Severity: ${r.severity})` : ""}
+          <br><span style="color:var(--text2)">${r.adminNote ? escapeHtml(r.adminNote) : ""}</span>
+          <br><span style="color:var(--text2);font-size:11px">${r.resolvedAt ? new Date(r.resolvedAt).toLocaleString() : ""}</span>
+        `;
+        reportHistoryList.appendChild(div);
+      }
+    } catch (err) {
+      reportHistoryList.innerHTML = `<div style="color:var(--danger);font-size:12px;">${err.message}</div>`;
+    }
+  }
+
+  // --- Direct Warning section ---
+  const directWarnSection = $("#direct-warn-section");
+  const directWarnReason = $("#direct-warn-reason");
+  const directWarnNote = $("#direct-warn-note");
+  const directWarnBtn = $("#direct-warn-btn");
+
+  function showDirectWarnSection() {
+    directWarnSection.style.display = "block";
+    directWarnReason.value = "";
+    directWarnNote.value = "";
+    document.querySelector('input[name="direct-warn-severity"][value="3"]').checked = true;
+  }
+
+  directWarnBtn.addEventListener("click", async () => {
+    if (!currentUid) return;
+    const reason = directWarnReason.value;
+    if (!reason) { showToast("Select a reason", "error"); return; }
+    const severity = parseInt(document.querySelector('input[name="direct-warn-severity"]:checked')?.value || "3");
+    const adminNote = directWarnNote.value.trim() || undefined;
+
+    if (!confirm(`Issue a warning to this user for "${reason}" (severity ${severity}, -${severity * 5} GCS)?`)) return;
+
+    directWarnBtn.disabled = true;
+    directWarnBtn.textContent = "Issuing...";
+    try {
+      const result = await apiCall("POST", `/api/user/${currentUid}/warn`, { reason, severity, adminNote });
+      showToast("Warning issued successfully");
+      if (result.autoEscalateSuggested) {
+        showToast("This user has 5+ warnings. Consider suspending.", "error");
+      }
+      // Refresh GCS display
+      const data = await apiCall("GET", `/api/user/${currentUid}`);
+      populateGcsSection(data);
+      loadReportHistory(currentUid);
+      directWarnReason.value = "";
+      directWarnNote.value = "";
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      directWarnBtn.disabled = false;
+      directWarnBtn.textContent = "Issue Warning";
+    }
+  });
+
+  // Hook GCS + report history + direct warn into form populate
+  const _origPopulateWithSuspension = populateFormWithSuspension;
+  async function populateFormFull(data) {
+    await _origPopulateWithSuspension(data);
+    populateGcsSection(data);
+    showDirectWarnSection();
+    loadReportHistory(data.uid);
+  }
+
+  // Re-bind search again
+  searchBtn.removeEventListener("click", doSearchUpdated);
+  searchUid.removeEventListener("keydown", () => {});
+
+  async function doSearchFinal() {
+    const q = searchUid.value.trim();
+    if (!q) return;
+    searchBtn.disabled = true;
+    searchBtn.textContent = "Searching...";
+    userForm.classList.remove("visible");
+    try {
+      const data = await apiCall("GET", `/api/search/uniqueId/${q}`);
+      await populateFormFull(data);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+    searchBtn.disabled = false;
+    searchBtn.textContent = "Search";
+  }
+
+  searchBtn.addEventListener("click", doSearchFinal);
+  searchUid.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearchFinal(); });
+
+  // --- Reports Tab ---
+  const reportsList = $("#reports-list");
+  let currentReportFilter = "pending";
+  let reportSearchQuery = "";
+  let reportCards = []; // For keyboard navigation
+  let selectedCardIndex = -1;
+  let reportsUnsubscribe = null; // Firestore listener
+  let currentLockedUid = null; // UID we currently hold a review lock on
+  let allReportUsers = []; // All users from API (for infinite scroll)
+  let renderedCount = 0;
+  const CARDS_PER_PAGE = 20;
+
+  // Filter buttons
+  for (const btn of $$("#report-filter-bar .tab-btn")) {
+    btn.addEventListener("click", () => {
+      for (const b of $$("#report-filter-bar .tab-btn")) b.classList.remove("active");
+      btn.classList.add("active");
+      currentReportFilter = btn.dataset.reportFilter;
+      localStorage.setItem("admin_report_filter", currentReportFilter);
+      loadReports();
+    });
+  }
+
+  // Search
+  const reportSearchInput = $("#report-search-input");
+  const reportSearchBtn = $("#report-search-btn");
+  reportSearchBtn.addEventListener("click", () => {
+    reportSearchQuery = reportSearchInput.value.trim();
+    localStorage.setItem("admin_report_search", reportSearchQuery);
+    loadReports();
+  });
+  reportSearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { reportSearchQuery = reportSearchInput.value.trim(); localStorage.setItem("admin_report_search", reportSearchQuery); loadReports(); }
+  });
+
+  // Stats
+  let statsPeriod = "7d";
+  for (const btn of $$(".period-toggle button")) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      for (const b of $$(".period-toggle button")) b.classList.remove("active");
+      btn.classList.add("active");
+      statsPeriod = btn.dataset.period;
+      loadReportStats();
+    });
+  }
+
+  async function loadReportStats() {
+    try {
+      const stats = await apiCall("GET", `/api/reports/stats?period=${statsPeriod}`);
+      $("#stat-pending").textContent = stats.pendingCount;
+      $("#stat-resolved-today").textContent = stats.resolvedToday;
+      $("#stat-avg-response").textContent = stats.avgResponseHours != null ? `${stats.avgResponseHours}h` : "-";
+      $("#stat-reviewers").textContent = stats.activeReviewers;
+
+      // Update tab badge
+      updateReportBadge(stats.pendingCount);
+    } catch (err) {
+      console.error("Failed to load stats:", err);
+    }
+  }
+
+  function updateReportBadge(count) {
+    let badge = tabReports.querySelector(".tab-badge");
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "tab-badge";
+        tabReports.appendChild(badge);
+      }
+      badge.textContent = count > 99 ? "99+" : count;
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // Real-time listener for pending reports count
+  function startReportListener() {
+    if (reportsUnsubscribe) reportsUnsubscribe();
+    const q = query(collection(clientDb, "reports"), where("status", "==", "pending"));
+    reportsUnsubscribe = onSnapshot(q, (snapshot) => {
+      updateReportBadge(snapshot.size);
+      // Auto-refresh if on reports tab
+      if (currentTab === "reports" && currentReportFilter === "pending") {
+        renderReportsFromSnapshot(snapshot);
+      }
+    });
+  }
+
+  // --- Review Lock Functions ---
+  async function acquireLock(uid) {
+    if (currentLockedUid === uid) return true;
+    if (currentLockedUid) await releaseLock();
+    try {
+      const result = await apiCall("POST", `/api/report-locks/${uid}/lock`);
+      if (result.locked) {
+        showToast(`Being reviewed by ${result.lockedBy}`, "error");
+        return false;
+      }
+      currentLockedUid = uid;
+      return true;
+    } catch (err) {
+      console.error("Failed to acquire lock:", err);
+      return false;
+    }
+  }
+
+  async function releaseLock() {
+    if (!currentLockedUid) return;
+    try { await apiCall("DELETE", `/api/report-locks/${currentLockedUid}`); } catch (_) {}
+    currentLockedUid = null;
+  }
+
+  // Release lock on page close (best-effort; 5-min expiry covers failure)
+  window.addEventListener("beforeunload", () => {
+    if (currentLockedUid && currentUser) {
+      const token = currentUser.accessToken || "";
+      fetch(`${API_BASE}/api/report-locks/${currentLockedUid}`, {
+        method: "DELETE", headers: { "Authorization": `Bearer ${token}` }, keepalive: true,
+      }).catch(() => {});
+    }
+  });
+
+  function renderReportsFromSnapshot(snapshot) {
+    // This just triggers a reload via API for full data
+    loadReports();
+  }
+
+  async function loadReports() {
+    await releaseLock(); // Release any held lock on reload
+    reportsList.innerHTML = '<div style="color:var(--text2);font-size:13px;">Loading...</div>';
+    try {
+      let url = `/api/reports?status=${currentReportFilter}`;
+      if (reportSearchQuery) url += `&search=${reportSearchQuery}`;
+      const result = await apiCall("GET", url);
+
+      if (result.users.length === 0) {
+        reportsList.innerHTML = '<div style="color:var(--text2);font-size:13px;font-style:italic;">No reports found</div>';
+        reportCards = [];
+        allReportUsers = [];
+        renderedCount = 0;
+        return;
+      }
+
+      reportsList.innerHTML = "";
+      reportCards = [];
+      allReportUsers = result.users;
+      renderedCount = 0;
+
+      // Render first batch
+      renderMoreCards();
+
+    } catch (err) {
+      reportsList.innerHTML = `<div style="color:var(--danger);font-size:13px;">${err.message}</div>`;
+    }
+  }
+
+  function renderMoreCards() {
+    const batch = allReportUsers.slice(renderedCount, renderedCount + CARDS_PER_PAGE);
+    if (batch.length === 0) return;
+
+    const myUid = currentUser?.uid;
+
+    for (const user of batch) {
+      const card = document.createElement("div");
+      card.className = "report-card";
+      card.dataset.uid = user.uid;
+      reportCards.push(card);
+
+      const gcsScore = user.gcs?.displayScore ?? 100;
+
+      // Header
+      let headerHtml = `<div class="report-card-header">`;
+      if (user.profilePhotoUrl) {
+        headerHtml += `<img class="report-user-avatar" src="${escapeHtml(user.profilePhotoUrl)}" alt="">`;
+      } else {
+        headerHtml += `<div class="report-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2);">\u{1F464}</div>`;
+      }
+      headerHtml += `<div class="report-user-info">
+        <div class="report-user-name" data-navigate-uid="${escapeHtml(user.uid)}">${escapeHtml(user.displayName || "Unknown")}${user.isSuspended ? ' <span style="color:var(--danger);font-size:11px;font-weight:600;background:rgba(231,76,60,0.1);padding:1px 6px;border-radius:4px;">Suspended</span>' : ""}</div>
+        <div class="report-user-id">ID: ${user.uniqueId || "?"} | Warnings: ${user.warningCount || 0}</div>
+      </div>`;
+      headerHtml += `<span class="gcs-badge ${gcsClass(gcsScore)}">${gcsEmoji(gcsScore)} ${gcsScore}</span>`;
+      headerHtml += `<span class="report-count-badge">${user.reportCount} report${user.reportCount !== 1 ? "s" : ""}</span>`;
+
+      // Review lock badge
+      if (user.lock && user.lock.adminUid !== myUid) {
+        const lockAge = Date.now() - new Date(user.lock.lockedAt).getTime();
+        const canTakeover = lockAge > 2 * 60 * 1000;
+        headerHtml += `<span class="review-lock-badge">\u{1F512} ${escapeHtml(user.lock.displayName)}`;
+        if (canTakeover) {
+          headerHtml += ` <button class="takeover-btn" data-takeover-uid="${user.uid}">Take Over</button>`;
+        }
+        headerHtml += `</span>`;
+      }
+      headerHtml += `</div>`;
+
+        // Reports list (show max 10, with "Show all")
+        const maxShow = 10;
+        const reports = user.reports || [];
+        let reportsHtml = '<div class="report-list">';
+        const toShow = reports.slice(0, maxShow);
+        for (const r of toShow) {
+          const reporterDisplay = r.reporterName
+            ? `${escapeHtml(r.reporterName)} (ID: ${r.reporterUniqueId || "?"})`
+            : "Unknown reporter";
+          reportsHtml += `<div class="report-item">
+            <div class="report-item-header">
+              <span class="report-item-reporter">${reporterDisplay}</span>
+              <span class="report-item-date">${r.timestamp ? new Date(r.timestamp).toLocaleString() : ""}</span>
+            </div>
+            <div class="report-item-type">${escapeHtml(r.reason || "Unknown")}</div>
+            ${r.description ? `<div class="report-item-text">${escapeHtml(r.description)}</div>` : ""}
+            ${r.messageText ? `<div class="report-item-context">\u{1F4AC} ${escapeHtml(r.messageText)}</div>` : ""}
+            ${renderEvidence(r.evidenceUrls)}
+            ${r.conversationId ? `<div class="console-links">
+              <a href="#" class="view-conversation-btn" data-conv-id="${r.conversationId}" data-highlight-msg="${r.messageId || ""}">View Conversation</a>
+            </div>` : ""}
+          </div>`;
+        }
+        if (reports.length > maxShow) {
+          reportsHtml += `<button class="show-all-btn" data-show-all="${user.uid}">Show all ${reports.length} reports</button>`;
+        }
+        reportsHtml += '</div>';
+
+        // Action form (only for pending)
+        let actionHtml = "";
+        if (currentReportFilter === "pending") {
+          actionHtml = `<div class="report-action-form" data-form-uid="${user.uid}">
+            <div class="action-row">
+              <label>Action</label>
+              <select data-action-select="${user.uid}">
+                <option value="warn">Warn <span class="shortcut-hint">[W]</span></option>
+                <option value="suspend">Suspend <span class="shortcut-hint">[S]</span></option>
+                <option value="dismiss">Dismiss <span class="shortcut-hint">[D]</span></option>
+              </select>
+            </div>
+            <div class="action-row" data-severity-row="${user.uid}">
+              <label>Severity</label>
+              <div class="severity-radio">
+                ${[1,2,3,4,5].map((n) => `<input type="radio" name="sev-${user.uid}" id="sev-${user.uid}-${n}" value="${n}" ${n===1?"checked":""}><label for="sev-${user.uid}-${n}">${n} (-${n*5})</label>`).join("")}
+              </div>
+            </div>
+            <div class="suspension-fields" data-suspension-fields="${user.uid}">
+              <label>Duration</label>
+              <select data-suspension-days="${user.uid}">
+                <option value="1">1 Day</option>
+                <option value="3">3 Days</option>
+                <option value="7" selected>7 Days</option>
+                <option value="30">30 Days</option>
+                <option value="0">Permanent</option>
+              </select>
+              <label style="min-width:auto;"><input type="checkbox" data-can-appeal="${user.uid}"> Can Appeal</label>
+            </div>
+            <div class="action-row">
+              <label>Note</label>
+              <textarea data-admin-note="${user.uid}" placeholder="Admin note (optional)"></textarea>
+            </div>
+            <div class="resolve-buttons">
+              <button class="btn-resolve" data-resolve-first="${user.uid}">Resolve Latest</button>
+              <button class="btn-resolve-all" data-resolve-all="${user.uid}">Resolve All (${user.reportCount})</button>
+            </div>
+          </div>`;
+        }
+
+      // Disable action form if locked by another admin
+      const isLockedByOther = user.lock && user.lock.adminUid !== myUid;
+      if (isLockedByOther) {
+        actionHtml = actionHtml.replace('class="report-action-form"', 'class="report-action-form locked-form" style="opacity:0.5;pointer-events:none;"');
+      }
+
+      card.innerHTML = headerHtml + reportsHtml + actionHtml;
+      reportsList.appendChild(card);
+    }
+
+    renderedCount += batch.length;
+
+    // Add or update infinite scroll sentinel
+    let sentinel = reportsList.querySelector(".scroll-sentinel");
+    if (sentinel) sentinel.remove();
+    if (renderedCount < allReportUsers.length) {
+      sentinel = document.createElement("div");
+      sentinel.className = "scroll-sentinel";
+      sentinel.style.height = "1px";
+      reportsList.appendChild(sentinel);
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          observer.disconnect();
+          renderMoreCards();
+        }
+      }, { rootMargin: "200px" });
+      observer.observe(sentinel);
+    }
+
+    // Wire up newly rendered cards
+    wireUpReportCards();
+  }
+
+  function wireUpReportCards() {
+    // Wire up action select to show/hide severity and suspension fields
+    for (const sel of reportsList.querySelectorAll("[data-action-select]:not([data-wired])")) {
+      sel.dataset.wired = "1";
+      const uid = sel.dataset.actionSelect;
+      sel.addEventListener("change", () => {
+        const sevRow = reportsList.querySelector(`[data-severity-row="${uid}"]`);
+        const susFields = reportsList.querySelector(`[data-suspension-fields="${uid}"]`);
+        sevRow.style.display = sel.value === "dismiss" ? "none" : "";
+        susFields.classList.toggle("visible", sel.value === "suspend");
+      });
+    }
+
+    // Wire up cross-tab navigation (click user name -> Users tab)
+    for (const el of reportsList.querySelectorAll("[data-navigate-uid]:not([data-wired])")) {
+      el.dataset.wired = "1";
+      el.addEventListener("click", async () => {
+        const uid = el.dataset.navigateUid;
+        switchTab("users");
+        try {
+          const data = await apiCall("GET", `/api/user/${uid}`);
+          searchUid.value = data.uniqueId || "";
+          await populateFormFull(data);
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+    }
+
+    // Wire up resolve buttons (acquire lock first)
+    for (const btn of reportsList.querySelectorAll("[data-resolve-first]:not([data-wired])")) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", async () => {
+        const uid = btn.dataset.resolveFirst;
+        if (await acquireLock(uid)) resolveReport(uid, false);
+      });
+    }
+    for (const btn of reportsList.querySelectorAll("[data-resolve-all]:not([data-wired])")) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", async () => {
+        const uid = btn.dataset.resolveAll;
+        if (await acquireLock(uid)) resolveReport(uid, true);
+      });
+    }
+
+    // Wire up takeover buttons
+    for (const btn of reportsList.querySelectorAll(".takeover-btn:not([data-wired])")) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const uid = btn.dataset.takeoverUid;
+        try {
+          // Force-acquire lock by calling the endpoint (it allows takeover after 2 min)
+          await apiCall("DELETE", `/api/report-locks/${uid}`);
+          const ok = await acquireLock(uid);
+          if (ok) {
+            showToast("Review taken over");
+            loadReports();
+          }
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+    }
+
+    // Wire up inline conversation viewer
+    for (const link of reportsList.querySelectorAll(".view-conversation-btn:not([data-wired])")) {
+      link.dataset.wired = "1";
+      link.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const convId = link.dataset.convId;
+        const highlightMsgId = link.dataset.highlightMsg;
+        const parent = link.closest(".report-item");
+        const existing = parent.querySelector(".conv-viewer");
+        if (existing) { existing.remove(); return; }
+        const viewer = document.createElement("div");
+        viewer.className = "conv-viewer";
+        viewer.innerHTML = '<div class="conv-viewer-loading">Loading messages...</div>';
+        parent.appendChild(viewer);
+        try {
+          const result = await apiCall("GET", `/api/conversations/${convId}/messages?limit=50`);
+          const msgs = result.messages || [];
+          if (msgs.length === 0) {
+            viewer.innerHTML = '<div class="conv-viewer-loading">No messages found</div>';
+            return;
+          }
+          let html = "";
+          for (const m of msgs) {
+            const isHighlighted = m.messageId === highlightMsgId;
+            const highlightClass = isHighlighted ? " highlighted" : "";
+            const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : "";
+            let contentHtml = "";
+            if (m.type === "IMAGE" && m.imageUrls && m.imageUrls.length > 0) {
+              contentHtml = m.imageUrls.map(url => `<img class="conv-msg-image" src="${escapeHtml(url)}" onclick="window.open(this.src,'_blank')">`).join("");
+            } else if (m.type === "STICKER" && m.stickerUrl) {
+              contentHtml = `<img class="conv-msg-sticker" src="${escapeHtml(m.stickerUrl)}">`;
+            } else if (m.type === "ROOM_INVITE") {
+              contentHtml = `<span class="conv-msg-type-badge">[Room Invite]</span>`;
+            } else if (m.text === "[Message recalled]") {
+              contentHtml = `<span class="conv-msg-type-badge">[Message recalled]</span>`;
+            } else {
+              contentHtml = `<div class="conv-msg-text">${escapeHtml(m.text || "")}</div>`;
+            }
+            html += `<div class="conv-msg conv-msg-left${highlightClass}">
+              <div class="conv-msg-sender">${escapeHtml(m.senderName || m.senderId || "Unknown")}</div>
+              ${contentHtml}
+              <div class="conv-msg-time">${time}</div>
+            </div>`;
+          }
+          viewer.innerHTML = html;
+          if (highlightMsgId) {
+            const highlighted = viewer.querySelector(".highlighted");
+            if (highlighted) highlighted.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        } catch (err) {
+          viewer.innerHTML = `<div class="conv-viewer-loading" style="color:var(--danger);">Failed to load: ${escapeHtml(err.message)}</div>`;
+        }
+      });
+    }
+
+    // Wire up evidence thumbnail clicks
+    for (const thumb of reportsList.querySelectorAll(".evidence-thumb:not([data-wired])")) {
+      thumb.dataset.wired = "1";
+      thumb.addEventListener("click", () => {
+        openEvidenceLightbox(thumb.dataset.evidenceUrl, thumb.dataset.evidenceType);
+      });
+    }
+  }
+
+  // Confirmation dialog
+  function showConfirm(title, message) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "confirm-overlay";
+      overlay.innerHTML = `
+        <div class="confirm-dialog">
+          <h3>${escapeHtml(title)}</h3>
+          <p>${escapeHtml(message)}</p>
+          <div class="confirm-buttons">
+            <button class="confirm-cancel">Cancel</button>
+            <button class="confirm-ok">Confirm</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector(".confirm-cancel").addEventListener("click", () => { overlay.remove(); resolve(false); });
+      overlay.querySelector(".confirm-ok").addEventListener("click", () => { overlay.remove(); resolve(true); });
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+    });
+  }
+
+  async function resolveReport(reportedUserId, resolveAll) {
+    const form = reportsList.querySelector(`[data-form-uid="${reportedUserId}"]`);
+    if (!form) return;
+
+    const action = form.querySelector(`[data-action-select="${reportedUserId}"]`).value;
+    const sevInput = form.querySelector(`input[name="sev-${reportedUserId}"]:checked`);
+    const severity = sevInput ? Number(sevInput.value) : 1;
+    const adminNote = form.querySelector(`[data-admin-note="${reportedUserId}"]`).value.trim();
+    const suspensionDaysEl = form.querySelector(`[data-suspension-days="${reportedUserId}"]`);
+    const suspensionDays = action === "suspend" ? Number(suspensionDaysEl.value) : undefined;
+    const canAppealEl = form.querySelector(`[data-can-appeal="${reportedUserId}"]`);
+    const canAppeal = action === "suspend" ? canAppealEl.checked : undefined;
+
+    const actionLabel = { warn: "Warn", suspend: "Suspend", dismiss: "Dismiss" }[action];
+    const confirmed = await showConfirm(
+      "Confirm Action",
+      `${resolveAll ? "Resolve ALL pending reports" : "Resolve latest report"} for this user with action: ${actionLabel}${action !== "dismiss" ? ` (Severity ${severity}, -${severity*5} GCS)` : ""}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      let result;
+      if (resolveAll) {
+        result = await apiCall("POST", `/api/reports/resolve-all/${reportedUserId}`, {
+          action, severity: action !== "dismiss" ? severity : undefined, adminNote,
+          suspensionDays, canAppeal,
+        });
+      } else {
+        // Find the first pending report for this user
+        const card = reportsList.querySelector(`[data-uid="${reportedUserId}"]`);
+        // Get reportId from data (stored in reports array)
+        const reportItem = card?.querySelector(".report-item");
+        // Need to get the report ID - let's fetch from API
+        const reportsData = await apiCall("GET", `/api/reports?status=pending`);
+        const userReports = reportsData.users.find((u) => u.uid === reportedUserId);
+        if (!userReports || userReports.reports.length === 0) {
+          showToast("No pending reports found", "error");
+          return;
+        }
+        const reportId = userReports.reports[0].reportId;
+        result = await apiCall("POST", `/api/reports/${reportId}/resolve`, {
+          action, severity: action !== "dismiss" ? severity : undefined, adminNote,
+          suspensionDays, canAppeal,
+        });
+      }
+
+      showToast(`Report${resolveAll ? "s" : ""} resolved: ${actionLabel}`);
+
+      if (result.autoEscalateSuggested) {
+        showToast("This user has 5+ warnings. Consider suspending.", "error");
+      }
+
+      // Release review lock after resolving
+      await releaseLock();
+
+      loadReports();
+      loadReportStats();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
+  // CSV Export
+  const exportCsvBtn = $("#export-csv-btn");
+  const exportFrom = $("#export-from");
+  const exportTo = $("#export-to");
+
+  // Default date range: last 30 days
+  const today = new Date();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+  exportTo.value = today.toISOString().split("T")[0];
+  exportFrom.value = thirtyDaysAgo.toISOString().split("T")[0];
+
+  exportCsvBtn.addEventListener("click", async () => {
+    if (!exportFrom.value || !exportTo.value) {
+      showToast("Select a date range", "error");
+      return;
+    }
+    try {
+      const token = await currentUser.getIdToken();
+      const url = `${API_BASE}/api/reports/export?from=${exportFrom.value}&to=${exportTo.value}`;
+      const res = await fetch(url, {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `reports_${exportFrom.value}_${exportTo.value}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast("CSV downloaded");
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+
+  // --- Keyboard Shortcuts (Reports tab) ---
+  document.addEventListener("keydown", (e) => {
+    if (currentTab !== "reports") return;
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (reportCards.length > 0) {
+        if (selectedCardIndex < reportCards.length - 1) selectedCardIndex++;
+        highlightCard();
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (selectedCardIndex > 0) selectedCardIndex--;
+      highlightCard();
+    } else if (selectedCardIndex >= 0 && selectedCardIndex < reportCards.length) {
+      const card = reportCards[selectedCardIndex];
+      const uid = card.dataset.uid;
+      const actionSel = card.querySelector(`[data-action-select="${uid}"]`);
+      if (!actionSel) return;
+
+      if (e.key.toLowerCase() === "w") {
+        actionSel.value = "warn";
+        actionSel.dispatchEvent(new Event("change"));
+      } else if (e.key.toLowerCase() === "s") {
+        actionSel.value = "suspend";
+        actionSel.dispatchEvent(new Event("change"));
+      } else if (e.key.toLowerCase() === "d") {
+        actionSel.value = "dismiss";
+        actionSel.dispatchEvent(new Event("change"));
+      } else if (e.key === "Enter") {
+        resolveReport(uid, false);
+      }
+    }
+  });
+
+  function highlightCard() {
+    for (const c of reportCards) c.classList.remove("selected");
+    if (selectedCardIndex >= 0 && selectedCardIndex < reportCards.length) {
+      reportCards[selectedCardIndex].classList.add("selected");
+      reportCards[selectedCardIndex].scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  // Start real-time report listener when already authenticated
+  // (Piggybacks on existing onAuthStateChanged — this second listener is additive)
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
+        const tokenResult = await user.getIdTokenResult();
+        if (tokenResult.claims.admin === true) {
+          startReportListener();
+        }
+      } catch (_) {}
+    } else {
+      if (reportsUnsubscribe) { reportsUnsubscribe(); reportsUnsubscribe = null; }
+    }
+  });
+
+  // --- Maintenance actions ---
+  async function runMaintenanceAction(btnId, resultId, endpoint, confirmMsg) {
+    const btn = $(`#${btnId}`);
+    const result = $(`#${resultId}`);
+    if (!confirm(confirmMsg)) return;
+
+    btn.disabled = true;
+    btn.textContent = "Processing...";
+    result.className = "maintenance-result";
+    result.style.display = "none";
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const resp = await fetch(`${API_BASE}/api/cleanup/${endpoint}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Request failed");
+      result.className = "maintenance-result success";
+      result.textContent = JSON.stringify(data, null, 2);
+      result.style.display = "block";
+    } catch (err) {
+      result.className = "maintenance-result error";
+      result.textContent = err.message;
+      result.style.display = "block";
+    }
+    btn.disabled = false;
+    btn.textContent = btn.dataset.label || "Run";
+  }
+
+  // Store original labels
+  for (const btn of $$("#maintenance-panel button")) {
+    btn.dataset.label = btn.textContent;
+  }
+
+  $("#clear-system-msgs-btn").addEventListener("click", () =>
+    runMaintenanceAction("clear-system-msgs-btn", "clear-system-msgs-result",
+      "all-system-conversations", "Delete ALL system message conversations? This cannot be undone."));
+
+  $("#clear-reports-btn").addEventListener("click", () =>
+    runMaintenanceAction("clear-reports-btn", "clear-reports-result",
+      "all-reports", "Delete ALL reports (pending, resolved, archived) and locks? This cannot be undone."));
+
+  $("#clear-warnings-btn").addEventListener("click", () =>
+    runMaintenanceAction("clear-warnings-btn", "clear-warnings-result",
+      "all-warnings", "Reset warnings and GCS for ALL users? This cannot be undone."));
+
+  // --- Storage audit ---
+  function formatBytes(bytes) {
+    if (bytes === 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(1) + " " + units[i];
+  }
+
+  $("#audit-storage-btn").addEventListener("click", async () => {
+    const btn = $("#audit-storage-btn");
+    const result = $("#storage-result");
+    btn.disabled = true;
+    btn.textContent = "Auditing...";
+    result.className = "maintenance-result";
+    result.style.display = "none";
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const resp = await fetch(`${API_BASE}/api/storage/audit`, {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Request failed");
+
+      const lines = Object.entries(data)
+        .filter(([k]) => k !== "success")
+        .map(([folder, info]) => `${folder}: ${info.files} files (${formatBytes(info.bytes)})`);
+      result.className = "maintenance-result success";
+      result.textContent = lines.join("\n");
+      result.style.display = "block";
+    } catch (err) {
+      result.className = "maintenance-result error";
+      result.textContent = err.message;
+      result.style.display = "block";
+    }
+    btn.disabled = false;
+    btn.textContent = "Audit Storage";
+  });
+
+  // --- Storage purge ---
+  $("#purge-storage-btn").addEventListener("click", async () => {
+    const btn = $("#purge-storage-btn");
+    const result = $("#storage-result");
+    const folders = ["pm_images/", "stickers/", "report_evidence/"];
+    if (!confirm(`Purge ALL files from:\n- ${folders.join("\n- ")}\n\nProfile and cover photos will NOT be affected. This cannot be undone.`)) return;
+
+    btn.disabled = true;
+    btn.textContent = "Purging...";
+    result.className = "maintenance-result";
+    result.style.display = "none";
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const resp = await fetch(`${API_BASE}/api/cleanup/orphaned-storage`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ folders }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Request failed");
+      result.className = "maintenance-result success";
+      result.textContent = JSON.stringify(data, null, 2);
+      result.style.display = "block";
+    } catch (err) {
+      result.className = "maintenance-result error";
+      result.textContent = err.message;
+      result.style.display = "block";
+    }
+    btn.disabled = false;
+    btn.textContent = "Purge Orphaned Files";
+  });
 </script>
 </body>
 </html>

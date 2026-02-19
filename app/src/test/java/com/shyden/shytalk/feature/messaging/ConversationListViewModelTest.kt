@@ -345,6 +345,113 @@ class ConversationListViewModelTest {
         assertTrue(vm.uiState.value.conversations[0].settings?.isPinned == true)
     }
 
+    // ===== Muted conversations unread =====
+
+    @Test
+    fun `muted conversations excluded from totalUnreadCount`() = runTest {
+        val user1 = TestData.createTestUser(uid = "user-a")
+        val user2 = TestData.createTestUser(uid = "user-b")
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(listOf(user1, user2))
+
+        val mutedSettings = TestData.createTestConversationSettings(userId = currentUserId, isMuted = true, unreadCount = 5)
+        val normalSettings = TestData.createTestConversationSettings(userId = currentUserId, isMuted = false, unreadCount = 3)
+
+        coEvery { pmRepository.getConversationSettings("conv-muted", currentUserId) } returns Resource.Success(mutedSettings)
+        coEvery { pmRepository.getConversationSettings("conv-normal", currentUserId) } returns Resource.Success(normalSettings)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val convMuted = TestData.createTestConversation(
+            conversationId = "conv-muted",
+            participantIds = listOf(currentUserId, "user-a")
+        )
+        val convNormal = TestData.createTestConversation(
+            conversationId = "conv-normal",
+            participantIds = listOf(currentUserId, "user-b")
+        )
+        conversationsFlow.emit(listOf(convMuted, convNormal))
+        advanceUntilIdle()
+
+        // totalUnreadCount should only include the non-muted conversation's 3
+        assertEquals(3L, vm.uiState.value.totalUnreadCount)
+    }
+
+    // ===== Group conversations in list =====
+
+    @Test
+    fun `group conversations appear in list with group fields`() = runTest {
+        coEvery { pmRepository.getConversationSettings(any(), currentUserId) } returns
+                Resource.Success(TestData.createTestConversationSettings(userId = currentUserId))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val groupConv = TestData.createTestConversation(
+            conversationId = "group-1",
+            participantIds = listOf(currentUserId, "user-a", "user-b"),
+            isGroup = true,
+            groupName = "Cool Group"
+        )
+        conversationsFlow.emit(listOf(groupConv))
+        advanceUntilIdle()
+
+        assertEquals(1, vm.uiState.value.conversations.size)
+        val cw = vm.uiState.value.conversations[0]
+        assertTrue(cw.isGroup)
+        assertEquals("Cool Group", cw.groupName)
+    }
+
+    @Test
+    fun `closed group conversations are filtered out`() = runTest {
+        coEvery { pmRepository.getConversationSettings(any(), currentUserId) } returns
+                Resource.Success(TestData.createTestConversationSettings(userId = currentUserId))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val closedGroup = TestData.createTestConversation(
+            conversationId = "group-closed",
+            participantIds = listOf(currentUserId, "user-a"),
+            isGroup = true,
+            groupName = "Closed Group",
+            isClosed = true
+        )
+        conversationsFlow.emit(listOf(closedGroup))
+        advanceUntilIdle()
+
+        assertEquals(0, vm.uiState.value.conversations.size)
+    }
+
+    @Test
+    fun `search filters group conversations by groupName`() = runTest {
+        val user = TestData.createTestUser(uid = "user-a", displayName = "Alice")
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(listOf(user))
+        coEvery { pmRepository.getConversationSettings(any(), currentUserId) } returns
+                Resource.Success(TestData.createTestConversationSettings(userId = currentUserId))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val groupConv = TestData.createTestConversation(
+            conversationId = "group-1",
+            participantIds = listOf(currentUserId, "user-a"),
+            isGroup = true,
+            groupName = "Design Team"
+        )
+        val oneOnOneConv = TestData.createTestConversation(
+            conversationId = "conv-1",
+            participantIds = listOf(currentUserId, "user-a")
+        )
+        conversationsFlow.emit(listOf(groupConv, oneOnOneConv))
+        advanceUntilIdle()
+
+        vm.onSearchQueryChanged("Design")
+        val filtered = vm.getFilteredConversations()
+        assertEquals(1, filtered.size)
+        assertTrue(filtered[0].isGroup)
+    }
+
     // ===== clearError =====
 
     @Test

@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun ConversationListScreen(
     onNavigateToChat: (String) -> Unit,
+    onNavigateToGroupChat: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: ConversationListViewModel = koinViewModel()
 ) {
@@ -134,6 +135,16 @@ fun ConversationListScreen(
                     ) { conversationWithUser ->
                         val cId = conversationWithUser.conversation.conversationId
                         Box {
+                            val navigateAction = {
+                                viewModel.markConversationRead(cId)
+                                if (conversationWithUser.isGroup) {
+                                    onNavigateToGroupChat(cId)
+                                } else {
+                                    val otherUserId = conversationWithUser.conversation.otherUserId(viewModel.currentUserId)
+                                    if (otherUserId != null) onNavigateToChat(otherUserId)
+                                }
+                            }
+
                             ConversationListItem(
                                 otherUser = conversationWithUser.otherUser,
                                 lastMessageText = conversationWithUser.conversation.lastMessage?.text,
@@ -142,15 +153,17 @@ fun ConversationListScreen(
                                 unreadCount = conversationWithUser.settings?.unreadCount ?: 0,
                                 isMuted = conversationWithUser.settings?.isMuted == true,
                                 isPinned = conversationWithUser.settings?.isPinned == true,
-                                onClick = {
-                                    val otherUserId = conversationWithUser.conversation.otherUserId(viewModel.currentUserId) ?: return@ConversationListItem
-                                    onNavigateToChat(otherUserId)
+                                onClick = { navigateAction() },
+                                isGroup = conversationWithUser.isGroup,
+                                groupName = conversationWithUser.groupName,
+                                groupPhotoUrl = conversationWithUser.groupPhotoUrl,
+                                currentUserRole = if (conversationWithUser.isGroup) {
+                                    conversationWithUser.conversation.roleOf(viewModel.currentUserId)
+                                } else {
+                                    com.shyden.shytalk.core.model.GroupRole.MEMBER
                                 },
                                 modifier = Modifier.combinedClickable(
-                                    onClick = {
-                                        val otherUserId = conversationWithUser.conversation.otherUserId(viewModel.currentUserId) ?: return@combinedClickable
-                                        onNavigateToChat(otherUserId)
-                                    },
+                                    onClick = { navigateAction() },
                                     onLongClick = {
                                         contextMenuConversationId = cId
                                     }

@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
 
     private val _navigateToRoom = mutableStateOf<String?>(null)
     private val _navigateToProfile = mutableStateOf<String?>(null)
+    private val _navigateToChat = mutableStateOf<Pair<String, Boolean>?>(null) // (id, isGroup)
     private val _showLeaveConfirmation = mutableStateOf(false)
 
     companion object {
@@ -117,6 +118,24 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            val navigateToChatInfo by _navigateToChat
+
+                            LaunchedEffect(navigateToChatInfo) {
+                                val chatInfo = navigateToChatInfo
+                                if (chatInfo != null) {
+                                    val (id, isGroup) = chatInfo
+                                    val route = if (isGroup) {
+                                        Screen.GroupChat.createRoute(id)
+                                    } else {
+                                        Screen.PrivateChat.createRoute(id)
+                                    }
+                                    navController.navigate(route) {
+                                        launchSingleTop = true
+                                    }
+                                    _navigateToChat.value = null
+                                }
+                            }
+
                             NavGraph(
                                 navController = navController,
                                 startDestination = Screen.SignIn.route,
@@ -187,6 +206,24 @@ class MainActivity : ComponentActivity() {
                 _navigateToProfile.value = pathSegments[1]
                 return
             }
+        }
+
+        // Handle PM notification tap (navigateTo=chat)
+        val navigateTo = intent?.getStringExtra("navigateTo")
+        if (navigateTo == "chat") {
+            val isGroup = intent.getBooleanExtra("isGroup", false)
+            if (isGroup) {
+                val conversationId = intent.getStringExtra("conversationId")
+                if (conversationId != null) {
+                    _navigateToChat.value = conversationId to true
+                }
+            } else {
+                val otherUserId = intent.getStringExtra("otherUserId")
+                if (otherUserId != null) {
+                    _navigateToChat.value = otherUserId to false
+                }
+            }
+            return
         }
 
         when (intent?.action) {

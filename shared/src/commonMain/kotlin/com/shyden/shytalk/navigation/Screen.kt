@@ -24,4 +24,12 @@ sealed class Screen(val route: String) {
     data object TermsAndConditions : Screen("terms_and_conditions")
     data object LegalAcceptance : Screen("legal_acceptance")
     data object ReportReview : Screen("report_review")
+    data object GroupChat : Screen("group_chat/{conversationId}") {
+        fun createRoute(conversationId: String) = "group_chat/$conversationId"
+    }
+    data object NewMessage : Screen("new_message")
+    data object GroupSetup : Screen("group_setup/{selectedIds}") {
+        fun createRoute(selectedIds: String) = "group_setup/$selectedIds"
+    }
+    data object Warning : Screen("warning")
 }
