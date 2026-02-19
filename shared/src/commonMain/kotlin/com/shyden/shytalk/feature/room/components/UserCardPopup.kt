@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.room.components
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.EventSeat
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Person
@@ -45,6 +47,8 @@ import coil3.compose.AsyncImage
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.countryNameForCode
 import com.shyden.shytalk.core.util.flagEmojiForCode
+import com.shyden.shytalk.feature.messaging.ReportUserDialog
+import com.shyden.shytalk.ui.components.FlagBadge
 
 @Composable
 fun UserCardPopup(
@@ -67,12 +71,20 @@ fun UserCardPopup(
     seatOccupantNames: Map<Int, String> = emptyMap(),
     onMakeHost: (() -> Unit)? = null,
     onRemoveHost: (() -> Unit)? = null,
-    isHost: Boolean = false
+    isHost: Boolean = false,
+    onReportUser: ((reason: String, description: String) -> Unit)? = null,
+    evidenceItems: List<ByteArray> = emptyList(),
+    onAddEvidence: (() -> Unit)? = null,
+    onRemoveEvidence: ((Int) -> Unit)? = null,
+    isSubmittingReport: Boolean = false,
+    isCompressingEvidence: Boolean = false,
+    reportError: String? = null
 ) {
     var showBlockConfirm by remember { mutableStateOf(false) }
     var showKickConfirm by remember { mutableStateOf(false) }
     var kickReason by remember { mutableStateOf("") }
     var showMoveDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -82,32 +94,42 @@ fun UserCardPopup(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val photoUrl = user.photoUrl
-                if (photoUrl != null) {
-                    AsyncImage(
-                        model = photoUrl,
-                        contentDescription = user.displayName,
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .border(
-                                2.dp,
-                                MaterialTheme.colorScheme.primary,
-                                CircleShape
-                            ),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Surface(
-                        modifier = Modifier.size(80.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
+                Box {
+                    val photoUrl = user.photoUrl
+                    if (photoUrl != null) {
+                        AsyncImage(
+                            model = photoUrl,
                             contentDescription = user.displayName,
-                            modifier = Modifier.padding(16.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    2.dp,
+                                    MaterialTheme.colorScheme.primary,
+                                    CircleShape
+                                ),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(80.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = user.displayName,
+                                modifier = Modifier.padding(16.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+
+                    if (user.nationality != null) {
+                        FlagBadge(
+                            countryCode = user.nationality!!,
+                            badgeSize = 24.dp,
+                            modifier = Modifier.align(Alignment.BottomEnd)
                         )
                     }
                 }
@@ -191,6 +213,25 @@ fun UserCardPopup(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Message")
+                    }
+                }
+
+                if (!isSelf && onReportUser != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { showReportDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Flag,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Report")
                     }
                 }
 
@@ -399,6 +440,26 @@ fun UserCardPopup(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    if (showReportDialog && onReportUser != null) {
+        ReportUserDialog(
+            userName = user.displayName,
+            onDismiss = {
+                if (!isSubmittingReport) {
+                    showReportDialog = false
+                }
+            },
+            onSubmit = { reason, description ->
+                onReportUser(reason, description)
+            },
+            evidenceItems = evidenceItems,
+            onAddEvidence = onAddEvidence,
+            onRemoveEvidence = onRemoveEvidence,
+            isSubmitting = isSubmittingReport,
+            isCompressing = isCompressingEvidence,
+            errorMessage = reportError
         )
     }
 

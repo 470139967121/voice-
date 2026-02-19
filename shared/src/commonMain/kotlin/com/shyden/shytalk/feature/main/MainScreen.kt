@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -54,6 +55,7 @@ fun MainScreen(
     onNavigateToFollowList: (String, String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToLunarNewYear: () -> Unit = {},
+    onNavigateToNewMessage: () -> Unit = {},
     messagesContent: @Composable (Modifier) -> Unit = {},
     totalUnreadCount: Long = 0,
     profileContent: @Composable (Modifier) -> Unit
@@ -137,13 +139,24 @@ fun MainScreen(
             }
         },
         floatingActionButton = {
-            if (selectedTab == BottomNavTab.Rooms) {
-                FloatingActionButton(
-                    onClick = { showCreateDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Create Room")
+            when (selectedTab) {
+                BottomNavTab.Rooms -> {
+                    FloatingActionButton(
+                        onClick = { showCreateDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Create Room")
+                    }
                 }
+                BottomNavTab.Messages -> {
+                    FloatingActionButton(
+                        onClick = onNavigateToNewMessage,
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "New Message")
+                    }
+                }
+                else -> {}
             }
         }
     ) { padding ->

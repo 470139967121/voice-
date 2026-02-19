@@ -1,8 +1,10 @@
 package com.shyden.shytalk.feature.messaging
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -10,12 +12,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -36,26 +37,53 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun PmBottomSheet(
     onDismiss: () -> Unit,
-    preOpenUserId: String? = null
+    preOpenUserId: String? = null,
+    onPickImages: ((PrivateChatViewModel) -> Unit)? = null,
+    onPickStickerImage: ((PrivateChatViewModel) -> Unit)? = null,
+    onNavigateToRoom: ((String) -> Unit)? = null,
+    activeRoomId: String? = null,
+    activeRoomName: String? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedChatUserId by remember { mutableStateOf(preOpenUserId) }
+    var selectedGroupConversationId by remember { mutableStateOf<String?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {
-        if (selectedChatUserId != null) {
-            // Chat view
-            PmSheetChatView(
-                otherUserId = selectedChatUserId!!,
-                onBack = { selectedChatUserId = null }
-            )
-        } else {
-            // Conversation list view
-            PmSheetListView(
-                onSelectConversation = { userId -> selectedChatUserId = userId }
-            )
+        when {
+            selectedGroupConversationId != null -> {
+                // Group chat view
+                PmSheetGroupChatView(
+                    conversationId = selectedGroupConversationId!!,
+                    onBack = { selectedGroupConversationId = null },
+                    onPickImages = onPickImages,
+                    onPickStickerImage = onPickStickerImage,
+                    onNavigateToRoom = onNavigateToRoom,
+                    activeRoomId = activeRoomId,
+                    activeRoomName = activeRoomName
+                )
+            }
+            selectedChatUserId != null -> {
+                // 1-on-1 chat view
+                PmSheetChatView(
+                    otherUserId = selectedChatUserId!!,
+                    onBack = { selectedChatUserId = null },
+                    onPickImages = onPickImages,
+                    onPickStickerImage = onPickStickerImage,
+                    onNavigateToRoom = onNavigateToRoom,
+                    activeRoomId = activeRoomId,
+                    activeRoomName = activeRoomName
+                )
+            }
+            else -> {
+                // Conversation list view
+                PmSheetListView(
+                    onSelectConversation = { userId -> selectedChatUserId = userId },
+                    onSelectGroupConversation = { conversationId -> selectedGroupConversationId = conversationId }
+                )
+            }
         }
     }
 }
@@ -63,6 +91,7 @@ fun PmBottomSheet(
 @Composable
 private fun PmSheetListView(
     onSelectConversation: (String) -> Unit,
+    onSelectGroupConversation: (String) -> Unit = {},
     viewModel: ConversationListViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,7 +117,14 @@ private fun PmSheetListView(
         HorizontalDivider()
 
         val conversations = viewModel.getFilteredConversations()
-        if (conversations.isEmpty()) {
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (conversations.isEmpty()) {
             Text(
                 text = "No conversations yet",
                 style = MaterialTheme.typography.bodyMedium,
@@ -109,9 +145,17 @@ private fun PmSheetListView(
                         unreadCount = cw.settings?.unreadCount ?: 0,
                         isMuted = cw.settings?.isMuted == true,
                         isPinned = cw.settings?.isPinned == true,
+                        isGroup = cw.isGroup,
+                        groupName = cw.groupName,
+                        groupPhotoUrl = cw.groupPhotoUrl,
                         onClick = {
-                            val otherUserId = cw.conversation.otherUserId(viewModel.currentUserId) ?: return@ConversationListItem
-                            onSelectConversation(otherUserId)
+                            viewModel.markConversationRead(cw.conversation.conversationId)
+                            if (cw.isGroup) {
+                                onSelectGroupConversation(cw.conversation.conversationId)
+                            } else {
+                                val otherUserId = cw.conversation.otherUserId(viewModel.currentUserId) ?: return@ConversationListItem
+                                onSelectConversation(otherUserId)
+                            }
                         }
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 80.dp))
@@ -125,36 +169,55 @@ private fun PmSheetListView(
 private fun PmSheetChatView(
     otherUserId: String,
     onBack: () -> Unit,
-    viewModel: PrivateChatViewModel = koinViewModel { parametersOf(otherUserId) }
+    onPickImages: ((PrivateChatViewModel) -> Unit)? = null,
+    onPickStickerImage: ((PrivateChatViewModel) -> Unit)? = null,
+    onNavigateToRoom: ((String) -> Unit)? = null,
+    activeRoomId: String? = null,
+    activeRoomName: String? = null,
+    viewModel: PrivateChatViewModel = koinViewModel(key = otherUserId) { parametersOf(otherUserId) }
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(500.dp)
     ) {
-        // Header with back button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-            Text(
-                text = uiState.otherUser?.displayName ?: "Chat",
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-        HorizontalDivider()
-
-        // Reuse the chat content in a condensed form
         PrivateChatScreen(
             otherUserId = otherUserId,
             onNavigateBack = onBack,
+            onPickImages = if (onPickImages != null) { { onPickImages(viewModel) } } else null,
+            onPickStickerImage = if (onPickStickerImage != null) { { onPickStickerImage(viewModel) } } else null,
+            onNavigateToRoom = onNavigateToRoom,
+            activeRoomId = activeRoomId,
+            activeRoomName = activeRoomName,
+            viewModel = viewModel
+        )
+    }
+}
+
+@Composable
+private fun PmSheetGroupChatView(
+    conversationId: String,
+    onBack: () -> Unit,
+    onPickImages: ((PrivateChatViewModel) -> Unit)? = null,
+    onPickStickerImage: ((PrivateChatViewModel) -> Unit)? = null,
+    onNavigateToRoom: ((String) -> Unit)? = null,
+    activeRoomId: String? = null,
+    activeRoomName: String? = null,
+    viewModel: PrivateChatViewModel = koinViewModel(key = conversationId) { parametersOf("", conversationId) }
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(500.dp)
+    ) {
+        PrivateChatScreen(
+            conversationId = conversationId,
+            onNavigateBack = onBack,
+            onPickImages = if (onPickImages != null) { { onPickImages(viewModel) } } else null,
+            onPickStickerImage = if (onPickStickerImage != null) { { onPickStickerImage(viewModel) } } else null,
+            onNavigateToRoom = onNavigateToRoom,
+            activeRoomId = activeRoomId,
+            activeRoomName = activeRoomName,
             viewModel = viewModel
         )
     }

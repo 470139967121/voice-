@@ -19,6 +19,8 @@ import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.MessageRepository
+import com.shyden.shytalk.data.repository.ReportRepository
+import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -60,6 +62,8 @@ class RoomViewModelTest {
     private val voiceService = mockk<VoiceService>(relaxed = true)
     private val presenceService = mockk<PresenceService>(relaxed = true)
     private val roomLifecycleManager = mockk<RoomLifecycleManager>(relaxed = true)
+    private val reportRepository = mockk<ReportRepository>(relaxed = true)
+    private val storageRepository = mockk<StorageRepository>(relaxed = true)
 
     private val roomFlow = MutableStateFlow<ChatRoom?>(null)
     private val messagesFlow = MutableStateFlow<List<Message>>(emptyList())
@@ -132,7 +136,9 @@ class RoomViewModelTest {
             seatRequestRepository = seatRequestRepository,
             voiceService = voiceService,
             presenceService = presenceService,
-            roomLifecycleManager = roomLifecycleManager
+            roomLifecycleManager = roomLifecycleManager,
+            reportRepository = reportRepository,
+            storageRepository = storageRepository
         )
     }
 

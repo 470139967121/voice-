@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.Conversation
 import com.shyden.shytalk.core.model.ConversationSettings
 import com.shyden.shytalk.core.model.User
+import com.shyden.shytalk.core.util.ModerationFilter
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import com.shyden.shytalk.core.util.Constants
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -20,7 +22,10 @@ data class ConversationWithUser(
     val conversation: Conversation,
     val otherUser: User? = null,
     val settings: ConversationSettings? = null,
-    val isBlocked: Boolean = false
+    val isBlocked: Boolean = false,
+    val isGroup: Boolean = false,
+    val groupName: String? = null,
+    val groupPhotoUrl: String? = null
 )
 
 data class ConversationListUiState(
@@ -49,6 +54,14 @@ class ConversationListViewModel(
     init {
         if (currentUserId.isNotEmpty()) {
             observeConversations()
+            loadModerationConfig()
+        }
+    }
+
+    private fun loadModerationConfig() {
+        viewModelScope.launch {
+            val result = pmRepository.getModerationConfig()
+            if (result is Resource.Success) ModerationFilter.updateProhibitedWords(result.data)
         }
     }
 
@@ -74,8 +87,8 @@ class ConversationListViewModel(
         }
         val blockedByMe = currentUser?.blockedUserIds ?: emptySet()
 
-        // Collect other user IDs we need to fetch
-        val otherUserIds = conversations.mapNotNull { it.otherUserId(currentUserId) }
+        // Collect other user IDs we need to fetch (for 1-on-1 only)
+        val otherUserIds = conversations.filter { !it.isGroup }.mapNotNull { it.otherUserId(currentUserId) }
         val uncachedIds = otherUserIds.filter { it !in userCache }
 
         // Batch fetch uncached users
@@ -90,25 +103,14 @@ class ConversationListViewModel(
 
         // Fetch settings for each conversation
         val conversationsWithDetails = conversations.mapNotNull { conversation ->
-            val otherUserId = conversation.otherUserId(currentUserId) ?: return@mapNotNull null
-            val otherUser = userCache[otherUserId]
-
-            // Check block status bidirectionally
-            val blockedByTarget = otherUser?.blockedUserIds?.contains(currentUserId) == true
-            val isBlocked = otherUserId in blockedByMe || blockedByTarget
-
-            // Skip blocked conversations
-            if (isBlocked) return@mapNotNull null
-
-            // Fetch settings
-            val settings = settingsCache[conversation.conversationId]
-                ?: when (val result = pmRepository.getConversationSettings(conversation.conversationId, currentUserId)) {
-                    is Resource.Success -> {
-                        settingsCache[conversation.conversationId] = result.data
-                        result.data
-                    }
-                    else -> null
+            // Fetch settings (always re-fetch to pick up unread count changes)
+            val settings = when (val result = pmRepository.getConversationSettings(conversation.conversationId, currentUserId)) {
+                is Resource.Success -> {
+                    settingsCache[conversation.conversationId] = result.data
+                    result.data
                 }
+                else -> settingsCache[conversation.conversationId]
+            }
 
             // Filter hidden conversations (unless a new message arrived after hiding)
             if (settings?.isHidden == true) {
@@ -116,21 +118,54 @@ class ConversationListViewModel(
                 if (conversation.lastMessageAt <= hiddenAt) return@mapNotNull null
             }
 
-            ConversationWithUser(
-                conversation = conversation,
-                otherUser = otherUser,
-                settings = settings,
-                isBlocked = isBlocked
-            )
+            if (conversation.isGroup) {
+                // Skip closed groups
+                if (conversation.isClosed) return@mapNotNull null
+                ConversationWithUser(
+                    conversation = conversation,
+                    otherUser = null,
+                    settings = settings,
+                    isBlocked = false,
+                    isGroup = true,
+                    groupName = conversation.groupName,
+                    groupPhotoUrl = conversation.groupPhotoUrl
+                )
+            } else {
+                val otherUserId = conversation.otherUserId(currentUserId) ?: return@mapNotNull null
+                val otherUser = userCache[otherUserId]
+
+                // Skip blocking checks for system user
+                val isSystemConversation = otherUserId == Constants.SYSTEM_USER_ID
+                if (!isSystemConversation) {
+                    // Check block status bidirectionally
+                    val blockedByTarget = otherUser?.blockedUserIds?.contains(currentUserId) == true
+                    val isBlocked = otherUserId in blockedByMe || blockedByTarget
+
+                    // Skip blocked conversations
+                    if (isBlocked) return@mapNotNull null
+                }
+
+                ConversationWithUser(
+                    conversation = conversation,
+                    otherUser = otherUser,
+                    settings = settings,
+                    isBlocked = false
+                )
+            }
         }
 
-        // Sort: pinned first (by lastMessageAt desc), then unpinned (by lastMessageAt desc)
+        // Sort: system conversations first, then pinned, then by lastMessageAt desc
         val sorted = conversationsWithDetails.sortedWith(
-            compareByDescending<ConversationWithUser> { it.settings?.isPinned == true }
+            compareByDescending<ConversationWithUser> {
+                it.conversation.otherUserId(currentUserId) == Constants.SYSTEM_USER_ID
+            }
+                .thenByDescending { it.settings?.isPinned == true }
                 .thenByDescending { it.conversation.lastMessageAt }
         )
 
-        val totalUnread = sorted.sumOf { it.settings?.unreadCount ?: 0 }
+        val totalUnread = sorted
+            .filter { it.settings?.isMuted != true }
+            .sumOf { it.settings?.unreadCount ?: 0 }
 
         _uiState.update {
             it.copy(
@@ -152,7 +187,11 @@ class ConversationListViewModel(
             conversations
         } else {
             conversations.filter { cw ->
-                cw.otherUser?.displayName?.contains(query, ignoreCase = true) == true
+                if (cw.isGroup) {
+                    cw.groupName?.contains(query, ignoreCase = true) == true
+                } else {
+                    cw.otherUser?.displayName?.contains(query, ignoreCase = true) == true
+                }
             }
         }
     }
@@ -191,6 +230,22 @@ class ConversationListViewModel(
                 )
                 state.copy(conversations = updated)
             }
+        }
+    }
+
+    fun markConversationRead(conversationId: String) {
+        settingsCache[conversationId] = (settingsCache[conversationId] ?: ConversationSettings(userId = currentUserId))
+            .copy(unreadCount = 0)
+        _uiState.update { state ->
+            val updated = state.conversations.map { cw ->
+                if (cw.conversation.conversationId == conversationId) {
+                    cw.copy(settings = cw.settings?.copy(unreadCount = 0))
+                } else cw
+            }
+            state.copy(
+                conversations = updated,
+                totalUnreadCount = updated.sumOf { it.settings?.unreadCount ?: 0 }
+            )
         }
     }
 

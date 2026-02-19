@@ -9,10 +9,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +50,8 @@ fun ChatPanel(
     onSendMessage: (String) -> Unit,
     onTapUser: (String) -> Unit,
     onInviteUser: (String, String) -> Unit,
-    onSettings: () -> Unit = {},
+    onToggleMessages: (() -> Unit)? = null,
+    unreadCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -115,14 +118,6 @@ fun ChatPanel(
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { focusManager.clearFocus(); onSettings() }) {
-                Icon(
-                    Icons.Default.Settings,
-                    contentDescription = "Room settings",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
             OutlinedTextField(
                 value = messageText,
                 onValueChange = { if (it.length <= 200) messageText = it },
@@ -130,6 +125,29 @@ fun ChatPanel(
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
+
+            if (onToggleMessages != null) {
+                IconButton(onClick = { focusManager.clearFocus(); onToggleMessages() }) {
+                    BadgedBox(
+                        badge = {
+                            if (unreadCount > 0) {
+                                Badge {
+                                    Text(
+                                        if (unreadCount > 99) "99+"
+                                        else "$unreadCount"
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Chat,
+                            contentDescription = "Messages",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
 
             if (isSeated) {
                 IconButton(onClick = {

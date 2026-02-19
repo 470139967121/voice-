@@ -2,8 +2,12 @@ package com.shyden.shytalk.data.repository
 
 import com.shyden.shytalk.core.model.Conversation
 import com.shyden.shytalk.core.model.ConversationSettings
+import com.shyden.shytalk.core.model.GroupPermissions
 import com.shyden.shytalk.core.model.MessageEdit
+import com.shyden.shytalk.core.model.MuteInfo
 import com.shyden.shytalk.core.model.PrivateMessage
+import com.shyden.shytalk.core.model.SystemMessageConfig
+import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import kotlinx.coroutines.flow.Flow
 
@@ -36,7 +40,6 @@ interface PrivateMessageRepository {
     suspend fun getEditHistory(conversationId: String, messageId: String): Resource<List<MessageEdit>>
     suspend fun markAsRead(conversationId: String, userId: String, messageId: String): Resource<Unit>
     suspend fun muteConversation(conversationId: String, userId: String, muted: Boolean): Resource<Unit>
-    suspend fun silentConversation(conversationId: String, userId: String, silent: Boolean): Resource<Unit>
     suspend fun pinConversation(conversationId: String, userId: String, pinned: Boolean): Resource<Unit>
     suspend fun hideConversation(conversationId: String, userId: String): Resource<Unit>
     suspend fun toggleReaction(conversationId: String, messageId: String, emoji: String, userId: String): Resource<Unit>
@@ -44,9 +47,57 @@ interface PrivateMessageRepository {
     suspend fun createGroupConversation(
         creatorId: String,
         participantIds: List<String>,
-        groupName: String
+        groupName: String,
+        groupDescription: String? = null,
+        groupPhotoUrl: String? = null,
+        adminIds: List<String> = emptyList(),
+        modIds: List<String> = emptyList(),
+        permissions: GroupPermissions = GroupPermissions(),
+        systemMessageConfig: SystemMessageConfig = SystemMessageConfig()
     ): Resource<Conversation>
     suspend fun addGroupParticipant(conversationId: String, userId: String): Resource<Unit>
     suspend fun removeGroupParticipant(conversationId: String, userId: String): Resource<Unit>
     suspend fun updateGroupName(conversationId: String, newName: String): Resource<Unit>
+    suspend fun sendStickerMessage(
+        conversationId: String,
+        senderId: String,
+        senderName: String,
+        stickerUrl: String
+    ): Resource<Unit>
+    suspend fun sendRoomInviteMessage(
+        conversationId: String,
+        senderId: String,
+        senderName: String,
+        roomId: String,
+        roomName: String
+    ): Resource<Unit>
+    suspend fun getModerationConfig(): Resource<List<String>>
+    suspend fun getConversation(conversationId: String): Resource<Conversation>
+    suspend fun closeGroupConversation(conversationId: String): Resource<Unit>
+    suspend fun recallMessage(conversationId: String, messageId: String): Resource<Unit>
+
+    // Mod actions
+    suspend fun muteGroupMember(conversationId: String, userId: String, duration: Long?, reason: String?): Resource<Unit>
+    suspend fun unmuteGroupMember(conversationId: String, userId: String): Resource<Unit>
+    suspend fun getGroupMutes(conversationId: String): Resource<List<MuteInfo>>
+    suspend fun hideMessage(conversationId: String, messageId: String, hiddenBy: String): Resource<Unit>
+
+    // Role management
+    suspend fun updateGroupRoles(conversationId: String, adminIds: List<String>, modIds: List<String>): Resource<Unit>
+    suspend fun transferOwnership(conversationId: String, newOwnerId: String): Resource<Unit>
+
+    // Permissions
+    suspend fun updateGroupPermissions(conversationId: String, permissions: GroupPermissions): Resource<Unit>
+    suspend fun updateSystemMessageConfig(conversationId: String, config: SystemMessageConfig): Resource<Unit>
+    suspend fun updateModNotifyMode(conversationId: String, mode: String): Resource<Unit>
+
+    // Group info
+    suspend fun updateGroupDescription(conversationId: String, description: String): Resource<Unit>
+    suspend fun updateGroupPhoto(conversationId: String, photoUrl: String?): Resource<Unit>
+
+    // Search
+    suspend fun searchUsers(query: String, currentUserId: String): Resource<List<User>>
+
+    // Counting
+    suspend fun getOwnedGroupCount(userId: String): Resource<Int>
 }

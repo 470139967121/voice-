@@ -5,7 +5,11 @@ import com.shyden.shytalk.core.util.Resource
 interface ReportRepository {
     suspend fun reportMessage(
         reporterId: String,
+        reporterName: String,
+        reporterUniqueId: Long,
         reportedUserId: String,
+        reportedUserName: String,
+        reportedUserUniqueId: Long,
         conversationId: String,
         messageId: String,
         messageText: String,
@@ -15,10 +19,15 @@ interface ReportRepository {
 
     suspend fun reportUser(
         reporterId: String,
+        reporterName: String,
+        reporterUniqueId: Long,
         reportedUserId: String,
+        reportedUserName: String,
+        reportedUserUniqueId: Long,
         conversationId: String,
         reason: String,
-        description: String
+        description: String,
+        evidenceUrls: List<String> = emptyList()
     ): Resource<Unit>
 
     suspend fun getPendingReports(): Resource<List<com.shyden.shytalk.feature.messaging.Report>>

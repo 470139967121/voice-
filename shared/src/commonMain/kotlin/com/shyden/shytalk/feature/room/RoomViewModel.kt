@@ -22,6 +22,8 @@ import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.MessageRepository
+import com.shyden.shytalk.data.repository.ReportRepository
+import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -93,7 +95,10 @@ data class RoomUiState(
     val kickedByName: String? = null,
     val kickReason: String? = null,
     val disconnectedUserIds: Set<String> = emptySet(),
-    val seatActionStatus: SeatActionStatus = SeatActionStatus.Idle
+    val seatActionStatus: SeatActionStatus = SeatActionStatus.Idle,
+    val isSubmittingReport: Boolean = false,
+    val reportSubmitted: Boolean = false,
+    val reportError: String? = null
 )
 
 class RoomViewModel(
@@ -105,7 +110,9 @@ class RoomViewModel(
     private val seatRequestRepository: SeatRequestRepository,
     private val voiceService: VoiceService,
     private val presenceService: PresenceService,
-    private val roomLifecycleManager: RoomLifecycleManager
+    private val roomLifecycleManager: RoomLifecycleManager,
+    private val reportRepository: ReportRepository,
+    private val storageRepository: StorageRepository
 ) : ViewModel() {
 
     companion object {
@@ -1271,6 +1278,72 @@ class RoomViewModel(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    fun reportUser(
+        targetUserId: String,
+        reason: String,
+        description: String,
+        evidenceImages: List<Pair<ByteArray, String>> = emptyList()
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingReport = true, reportError = null) }
+
+            val currentUser = userCache[_uiState.value.currentUserId]
+                ?: when (val r = userRepository.getUser(_uiState.value.currentUserId)) {
+                    is Resource.Success -> r.data
+                    else -> null
+                }
+            val targetUser = userCache[targetUserId]
+                ?: when (val r = userRepository.getUser(targetUserId)) {
+                    is Resource.Success -> r.data
+                    else -> null
+                }
+            if (currentUser == null || targetUser == null) {
+                _uiState.update { it.copy(isSubmittingReport = false, reportError = "Could not submit report") }
+                return@launch
+            }
+
+            // Upload evidence
+            val evidenceUrls = mutableListOf<String>()
+            for ((bytes, mimeType) in evidenceImages) {
+                when (val r = storageRepository.uploadImage(
+                    currentUser.uid, "report_evidence", bytes, mimeType
+                )) {
+                    is Resource.Success -> evidenceUrls.add(r.data)
+                    is Resource.Error -> {
+                        _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to upload evidence") }
+                        return@launch
+                    }
+                    is Resource.Loading -> {}
+                }
+            }
+
+            when (reportRepository.reportUser(
+                reporterId = currentUser.uid,
+                reporterName = currentUser.displayName,
+                reporterUniqueId = currentUser.uniqueId,
+                reportedUserId = targetUser.uid,
+                reportedUserName = targetUser.displayName,
+                reportedUserUniqueId = targetUser.uniqueId,
+                conversationId = "",
+                reason = reason,
+                description = description,
+                evidenceUrls = evidenceUrls
+            )) {
+                is Resource.Success -> {
+                    _uiState.update { it.copy(isSubmittingReport = false, reportSubmitted = true) }
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to submit report") }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun clearReportSubmitted() {
+        _uiState.update { it.copy(reportSubmitted = false, reportError = null) }
     }
 
     // --- Notification Queue ---

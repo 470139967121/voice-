@@ -1,13 +1,11 @@
-v0.36 - Private Messaging System
+v0.36 - Private Messaging
 
-- Private messaging with text, images, replies, reactions, and stickers
-- Message editing with 15-minute window and edit history
-- Conversation list with pinning, muting, hiding, and silent mode
+- Private messaging: text, images, replies, reactions, stickers
+- Message editing (15min window) with edit history
+- Conversation list with pin, mute, hide
 - Read receipts and typing indicators
-- Message search within conversations
-- PM privacy controls: Everyone, Followers Only, No One
-- Content moderation filter and spam protection
-- Message reporting system
+- Message search, privacy controls, spam protection
+- Content moderation and message reporting
 - Push notifications for new messages
 - Group chat support with admin controls
 - Dark mode fix for legal acceptance screen

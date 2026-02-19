@@ -29,7 +29,7 @@ class StorageRepositoryImplTest {
 
     @Test
     fun `uploadImage returns Error when putBytes throws`() = runTest {
-        every { fileRef.putBytes(any()) } throws RuntimeException("Upload failed")
+        every { fileRef.putBytes(any(), any()) } throws RuntimeException("Upload failed")
 
         val result = repo.uploadImage("user-1", "avatars", byteArrayOf(1, 2, 3))
 
@@ -39,7 +39,7 @@ class StorageRepositoryImplTest {
 
     @Test
     fun `uploadImage constructs correct storage path`() = runTest {
-        every { fileRef.putBytes(any()) } throws RuntimeException("stop here")
+        every { fileRef.putBytes(any(), any()) } throws RuntimeException("stop here")
 
         repo.uploadImage("user-1", "avatars", byteArrayOf(1, 2, 3))
 

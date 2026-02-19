@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.shyden.shytalk.core.audio.EmergencyTonePlayer
 import com.shyden.shytalk.core.util.formatSuspensionEndDateTime
 import kotlin.math.cos
 import kotlin.math.sin
@@ -71,6 +73,11 @@ fun SuspensionScreen(
     var appealText by remember { mutableStateOf("") }
     var appealSubmitted by remember { mutableStateOf(false) }
     var countdownExpired by remember { mutableStateOf(endDate != null && endDate <= System.currentTimeMillis()) }
+
+    DisposableEffect(Unit) {
+        EmergencyTonePlayer.play()
+        onDispose { EmergencyTonePlayer.stop() }
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
     Box(modifier = Modifier.fillMaxSize()) {

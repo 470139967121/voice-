@@ -6,7 +6,11 @@ import com.shyden.shytalk.core.util.timestampToMillis
 
 enum class PrivateMessageType {
     TEXT,
-    IMAGE
+    IMAGE,
+    STICKER,
+    ROOM_INVITE,
+    MOD_ACTION,
+    SYSTEM
 }
 
 enum class SendStatus {
@@ -29,10 +33,17 @@ data class PrivateMessage(
     val replyToMessageId: String? = null,
     val replyToText: String? = null,
     val replyToSenderName: String? = null,
+    val stickerUrl: String? = null,
+    val roomInviteId: String? = null,
+    val roomInviteName: String? = null,
     // Reactions: emoji -> list of user IDs
     val reactions: Map<String, List<String>> = emptyMap(),
+    val isRecalled: Boolean = false,
+    val isHidden: Boolean = false,
+    val hiddenBy: String? = null,
     // Client-side only
-    val sendStatus: SendStatus = SendStatus.SENT
+    val sendStatus: SendStatus = SendStatus.SENT,
+    val localImageData: List<ByteArray> = emptyList()
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "messageId" to messageId,
@@ -48,7 +59,13 @@ data class PrivateMessage(
         "replyToMessageId" to replyToMessageId,
         "replyToText" to replyToText,
         "replyToSenderName" to replyToSenderName,
-        "reactions" to reactions
+        "stickerUrl" to stickerUrl,
+        "roomInviteId" to roomInviteId,
+        "roomInviteName" to roomInviteName,
+        "reactions" to reactions,
+        "isRecalled" to isRecalled,
+        "isHidden" to isHidden,
+        "hiddenBy" to hiddenBy
     )
 
     companion object {
@@ -62,7 +79,7 @@ data class PrivateMessage(
             type = (map["type"] as? String)?.let {
                 try { PrivateMessageType.valueOf(it) } catch (_: Exception) { PrivateMessageType.TEXT }
             } ?: PrivateMessageType.TEXT,
-            createdAt = timestampToMillis(map["createdAt"]),
+            createdAt = timestampToMillis(map["createdAt"] ?: map["timestamp"]),
             editedAt = map["editedAt"]?.let { timestampToMillis(it) },
             editCount = (map["editCount"] as? Long) ?: 0,
             readBy = (map["readBy"] as? List<*>)
@@ -70,11 +87,17 @@ data class PrivateMessage(
             replyToMessageId = map["replyToMessageId"] as? String,
             replyToText = map["replyToText"] as? String,
             replyToSenderName = map["replyToSenderName"] as? String,
+            stickerUrl = map["stickerUrl"] as? String,
+            roomInviteId = map["roomInviteId"] as? String,
+            roomInviteName = map["roomInviteName"] as? String,
             reactions = (map["reactions"] as? Map<*, *>)?.mapNotNull { (key, value) ->
                 val emoji = key as? String ?: return@mapNotNull null
                 val users = (value as? List<*>)?.filterIsInstance<String>() ?: return@mapNotNull null
                 emoji to users
-            }?.toMap() ?: emptyMap()
+            }?.toMap() ?: emptyMap(),
+            isRecalled = map["isRecalled"] as? Boolean ?: false,
+            isHidden = map["isHidden"] as? Boolean ?: false,
+            hiddenBy = map["hiddenBy"] as? String
         )
     }
 }

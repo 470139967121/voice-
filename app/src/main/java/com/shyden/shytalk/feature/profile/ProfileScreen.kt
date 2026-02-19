@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
@@ -67,6 +68,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -83,11 +85,14 @@ import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.shyden.shytalk.core.util.calculateAge
+import com.shyden.shytalk.feature.messaging.ReportUserDialog
+import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.countryNameForCode
 import com.shyden.shytalk.core.util.flagEmojiForCode
 import com.shyden.shytalk.ui.components.FlagBadge
 import com.shyden.shytalk.ui.theme.CnyGold
 import com.shyden.shytalk.ui.theme.SpeakingGreen
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +123,12 @@ fun ProfileScreen(
     }
     var showCountryPicker by remember { mutableStateOf(false) }
     var showBlockDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
     var fullscreenPhotoUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    val reportEvidenceList = remember { mutableListOf<Pair<ByteArray, String>>() }
+    var reportEvidenceVersion by remember { mutableStateOf(0) }
+    var isCompressingEvidence by remember { mutableStateOf(false) }
+    val evidenceScope = rememberCoroutineScope()
 
     // Photo picking + cropping
     var pendingCropType by remember { mutableStateOf<String?>(null) }
@@ -150,6 +160,39 @@ fun ProfileScreen(
         }
     }
 
+    val reportEvidencePickerLauncher = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->
+        if (uri != null) {
+            val mimeType = imageContext.contentResolver.getType(uri) ?: "image/jpeg"
+            if (mimeType.startsWith("video/")) {
+                isCompressingEvidence = true
+                evidenceScope.launch {
+                    val result = com.shyden.shytalk.core.util.VideoCompressor.compressVideo(
+                        imageContext, uri, Constants.EVIDENCE_VIDEO_TARGET_BYTES, mimeType
+                    )
+                    isCompressingEvidence = false
+                    if (result != null && result.first.size <= Constants.EVIDENCE_MAX_SIZE_BYTES) {
+                        reportEvidenceList.add(result)
+                        reportEvidenceVersion++
+                    } else {
+                        snackbarHostState.showSnackbar("Video is too large to upload. Please use a shorter clip.")
+                    }
+                }
+            } else {
+                val bytes = imageContext.contentResolver.openInputStream(uri)?.readBytes()
+                if (bytes != null) {
+                    if (bytes.size <= Constants.EVIDENCE_MAX_SIZE_BYTES) {
+                        reportEvidenceList.add(bytes to mimeType)
+                        reportEvidenceVersion++
+                    } else {
+                        evidenceScope.launch {
+                            snackbarHostState.showSnackbar("File is too large. Maximum size is 10 MB.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun launchPhotoPicker(type: String) {
         pendingCropType = type
         pickerLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
@@ -159,6 +202,16 @@ fun ProfileScreen(
         uiState.error?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(uiState.reportSubmitted) {
+        if (uiState.reportSubmitted) {
+            showReportDialog = false
+            reportEvidenceList.clear()
+            reportEvidenceVersion++
+            snackbarHostState.showSnackbar("Thank you for your report. We will review it shortly.")
+            viewModel.clearReportSubmitted()
         }
     }
 
@@ -190,6 +243,7 @@ fun ProfileScreen(
                 onPickCoverPhoto = { launchPhotoPicker("cover") },
                 onTapPhoto = { fullscreenPhotoUrl = it },
                 onBlockToggle = { showBlockDialog = true },
+                onReportUser = { showReportDialog = true },
                 onFollowToggle = {
                     val targetId = uiState.user?.uid ?: return@ProfileContent
                     if (uiState.isFollowingTarget) viewModel.unfollowUser(targetId)
@@ -252,6 +306,7 @@ fun ProfileScreen(
                 onPickCoverPhoto = { launchPhotoPicker("cover") },
                 onTapPhoto = { fullscreenPhotoUrl = it },
                 onBlockToggle = { showBlockDialog = true },
+                onReportUser = { showReportDialog = true },
                 onFollowToggle = {
                     val targetId = uiState.user?.uid ?: return@ProfileContent
                     if (uiState.isFollowingTarget) viewModel.unfollowUser(targetId)
@@ -266,6 +321,38 @@ fun ProfileScreen(
                     .padding(padding)
             )
         }
+    }
+
+    // Report user dialog
+    if (showReportDialog && user != null) {
+        ReportUserDialog(
+            userName = user.displayName,
+            onDismiss = {
+                if (!uiState.isSubmittingReport) {
+                    showReportDialog = false
+                    reportEvidenceList.clear()
+                    reportEvidenceVersion++
+                }
+            },
+            onSubmit = { reason, description ->
+                viewModel.reportUser(reason, description, reportEvidenceList.toList())
+            },
+            evidenceItems = reportEvidenceList.map { it.first }.also { _ -> reportEvidenceVersion },
+            onAddEvidence = {
+                reportEvidencePickerLauncher.launch(
+                    PickVisualMediaRequest(PickVisualMedia.ImageAndVideo)
+                )
+            },
+            onRemoveEvidence = { index ->
+                if (index in reportEvidenceList.indices) {
+                    reportEvidenceList.removeAt(index)
+                    reportEvidenceVersion++
+                }
+            },
+            isSubmitting = uiState.isSubmittingReport,
+            isCompressing = isCompressingEvidence,
+            errorMessage = uiState.reportError
+        )
     }
 
     // Country picker dialog
@@ -365,6 +452,7 @@ private fun ProfileContent(
     onPickCoverPhoto: () -> Unit,
     onTapPhoto: (String) -> Unit,
     onBlockToggle: () -> Unit,
+    onReportUser: () -> Unit = {},
     onFollowToggle: () -> Unit = {},
     onNavigateToFollowList: ((String, String) -> Unit)? = null,
     onNavigateToRoom: ((String) -> Unit)? = null,
@@ -421,6 +509,21 @@ private fun ProfileContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = onReportUser,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Flag,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Report User")
+                }
             }
         }
         return
@@ -930,6 +1033,25 @@ private fun ProfileContent(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(if (isBlocked) "Unblock" else "Block")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Report button for other users
+                    OutlinedButton(
+                        onClick = onReportUser,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Flag,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Report")
                     }
                 }
             }

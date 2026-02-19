@@ -24,14 +24,22 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,12 +68,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.shyden.shytalk.core.model.GroupPermissions
 import com.shyden.shytalk.core.model.MessageEdit
 import com.shyden.shytalk.core.model.PrivateMessage
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.formatRelativeTime
 import com.shyden.shytalk.ui.theme.SpeakingGreen
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -76,11 +87,17 @@ import kotlinx.datetime.toLocalDateTime
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivateChatScreen(
-    otherUserId: String,
+    otherUserId: String = "",
     onNavigateBack: () -> Unit,
     onNavigateToUserProfile: (String) -> Unit = {},
+    onPickImages: (() -> Unit)? = null,
+    onPickStickerImage: (() -> Unit)? = null,
+    onNavigateToRoom: ((String) -> Unit)? = null,
+    activeRoomId: String? = null,
+    activeRoomName: String? = null,
+    conversationId: String? = null,
     modifier: Modifier = Modifier,
-    viewModel: PrivateChatViewModel = koinViewModel { parametersOf(otherUserId) }
+    viewModel: PrivateChatViewModel = koinViewModel(key = conversationId ?: otherUserId) { parametersOf(otherUserId) }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -92,12 +109,29 @@ fun PrivateChatScreen(
     var showEditHistory by remember { mutableStateOf<Pair<String, String>?>(null) } // messageId, currentText
     var editHistoryData by remember { mutableStateOf<List<MessageEdit>>(emptyList()) }
     var reportingMessage by remember { mutableStateOf<PrivateMessage?>(null) }
+    var showImageViewer by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
+    var showGroupSettings by remember { mutableStateOf(false) }
 
-    // Auto-scroll to bottom when new messages arrive
-    LaunchedEffect(uiState.messages.size) {
+    // Close sticker picker when navigating away
+    DisposableEffect(Unit) {
+        onDispose { viewModel.closeStickerPicker() }
+    }
+
+    // Auto-scroll to bottom when new messages arrive (key on last message ID, not size)
+    LaunchedEffect(uiState.messages.lastOrNull()?.messageId) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.messages.size - 1)
         }
+    }
+
+    // Load older messages when scrolled to top
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { index ->
+                if (index <= 1 && uiState.hasOlderMessages && !uiState.isLoadingOlder) {
+                    viewModel.loadOlderMessages()
+                }
+            }
     }
 
     // Mark messages as read when viewing
@@ -127,7 +161,7 @@ fun PrivateChatScreen(
     }
 
     val otherUser = uiState.otherUser
-    val isOnline = otherUser?.hideOnlineStatus != true &&
+    val isOnline = !uiState.isSystemConversation && otherUser?.hideOnlineStatus != true &&
         (otherUser?.lastSeenAt ?: 0) > currentTimeMillis() - Constants.ONLINE_THRESHOLD_MS
 
     Scaffold(
@@ -140,55 +174,88 @@ fun PrivateChatScreen(
                     }
                 },
                 title = {
-                    Row(
-                        modifier = Modifier.clickable { otherUser?.uid?.let { onNavigateToUserProfile(it) } },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Avatar
-                        val photoUrl = otherUser?.photoUrl
-                        if (photoUrl != null) {
-                            AsyncImage(
-                                model = photoUrl,
-                                contentDescription = otherUser.displayName,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
+                    if (uiState.isGroup) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 modifier = Modifier.size(36.dp),
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Icon(
-                                    Icons.Default.Person,
+                                    Icons.Default.Group,
                                     contentDescription = null,
                                     modifier = Modifier.padding(8.dp),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = uiState.conversationName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "${uiState.groupParticipants.size} members",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = otherUser?.displayName ?: "Chat",
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (uiState.isOtherUserTyping) {
-                                Text(
-                                    text = "typing...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = SpeakingGreen
+                    } else {
+                        Row(
+                            modifier = if (!uiState.isSystemConversation) {
+                                Modifier.clickable { otherUser?.uid?.let { onNavigateToUserProfile(it) } }
+                            } else Modifier,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Avatar
+                            val photoUrl = otherUser?.photoUrl
+                            if (photoUrl != null) {
+                                AsyncImage(
+                                    model = photoUrl,
+                                    contentDescription = otherUser.displayName,
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
                                 )
-                            } else if (otherUser?.hideOnlineStatus != true) {
+                            } else {
+                                Surface(
+                                    modifier = Modifier.size(36.dp),
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(8.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
                                 Text(
-                                    text = if (isOnline) "Online" else otherUser?.lastSeenAt?.let { "Last seen ${formatRelativeTime(it)}" } ?: "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (isOnline) SpeakingGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = otherUser?.displayName ?: "Chat",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
+                                if (uiState.isOtherUserTyping) {
+                                    Text(
+                                        text = "typing...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = SpeakingGreen
+                                    )
+                                } else if (otherUser?.hideOnlineStatus != true && !uiState.isSystemConversation) {
+                                    Text(
+                                        text = if (isOnline) "Online" else otherUser?.lastSeenAt?.let { "Last seen ${formatRelativeTime(it)}" } ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (isOnline) SpeakingGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -197,56 +264,71 @@ fun PrivateChatScreen(
                     IconButton(onClick = { viewModel.toggleSearch() }) {
                         Icon(Icons.Default.Search, contentDescription = "Search messages")
                     }
-                    Box {
-                        IconButton(onClick = { showOverflowMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                        }
-                        DropdownMenu(
-                            expanded = showOverflowMenu,
-                            onDismissRequest = { showOverflowMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(if (uiState.isMuted) "Unmute Notifications" else "Mute Notifications") },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.toggleMute()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(if (uiState.isSilent) "Disable Silent Mode" else "Silent Mode") },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.toggleSilent()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(if (uiState.isPinned) "Unpin" else "Pin") },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.togglePin()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("View Profile") },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    otherUser?.uid?.let { onNavigateToUserProfile(it) }
-                                }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "Delete Conversation",
-                                        color = MaterialTheme.colorScheme.error
+                    if (!uiState.isSystemConversation) {
+                        Box {
+                            IconButton(onClick = { showOverflowMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                            }
+                            DropdownMenu(
+                                expanded = showOverflowMenu,
+                                onDismissRequest = { showOverflowMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(if (uiState.isMuted) "Unmute Notifications" else "Mute Notifications") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.toggleMute()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (uiState.isPinned) "Unpin" else "Pin") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.togglePin()
+                                    }
+                                )
+                                if (uiState.isGroup) {
+                                    DropdownMenuItem(
+                                        text = { Text("Group Settings") },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            showGroupSettings = true
+                                        }
                                     )
-                                },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.hideConversation()
-                                    onNavigateBack()
                                 }
-                            )
+                                if (!uiState.isGroup) {
+                                    DropdownMenuItem(
+                                        text = { Text("View Profile") },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            otherUser?.uid?.let { onNavigateToUserProfile(it) }
+                                        }
+                                    )
+                                }
+                                if (activeRoomId != null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Invite to Room") },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            viewModel.sendRoomInvite(activeRoomId, activeRoomName ?: "Room")
+                                        }
+                                    )
+                                }
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "Delete Conversation",
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.hideConversation()
+                                        onNavigateBack()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -320,12 +402,17 @@ fun PrivateChatScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                // Messages list
-                LazyColumn(
-                    state = listState,
+                // Messages list with pull-to-refresh
+                PullToRefreshBox(
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = { viewModel.refreshMessages() },
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
                     reverseLayout = false
                 ) {
                     // Load more indicator
@@ -371,6 +458,16 @@ fun PrivateChatScreen(
                             uiState.otherUser?.uid ?: ""
                         )
 
+                        // Show sender name for group messages (received only)
+                        if (uiState.isGroup && !isSent) {
+                            Text(
+                                text = message.senderName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                            )
+                        }
+
                         PrivateMessageBubble(
                             message = message,
                             isSent = isSent,
@@ -385,10 +482,24 @@ fun PrivateChatScreen(
                             },
                             onRetry = { /* Failed message retry handled in future phase */ },
                             onReportMessage = { reportingMessage = message },
-                            onToggleReaction = { emoji -> viewModel.toggleReaction(message.messageId, emoji) }
+                            onToggleReaction = { emoji -> viewModel.toggleReaction(message.messageId, emoji) },
+                            onImageClick = { urls, index -> showImageViewer = urls to index },
+                            onRoomInviteTap = onNavigateToRoom?.let { nav -> { roomId: String -> nav(roomId) } },
+                            onRecall = { viewModel.recallMessage(message.messageId) },
+                            onSaveSticker = { url -> viewModel.saveStickerFromUrl(url) },
+                            onHideMessage = if (uiState.isGroup &&
+                                uiState.conversation?.permissions?.whoCanDeleteMessages?.isAllowed(uiState.currentUserRole) == true
+                            ) {
+                                { viewModel.hideMessage(message.messageId) }
+                            } else if (!uiState.isGroup && uiState.isModOrAbove) {
+                                { viewModel.hideMessage(message.messageId) }
+                            } else null,
+                            isModOrAbove = uiState.isModOrAbove,
+                            isGroupChat = uiState.isGroup
                         )
                     }
                 }
+                } // PullToRefreshBox
             }
 
             // Reply preview bar
@@ -466,8 +577,84 @@ fun PrivateChatScreen(
                 }
             }
 
-            // Input row
-            if (!uiState.isBlocked) {
+            // Sticker picker
+            if (uiState.showStickerPicker) {
+                StickerPicker(
+                    stickers = uiState.stickers,
+                    onStickerSelected = { sticker ->
+                        viewModel.sendSticker(sticker)
+                    },
+                    onAddSticker = onPickStickerImage,
+                    onDeleteSticker = { id -> viewModel.deleteSticker(id) },
+                    onMoveToFront = { id -> viewModel.moveStickerToFront(id) }
+                )
+            }
+
+            // Mute banner (group only)
+            if (uiState.isGroup && uiState.currentUserMuteInfo != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.VolumeOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val muteInfo = uiState.currentUserMuteInfo!!
+                        val muteText = buildString {
+                            if (muteInfo.expiresAt != null) {
+                                val remaining = muteInfo.expiresAt - currentTimeMillis()
+                                if (remaining > 0) {
+                                    val mins = remaining / 60000
+                                    val hrs = mins / 60
+                                    append("You are muted for ")
+                                    if (hrs > 0) append("${hrs}h ${mins % 60}m")
+                                    else append("${mins}m")
+                                } else {
+                                    append("You are muted")
+                                }
+                            } else {
+                                append("You are muted")
+                            }
+                            muteInfo.reason?.let { append(". Reason: $it") }
+                        }
+                        Text(
+                            text = muteText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
+            // Send permission check for groups
+            val canSend = !uiState.isGroup ||
+                (uiState.conversation?.permissions?.whoCanSend?.isAllowed(uiState.currentUserRole) ?: true)
+
+            // Permission-restricted banner
+            if (uiState.isGroup && !canSend && uiState.currentUserMuteInfo == null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Text(
+                        text = "Only admins and mods can send messages in this group",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
+                }
+            }
+
+            // Input row (hidden for blocked users, system conversations, muted users, and permission-restricted)
+            if (!uiState.isBlocked && !uiState.isSystemConversation && uiState.currentUserMuteInfo == null && canSend) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     tonalElevation = 3.dp
@@ -478,6 +665,23 @@ fun PrivateChatScreen(
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.Bottom
                     ) {
+                        if (onPickImages != null) {
+                            IconButton(
+                                onClick = onPickImages,
+                                enabled = !uiState.isUploadingImages
+                            ) {
+                                if (uiState.isUploadingImages) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                                } else {
+                                    Icon(Icons.Default.Image, contentDescription = "Send image")
+                                }
+                            }
+                        }
+                        IconButton(
+                            onClick = { viewModel.toggleStickerPicker() }
+                        ) {
+                            Icon(Icons.Default.EmojiEmotions, contentDescription = "Stickers")
+                        }
                         OutlinedTextField(
                             value = messageText,
                             onValueChange = {
@@ -539,6 +743,50 @@ fun PrivateChatScreen(
                 viewModel.reportMessage(msg, reason, description)
                 reportingMessage = null
             }
+        )
+    }
+
+    // Fullscreen image viewer
+    showImageViewer?.let { (urls, idx) ->
+        Dialog(
+            onDismissRequest = { showImageViewer = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            FullscreenImageViewer(
+                imageUrls = urls,
+                initialIndex = idx,
+                onDismiss = { showImageViewer = null }
+            )
+        }
+    }
+
+    // Group settings sheet
+    if (showGroupSettings && uiState.isGroup) {
+        GroupSettingsSheet(
+            conversation = uiState.conversation,
+            conversationName = uiState.conversationName,
+            participants = uiState.groupParticipants,
+            isAdmin = uiState.isAdmin,
+            isModOrAbove = uiState.isModOrAbove,
+            currentUserRole = uiState.currentUserRole,
+            currentUserId = uiState.currentUserId,
+            groupMutes = uiState.groupMutes,
+            onDismiss = { showGroupSettings = false },
+            onUpdateGroupName = { viewModel.updateGroupName(it) },
+            onRemoveParticipant = { viewModel.removeGroupParticipant(it) },
+            onLeaveGroup = {
+                viewModel.leaveGroup()
+                showGroupSettings = false
+                onNavigateBack()
+            },
+            onUpdateGroupDescription = { viewModel.updateGroupDescription(it) },
+            onUpdateGroupRoles = { adminIds, modIds -> viewModel.updateGroupRoles(adminIds, modIds) },
+            onUpdatePermissions = { viewModel.updateGroupPermissions(it) },
+            onUpdateSystemMessageConfig = { viewModel.updateSystemMessageConfig(it) },
+            onUpdateModNotifyMode = { viewModel.updateModNotifyMode(it) },
+            onTransferOwnership = { viewModel.transferOwnership(it) },
+            onUnmuteMember = { viewModel.unmuteGroupMember(it) },
+            onAddParticipant = { viewModel.addGroupParticipant(it) }
         )
     }
 }

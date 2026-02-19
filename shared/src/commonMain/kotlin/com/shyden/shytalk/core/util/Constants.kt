@@ -37,10 +37,32 @@ object Constants {
     const val PM_MAX_IMAGES_PER_MESSAGE = 10
     const val PM_MESSAGES_PAGE_SIZE = 50
     const val PM_EDIT_WINDOW_MS = 900_000L // 15 minutes
+    const val PM_RECALL_WINDOW_MS = 300_000L // 5 minutes
     const val TYPING_DEBOUNCE_MS = 5_000L // 5 seconds
 
     // PM flood protection
     const val PM_FLOOD_COOLDOWN_MS = 1_000L
     const val PM_FLOOD_WINDOW_MS = 10_000L
     const val PM_FLOOD_MAX_MESSAGES = 5
+
+    // Group chats
+    const val MAX_GROUP_PARTICIPANTS = 50
+    const val MAX_OWNED_GROUPS = 5
+    const val MAX_GROUP_DESCRIPTION_LENGTH = 1000
+    const val MUTE_DURATION_5MIN = 5 * 60 * 1000L
+    const val MUTE_DURATION_1HR = 60 * 60 * 1000L
+    const val MUTE_DURATION_24HR = 24 * 60 * 60 * 1000L
+
+    // Report evidence
+    const val EVIDENCE_MAX_SIZE_BYTES = 20 * 1024 * 1024L   // 20 MB
+    const val EVIDENCE_VIDEO_TARGET_BYTES = 18 * 1024 * 1024L // 18 MB (leave headroom)
+
+    // System user
+    const val SYSTEM_USER_ID = "SHYTALK_SYSTEM"
+
+    // Legal pages (GitHub Pages)
+    const val LEGAL_BASE_URL = "https://shydenmcm.github.io/ShyTalk"
+    const val PRIVACY_POLICY_URL = "$LEGAL_BASE_URL/privacy-policy.html"
+    const val TERMS_URL = "$LEGAL_BASE_URL/terms-and-conditions.html"
+    const val COMMUNITY_GUIDELINES_URL = "$LEGAL_BASE_URL/community-guidelines.html"
 }

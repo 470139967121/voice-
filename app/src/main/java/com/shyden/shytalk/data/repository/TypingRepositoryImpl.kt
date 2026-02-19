@@ -39,7 +39,8 @@ class TypingRepositoryImpl(
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                trySend(false)
+                close()
             }
         }
 

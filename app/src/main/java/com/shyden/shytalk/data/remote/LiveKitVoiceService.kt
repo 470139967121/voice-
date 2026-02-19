@@ -1,7 +1,9 @@
 package com.shyden.shytalk.data.remote
 
 import android.content.Context
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Build
 import android.util.Log
 import com.shyden.shytalk.BuildConfig
 import io.livekit.android.AudioOptions
@@ -68,6 +70,23 @@ class LiveKitVoiceService(
     init {
         Log.d(TAG, "LiveKit Room pre-initialized (MediaAudioType)")
         setupEventCollection()
+    }
+
+    private fun setSpeakerphoneEnabled(enabled: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (enabled) {
+                val speaker = audioManager.availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                if (speaker != null) {
+                    audioManager.setCommunicationDevice(speaker)
+                }
+            } else {
+                audioManager.clearCommunicationDevice()
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = enabled
+        }
     }
 
     /**
@@ -208,7 +227,7 @@ class LiveKitVoiceService(
         cachedToken = null
         desiredMicEnabled = false
         isVoiceMode = false
-        audioManager.isSpeakerphoneOn = false
+        setSpeakerphoneEnabled(false)
         audioManager.mode = AudioManager.MODE_NORMAL
         try {
             room.disconnect()
@@ -240,9 +259,9 @@ class LiveKitVoiceService(
         // Set AudioManager mode immediately
         if (voiceMode) {
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-            audioManager.isSpeakerphoneOn = true
+            setSpeakerphoneEnabled(true)
         } else {
-            audioManager.isSpeakerphoneOn = false
+            setSpeakerphoneEnabled(false)
             audioManager.mode = AudioManager.MODE_NORMAL
         }
 
@@ -311,7 +330,7 @@ class LiveKitVoiceService(
     }
 
     fun destroy() {
-        audioManager.isSpeakerphoneOn = false
+        setSpeakerphoneEnabled(false)
         audioManager.mode = AudioManager.MODE_NORMAL
         try {
             room.disconnect()

@@ -1,5 +1,6 @@
 package com.shyden.shytalk.feature.messaging
 
+import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.Conversation
 import com.shyden.shytalk.core.model.ConversationSettings
 import com.shyden.shytalk.core.model.PmPrivacy
@@ -8,9 +9,11 @@ import com.shyden.shytalk.core.model.PrivateMessageType
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.ModerationFilter
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.data.local.StickerStorage
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.ReportRepository
+import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.TypingRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
@@ -21,6 +24,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -45,6 +49,8 @@ class PrivateChatViewModelTest {
     private val pmRepository = mockk<PrivateMessageRepository>(relaxed = true)
     private val typingRepository = mockk<TypingRepository>(relaxed = true)
     private val reportRepository = mockk<ReportRepository>(relaxed = true)
+    private val storageRepository = mockk<StorageRepository>(relaxed = true)
+    private val stickerStorage = mockk<StickerStorage>(relaxed = true)
 
     private val currentUserId = "current-user"
     private val otherUserId = "other-user"
@@ -86,7 +92,8 @@ class PrivateChatViewModelTest {
             userRepository = userRepository,
             authRepository = authRepository,
             typingRepository = typingRepository,
-            reportRepository = reportRepository
+            reportRepository = reportRepository,
+            storageRepository = storageRepository
         )
     }
 
@@ -536,18 +543,6 @@ class PrivateChatViewModelTest {
     }
 
     @Test
-    fun `toggleSilent calls repo with inverted value`() = runTest {
-        val vm = createViewModel()
-        advanceUntilIdle()
-
-        coEvery { pmRepository.silentConversation(any(), any(), any()) } returns Resource.Success(Unit)
-        vm.toggleSilent()
-        advanceUntilIdle()
-
-        coVerify { pmRepository.silentConversation(conversationId, currentUserId, true) }
-    }
-
-    @Test
     fun `togglePin calls repo with inverted value`() = runTest {
         val vm = createViewModel()
         advanceUntilIdle()
@@ -662,7 +657,7 @@ class PrivateChatViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        coEvery { reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any()) } returns
+        coEvery { reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
                 Resource.Success(Unit)
 
         val msg = TestData.createTestPrivateMessage(messageId = "msg-r", senderId = otherUserId, text = "Bad msg")
@@ -672,7 +667,11 @@ class PrivateChatViewModelTest {
         coVerify {
             reportRepository.reportMessage(
                 reporterId = currentUserId,
+                reporterName = any(),
+                reporterUniqueId = any(),
                 reportedUserId = otherUserId,
+                reportedUserName = any(),
+                reportedUserUniqueId = any(),
                 conversationId = conversationId,
                 messageId = "msg-r",
                 messageText = "Bad msg",
@@ -688,7 +687,7 @@ class PrivateChatViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        coEvery { reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any()) } returns
+        coEvery { reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
                 Resource.Error("report failed")
 
         val msg = TestData.createTestPrivateMessage(messageId = "msg-r", senderId = otherUserId)
@@ -714,6 +713,264 @@ class PrivateChatViewModelTest {
         assertNull(vm.uiState.value.error)
     }
 
+    // ===== Group Chat Init =====
+
+    @Test
+    fun `initGroupChat loads group conversation`() = runTest {
+        val groupConversation = TestData.createTestConversation(
+            conversationId = "group-conv",
+            participantIds = listOf(currentUserId, "user-a", "user-b"),
+            isGroup = true,
+            groupName = "Test Group",
+            groupAdminIds = listOf(currentUserId),
+            createdBy = currentUserId
+        )
+        coEvery { pmRepository.getConversation("group-conv") } returns Resource.Success(groupConversation)
+
+        val userA = TestData.createTestUser(uid = "user-a", displayName = "A")
+        val userB = TestData.createTestUser(uid = "user-b", displayName = "B")
+        val currentUser = TestData.createTestUser(uid = currentUserId, displayName = "Current")
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(listOf(currentUser, userA, userB))
+
+        val groupMessagesFlow = MutableSharedFlow<List<PrivateMessage>>()
+        every { pmRepository.getMessages("group-conv", any()) } returns groupMessagesFlow
+        every { pmRepository.observeConversationSettings("group-conv", currentUserId) } returns settingsFlow
+
+        val vm = PrivateChatViewModel(
+            otherUserId = "",
+            pmRepository = pmRepository,
+            userRepository = userRepository,
+            authRepository = authRepository,
+            typingRepository = typingRepository,
+            reportRepository = reportRepository,
+            initialConversationId = "group-conv"
+        )
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.isGroup)
+        assertEquals("Test Group", state.conversationName)
+        assertTrue(state.isAdmin)
+        assertEquals("group-conv", state.conversationId)
+        assertFalse(state.isLoading)
+    }
+
+    // ===== Pagination =====
+
+    @Test
+    fun `loadOlderMessages merges with existing messages`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Emit live messages
+        val liveMsg = TestData.createTestPrivateMessage(messageId = "m2", createdAt = 2_000_000_000L)
+        messagesFlow.emit(listOf(liveMsg))
+        advanceUntilIdle()
+
+        assertEquals(1, vm.uiState.value.messages.size)
+
+        // Load older messages
+        val olderMsg = TestData.createTestPrivateMessage(messageId = "m1", createdAt = 1_000_000_000L)
+        coEvery { pmRepository.loadOlderMessages(any(), any(), any()) } returns Resource.Success(listOf(olderMsg))
+
+        vm.loadOlderMessages()
+        advanceUntilIdle()
+
+        assertEquals(2, vm.uiState.value.messages.size)
+        assertEquals("m1", vm.uiState.value.messages[0].messageId)
+        assertEquals("m2", vm.uiState.value.messages[1].messageId)
+    }
+
+    @Test
+    fun `loadOlderMessages sets hasOlderMessages false when underfull`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val liveMsg = TestData.createTestPrivateMessage(messageId = "m2", createdAt = 2_000_000_000L)
+        messagesFlow.emit(listOf(liveMsg))
+        advanceUntilIdle()
+
+        coEvery { pmRepository.loadOlderMessages(any(), any(), any()) } returns Resource.Success(listOf(
+            TestData.createTestPrivateMessage(messageId = "m1", createdAt = 1_000_000_000L)
+        ))
+
+        vm.loadOlderMessages()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.hasOlderMessages)
+    }
+
+    @Test
+    fun `loadOlderMessages does not run when messages empty`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // No messages emitted — messages list is empty
+        coEvery { pmRepository.loadOlderMessages(any(), any(), any()) } returns Resource.Success(emptyList())
+
+        vm.loadOlderMessages()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { pmRepository.loadOlderMessages(any(), any(), any()) }
+    }
+
+    // ===== Image Upload =====
+
+    @Test
+    fun `uploadAndSendImages rejects empty list`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.uploadAndSendImages(emptyList())
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { storageRepository.uploadImage(any(), any(), any()) }
+    }
+
+    @Test
+    fun `uploadAndSendImages rejects over max images`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val tooMany = (1..Constants.PM_MAX_IMAGES_PER_MESSAGE + 1).map { ByteArray(1) }
+        vm.uploadAndSendImages(tooMany)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { storageRepository.uploadImage(any(), any(), any()) }
+    }
+
+    // ===== Sticker =====
+
+    @Test
+    fun `toggleStickerPicker toggles state`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.showStickerPicker)
+        vm.toggleStickerPicker()
+        assertTrue(vm.uiState.value.showStickerPicker)
+        vm.toggleStickerPicker()
+        assertFalse(vm.uiState.value.showStickerPicker)
+    }
+
+    @Test
+    fun `sendSticker calls repo with correct params`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        coEvery { pmRepository.sendStickerMessage(any(), any(), any(), any()) } returns Resource.Success(Unit)
+
+        vm.sendSticker("https://sticker.png")
+        advanceUntilIdle()
+
+        coVerify {
+            pmRepository.sendStickerMessage(
+                conversationId = conversationId,
+                senderId = currentUserId,
+                senderName = "Current",
+                stickerUrl = "https://sticker.png"
+            )
+        }
+        assertFalse(vm.uiState.value.showStickerPicker)
+    }
+
+    @Test
+    fun `sendSticker does nothing without conversationId`() = runTest {
+        coEvery { pmRepository.getOrCreateConversation(currentUserId, otherUserId) } returns
+                Resource.Error("network error")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.sendSticker("https://sticker.png")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { pmRepository.sendStickerMessage(any(), any(), any(), any()) }
+    }
+
+    // ===== Group Management =====
+
+    @Test
+    fun `updateGroupName calls repo`() = runTest {
+        val groupConversation = TestData.createTestConversation(
+            conversationId = "group-conv",
+            participantIds = listOf(currentUserId, "user-a"),
+            isGroup = true,
+            groupName = "Old Name",
+            createdBy = currentUserId
+        )
+        coEvery { pmRepository.getConversation("group-conv") } returns Resource.Success(groupConversation)
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(emptyList())
+
+        val groupMessagesFlow = MutableSharedFlow<List<PrivateMessage>>()
+        every { pmRepository.getMessages("group-conv", any()) } returns groupMessagesFlow
+        every { pmRepository.observeConversationSettings("group-conv", currentUserId) } returns settingsFlow
+
+        coEvery { pmRepository.updateGroupName("group-conv", "New Name") } returns Resource.Success(Unit)
+
+        val vm = PrivateChatViewModel(
+            otherUserId = "",
+            pmRepository = pmRepository,
+            userRepository = userRepository,
+            authRepository = authRepository,
+            typingRepository = typingRepository,
+            reportRepository = reportRepository,
+            initialConversationId = "group-conv"
+        )
+        advanceUntilIdle()
+
+        vm.updateGroupName("New Name")
+        advanceUntilIdle()
+
+        coVerify { pmRepository.updateGroupName("group-conv", "New Name") }
+        assertEquals("New Name", vm.uiState.value.conversationName)
+    }
+
+    @Test
+    fun `updateGroupName rejects blank name`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.updateGroupName("   ")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { pmRepository.updateGroupName(any(), any()) }
+    }
+
+    @Test
+    fun `leaveGroup calls closeGroupConversation for admin`() = runTest {
+        val groupConversation = TestData.createTestConversation(
+            conversationId = "group-conv",
+            participantIds = listOf(currentUserId),
+            isGroup = true,
+            createdBy = currentUserId
+        )
+        coEvery { pmRepository.getConversation("group-conv") } returns Resource.Success(groupConversation)
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(emptyList())
+
+        val groupMessagesFlow = MutableSharedFlow<List<PrivateMessage>>()
+        every { pmRepository.getMessages("group-conv", any()) } returns groupMessagesFlow
+        every { pmRepository.observeConversationSettings("group-conv", currentUserId) } returns settingsFlow
+
+        coEvery { pmRepository.closeGroupConversation("group-conv") } returns Resource.Success(Unit)
+
+        val vm = PrivateChatViewModel(
+            otherUserId = "",
+            pmRepository = pmRepository,
+            userRepository = userRepository,
+            authRepository = authRepository,
+            typingRepository = typingRepository,
+            reportRepository = reportRepository,
+            initialConversationId = "group-conv"
+        )
+        advanceUntilIdle()
+
+        vm.leaveGroup()
+        advanceUntilIdle()
+
+        coVerify { pmRepository.closeGroupConversation("group-conv") }
+    }
+
     // ===== Messages flow =====
 
     @Test
@@ -735,15 +992,235 @@ class PrivateChatViewModelTest {
     // ===== Settings flow =====
 
     @Test
-    fun `settings flow updates mute silent pin state`() = runTest {
+    fun `settings flow updates mute and pin state`() = runTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        settingsFlow.emit(ConversationSettings(isMuted = true, isSilent = true, isPinned = true))
+        settingsFlow.emit(ConversationSettings(isMuted = true, isPinned = true))
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.isMuted)
-        assertTrue(vm.uiState.value.isSilent)
         assertTrue(vm.uiState.value.isPinned)
+    }
+
+    // ===== Sticker Storage Integration =====
+
+    private fun createViewModelWithStickerStorage(): PrivateChatViewModel {
+        return PrivateChatViewModel(
+            otherUserId = otherUserId,
+            pmRepository = pmRepository,
+            userRepository = userRepository,
+            authRepository = authRepository,
+            typingRepository = typingRepository,
+            reportRepository = reportRepository,
+            storageRepository = storageRepository,
+            stickerStorage = stickerStorage
+        )
+    }
+
+    @Test
+    fun `toggleStickerPicker loads stickers from storage when opening`() = runTest {
+        val sticker1 = Sticker(id = "s1", url = "", localPath = "/path/s1.jpg")
+        val sticker2 = Sticker(id = "s2", url = "", localPath = "/path/s2.jpg")
+        every { stickerStorage.getStickers() } returns listOf(sticker1, sticker2)
+
+        val vm = createViewModelWithStickerStorage()
+        advanceUntilIdle()
+
+        vm.toggleStickerPicker()
+
+        assertTrue(vm.uiState.value.showStickerPicker)
+        assertEquals(2, vm.uiState.value.stickers.size)
+        assertEquals("s1", vm.uiState.value.stickers[0].id)
+    }
+
+    @Test
+    fun `toggleStickerPicker does not load stickers when closing`() = runTest {
+        every { stickerStorage.getStickers() } returns emptyList()
+
+        val vm = createViewModelWithStickerStorage()
+        advanceUntilIdle()
+
+        vm.toggleStickerPicker() // open
+        assertTrue(vm.uiState.value.showStickerPicker)
+
+        vm.toggleStickerPicker() // close
+        assertFalse(vm.uiState.value.showStickerPicker)
+    }
+
+    @Test
+    fun `sendSticker with Sticker object using URL sends directly`() = runTest {
+        val vm = createViewModelWithStickerStorage()
+        advanceUntilIdle()
+
+        coEvery { pmRepository.sendStickerMessage(any(), any(), any(), any()) } returns Resource.Success(Unit)
+
+        val sticker = Sticker(id = "s1", url = "https://sticker.png")
+        vm.sendSticker(sticker)
+        advanceUntilIdle()
+
+        coVerify {
+            pmRepository.sendStickerMessage(
+                conversationId = conversationId,
+                senderId = currentUserId,
+                senderName = "Current",
+                stickerUrl = "https://sticker.png"
+            )
+        }
+        verify { stickerStorage.markAsRecent("s1") }
+        assertFalse(vm.uiState.value.showStickerPicker)
+    }
+
+    @Test
+    fun `sendSticker with Sticker object marks as recent`() = runTest {
+        val vm = createViewModelWithStickerStorage()
+        advanceUntilIdle()
+
+        coEvery { pmRepository.sendStickerMessage(any(), any(), any(), any()) } returns Resource.Success(Unit)
+
+        val sticker = Sticker(id = "recent-sticker", url = "https://example.png")
+        vm.sendSticker(sticker)
+        advanceUntilIdle()
+
+        verify { stickerStorage.markAsRecent("recent-sticker") }
+    }
+
+    @Test
+    fun `sendSticker with Sticker object without conversationId does nothing`() = runTest {
+        coEvery { pmRepository.getOrCreateConversation(currentUserId, otherUserId) } returns
+                Resource.Error("network error")
+
+        val vm = createViewModelWithStickerStorage()
+        advanceUntilIdle()
+
+        val sticker = Sticker(id = "s1", url = "https://sticker.png")
+        vm.sendSticker(sticker)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { pmRepository.sendStickerMessage(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `addStickerFromImage saves to storage and refreshes lists`() = runTest {
+        val savedSticker = Sticker(id = "new-id", url = "", localPath = "/path/new.jpg")
+        every { stickerStorage.addSticker(any(), any()) } returns savedSticker
+        every { stickerStorage.getStickers() } returns listOf(savedSticker)
+
+        val vm = createViewModelWithStickerStorage()
+        advanceUntilIdle()
+
+        vm.addStickerFromImage(byteArrayOf(1, 2, 3))
+
+        verify { stickerStorage.addSticker(any(), eq(byteArrayOf(1, 2, 3))) }
+        assertEquals(1, vm.uiState.value.stickers.size)
+    }
+
+    @Test
+    fun `addStickerFromImage does nothing without stickerStorage`() = runTest {
+        // Use default ViewModel (no stickerStorage)
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.addStickerFromImage(byteArrayOf(1, 2, 3))
+
+        verify(exactly = 0) { stickerStorage.addSticker(any(), any()) }
+    }
+
+    // ===== Recall Message =====
+
+    @Test
+    fun `recallMessage calls repo with correct params`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        coEvery { pmRepository.recallMessage(any(), any()) } returns Resource.Success(Unit)
+
+        vm.recallMessage("msg-to-recall")
+        advanceUntilIdle()
+
+        coVerify { pmRepository.recallMessage(conversationId, "msg-to-recall") }
+    }
+
+    @Test
+    fun `recallMessage sets error on failure`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        coEvery { pmRepository.recallMessage(any(), any()) } returns Resource.Error("recall failed")
+
+        vm.recallMessage("msg-to-recall")
+        advanceUntilIdle()
+
+        assertEquals("Failed to recall message", vm.uiState.value.error)
+    }
+
+    @Test
+    fun `recallMessage does nothing without conversationId`() = runTest {
+        coEvery { pmRepository.getOrCreateConversation(currentUserId, otherUserId) } returns
+                Resource.Error("network error")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.recallMessage("msg-to-recall")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { pmRepository.recallMessage(any(), any()) }
+    }
+
+    // ===== Close Sticker Picker =====
+
+    @Test
+    fun `closeStickerPicker closes picker`() = runTest {
+        val vm = createViewModelWithStickerStorage()
+        advanceUntilIdle()
+
+        vm.toggleStickerPicker() // open
+        assertTrue(vm.uiState.value.showStickerPicker)
+
+        vm.closeStickerPicker()
+        assertFalse(vm.uiState.value.showStickerPicker)
+    }
+
+    @Test
+    fun `closeStickerPicker is no-op when already closed`() = runTest {
+        val vm = createViewModelWithStickerStorage()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.showStickerPicker)
+        vm.closeStickerPicker()
+        assertFalse(vm.uiState.value.showStickerPicker)
+    }
+
+    // ===== Optimistic Sending =====
+
+    @Test
+    fun `uploadAndSendImages shows pending message immediately`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Emit initial live messages so we have a non-empty list
+        messagesFlow.emit(emptyList())
+        advanceUntilIdle()
+
+        // Make upload hang forever so the pending message stays visible
+        coEvery { storageRepository.uploadImage(any(), any(), any()) } coAnswers {
+            kotlinx.coroutines.awaitCancellation()
+        }
+
+        vm.uploadAndSendImages(listOf(byteArrayOf(1, 2, 3)))
+        // Allow Dispatchers.Default (compressImage) to complete and return to Main
+        kotlinx.coroutines.yield()
+        advanceUntilIdle()
+
+        // Pending message should appear in the messages list
+        val messages = vm.uiState.value.messages
+        assertTrue(messages.any { it.messageId.startsWith("temp_") })
+        val pending = messages.first { it.messageId.startsWith("temp_") }
+        assertEquals(com.shyden.shytalk.core.model.SendStatus.SENDING, pending.sendStatus)
+        assertEquals(PrivateMessageType.IMAGE, pending.type)
+
+        // Cancel viewModelScope to prevent coroutines leaking past Dispatchers.resetMain()
+        vm.viewModelScope.cancel()
     }
 }

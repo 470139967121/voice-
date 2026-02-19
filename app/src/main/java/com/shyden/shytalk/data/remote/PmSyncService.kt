@@ -8,6 +8,14 @@ import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.shyden.shytalk.R
+import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.PrivateMessageRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 
 /**
  * Foreground service that keeps Firestore snapshot listeners active
@@ -21,6 +29,11 @@ class PmSyncService : Service() {
         const val NOTIFICATION_ID = 2001
     }
 
+    private val pmRepository: PrivateMessageRepository by inject()
+    private val authRepository: AuthRepository by inject()
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var conversationsJob: Job? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -28,12 +41,20 @@ class PmSyncService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val userId = authRepository.currentUserId
+        if (userId != null) {
+            conversationsJob?.cancel()
+            conversationsJob = serviceScope.launch {
+                pmRepository.getConversations(userId).collect { /* keep listener alive */ }
+            }
+        }
         return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        conversationsJob?.cancel()
         super.onDestroy()
     }
 
@@ -41,10 +62,12 @@ class PmSyncService : Service() {
         val channel = NotificationChannel(
             CHANNEL_ID,
             "Message Sync",
-            NotificationManager.IMPORTANCE_MIN
+            NotificationManager.IMPORTANCE_NONE
         ).apply {
             description = "Keeps messages in sync"
             setShowBadge(false)
+            enableLights(false)
+            enableVibration(false)
         }
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
@@ -52,11 +75,11 @@ class PmSyncService : Service() {
 
     private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("ShyTalk")
-            .setContentText("Syncing messages")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
+            .setSilent(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_DEFERRED)
             .build()
     }
 }

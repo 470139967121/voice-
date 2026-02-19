@@ -9,7 +9,6 @@ data class ConversationSettings(
     val isHidden: Boolean = false,
     val hiddenAt: Long? = null,
     val isPinned: Boolean = false,
-    val isSilent: Boolean = false,
     val lastReadMessageId: String = "",
     val lastReadAt: Long = 0,
     val unreadCount: Long = 0
@@ -20,7 +19,6 @@ data class ConversationSettings(
         "isHidden" to isHidden,
         "hiddenAt" to hiddenAt?.let { millisToTimestamp(it) },
         "isPinned" to isPinned,
-        "isSilent" to isSilent,
         "lastReadMessageId" to lastReadMessageId,
         "lastReadAt" to millisToTimestamp(lastReadAt),
         "unreadCount" to unreadCount
@@ -33,7 +31,6 @@ data class ConversationSettings(
             isHidden = map["isHidden"] as? Boolean ?: false,
             hiddenAt = map["hiddenAt"]?.let { timestampToMillis(it) },
             isPinned = map["isPinned"] as? Boolean ?: false,
-            isSilent = map["isSilent"] as? Boolean ?: false,
             lastReadMessageId = map["lastReadMessageId"] as? String ?: "",
             lastReadAt = map["lastReadAt"]?.let { timestampToMillis(it) } ?: 0,
             unreadCount = (map["unreadCount"] as? Long) ?: 0

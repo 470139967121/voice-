@@ -1,7 +1,11 @@
 package com.shyden.shytalk.feature.messaging
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,14 +16,17 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,30 +42,20 @@ data class Sticker(
     val localPath: String? = null
 )
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StickerPicker(
     stickers: List<Sticker>,
-    recentStickers: List<Sticker>,
     onStickerSelected: (Sticker) -> Unit,
+    onAddSticker: (() -> Unit)? = null,
+    onDeleteSticker: ((String) -> Unit)? = null,
+    onMoveToFront: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Recent", "My Stickers")
+    var longPressedSticker by remember { mutableStateOf<Sticker?>(null) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        TabRow(selectedTabIndex = selectedTab) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(title) }
-                )
-            }
-        }
-
-        val displayStickers = if (selectedTab == 0) recentStickers else stickers
-
-        if (displayStickers.isEmpty()) {
+        if (stickers.isEmpty() && onAddSticker == null) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -71,7 +68,7 @@ fun StickerPicker(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = if (selectedTab == 0) "No recent stickers" else "No stickers yet",
+                        text = "No stickers yet",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -87,18 +84,76 @@ fun StickerPicker(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(displayStickers, key = { it.id }) { sticker ->
+                if (onAddSticker != null) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                                .clickable { onAddSticker() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Add sticker",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+                items(stickers, key = { it.id }) { sticker ->
                     AsyncImage(
                         model = sticker.localPath ?: sticker.url,
                         contentDescription = "Sticker",
                         modifier = Modifier
                             .size(72.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { onStickerSelected(sticker) },
+                            .combinedClickable(
+                                onClick = { onStickerSelected(sticker) },
+                                onLongClick = {
+                                    if (onDeleteSticker != null || onMoveToFront != null) {
+                                        longPressedSticker = sticker
+                                    }
+                                }
+                            ),
                         contentScale = ContentScale.Fit
                     )
                 }
             }
         }
+    }
+
+    if (longPressedSticker != null) {
+        AlertDialog(
+            onDismissRequest = { longPressedSticker = null },
+            title = { Text("Sticker") },
+            text = {
+                Column {
+                    if (onMoveToFront != null) {
+                        TextButton(onClick = {
+                            onMoveToFront(longPressedSticker!!.id)
+                            longPressedSticker = null
+                        }) {
+                            Text("Move to front")
+                        }
+                    }
+                    if (onDeleteSticker != null) {
+                        TextButton(onClick = {
+                            onDeleteSticker(longPressedSticker!!.id)
+                            longPressedSticker = null
+                        }) {
+                            Text("Delete", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { longPressedSticker = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

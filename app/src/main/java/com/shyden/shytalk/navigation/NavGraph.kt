@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -21,6 +22,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -33,6 +35,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.NotificationRepository
 import com.shyden.shytalk.data.repository.UserRepository
+import com.shyden.shytalk.data.remote.PmSyncService
 import com.shyden.shytalk.feature.auth.GoogleSignInScreen
 import com.shyden.shytalk.feature.home.LunarNewYearScreen
 import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
@@ -42,7 +45,14 @@ import com.shyden.shytalk.feature.legal.TermsAndConditionsScreen
 import com.shyden.shytalk.feature.main.MainScreen
 import com.shyden.shytalk.feature.messaging.ConversationListScreen
 import com.shyden.shytalk.feature.messaging.ConversationListViewModel
+import com.shyden.shytalk.feature.messaging.GroupSetupScreen
+import com.shyden.shytalk.feature.messaging.GroupSetupViewModel
+import com.shyden.shytalk.feature.messaging.NewMessageScreen
+import com.shyden.shytalk.core.crop.CropContract
+import com.shyden.shytalk.core.crop.CropInput
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import com.shyden.shytalk.feature.messaging.PrivateChatScreen
+import com.shyden.shytalk.feature.messaging.PrivateChatViewModel
 import com.shyden.shytalk.feature.messaging.ReportReviewScreen
 import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
 import com.shyden.shytalk.feature.settings.AppSettingsScreen
@@ -51,9 +61,18 @@ import com.shyden.shytalk.feature.profile.ProfileScreen
 import com.shyden.shytalk.feature.profile.ProfileSetupScreen
 import com.shyden.shytalk.feature.profile.RequiredDOBScreen
 import com.shyden.shytalk.feature.room.RoomScreen
+import com.shyden.shytalk.feature.warning.WarningScreen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import org.koin.compose.koinInject
+
+private fun NavController.safePopBackStack(): Boolean {
+    return if (previousBackStackEntry != null) {
+        popBackStack()
+    } else {
+        false
+    }
+}
 
 @Composable
 fun NavGraph(
@@ -72,7 +91,7 @@ fun NavGraph(
         }
     }
 
-    // Real-time suspension listener: force sign-out when user is actively suspended
+    // Real-time suspension + warning listener
     val uid = currentUserId
     if (uid != null) {
         DisposableEffect(uid) {
@@ -87,6 +106,15 @@ fun NavGraph(
                         if (isActive) {
                             onSignOut()
                             navController.navigate(Screen.SignIn.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }
+                    // Check for active warning — navigate to warning screen
+                    if (snapshot?.getBoolean("hasActiveWarning") == true) {
+                        val currentRoute = navController.currentDestination?.route
+                        if (currentRoute != Screen.Warning.route) {
+                            navController.navigate(Screen.Warning.route) {
                                 popUpTo(0) { inclusive = true }
                             }
                         }
@@ -195,6 +223,16 @@ fun NavGraph(
                 }
             }
 
+            // Start PM sync service
+            LaunchedEffect(Unit) {
+                try {
+                    val syncIntent = Intent(context, PmSyncService::class.java)
+                    androidx.core.content.ContextCompat.startForegroundService(context, syncIntent)
+                } catch (_: Exception) {
+                    // Service start failed — non-critical
+                }
+            }
+
             LaunchedEffect(Unit) {
                 if (!notificationPermissionRequested) {
                     notificationPermissionRequested = true
@@ -251,10 +289,16 @@ fun NavGraph(
                 onNavigateToLunarNewYear = {
                     navController.navigate(Screen.LunarNewYear.route)
                 },
+                onNavigateToNewMessage = {
+                    navController.navigate(Screen.NewMessage.route)
+                },
                 messagesContent = { modifier ->
                     ConversationListScreen(
                         onNavigateToChat = { otherUserId ->
                             navController.navigate(Screen.PrivateChat.createRoute(otherUserId))
+                        },
+                        onNavigateToGroupChat = { conversationId ->
+                            navController.navigate(Screen.GroupChat.createRoute(conversationId))
                         },
                         modifier = modifier
                     )
@@ -288,7 +332,7 @@ fun NavGraph(
             val roomId = backStackEntry.arguments?.getString("roomId") ?: return@composable
             RoomScreen(
                 roomId = roomId,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.safePopBackStack() },
                 onNavigateToUserProfile = { userId ->
                     navController.navigate(Screen.UserProfile.createRoute(userId))
                 },
@@ -305,7 +349,7 @@ fun NavGraph(
             val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
             ProfileScreen(
                 userId = userId,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.safePopBackStack() },
                 onNavigateToUserProfile = { uid ->
                     navController.navigate(Screen.UserProfile.createRoute(uid))
                 },
@@ -324,12 +368,56 @@ fun NavGraph(
             arguments = listOf(navArgument("otherUserId") { type = NavType.StringType })
         ) { backStackEntry ->
             val otherUserId = backStackEntry.arguments?.getString("otherUserId") ?: return@composable
+            val context = LocalContext.current
+            val chatViewModel: PrivateChatViewModel = org.koin.compose.viewmodel.koinViewModel(
+                key = otherUserId
+            ) { org.koin.core.parameter.parametersOf(otherUserId) }
+
+            val imagePickerLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.PickMultipleVisualMedia(10)
+            ) { uris ->
+                if (uris.isNotEmpty()) {
+                    val bytesList = uris.mapNotNull { uri ->
+                        context.contentResolver.openInputStream(uri)?.readBytes()
+                    }
+                    chatViewModel.uploadAndSendImages(bytesList)
+                }
+            }
+
+            val stickerPickerLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.PickVisualMedia()
+            ) { uri ->
+                if (uri != null) {
+                    val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+                    if (bytes != null) {
+                        chatViewModel.addStickerFromImage(bytes)
+                    }
+                }
+            }
+
+            val activeRoomId by activeRoomManager.activeRoomId.collectAsState()
+            val activeRoom by activeRoomManager.activeRoom.collectAsState()
+
             PrivateChatScreen(
                 otherUserId = otherUserId,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.safePopBackStack() },
                 onNavigateToUserProfile = { uid ->
                     navController.navigate(Screen.UserProfile.createRoute(uid))
-                }
+                },
+                onPickImages = {
+                    imagePickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onPickStickerImage = {
+                    stickerPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onNavigateToRoom = { roomId -> navigateToRoom(roomId) },
+                activeRoomId = activeRoomId,
+                activeRoomName = activeRoom?.name,
+                viewModel = chatViewModel
             )
         }
 
@@ -345,7 +433,7 @@ fun NavGraph(
             FollowListScreen(
                 userId = userId,
                 tab = tab,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.safePopBackStack() },
                 onNavigateToUserProfile = { uid ->
                     navController.navigate(Screen.UserProfile.createRoute(uid))
                 }
@@ -357,7 +445,7 @@ fun NavGraph(
             val settingsScope = rememberCoroutineScope()
 
             AppSettingsScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.safePopBackStack() },
                 onNavigateToPrivacyPolicy = {
                     navController.navigate(Screen.PrivacyPolicy.route)
                 },
@@ -378,6 +466,11 @@ fun NavGraph(
                             } catch (_: Exception) {}
                         }
                     }
+                    // Stop PM sync service
+                    try {
+                        val ctx = navController.context
+                        ctx.stopService(Intent(ctx, PmSyncService::class.java))
+                    } catch (_: Exception) {}
                     onSignOut()
                     navController.navigate(Screen.SignIn.route) {
                         popUpTo(Screen.Main.route) { inclusive = true }
@@ -388,27 +481,27 @@ fun NavGraph(
 
         composable(Screen.LunarNewYear.route) {
             LunarNewYearScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.safePopBackStack() }
             )
         }
 
         composable(Screen.PrivacyPolicy.route) {
             PrivacyPolicyScreen(
-                onAccept = { navController.popBackStack() },
-                onDecline = { navController.popBackStack() },
+                onAccept = { navController.safePopBackStack() },
+                onDecline = { navController.safePopBackStack() },
                 showActions = false
             )
         }
 
         composable(Screen.CommunityStandards.route) {
             CommunityStandardsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.safePopBackStack() }
             )
         }
 
         composable(Screen.TermsAndConditions.route) {
             TermsAndConditionsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.safePopBackStack() }
             )
         }
 
@@ -424,7 +517,7 @@ fun NavGraph(
                             userId,
                             mapOf("acceptedLegalVersion" to CURRENT_LEGAL_VERSION)
                         )
-                        navController.popBackStack()
+                        navController.safePopBackStack()
                     }
                 },
                 onViewPrivacyPolicy = {
@@ -441,7 +534,162 @@ fun NavGraph(
 
         composable(Screen.ReportReview.route) {
             ReportReviewScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.safePopBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.GroupChat.route,
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val cId = backStackEntry.arguments?.getString("conversationId") ?: return@composable
+            val context = LocalContext.current
+            val groupChatViewModel: PrivateChatViewModel = org.koin.compose.viewmodel.koinViewModel(
+                key = cId
+            ) { org.koin.core.parameter.parametersOf("", cId) }
+
+            val groupImagePickerLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.PickMultipleVisualMedia(10)
+            ) { uris ->
+                if (uris.isNotEmpty()) {
+                    val bytesList = uris.mapNotNull { uri ->
+                        context.contentResolver.openInputStream(uri)?.readBytes()
+                    }
+                    groupChatViewModel.uploadAndSendImages(bytesList)
+                }
+            }
+
+            val groupStickerPickerLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.PickVisualMedia()
+            ) { uri ->
+                if (uri != null) {
+                    val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+                    if (bytes != null) {
+                        groupChatViewModel.addStickerFromImage(bytes)
+                    }
+                }
+            }
+
+            val groupActiveRoomId by activeRoomManager.activeRoomId.collectAsState()
+            val groupActiveRoom by activeRoomManager.activeRoom.collectAsState()
+
+            PrivateChatScreen(
+                conversationId = cId,
+                onNavigateBack = { navController.safePopBackStack() },
+                onNavigateToUserProfile = { uid ->
+                    navController.navigate(Screen.UserProfile.createRoute(uid))
+                },
+                onPickImages = {
+                    groupImagePickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onPickStickerImage = {
+                    groupStickerPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onNavigateToRoom = { roomId -> navigateToRoom(roomId) },
+                activeRoomId = groupActiveRoomId,
+                activeRoomName = groupActiveRoom?.name,
+                viewModel = groupChatViewModel
+            )
+        }
+
+        composable(Screen.NewMessage.route) {
+            NewMessageScreen(
+                onNavigateBack = { navController.safePopBackStack() },
+                onNavigateToChat = { otherUserId ->
+                    navController.navigate(Screen.PrivateChat.createRoute(otherUserId)) {
+                        popUpTo(Screen.NewMessage.route) { inclusive = true }
+                    }
+                },
+                onNavigateToGroupSetup = { selectedIds ->
+                    navController.navigate(Screen.GroupSetup.createRoute(selectedIds))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.GroupSetup.route,
+            arguments = listOf(navArgument("selectedIds") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val selectedIds = backStackEntry.arguments?.getString("selectedIds") ?: return@composable
+            val groupSetupContext = LocalContext.current
+            val groupSetupViewModel: GroupSetupViewModel = org.koin.compose.viewmodel.koinViewModel(
+                key = selectedIds
+            ) { org.koin.core.parameter.parametersOf(selectedIds) }
+
+            val groupPhotoCropLauncher = rememberLauncherForActivityResult(CropContract()) { uri ->
+                if (uri != null) {
+                    val bytes = try {
+                        groupSetupContext.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    } catch (_: Exception) { null }
+                    if (bytes != null) {
+                        groupSetupViewModel.setGroupPhoto(bytes)
+                    }
+                }
+            }
+
+            val groupPhotoPickerLauncher = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->
+                if (uri != null) {
+                    groupPhotoCropLauncher.launch(
+                        CropInput(uri, 1, 1, "oval", 80, "Crop Group Photo")
+                    )
+                }
+            }
+
+            GroupSetupScreen(
+                selectedIds = selectedIds,
+                onNavigateBack = { navController.safePopBackStack() },
+                onGroupCreated = { conversationId ->
+                    navController.navigate(Screen.GroupChat.createRoute(conversationId)) {
+                        popUpTo(Screen.NewMessage.route) { inclusive = true }
+                    }
+                },
+                onPickGroupPhoto = {
+                    groupPhotoPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                viewModel = groupSetupViewModel
+            )
+        }
+
+        composable(Screen.Warning.route) {
+            val warningUserRepo: UserRepository = koinInject()
+            val warningScope = rememberCoroutineScope()
+
+            // Read the warning reason from user doc
+            var warningReason by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(Unit) {
+                val userId = authRepository.currentUserId ?: return@LaunchedEffect
+                val doc = FirebaseFirestore.getInstance()
+                    .collection("users").document(userId).get().await()
+                warningReason = doc.getString("warningReason")
+            }
+
+            WarningScreen(
+                reason = warningReason,
+                onAccept = {
+                    warningScope.launch {
+                        val userId = authRepository.currentUserId ?: return@launch
+                        FirebaseFirestore.getInstance()
+                            .collection("users").document(userId)
+                            .update(
+                                mapOf(
+                                    "hasActiveWarning" to false,
+                                    "warningAcceptedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                                )
+                            ).await()
+                        navController.navigate(Screen.Main.route) {
+                            popUpTo(Screen.Warning.route) { inclusive = true }
+                        }
+                    }
+                },
+                onViewCommunityStandards = {
+                    navController.navigate(Screen.CommunityStandards.route)
+                }
             )
         }
     }

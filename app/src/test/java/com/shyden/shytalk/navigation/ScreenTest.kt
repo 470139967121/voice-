@@ -75,6 +75,46 @@ class ScreenTest {
     }
 
     @Test
+    fun `PrivateChat route contains otherUserId placeholder`() {
+        assertEquals("chat/{otherUserId}", Screen.PrivateChat.route)
+    }
+
+    @Test
+    fun `PrivateChat createRoute substitutes otherUserId`() {
+        assertEquals("chat/user-42", Screen.PrivateChat.createRoute("user-42"))
+    }
+
+    @Test
+    fun `GroupChat route contains conversationId placeholder`() {
+        assertEquals("group_chat/{conversationId}", Screen.GroupChat.route)
+    }
+
+    @Test
+    fun `GroupChat createRoute substitutes conversationId`() {
+        assertEquals("group_chat/conv-123", Screen.GroupChat.createRoute("conv-123"))
+    }
+
+    @Test
+    fun `NewMessage has correct route`() {
+        assertEquals("new_message", Screen.NewMessage.route)
+    }
+
+    @Test
+    fun `GroupSetup route contains selectedIds placeholder`() {
+        assertEquals("group_setup/{selectedIds}", Screen.GroupSetup.route)
+    }
+
+    @Test
+    fun `GroupSetup createRoute substitutes selectedIds`() {
+        assertEquals("group_setup/id1,id2,id3", Screen.GroupSetup.createRoute("id1,id2,id3"))
+    }
+
+    @Test
+    fun `Warning has correct route`() {
+        assertEquals("warning", Screen.Warning.route)
+    }
+
+    @Test
     fun `all static routes are unique`() {
         val routes = listOf(
             Screen.SignIn.route,
@@ -86,7 +126,16 @@ class ScreenTest {
             Screen.RequiredDOB.route,
             Screen.PrivacyPolicy.route,
             Screen.LunarNewYear.route,
-            Screen.Settings.route
+            Screen.Settings.route,
+            Screen.PrivateChat.route,
+            Screen.GroupChat.route,
+            Screen.NewMessage.route,
+            Screen.GroupSetup.route,
+            Screen.CommunityStandards.route,
+            Screen.TermsAndConditions.route,
+            Screen.LegalAcceptance.route,
+            Screen.ReportReview.route,
+            Screen.Warning.route
         )
         assertEquals(routes.size, routes.toSet().size)
     }
