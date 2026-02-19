@@ -1,11 +1,14 @@
-v0.36 - Private Messaging
+v0.37 - Group Messaging & Moderation
 
-- Private messaging: text, images, replies, reactions, stickers
-- Message editing (15min window) with edit history
-- Conversation list with pin, mute, hide
-- Read receipts and typing indicators
-- Message search, privacy controls, spam protection
-- Content moderation and message reporting
-- Push notifications for new messages
-- Group chat support with admin controls
-- Dark mode fix for legal acceptance screen
+- Group chats: create groups, manage members, admin roles & permissions
+- Group settings: mute members, mod actions, notification controls
+- New message screen for starting 1-on-1 and group conversations
+- In-app report dialog for reporting users in conversations
+- Warning system with emergency tone alerts
+- Video compression and thumbnail support
+- Sticker storage with KMP support (Android & iOS)
+- In-app Community Guidelines and Terms via WebView
+- Orphaned storage cleanup (daily cron + admin purge)
+- Expanded admin panel with new moderation tools
+- Storage security rules
+- Bug fixes and performance improvements
