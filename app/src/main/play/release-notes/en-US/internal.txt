@@ -1,14 +1,12 @@
 v0.37 - Group Messaging & Moderation
 
-- Group chats: create groups, manage members, admin roles & permissions
-- Group settings: mute members, mod actions, notification controls
-- New message screen for starting 1-on-1 and group conversations
-- In-app report dialog for reporting users in conversations
+- Group chats with admin roles, permissions & mod actions
+- New message screen for starting conversations
+- In-app user reporting in conversations
 - Warning system with emergency tone alerts
 - Video compression and thumbnail support
-- Sticker storage with KMP support (Android & iOS)
-- In-app Community Guidelines and Terms via WebView
+- Sticker storage (KMP: Android & iOS)
+- Community Guidelines & Terms via in-app WebView
 - Orphaned storage cleanup (daily cron + admin purge)
-- Expanded admin panel with new moderation tools
-- Storage security rules
+- Expanded admin panel with moderation tools
 - Bug fixes and performance improvements
