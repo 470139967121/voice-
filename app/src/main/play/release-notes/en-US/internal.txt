@@ -1,13 +1,12 @@
 v0.38 - Lucky Spin & Virtual Economy
 
-- Lucky Spin dual-ring wheel game replaces old gacha
-- Light-chase animations with 1x, 10x, 100x spin tiers
-- Confetti bursts and screen shake for rare wins
-- Gift catalogue with 27 gifts across 5 rarity tiers
-- Shy Coins wallet with test purchase buttons
-- Shy Beans redemption with 10% bonus at 2000+
-- Transaction history with friendly labels
-- Daily reward system with streak milestones
-- Animated mini-wheel icon in room carousel
-- Firestore PITR and delete protection enabled
+- Lucky Spin dual-ring wheel with light-chase animations
+- 1x, 10x, 100x spin tiers with confetti and screen shake
+- 27 gifts across 5 rarity tiers
+- Shy Coins wallet with test purchases
+- Shy Beans redemption (10% bonus at 2000+)
+- Transaction history
+- Daily rewards with streak milestones
+- Animated mini-wheel in room carousel
+- Firestore PITR and delete protection
 - Bug fixes and UI improvements
