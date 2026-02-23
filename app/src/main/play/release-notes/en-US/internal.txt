@@ -1,11 +1,12 @@
-v0.41 - Gacha, Gifting & UI Fixes
+v0.42 - Room Speed-up, Broadcasts & Quality of Life
 
-- Gacha wheel locked to 16 slots (CF + client)
-- Admin: showOnWheel toggle now saves correctly
-- Broadcast banner for ALL gift sends
-- Send-all plays queued animations per gift type
-- Gift wall shows ALL gifts (locked/unlocked)
-- Backpack shows all items regardless of store flag
-- Perfect square cells: gift wall, backpack, profile
-- System/gift messages no longer hidden under carousel
-- Admin UX: keyboard hints, GCS legend, mute, toasts
+- LiveKit token pre-warming for faster room joins
+- Soft update dialog on launch (no extra network call)
+- Broadcast banners show gift quantity (3x Crown)
+- Cross-room broadcast banners restored
+- Super Shy purchase stays on sheet (no blank screen)
+- Self-destruct TTS countdown (opt-in in Settings)
+- ShyBeans redemption supports large balances (Long)
+- Broadcast banner repositioned above seats
+- Buy coins sheet available inside rooms
+- Invite shows error if person left the room

@@ -29,7 +29,6 @@ fun GiftEffectOverlay(
 ) {
     val coinValue = GiftEffectRegistry.coinValueForGiftId(event.giftId)
     val durationMs = GiftEffectRegistry.durationForValue(coinValue)
-    val label = "${event.senderName} sent ${event.giftName} to ${event.recipientName}"
 
     // Guard against double-firing (tap dismiss + animation timer both call onFinished)
     var dismissed by remember(event) { mutableStateOf(false) }
@@ -51,7 +50,6 @@ fun GiftEffectOverlay(
     ) {
         GiftAnimation(
             giftId = event.giftId,
-            label = label,
             durationMs = durationMs,
             onFinished = dismiss,
             modifier = Modifier.fillMaxSize(),
@@ -71,17 +69,9 @@ fun GiftEffectOverlay(
     isVisible: Boolean,
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
-    giftId: String = "",
-    senderName: String = "",
-    recipientName: String = "",
-    giftName: String = ""
+    giftId: String = ""
 ) {
     if (!isVisible) return
-    val event = GiftEvent(
-        giftId = giftId,
-        giftName = giftName,
-        senderName = senderName,
-        recipientName = recipientName
-    )
+    val event = GiftEvent(giftId = giftId)
     GiftEffectOverlay(event = event, onFinished = onFinished, modifier = modifier)
 }

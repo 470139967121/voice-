@@ -214,7 +214,8 @@ fun BackpackSheet(
                     onQuantityClick = {},
                     onSendClick = { viewModel.activateTrial() },
                     onSendAllClick = null,
-                    sendLabel = "Use"
+                    sendLabel = "Use",
+                    isSelfUse = true
                 )
             } else {
                 BottomBar(
@@ -692,11 +693,13 @@ private fun BottomBar(
     onQuantityClick: () -> Unit,
     onSendClick: () -> Unit,
     onSendAllClick: (() -> Unit)? = null,
-    sendLabel: String? = null
+    sendLabel: String? = null,
+    isSelfUse: Boolean = false
 ) {
     val selectedGift = state.selectedGiftId?.let { id -> giftCatalog.find { it.id == id } }
     val hasRecipients = state.selectedRecipientIds.isNotEmpty()
-    val canSend = selectedGift != null && hasRecipients && !state.isSending
+    val canSend = selectedGift != null && !state.isSending &&
+        if (isSelfUse) !hasRecipients else hasRecipients
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

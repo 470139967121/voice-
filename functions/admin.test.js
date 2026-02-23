@@ -1664,6 +1664,21 @@ describe("POST /api/cleanup/all-supershy", () => {
     expect(res.status).toBe(200);
     expect(res.body.usersCleared).toBe(0);
   });
+
+  test("resets hasClaimedSuperShyTrial for users who claimed trial", async () => {
+    mockUsers["user-1"] = { displayName: "A", hasClaimedSuperShyTrial: true };
+    mockUsers["user-2"] = { displayName: "B", hasClaimedSuperShyTrial: true, isSuperShy: true, superShyTier: "trial" };
+    mockUsers["user-3"] = { displayName: "C" };
+
+    const res = await request("POST", "/api/cleanup/all-supershy", {}, "valid");
+    expect(res.status).toBe(200);
+    expect(res.body.trialsReset).toBe(2);
+    // Verify batch.update was called with hasClaimedSuperShyTrial: false
+    const trialUpdates = mockBatch.update.mock.calls.filter(
+      ([, data]) => data.hasClaimedSuperShyTrial === false
+    );
+    expect(trialUpdates.length).toBe(2);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════

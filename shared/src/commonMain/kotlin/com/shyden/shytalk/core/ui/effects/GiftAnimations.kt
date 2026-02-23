@@ -6,22 +6,15 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -30,12 +23,10 @@ import kotlin.random.Random
 /**
  * Renders the gift animation for the given giftId over the specified duration.
  * Calls [onFinished] when the animation completes.
- * The [label] is shown as a text overlay at the top (e.g. "Alice sent Crown to Bob").
  */
 @Composable
 fun GiftAnimation(
     giftId: String,
-    label: String,
     durationMs: Long,
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
@@ -53,29 +44,8 @@ fun GiftAnimation(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // Animation canvas
         val coinValue = GiftEffectRegistry.coinValueForGiftId(giftId)
         GiftCanvas(giftId = giftId, coinValue = coinValue, progress = progress.value)
-
-        // Label overlay
-        if (label.isNotBlank()) {
-            val labelAlpha = when {
-                progress.value < 0.1f -> progress.value / 0.1f
-                progress.value > 0.85f -> (1f - progress.value) / 0.15f
-                else -> 1f
-            }.coerceIn(0f, 1f)
-
-            Text(
-                text = label,
-                color = Color.White.copy(alpha = labelAlpha),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 80.dp)
-            )
-        }
     }
 }
 

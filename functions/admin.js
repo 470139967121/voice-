@@ -2287,9 +2287,11 @@ app.post("/api/cleanup/all-spin-history", async (req, res) => {
 app.post("/api/cleanup/all-supershy", async (req, res) => {
   try {
     const db = getFirestore();
-    const snap = await db.collection("users").where("isSuperShy", "==", true).get();
     let usersCleared = 0;
+    let trialsReset = 0;
 
+    // Clear active Super Shy status
+    const snap = await db.collection("users").where("isSuperShy", "==", true).get();
     for (let i = 0; i < snap.docs.length; i += 500) {
       const batch = db.batch();
       snap.docs.slice(i, i + 500).forEach((doc) => {
@@ -2303,13 +2305,24 @@ app.post("/api/cleanup/all-supershy", async (req, res) => {
       usersCleared += Math.min(500, snap.docs.length - i);
     }
 
+    // Reset trial claim flag so users can re-claim after reset
+    const trialSnap = await db.collection("users").where("hasClaimedSuperShyTrial", "==", true).get();
+    for (let i = 0; i < trialSnap.docs.length; i += 500) {
+      const batch = db.batch();
+      trialSnap.docs.slice(i, i + 500).forEach((doc) => {
+        batch.update(doc.ref, { hasClaimedSuperShyTrial: false });
+      });
+      await batch.commit();
+      trialsReset += Math.min(500, trialSnap.docs.length - i);
+    }
+
     await writeAuditLog(db, {
       adminUid: req.admin.uid,
       action: "cleanup_all_supershy",
-      note: `Removed Super Shy from ${usersCleared} users`,
+      note: `Removed Super Shy from ${usersCleared} users, reset ${trialsReset} trial claims`,
     });
 
-    return res.json({ success: true, usersCleared });
+    return res.json({ success: true, usersCleared, trialsReset });
   } catch (err) {
     console.error("POST cleanup/all-supershy error:", err);
     return res.status(500).json({ error: err.message });

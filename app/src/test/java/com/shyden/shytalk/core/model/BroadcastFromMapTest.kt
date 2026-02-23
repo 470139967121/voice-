@@ -111,4 +111,59 @@ class BroadcastFromMapTest {
 
         assertEquals(BroadcastType.GIFT_SEND, broadcast.type)
     }
+
+    // ===== quantity field =====
+
+    @Test
+    fun `fromMap parses quantity from Long`() {
+        val map = mapOf<String, Any?>(
+            "type" to "GIFT_SEND",
+            "senderName" to "Alice",
+            "recipientName" to "Bob",
+            "giftName" to "Crown",
+            "giftCoinValue" to 800L,
+            "quantity" to 3L
+        )
+
+        val broadcast = Broadcast.fromMap(map, "bq1")
+
+        assertEquals(3, broadcast.quantity)
+    }
+
+    @Test
+    fun `fromMap defaults quantity to 1 when missing`() {
+        val map = mapOf<String, Any?>(
+            "senderName" to "Alice",
+            "giftName" to "Crown"
+        )
+
+        val broadcast = Broadcast.fromMap(map, "bq2")
+
+        assertEquals(1, broadcast.quantity)
+    }
+
+    @Test
+    fun `fromMap defaults quantity to 1 when null`() {
+        val map = mapOf<String, Any?>("quantity" to null)
+
+        val broadcast = Broadcast.fromMap(map, "bq3")
+
+        assertEquals(1, broadcast.quantity)
+    }
+
+    @Test
+    fun `fromMap defaults quantity to 1 when wrong type`() {
+        val map = mapOf<String, Any?>("quantity" to "not a number")
+
+        val broadcast = Broadcast.fromMap(map, "bq4")
+
+        assertEquals(1, broadcast.quantity)
+    }
+
+    @Test
+    fun `fromMap empty map defaults quantity to 1`() {
+        val broadcast = Broadcast.fromMap(emptyMap(), "bq5")
+
+        assertEquals(1, broadcast.quantity)
+    }
 }

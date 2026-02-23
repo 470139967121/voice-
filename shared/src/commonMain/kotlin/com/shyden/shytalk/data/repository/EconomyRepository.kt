@@ -17,7 +17,7 @@ interface EconomyRepository {
     suspend fun sendGiftDirect(recipientId: String, giftId: String, quantity: Int = 1): Resource<Map<String, Any?>>
     suspend fun sendGiftBatch(recipientIds: List<String>, giftId: String, quantity: Int, fromBackpack: Boolean): Resource<Map<String, Any?>>
     suspend fun sendEntireBackpack(recipientId: String): Resource<Map<String, Any?>>
-    suspend fun redeemBeans(amount: Int): Resource<Map<String, Any?>>
+    suspend fun redeemBeans(amount: Long): Resource<Map<String, Any?>>
     suspend fun purchaseCoins(productId: String, purchaseToken: String): Resource<Map<String, Any?>>
     suspend fun purchaseSubscription(productId: String, purchaseToken: String): Resource<Map<String, Any?>>
     suspend fun getCoinPackages(): Resource<List<CoinPackage>>

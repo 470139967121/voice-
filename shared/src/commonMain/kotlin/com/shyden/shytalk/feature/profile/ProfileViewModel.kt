@@ -44,7 +44,8 @@ data class ProfileUiState(
     val isTargetSuspended: Boolean = false,
     val isSubmittingReport: Boolean = false,
     val reportSubmitted: Boolean = false,
-    val reportError: String? = null
+    val reportError: String? = null,
+    val isPurchasingSuperShy: Boolean = false
 )
 
 class ProfileViewModel(
@@ -509,13 +510,14 @@ class ProfileViewModel(
 
     fun testPurchaseSuperShy(productId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isPurchasingSuperShy = true) }
             when (val result = economyRepository.purchaseSubscription(productId, "test_token")) {
                 is Resource.Success -> {
+                    _uiState.update { it.copy(isPurchasingSuperShy = false) }
                     loadProfile(null)
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message ?: "Test purchase failed") }
+                    _uiState.update { it.copy(isPurchasingSuperShy = false, error = result.message ?: "Test purchase failed") }
                 }
                 is Resource.Loading -> {}
             }

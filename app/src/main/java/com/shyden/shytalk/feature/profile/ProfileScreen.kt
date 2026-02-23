@@ -1263,10 +1263,10 @@ private fun ProfileContent(
         SuperShyBottomSheet(
             user = user,
             onTestPurchase = if (onTestPurchaseSuperShy != null) { productId ->
-                showSuperShySheet = false
                 onTestPurchaseSuperShy(productId)
             } else null,
             onClaimTrial = onClaimTrial,
+            isPurchasing = uiState.isPurchasingSuperShy,
             onDismiss = { showSuperShySheet = false }
         )
     }

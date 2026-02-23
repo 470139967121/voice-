@@ -782,33 +782,45 @@ class RoomViewModel(
                 }
             }
             val userName = _uiState.value.currentUserName
-            roomRepository.leaveAllRooms(userId, exceptRoomId = roomId)
-            roomRepository.recordFirstJoinTimestamp(roomId, userId)
-            roomRepository.joinRoom(roomId, userId)
-            presenceService.setPresence(roomId, userId)
-            userRepository.updateProfile(userId, mapOf("currentRoomId" to roomId))
+
+            // Mute setup if already seated (owner re-entering)
+            val voiceRoom = room?.voiceRoomName
+            if (!voiceRoom.isNullOrEmpty()) {
+                val seatEntry = room.findUserSeat(userId)
+                if (seatEntry != null) {
+                    isSeated = true
+                    if (!seatEntry.value.isMuted) {
+                        roomRepository.toggleMute(roomId, seatEntry.key.toInt(), true)
+                    }
+                }
+            }
+
             _uiState.update { it.copy(hasJoined = true) }
             refilterPendingRequests()
 
             // Start foreground service via RoomLifecycleManager
             roomLifecycleManager.trackRoom(roomId)
 
-            // Join voice room — always start muted (Bug #6)
-            val voiceRoom = room?.voiceRoomName
+            // Run all independent operations in parallel for faster room join
+            // Firestore room writes (sequential — same document)
+            launch {
+                roomRepository.leaveAllRooms(userId, exceptRoomId = roomId)
+                roomRepository.recordFirstJoinTimestamp(roomId, userId)
+                roomRepository.joinRoom(roomId, userId)
+            }
+            // RTDB presence (independent)
+            launch { presenceService.setPresence(roomId, userId) }
+            // User profile update (different document)
+            launch { userRepository.updateProfile(userId, mapOf("currentRoomId" to roomId)) }
+            // Voice join — biggest bottleneck, runs in parallel with writes
             if (!voiceRoom.isNullOrEmpty()) {
-                val seatEntry = room.findUserSeat(userId)
-                if (seatEntry != null) {
-                    isSeated = true
-                    // Ensure Firestore seat shows muted so the icon is correct
-                    if (!seatEntry.value.isMuted) {
-                        roomRepository.toggleMute(roomId, seatEntry.key.toInt(), true)
-                    }
+                launch {
+                    voiceService.joinRoom(voiceRoom, userId)
+                    voiceService.setMicrophoneEnabled(false)
+                    voiceService.setAudioMode(false)
                 }
-                voiceService.joinRoom(voiceRoom, userId)
-                voiceService.setMicrophoneEnabled(false)
-                voiceService.setAudioMode(false)
                 // Timeout: unblock room if voice doesn't connect in time
-                viewModelScope.launch {
+                launch {
                     delay(VOICE_CONNECT_TIMEOUT_MS)
                     if (!_uiState.value.isVoiceReady) {
                         _uiState.update { it.copy(isVoiceReady = true, isVoiceUnavailable = true) }
@@ -818,14 +830,16 @@ class RoomViewModel(
                 // No voice room — mark ready so the room UI is shown immediately
                 _uiState.update { it.copy(isVoiceReady = true) }
             }
-
+            // Join message (independent)
             if (userName.isNotEmpty()) {
-                messageRepository.sendJoinMessage(
-                    roomId,
-                    userId,
-                    userName,
-                    "$userName joined the room"
-                )
+                launch {
+                    messageRepository.sendJoinMessage(
+                        roomId,
+                        userId,
+                        userName,
+                        "$userName joined the room"
+                    )
+                }
             }
         }
     }
@@ -1112,6 +1126,12 @@ class RoomViewModel(
             // Don't invite someone who is already seated or already invited
             if (room.findUserSeat(userId) != null) return@launch
             if (userId in room.pendingInvites) return@launch
+
+            // Check the person is still in the room
+            if (userId !in room.participantIds) {
+                _uiState.update { it.copy(error = "$userName has left the room") }
+                return@launch
+            }
 
             // Owner can always invite; hosts only when requireApproval is OFF
             if (role == RoomRole.ATTENDEE) return@launch

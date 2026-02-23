@@ -14,4 +14,5 @@ interface VoiceService {
     fun setMicrophoneEnabled(enabled: Boolean)
     fun setAudioMode(voiceMode: Boolean)
     fun clearError()
+    fun prewarmToken(roomName: String, userId: String)
 }

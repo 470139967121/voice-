@@ -105,13 +105,14 @@ fun BroadcastBanner(
     val isGachaWin = broadcast.type == BroadcastType.GACHA_WIN
     val gradient = if (isGachaWin) gachaWinGradient else giftSendGradient
     val icon = if (isGachaWin) Icons.Filled.Stars else Icons.Filled.CardGiftcard
+    val qtyPrefix = if (broadcast.quantity > 1) "${broadcast.quantity}x " else ""
     val coinText = if (broadcast.giftCoinValue > 0) {
         " (${broadcast.giftCoinValue.formatWithCommas()})"
     } else ""
     val text = if (isGachaWin) {
-        "${broadcast.senderName} won ${broadcast.giftName}$coinText from Lucky Spin!"
+        "${broadcast.senderName} won $qtyPrefix${broadcast.giftName}$coinText from Lucky Spin!"
     } else {
-        "${broadcast.senderName} sent ${broadcast.giftName}$coinText to ${broadcast.recipientName}!"
+        "${broadcast.senderName} sent $qtyPrefix${broadcast.giftName}$coinText to ${broadcast.recipientName}!"
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {

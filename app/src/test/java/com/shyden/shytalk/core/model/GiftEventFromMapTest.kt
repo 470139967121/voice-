@@ -168,4 +168,70 @@ class GiftEventFromMapTest {
 
         assertTrue(event.timestamp in before..after)
     }
+
+    // ===== quantity field =====
+
+    @Test
+    fun `fromMap parses quantity from Long`() {
+        val map = mapOf<String, Any?>("quantity" to 5L)
+        val event = GiftEvent.fromMap(map)
+        assertEquals(5, event.quantity)
+    }
+
+    @Test
+    fun `fromMap defaults quantity to 1 when missing`() {
+        val map = mapOf<String, Any?>(
+            "senderId" to "sender-1",
+            "giftId" to "crown"
+        )
+        val event = GiftEvent.fromMap(map)
+        assertEquals(1, event.quantity)
+    }
+
+    @Test
+    fun `fromMap defaults quantity to 1 when null`() {
+        val map = mapOf<String, Any?>("quantity" to null)
+        val event = GiftEvent.fromMap(map)
+        assertEquals(1, event.quantity)
+    }
+
+    @Test
+    fun `fromMap defaults quantity to 1 when wrong type`() {
+        val map = mapOf<String, Any?>("quantity" to "not a number")
+        val event = GiftEvent.fromMap(map)
+        assertEquals(1, event.quantity)
+    }
+
+    @Test
+    fun `default constructor has quantity 1`() {
+        val event = GiftEvent()
+        assertEquals(1, event.quantity)
+    }
+
+    @Test
+    fun `fromMap parses complete map including quantity`() {
+        val map = mapOf<String, Any?>(
+            "senderId" to "sender-1",
+            "senderName" to "Alice",
+            "recipientId" to "recipient-1",
+            "recipientName" to "Bob",
+            "giftId" to "crown",
+            "giftName" to "Crown",
+            "coinValue" to 800L,
+            "quantity" to 3L,
+            "timestamp" to ts
+        )
+
+        val event = GiftEvent.fromMap(map)
+
+        assertEquals("sender-1", event.senderId)
+        assertEquals("Alice", event.senderName)
+        assertEquals("recipient-1", event.recipientId)
+        assertEquals("Bob", event.recipientName)
+        assertEquals("crown", event.giftId)
+        assertEquals("Crown", event.giftName)
+        assertEquals(800, event.coinValue)
+        assertEquals(3, event.quantity)
+        assertEquals(tsMillis, event.timestamp)
+    }
 }

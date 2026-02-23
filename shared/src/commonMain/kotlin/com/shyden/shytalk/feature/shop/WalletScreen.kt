@@ -217,10 +217,10 @@ private fun CoinsTab(
 private fun BeansTab(
     beanBalance: Long,
     isPurchasing: Boolean,
-    onRedeem: (Int) -> Unit
+    onRedeem: (Long) -> Unit
 ) {
-    val presets = listOf(100, 500, 1_000, 2_000, 5_000)
-    var confirmAmount by remember { mutableStateOf<Int?>(null) }
+    val presets = listOf(100L, 500L, 1_000L, 2_000L, 5_000L)
+    var confirmAmount by remember { mutableStateOf<Long?>(null) }
 
     Column(
         modifier = Modifier
@@ -247,16 +247,16 @@ private fun BeansTab(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Preset buttons in 2-column grid
-        val rows = (presets + -1).chunked(2) // -1 sentinel for "Redeem All"
+        val rows = (presets + -1L).chunked(2) // -1 sentinel for "Redeem All"
         rows.forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 row.forEach { preset ->
-                    val isRedeemAll = preset == -1
-                    val amount = if (isRedeemAll) beanBalance.toInt() else preset
-                    val label = if (isRedeemAll) "Redeem All" else formatNumber(preset.toLong())
+                    val isRedeemAll = preset == -1L
+                    val amount = if (isRedeemAll) beanBalance else preset
+                    val label = if (isRedeemAll) "Redeem All" else formatNumber(preset)
                     val hasBonus = amount >= 2_000
                     val enabled = !isPurchasing && amount > 0 && amount <= beanBalance
 
@@ -295,12 +295,12 @@ private fun BeansTab(
 
     // Confirmation dialog
     confirmAmount?.let { amount ->
-        val coins = if (amount >= 2_000) (amount * 1.1).toInt() else amount
+        val coins = if (amount >= 2_000) (amount * 1.1).toLong() else amount
         AlertDialog(
             onDismissRequest = { confirmAmount = null },
             title = { Text("Confirm Redemption") },
             text = {
-                Text("Redeem ${formatNumber(amount.toLong())} beans for ${formatNumber(coins.toLong())} coins?")
+                Text("Redeem ${formatNumber(amount)} beans for ${formatNumber(coins)} coins?")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -371,5 +371,59 @@ internal fun CoinPackageCard(pkg: CoinPackage, enabled: Boolean = true, onClick:
             Spacer(modifier = Modifier.height(4.dp))
             Text(pkg.displayPrice, style = MaterialTheme.typography.bodyMedium)
         }
+    }
+}
+
+/**
+ * Lightweight coin-purchase content for use inside a ModalBottomSheet.
+ * Keeps the user in the room while purchasing coins.
+ */
+@Composable
+fun CoinPurchaseSheetContent(
+    coinBalance: Long,
+    coinPackages: List<CoinPackage>,
+    isPurchasing: Boolean,
+    onTestPurchase: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        BalanceCard(
+            label = "Shy Coins",
+            amount = coinBalance,
+            icon = "\uD83E\uDE99",
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Buy Shy Coins", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(0.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.heightIn(max = 240.dp)
+        ) {
+            items(coinPackages) { pkg ->
+                val totalCoins = pkg.coins + pkg.bonusCoins
+                CoinPackageCard(
+                    pkg = pkg,
+                    enabled = !isPurchasing,
+                    onClick = {
+                        onTestPurchase(totalCoins)
+                        onDismiss()
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }

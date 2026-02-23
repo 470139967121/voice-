@@ -169,6 +169,7 @@ fun AppSettingsScreen(
                 onSetDndEndHour = { viewModel.setDndEndHour(it) },
                 onSetDndEndMinute = { viewModel.setDndEndMinute(it) },
                 onSetMinGiftAnimationValue = { viewModel.setMinGiftAnimationValue(it) },
+                onToggleSelfDestructAlert = { viewModel.toggleSelfDestructAlert() },
                 snackbarHostState = snackbarHostState
             )
             SettingsPage.Permissions -> PermissionsPage(
@@ -650,6 +651,7 @@ private fun NotificationsPage(
     onSetDndEndHour: (Int) -> Unit,
     onSetDndEndMinute: (Int) -> Unit,
     onSetMinGiftAnimationValue: (Int) -> Unit,
+    onToggleSelfDestructAlert: () -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
     SettingsSubPage(
@@ -847,6 +849,23 @@ private fun NotificationsPage(
                 onValueChangeFinished = { onSetMinGiftAnimationValue(sliderValue.toInt()) },
                 valueRange = 0f..5000f,
                 steps = 9
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Room Alerts",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            SettingsSwitch(
+                title = "Self-Destruct Countdown",
+                description = "Play a voice announcement when a room's 5-minute self-destruct timer starts or stops.",
+                checked = uiState.selfDestructAlertEnabled,
+                onCheckedChange = { onToggleSelfDestructAlert() }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
