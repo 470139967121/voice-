@@ -61,7 +61,10 @@ data class User(
     val pityCounter: Int = 0,
     val loginStreak: Int = 0,
     val lastLoginDate: String? = null,
-    val lastLoginRewardDate: String? = null
+    val lastLoginRewardDate: String? = null,
+    val aliases: Map<String, String> = emptyMap(),
+    val minGiftAnimationValue: Int = 0,
+    val hasClaimedSuperShyTrial: Boolean = false
 ) {
     val isActivelySuspended: Boolean
         get() {
@@ -127,7 +130,10 @@ data class User(
         "pityCounter" to pityCounter,
         "loginStreak" to loginStreak,
         "lastLoginDate" to lastLoginDate,
-        "lastLoginRewardDate" to lastLoginRewardDate
+        "lastLoginRewardDate" to lastLoginRewardDate,
+        "aliases" to aliases,
+        "minGiftAnimationValue" to minGiftAnimationValue,
+        "hasClaimedSuperShyTrial" to hasClaimedSuperShyTrial
     )
 
     companion object {
@@ -193,7 +199,13 @@ data class User(
             pityCounter = (map["pityCounter"] as? Long)?.toInt() ?: 0,
             loginStreak = (map["loginStreak"] as? Long)?.toInt() ?: 0,
             lastLoginDate = map["lastLoginDate"] as? String,
-            lastLoginRewardDate = map["lastLoginRewardDate"] as? String
+            lastLoginRewardDate = map["lastLoginRewardDate"] as? String,
+            aliases = (map["aliases"] as? Map<*, *>)
+                ?.entries
+                ?.mapNotNull { (k, v) -> (k as? String)?.let { key -> (v as? String)?.let { value -> key to value } } }
+                ?.toMap() ?: emptyMap(),
+            minGiftAnimationValue = (map["minGiftAnimationValue"] as? Long)?.toInt() ?: 0,
+            hasClaimedSuperShyTrial = map["hasClaimedSuperShyTrial"] as? Boolean ?: false
         )
     }
 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Backpack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material3.Badge
@@ -32,12 +35,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.shyden.shytalk.ui.theme.SpeakingGreen
 import com.shyden.shytalk.core.model.Message
@@ -54,6 +59,7 @@ fun ChatPanel(
     seats: Map<String, Seat>,
     userMap: Map<String, User>,
     isOwnerOrHost: Boolean = false,
+    isVoiceUnavailable: Boolean = false,
     onToggleMic: (Int) -> Unit = {},
     onSendMessage: (String) -> Unit,
     onTapUser: (String) -> Unit,
@@ -61,10 +67,24 @@ fun ChatPanel(
     onToggleMessages: (() -> Unit)? = null,
     unreadCount: Int = 0,
     onOpenBackpack: (() -> Unit)? = null,
+    editingMessageId: String? = null,
+    editingMessageText: String = "",
+    onStartEditMessage: (messageId: String, text: String) -> Unit = { _, _ -> },
+    onEditMessage: (String) -> Unit = {},
+    onCancelEdit: () -> Unit = {},
+    aliases: Map<String, String> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+    val isEditing = editingMessageId != null
     var messageText by rememberSaveable { mutableStateOf("") }
+
+    // When entering edit mode, set the input field to the message being edited
+    LaunchedEffect(editingMessageId) {
+        if (editingMessageId != null) {
+            messageText = editingMessageText
+        }
+    }
 
     val seatedUserIds = remember(seats) {
         seats.values.asSequence()
@@ -81,11 +101,16 @@ fun ChatPanel(
     val isSeated = currentSeatEntry != null
     val isSelfMuted = currentSeatEntry?.value?.isMuted ?: false
 
-    // Auto-scroll: with reverseLayout=true, index 0 is the bottom (newest message).
-    // When a new message is inserted at index 0, the previous first visible shifts to
-    // index 1, so use <= 1 to still count that as "at bottom".
+    // Track whether user is near the bottom continuously via snapshotFlow
+    val isNearBottom = remember { mutableStateOf(true) }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { index -> isNearBottom.value = index <= 2 }
+    }
+
+    // Auto-scroll when new messages arrive and user is near bottom
     LaunchedEffect(messages.size) {
-        if (listState.firstVisibleItemIndex <= 1) {
+        if (isNearBottom.value) {
             listState.animateScrollToItem(0)
         }
     }
@@ -102,7 +127,7 @@ fun ChatPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 8.dp)
+                .padding(start = 8.dp, end = 80.dp)
         ) {
             items(reversedMessages, key = { it.messageId }) { message ->
                 val senderUser = userMap[message.senderId]
@@ -115,7 +140,11 @@ fun ChatPanel(
                     isUserSeated = isUserSeated,
                     isSelf = isSelf,
                     onTapUser = { onTapUser(message.senderId) },
-                    onInvite = { onInviteUser(message.senderId, message.senderName) }
+                    onInvite = { onInviteUser(message.senderId, message.senderName) },
+                    onEditMessage = if (isSelf && message.type == com.shyden.shytalk.core.model.MessageType.TEXT) {
+                        { onStartEditMessage(message.messageId, message.text) }
+                    } else null,
+                    aliases = aliases
                 )
             }
         }
@@ -127,25 +156,46 @@ fun ChatPanel(
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (isEditing) {
+                IconButton(onClick = {
+                    messageText = ""
+                    onCancelEdit()
+                }) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Cancel edit",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
             OutlinedTextField(
                 value = messageText,
                 onValueChange = { if (it.length <= 200) messageText = it },
-                placeholder = { Text("Type a message...") },
-                modifier = Modifier.weight(0.6f),
-                singleLine = true
+                placeholder = { Text(if (isEditing) "Edit message..." else "Type a message...") },
+                modifier = Modifier.weight(0.6f).testTag("room_chatInput"),
+                singleLine = true,
+                leadingIcon = if (isEditing) {
+                    { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                } else null
             )
 
             IconButton(
                 onClick = {
                     if (messageText.isNotBlank()) {
-                        onSendMessage(messageText)
+                        if (isEditing) {
+                            onEditMessage(messageText)
+                        } else {
+                            onSendMessage(messageText)
+                        }
                         messageText = ""
                     }
-                }
+                },
+                modifier = Modifier.testTag("room_sendButton")
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
+                    contentDescription = if (isEditing) "Save edit" else "Send",
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -156,9 +206,11 @@ fun ChatPanel(
                     currentSeatEntry?.key?.toIntOrNull()?.let { onToggleMic(it) }
                 }) {
                     Icon(
-                        imageVector = if (isSelfMuted) Icons.Default.MicOff else Icons.Default.Mic,
-                        contentDescription = if (isSelfMuted) "Unmute" else "Mute",
-                        tint = if (isSelfMuted) MaterialTheme.colorScheme.error else SpeakingGreen
+                        imageVector = if (isVoiceUnavailable || isSelfMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                        contentDescription = if (isVoiceUnavailable) "Voice unavailable" else if (isSelfMuted) "Unmute" else "Mute",
+                        tint = if (isVoiceUnavailable) MaterialTheme.colorScheme.onSurfaceVariant
+                              else if (isSelfMuted) MaterialTheme.colorScheme.error
+                              else SpeakingGreen
                     )
                 }
             }

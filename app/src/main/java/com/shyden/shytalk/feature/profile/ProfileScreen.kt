@@ -13,10 +13,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import com.shyden.shytalk.core.crop.CropContract
 import com.shyden.shytalk.core.crop.CropInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +31,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,10 +53,7 @@ import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import android.app.Activity
 import android.content.Intent
-import com.android.billingclient.api.BillingClient
-import com.shyden.shytalk.data.remote.BillingService
 import org.koin.compose.koinInject
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -94,13 +97,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.shyden.shytalk.core.model.BackpackItem
+import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.ui.StyledDisplayName
 import com.shyden.shytalk.core.ui.SuperShyGold
 import com.shyden.shytalk.core.util.calculateAge
 import com.shyden.shytalk.core.util.currentTimeMillis
+import com.shyden.shytalk.feature.gifting.GiftingViewModel
 import com.shyden.shytalk.feature.messaging.ReportUserDialog
 import com.shyden.shytalk.feature.shop.SuperShyBottomSheet
 import com.shyden.shytalk.core.util.Constants
@@ -241,42 +248,9 @@ fun ProfileScreen(
     val user = uiState.user
     val isOwn = uiState.isOwnProfile
 
-    // Billing setup for Super Shy purchases
-    val billingService: BillingService = koinInject()
-    val billingScope = rememberCoroutineScope()
-    val activity = LocalContext.current as? Activity
-
-    LaunchedEffect(Unit) {
-        billingService.purchaseEvents.collect { result ->
-            if (result.success) {
-                viewModel.validateSuperShyPurchase(result.productId, result.purchaseToken)
-            } else if (result.errorMessage != null) {
-                snackbarHostState.showSnackbar(result.errorMessage!!)
-            }
-        }
-    }
-
-    val onPurchaseSuperShy: (String) -> Unit = { productId ->
-        if (activity != null) {
-            billingScope.launch {
-                val type = if (productId == "super_shy_lifetime")
-                    BillingClient.ProductType.INAPP
-                else BillingClient.ProductType.SUBS
-
-                val products = billingService.queryProducts(listOf(productId), type)
-                val details = products.firstOrNull()
-                if (details == null) {
-                    snackbarHostState.showSnackbar("Product not available")
-                    return@launch
-                }
-
-                val offerToken = if (type == BillingClient.ProductType.SUBS) {
-                    details.subscriptionOfferDetails?.firstOrNull()?.offerToken
-                } else null
-
-                billingService.launchPurchaseFlow(activity, details, offerToken)
-            }
-        }
+    // Test purchase for Super Shy — bypasses BillingClient, calls validatePurchase directly
+    val onTestPurchaseSuperShy: (String) -> Unit = { productId ->
+        viewModel.testPurchaseSuperShy(productId)
     }
 
     // If this is embedded in a tab (no scaffold needed), just render the content
@@ -309,7 +283,8 @@ fun ProfileScreen(
                 onNavigateToRoom = onNavigateToRoom,
                 onNavigateToChat = onNavigateToChat,
                 onNavigateToWallet = onNavigateToWallet,
-                onPurchaseSuperShy = onPurchaseSuperShy,
+                onTestPurchaseSuperShy = onTestPurchaseSuperShy,
+                onClaimTrial = { viewModel.claimSuperShyTrial() },
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier.fillMaxSize()
             )
@@ -374,7 +349,8 @@ fun ProfileScreen(
                 onNavigateToRoom = onNavigateToRoom,
                 onNavigateToChat = onNavigateToChat,
                 onNavigateToWallet = onNavigateToWallet,
-                onPurchaseSuperShy = onPurchaseSuperShy,
+                onTestPurchaseSuperShy = onTestPurchaseSuperShy,
+                onClaimTrial = { viewModel.claimSuperShyTrial() },
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxSize()
@@ -519,7 +495,8 @@ private fun ProfileContent(
     onNavigateToRoom: ((String) -> Unit)? = null,
     onNavigateToChat: ((String) -> Unit)? = null,
     onNavigateToWallet: (() -> Unit)? = null,
-    onPurchaseSuperShy: (String) -> Unit = {},
+    onTestPurchaseSuperShy: ((String) -> Unit)? = null,
+    onClaimTrial: (() -> Unit)? = null,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -548,7 +525,8 @@ private fun ProfileContent(
                     Text(
                         text = user.displayName,
                         style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.testTag("profile_displayName")
                     )
                     if (user.uniqueId != 0L) {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -633,6 +611,10 @@ private fun ProfileContent(
         key = user.uid
     ) { org.koin.core.parameter.parametersOf(user.uid) }
     val giftWallState by giftWallViewModel.uiState.collectAsStateWithLifecycle()
+
+    // Backpack (own profile only)
+    val giftingViewModel: GiftingViewModel? = if (isOwn) koinInject() else null
+    val giftingState = giftingViewModel?.uiState?.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -879,9 +861,10 @@ private fun ProfileContent(
                 }
 
                 // Nationality flag badge on profile photo
-                if (!uiState.isEditing && user.nationality != null) {
+                val nationality = user.nationality
+                if (!uiState.isEditing && nationality != null) {
                     FlagBadge(
-                        countryCode = user.nationality!!,
+                        countryCode = nationality,
                         badgeSize = 28.dp,
                         modifier = Modifier.align(Alignment.BottomEnd)
                     )
@@ -1002,7 +985,8 @@ private fun ProfileContent(
                     StyledDisplayName(
                         displayName = user.displayName,
                         isSuperShy = user.isSuperShy,
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.testTag("profile_displayName")
                     )
                     if (uiState.isOnline) {
                         Spacer(modifier = Modifier.width(8.dp))
@@ -1129,7 +1113,7 @@ private fun ProfileContent(
                         // Wallet button
                         Button(
                             onClick = { onNavigateToWallet?.invoke() },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).testTag("profile_walletButton"),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
                             ),
@@ -1161,7 +1145,7 @@ private fun ProfileContent(
                         if (uiState.isFollowingTarget) {
                             OutlinedButton(
                                 onClick = onFollowToggle,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("profile_followButton")
                             ) {
                                 Icon(Icons.Default.PersonRemove, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -1170,7 +1154,7 @@ private fun ProfileContent(
                         } else {
                             Button(
                                 onClick = onFollowToggle,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("profile_followButton")
                             ) {
                                 Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -1180,7 +1164,7 @@ private fun ProfileContent(
                         if (onNavigateToChat != null) {
                             OutlinedButton(
                                 onClick = { onNavigateToChat(user.uid) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("profile_messageButton")
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -1230,8 +1214,9 @@ private fun ProfileContent(
                     }
                 }
 
-                // Gift Wall Tab
+                // Gift Wall / Backpack Tabs
                 Spacer(modifier = Modifier.height(16.dp))
+                val tabCount = if (isOwn) 2 else 1
                 var selectedTab by rememberSaveable { mutableIntStateOf(0) }
                 PrimaryTabRow(selectedTabIndex = selectedTab) {
                     Tab(
@@ -1239,17 +1224,34 @@ private fun ProfileContent(
                         onClick = { selectedTab = 0 },
                         text = { Text("Gift Wall") }
                     )
+                    if (isOwn) {
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            text = { Text("Backpack") }
+                        )
+                    }
                 }
 
-                // Gift Wall content inline (non-scrolling since parent scrolls)
-                GiftWallContent(
-                    state = giftWallState,
-                    onSelectGift = { giftWallViewModel.selectGift(it) },
-                    onDismissDetails = { giftWallViewModel.dismissDetails() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(400.dp)
-                )
+                when (selectedTab) {
+                    0 -> GiftWallContent(
+                        state = giftWallState,
+                        onSelectGift = { giftWallViewModel.selectGift(it) },
+                        onDismissDetails = { giftWallViewModel.dismissDetails() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(400.dp)
+                    )
+                    1 -> if (isOwn && giftingState != null) {
+                        BackpackContent(
+                            backpackItems = giftingState.value.backpackItems,
+                            giftCatalog = giftingState.value.giftCatalog,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(400.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -1260,13 +1262,126 @@ private fun ProfileContent(
     if (showSuperShySheet) {
         SuperShyBottomSheet(
             user = user,
-            onPurchase = { productId ->
+            onTestPurchase = if (onTestPurchaseSuperShy != null) { productId ->
                 showSuperShySheet = false
-                onPurchaseSuperShy(productId)
-            },
+                onTestPurchaseSuperShy(productId)
+            } else null,
+            onClaimTrial = onClaimTrial,
             onDismiss = { showSuperShySheet = false }
         )
     }
 }
 
 private fun formatBalance(value: Long): String = "%,d".format(value)
+
+@Composable
+private fun BackpackContent(
+    backpackItems: List<BackpackItem>,
+    giftCatalog: List<Gift>,
+    modifier: Modifier = Modifier
+) {
+    val ownedGifts = remember(backpackItems, giftCatalog) {
+        backpackItems
+            .filter { it.quantity > 0 }
+            .mapNotNull { item ->
+                giftCatalog.find { it.id == item.giftId }?.let { gift -> gift to item.quantity }
+            }
+            .sortedByDescending { it.first.coinValue }
+    }
+
+    if (ownedGifts.isEmpty()) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text(
+                text = "Your backpack is empty.\nWin gifts from Lucky Spin!",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = modifier
+        ) {
+            items(ownedGifts, key = { it.first.id }) { (gift, quantity) ->
+                BackpackItemCell(gift = gift, quantity = quantity)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackpackItemCell(
+    gift: Gift,
+    quantity: Int,
+    modifier: Modifier = Modifier
+) {
+    val cellColor = MaterialTheme.colorScheme.onSurface
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(12.dp))
+            .background(cellColor.copy(alpha = 0.06f))
+            .border(1.dp, cellColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+            .padding(8.dp)
+    ) {
+        Box(contentAlignment = Alignment.TopEnd) {
+            if (gift.iconUrl.isNotBlank()) {
+                AsyncImage(
+                    model = gift.iconUrl,
+                    contentDescription = gift.name,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.size(40.dp),
+                    shape = CircleShape,
+                    color = cellColor.copy(alpha = 0.10f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = gift.name.take(2).uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = cellColor
+                        )
+                    }
+                }
+            }
+            // Quantity badge
+            if (quantity > 1) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "$quantity",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontSize = 9.sp
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = gift.name,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+    }
+}
