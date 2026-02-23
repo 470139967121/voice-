@@ -14,12 +14,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -120,6 +124,39 @@ fun RoomSettingsSheet(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
             }
+
+            // Gift Animations filter (per-user setting)
+            Text(
+                text = "Gift Animations",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (uiState.minGiftAnimationValue == 0) "Showing all gift animations"
+                       else "Only showing animations worth ${uiState.minGiftAnimationValue}+ coins",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Filter out animations for cheaper gifts.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            var sliderValue by remember(uiState.minGiftAnimationValue) {
+                mutableStateOf(uiState.minGiftAnimationValue.toFloat())
+            }
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                onValueChangeFinished = { viewModel.setMinGiftAnimationValue(sliderValue.toInt()) },
+                valueRange = 0f..10000f
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Close Room Button (owner only)
             if (isOwner) {

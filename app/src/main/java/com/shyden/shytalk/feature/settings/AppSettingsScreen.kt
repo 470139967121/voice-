@@ -46,7 +46,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -168,7 +167,6 @@ fun AppSettingsScreen(
                 onSetDndStartMinute = { viewModel.setDndStartMinute(it) },
                 onSetDndEndHour = { viewModel.setDndEndHour(it) },
                 onSetDndEndMinute = { viewModel.setDndEndMinute(it) },
-                onSetMinGiftAnimationValue = { viewModel.setMinGiftAnimationValue(it) },
                 onToggleSelfDestructAlert = { viewModel.toggleSelfDestructAlert() },
                 snackbarHostState = snackbarHostState
             )
@@ -650,7 +648,6 @@ private fun NotificationsPage(
     onSetDndStartMinute: (Int) -> Unit,
     onSetDndEndHour: (Int) -> Unit,
     onSetDndEndMinute: (Int) -> Unit,
-    onSetMinGiftAnimationValue: (Int) -> Unit,
     onToggleSelfDestructAlert: () -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
@@ -817,39 +814,6 @@ private fun NotificationsPage(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Gift Animations",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = if (uiState.minGiftAnimationValue == 0) "Showing all gift animations"
-                       else "Only showing gift animations worth ${uiState.minGiftAnimationValue}+ coins",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Filter out animations for cheaper gifts in rooms.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            var sliderValue by remember(uiState.minGiftAnimationValue) {
-                mutableStateOf(uiState.minGiftAnimationValue.toFloat())
-            }
-            Slider(
-                value = sliderValue,
-                onValueChange = { sliderValue = it },
-                onValueChangeFinished = { onSetMinGiftAnimationValue(sliderValue.toInt()) },
-                valueRange = 0f..5000f,
-                steps = 9
-            )
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()

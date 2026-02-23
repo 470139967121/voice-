@@ -26,6 +26,7 @@ data class RoomSettingsUiState(
     val room: ChatRoom? = null,
     val pendingRequests: List<SeatRequest> = emptyList(),
     val userNames: Map<String, String> = emptyMap(),
+    val minGiftAnimationValue: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -47,6 +48,18 @@ class RoomSettingsViewModel(
 
     fun loadRoom(roomId: String) {
         currentRoomId = roomId
+        viewModelScope.launch {
+            // Load the user's gift animation preference
+            val uid = currentUserId
+            if (uid.isNotEmpty()) {
+                when (val result = userRepository.getUser(uid)) {
+                    is Resource.Success -> {
+                        _uiState.update { it.copy(minGiftAnimationValue = result.data.minGiftAnimationValue) }
+                    }
+                    else -> {}
+                }
+            }
+        }
         viewModelScope.launch {
             combine(
                 roomRepository.getRoomFlow(roomId),
@@ -203,6 +216,13 @@ class RoomSettingsViewModel(
         if (currentUserId != room.ownerId) return
         viewModelScope.launch {
             roomRepository.closeRoom(currentRoomId)
+        }
+    }
+
+    fun setMinGiftAnimationValue(value: Int) {
+        _uiState.update { it.copy(minGiftAnimationValue = value) }
+        viewModelScope.launch {
+            userRepository.updateProfile(currentUserId, mapOf("minGiftAnimationValue" to value))
         }
     }
 
