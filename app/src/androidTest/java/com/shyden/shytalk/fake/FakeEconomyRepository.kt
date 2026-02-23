@@ -50,7 +50,7 @@ class FakeEconomyRepository : EconomyRepository {
     override suspend fun sendEntireBackpack(recipientId: String): Resource<Map<String, Any?>> =
         Resource.Success(mapOf("success" to true, "totalItemsSent" to 0))
 
-    override suspend fun redeemBeans(amount: Int): Resource<Map<String, Any?>> =
+    override suspend fun redeemBeans(amount: Long): Resource<Map<String, Any?>> =
         Resource.Success(mapOf("success" to true))
 
     override suspend fun purchaseCoins(productId: String, purchaseToken: String): Resource<Map<String, Any?>> =

@@ -64,6 +64,7 @@ data class User(
     val lastLoginRewardDate: String? = null,
     val aliases: Map<String, String> = emptyMap(),
     val minGiftAnimationValue: Int = 0,
+    val selfDestructAlertEnabled: Boolean = false,
     val hasClaimedSuperShyTrial: Boolean = false
 ) {
     val isActivelySuspended: Boolean
@@ -133,6 +134,7 @@ data class User(
         "lastLoginRewardDate" to lastLoginRewardDate,
         "aliases" to aliases,
         "minGiftAnimationValue" to minGiftAnimationValue,
+        "selfDestructAlertEnabled" to selfDestructAlertEnabled,
         "hasClaimedSuperShyTrial" to hasClaimedSuperShyTrial
     )
 
@@ -205,6 +207,7 @@ data class User(
                 ?.mapNotNull { (k, v) -> (k as? String)?.let { key -> (v as? String)?.let { value -> key to value } } }
                 ?.toMap() ?: emptyMap(),
             minGiftAnimationValue = (map["minGiftAnimationValue"] as? Long)?.toInt() ?: 0,
+            selfDestructAlertEnabled = map["selfDestructAlertEnabled"] as? Boolean ?: false,
             hasClaimedSuperShyTrial = map["hasClaimedSuperShyTrial"] as? Boolean ?: false
         )
     }

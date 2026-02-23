@@ -69,7 +69,7 @@ class UserToMapTest {
     fun `toMap contains exactly 56 keys`() {
         val user = TestData.createTestUser()
         val map = user.toMap()
-        assertEquals(57, map.size)
+        assertEquals(58, map.size)
     }
 
     @Test
@@ -91,7 +91,7 @@ class UserToMapTest {
             "dndEndHour", "dndEndMinute",
             "shyCoins", "shyBeans", "isSuperShy", "superShyExpiry", "superShyTier",
             "luckScore", "pityCounter", "loginStreak", "lastLoginDate", "lastLoginRewardDate",
-            "aliases", "minGiftAnimationValue", "hasClaimedSuperShyTrial"
+            "aliases", "minGiftAnimationValue", "selfDestructAlertEnabled", "hasClaimedSuperShyTrial"
         )
         val user = TestData.createTestUser()
         assertEquals(expectedKeys, user.toMap().keys)

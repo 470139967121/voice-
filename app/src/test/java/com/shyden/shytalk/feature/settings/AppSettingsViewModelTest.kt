@@ -629,4 +629,57 @@ class AppSettingsViewModelTest {
 
         assertEquals(PmPrivacy.FOLLOWERS_ONLY, vm.uiState.value.pmPrivacy)
     }
+
+    // ===== selfDestructAlert =====
+
+    @Test
+    fun `init loads selfDestructAlertEnabled from user`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId).copy(
+            selfDestructAlertEnabled = true
+        )
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.selfDestructAlertEnabled)
+    }
+
+    @Test
+    fun `selfDestructAlert defaults to false`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.selfDestructAlertEnabled)
+    }
+
+    @Test
+    fun `toggleSelfDestructAlert - optimistic toggle on`() = runTest {
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.selfDestructAlertEnabled)
+
+        vm.toggleSelfDestructAlert()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.selfDestructAlertEnabled)
+        coVerify { userRepository.updateProfile(currentUserId, mapOf("selfDestructAlertEnabled" to true)) }
+    }
+
+    @Test
+    fun `toggleSelfDestructAlert - error reverts`() = runTest {
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Error("fail")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.selfDestructAlertEnabled)
+
+        vm.toggleSelfDestructAlert()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.selfDestructAlertEnabled)
+        assertEquals("Failed to update privacy setting", vm.uiState.value.error)
+    }
 }

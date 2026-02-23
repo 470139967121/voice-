@@ -109,7 +109,7 @@ class EconomyRepositoryImpl(
             result.data as Map<String, Any?>
         }
 
-    override suspend fun redeemBeans(amount: Int): Resource<Map<String, Any?>> =
+    override suspend fun redeemBeans(amount: Long): Resource<Map<String, Any?>> =
         firebaseCall("Failed to redeem beans") {
             val result = functions.getHttpsCallable("redeemBeans")
                 .call(mapOf("amount" to amount))

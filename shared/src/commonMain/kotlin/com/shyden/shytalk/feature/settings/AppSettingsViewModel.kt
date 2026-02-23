@@ -40,6 +40,7 @@ data class AppSettingsUiState(
     val dndEndHour: Int = 8,
     val dndEndMinute: Int = 0,
     val minGiftAnimationValue: Int = 0,
+    val selfDestructAlertEnabled: Boolean = false,
     val cacheCleared: Boolean = false,
     val updateCheckResult: UpdateCheckResult? = null,
     val isCheckingUpdate: Boolean = false
@@ -91,7 +92,8 @@ class AppSettingsViewModel(
                             dndStartMinute = user.dndStartMinute,
                             dndEndHour = user.dndEndHour,
                             dndEndMinute = user.dndEndMinute,
-                            minGiftAnimationValue = user.minGiftAnimationValue
+                            minGiftAnimationValue = user.minGiftAnimationValue,
+                            selfDestructAlertEnabled = user.selfDestructAlertEnabled
                         )
                     }
                 }
@@ -233,6 +235,12 @@ class AppSettingsViewModel(
             userRepository.updateProfile(currentUserId, mapOf(key to value))
         }
     }
+
+    fun toggleSelfDestructAlert() = togglePrivacySetting(
+        key = "selfDestructAlertEnabled",
+        currentValue = _uiState.value.selfDestructAlertEnabled,
+        applyOptimistic = { value -> _uiState.update { it.copy(selfDestructAlertEnabled = value) } }
+    )
 
     fun setMinGiftAnimationValue(value: Int) {
         _uiState.update { it.copy(minGiftAnimationValue = value) }

@@ -13,6 +13,7 @@ data class Broadcast(
     val giftName: String = "",
     val giftIconUrl: String = "",
     val giftCoinValue: Int = 0,
+    val quantity: Int = 1,
     val timestamp: Long = 0
 ) {
     companion object {
@@ -27,6 +28,7 @@ data class Broadcast(
             giftName = map["giftName"] as? String ?: "",
             giftIconUrl = map["giftIconUrl"] as? String ?: "",
             giftCoinValue = (map["giftCoinValue"] as? Long)?.toInt() ?: 0,
+            quantity = (map["quantity"] as? Long)?.toInt() ?: 1,
             timestamp = map["timestamp"]?.let { timestampToMillis(it) } ?: 0
         )
     }

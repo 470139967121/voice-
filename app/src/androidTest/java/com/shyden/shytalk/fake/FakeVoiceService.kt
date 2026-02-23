@@ -24,4 +24,5 @@ class FakeVoiceService : VoiceService {
     override fun setMicrophoneEnabled(enabled: Boolean) { /* no-op */ }
     override fun setAudioMode(voiceMode: Boolean) { /* no-op */ }
     override fun clearError() { /* no-op */ }
+    override fun prewarmToken(roomName: String, userId: String) { /* no-op */ }
 }

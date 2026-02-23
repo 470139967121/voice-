@@ -824,7 +824,7 @@ class RoomViewModelTest {
         viewModel = createViewModel()
         emitRoomAsHost(TestData.createTestRoom(
             ownerId = ownerId,
-            participantIds = setOf(ownerId, currentUserId),
+            participantIds = setOf(ownerId, currentUserId, "target-user"),
             hostIds = setOf(currentUserId),
             requireApproval = false
         ))
@@ -841,6 +841,7 @@ class RoomViewModelTest {
         viewModel = createViewModel()
         emitRoomAsOwner(TestData.createTestRoom(
             ownerId = currentUserId,
+            participantIds = setOf(currentUserId, "target-user"),
             requireApproval = true
         ))
         advanceUntilIdle()
@@ -880,6 +881,22 @@ class RoomViewModelTest {
         viewModel.inviteUser("target-user", "Target")
         advanceUntilIdle()
 
+        coVerify(exactly = 0) { roomRepository.sendInvite(any(), any(), any()) }
+    }
+
+    @Test
+    fun `inviteUser - user who left room shows error`() = roomTest {
+        viewModel = createViewModel()
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId) // target-user NOT in participants
+        ))
+        advanceUntilIdle()
+
+        viewModel.inviteUser("target-user", "Target")
+        advanceUntilIdle()
+
+        assertEquals("Target has left the room", viewModel.uiState.value.error)
         coVerify(exactly = 0) { roomRepository.sendInvite(any(), any(), any()) }
     }
 

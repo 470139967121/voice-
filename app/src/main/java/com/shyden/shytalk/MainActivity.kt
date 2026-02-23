@@ -1,6 +1,7 @@
 package com.shyden.shytalk
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
                 }
                 var updateRequired by remember { mutableStateOf(false) }
                 var checkComplete by remember { mutableStateOf(false) }
+                var softUpdateAvailable by remember { mutableStateOf<String?>(null) }
 
                 LaunchedEffect(Unit) {
                     try {
@@ -69,6 +71,13 @@ class MainActivity : ComponentActivity() {
                             .await()
                         val minVersion = (doc.getLong("minVersionCode") ?: 0).toInt()
                         updateRequired = BuildConfig.VERSION_CODE < minVersion
+                        if (!updateRequired) {
+                            val latestVersion = (doc.getLong("latestVersionCode") ?: 0).toInt()
+                            if (BuildConfig.VERSION_CODE < latestVersion) {
+                                softUpdateAvailable = doc.getString("latestVersionName")
+                                    ?: "v$latestVersion"
+                            }
+                        }
                     } catch (_: Exception) {
                         updateRequired = false
                     }
@@ -141,6 +150,30 @@ class MainActivity : ComponentActivity() {
                                 startDestination = Screen.SignIn.route,
                                 onSignOut = { authRepository.signOut() }
                             )
+
+                            if (softUpdateAvailable != null) {
+                                AlertDialog(
+                                    onDismissRequest = { softUpdateAvailable = null },
+                                    title = { Text("Update Available") },
+                                    text = { Text("A new version ($softUpdateAvailable) of ShyTalk is available.") },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            softUpdateAvailable = null
+                                            startActivity(
+                                                Intent(
+                                                    Intent.ACTION_VIEW,
+                                                    Uri.parse("https://play.google.com/store/apps/details?id=com.shyden.shytalk")
+                                                )
+                                            )
+                                        }) { Text("Update Now") }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { softUpdateAvailable = null }) {
+                                            Text("Later")
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }

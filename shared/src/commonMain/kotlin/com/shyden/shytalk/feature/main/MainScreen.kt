@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.feature.home.RoomListContent
 import com.shyden.shytalk.ui.theme.CnyGold
 
@@ -52,6 +53,7 @@ enum class BottomNavTab(val label: String) {
 @Composable
 fun MainScreen(
     onNavigateToRoom: (String) -> Unit,
+    onPrewarmRoom: (ChatRoom) -> Unit = {},
     onNavigateToUserProfile: (String) -> Unit,
     onNavigateToFollowList: (String, String) -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -171,6 +173,7 @@ fun MainScreen(
             BottomNavTab.Rooms -> {
                 RoomListContent(
                     onNavigateToRoom = onNavigateToRoom,
+                    onPrewarmRoom = onPrewarmRoom,
                     onNavigateToLunarNewYear = onNavigateToLunarNewYear,
                     snackbarHostState = snackbarHostState,
                     showCreateDialog = showCreateDialog,

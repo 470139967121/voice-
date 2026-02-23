@@ -41,6 +41,11 @@ class LiveKitVoiceService(
     private var cachedToken: String? = null
     private val joinMutex = Mutex()
 
+    // Token pre-warming: fetched in background before user navigates to room
+    private var prewarmedToken: String? = null
+    private var prewarmedRoomName: String? = null
+    private var prewarmJob: Job? = null
+
     // Audio type switching: we recreate the Room to swap between
     // CallAudioType (STREAM_VOICE_CALL → loudspeaker) and
     // MediaAudioType (STREAM_MUSIC → media channel).
@@ -181,13 +186,22 @@ class LiveKitVoiceService(
         currentRoomName = roomName
         currentUserId = userId
 
-        // Fetch token and connect
-        val token: String? = try {
-            tokenService.fetchToken(roomName, userId)
-        } catch (e: Exception) {
-            Log.w(TAG, "Token fetch failed", e)
-            _error.value = "Token fetch failed — check Cloud Function deployment"
-            null
+        // Use prewarmed token if available for this room, otherwise fetch
+        prewarmJob?.join() // Wait for in-flight prewarm if running
+        val token: String? = if (prewarmedRoomName == roomName && prewarmedToken != null) {
+            Log.d(TAG, "Using prewarmed token for room=$roomName")
+            prewarmedToken.also {
+                prewarmedToken = null
+                prewarmedRoomName = null
+            }
+        } else {
+            try {
+                tokenService.fetchToken(roomName, userId)
+            } catch (e: Exception) {
+                Log.w(TAG, "Token fetch failed", e)
+                _error.value = "Token fetch failed — check Cloud Function deployment"
+                null
+            }
         }
 
         if (token == null) {
@@ -225,6 +239,9 @@ class LiveKitVoiceService(
         currentRoomName = null
         currentUserId = null
         cachedToken = null
+        prewarmedToken = null
+        prewarmedRoomName = null
+        prewarmJob?.cancel()
         desiredMicEnabled = false
         isVoiceMode = false
         setSpeakerphoneEnabled(false)
@@ -326,6 +343,23 @@ class LiveKitVoiceService(
             isSwitchingAudioType = false
             _isJoined.value = false
             _connectionState.value = VoiceConnectionState.DISCONNECTED
+        }
+    }
+
+    override fun prewarmToken(roomName: String, userId: String) {
+        prewarmJob?.cancel()
+        prewarmedToken = null
+        prewarmedRoomName = null
+        prewarmJob = scope.launch {
+            try {
+                Log.d(TAG, "Pre-warming token for room=$roomName")
+                val token = tokenService.fetchToken(roomName, userId)
+                prewarmedToken = token
+                prewarmedRoomName = roomName
+                Log.d(TAG, "Token pre-warmed for room=$roomName")
+            } catch (e: Exception) {
+                Log.w(TAG, "Token pre-warm failed (joinRoom will retry)", e)
+            }
         }
     }
 

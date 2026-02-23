@@ -41,6 +41,7 @@ import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.NotificationRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.data.remote.PmSyncService
+import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.feature.auth.GoogleSignInScreen
 import com.shyden.shytalk.feature.home.LunarNewYearScreen
 import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
@@ -75,12 +76,7 @@ import com.shyden.shytalk.feature.daily.DailyRewardDialog
 import com.shyden.shytalk.feature.daily.DailyRewardViewModel
 import com.shyden.shytalk.data.remote.BillingService
 import com.shyden.shytalk.feature.room.RoomScreen
-import com.shyden.shytalk.core.model.Broadcast
-import com.shyden.shytalk.core.ui.BroadcastBanner
-import com.shyden.shytalk.data.repository.GiftRepository
 import com.shyden.shytalk.feature.warning.WarningScreen
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import org.koin.compose.koinInject
@@ -137,15 +133,6 @@ fun NavGraph(
                 }
             }
         }
-    }
-
-    // App-wide broadcast banner
-    val giftRepository: GiftRepository = koinInject()
-    var broadcastList by remember { mutableStateOf<List<Broadcast>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        giftRepository.observeBroadcasts()
-            .catch { /* ignore errors */ }
-            .collect { broadcastList = it }
     }
 
     fun navigateToRoom(roomId: String) {
@@ -321,9 +308,17 @@ fun NavGraph(
                 )
             }
 
+            val voiceService: VoiceService = koinInject()
+
             MainScreen(
                 onNavigateToRoom = { roomId ->
                     navController.navigate(Screen.Room.createRoute(roomId))
+                },
+                onPrewarmRoom = { room ->
+                    val userId = authRepository.currentUserId
+                    if (userId != null && room.voiceRoomName.isNotEmpty()) {
+                        voiceService.prewarmToken(room.voiceRoomName, userId)
+                    }
                 },
                 onNavigateToUserProfile = { userId ->
                     navController.navigate(Screen.UserProfile.createRoute(userId))
@@ -789,9 +784,5 @@ fun NavGraph(
         }
     }
 
-    BroadcastBanner(
-        broadcasts = broadcastList,
-        modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding()
-    )
     } // Box
 }

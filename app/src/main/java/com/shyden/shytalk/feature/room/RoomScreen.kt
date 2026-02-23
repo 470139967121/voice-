@@ -2,6 +2,8 @@ package com.shyden.shytalk.feature.room
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,6 +38,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,9 +75,16 @@ import com.shyden.shytalk.feature.room.components.RoomToolbar
 import com.shyden.shytalk.feature.room.components.SeatGrid
 import com.shyden.shytalk.feature.room.components.UserCardPopup
 import androidx.activity.result.PickVisualMediaRequest
+import com.shyden.shytalk.core.model.Broadcast
+import com.shyden.shytalk.core.model.BroadcastType
 import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.model.GiftEvent
+import com.shyden.shytalk.core.ui.BroadcastBanner
 import com.shyden.shytalk.core.ui.GiftEffectOverlay
+import com.shyden.shytalk.core.util.currentTimeMillis
+import com.shyden.shytalk.data.repository.GiftRepository
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.drop
 import com.shyden.shytalk.core.ui.GiftPreviewPopup
 import com.shyden.shytalk.feature.gacha.GachaViewModel
 import com.shyden.shytalk.feature.gacha.LuckySpinOverlay
@@ -87,8 +97,12 @@ import com.shyden.shytalk.feature.room.components.RoomActionCarousel
 import com.shyden.shytalk.feature.daily.DailyRewardDialog
 import com.shyden.shytalk.feature.daily.DailyRewardViewModel
 import com.shyden.shytalk.feature.settings.RoomSettingsSheet
+import com.shyden.shytalk.feature.shop.WalletViewModel
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import org.koin.compose.koinInject
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoomScreen(
     roomId: String,
@@ -119,7 +133,43 @@ fun RoomScreen(
     var additionalBackpackRecipient by remember(roomId) { mutableStateOf<com.shyden.shytalk.core.model.User?>(null) }
     var previewGift by remember { mutableStateOf<Gift?>(null) }
     var showSuperShySheet by remember(roomId) { mutableStateOf(false) }
+    var showWalletSheet by remember(roomId) { mutableStateOf(false) }
     val currentGiftEvent by viewModel.giftAnimationQueue.currentEvent.collectAsStateWithLifecycle()
+    val giftRepository: GiftRepository = koinInject()
+    val roomBroadcasts = remember { mutableStateListOf<Broadcast>() }
+
+    // Convert room gift events into Broadcast objects for the sliding banner
+    LaunchedEffect(currentGiftEvent) {
+        currentGiftEvent?.let { event ->
+            roomBroadcasts.add(
+                Broadcast(
+                    id = "room_${event.eventId}",
+                    type = BroadcastType.GIFT_SEND,
+                    senderName = event.senderName,
+                    recipientName = event.recipientName,
+                    giftName = event.giftName,
+                    giftCoinValue = event.coinValue,
+                    quantity = event.quantity,
+                    timestamp = currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    // Observe app-wide Firestore broadcasts (high-value gifts & gacha wins from all rooms)
+    LaunchedEffect(Unit) {
+        giftRepository.observeBroadcasts()
+            .drop(1) // Skip the initial snapshot to avoid replaying old broadcasts
+            .catch { /* ignore errors */ }
+            .collect { broadcasts ->
+                for (b in broadcasts) {
+                    if (b.id.isNotEmpty() && roomBroadcasts.none { it.id == b.id }) {
+                        roomBroadcasts.add(b)
+                    }
+                }
+            }
+    }
+
     var pmImageResultHandler by remember { mutableStateOf<((List<ByteArray>) -> Unit)?>(null) }
     var pmStickerResultHandler by remember { mutableStateOf<((ByteArray) -> Unit)?>(null) }
     val reportEvidenceList = remember { mutableListOf<Pair<ByteArray, String>>() }
@@ -240,6 +290,53 @@ fun RoomScreen(
         activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    // Self-destruct announcement TTS
+    val tts = remember { mutableStateOf<TextToSpeech?>(null) }
+    var selfDestructAnnounced by remember(roomId) { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        val engine = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts.value?.language = Locale.US
+                tts.value?.setPitch(0.75f)
+                tts.value?.setSpeechRate(0.85f)
+            }
+        }
+        tts.value = engine
+        onDispose {
+            engine.stop()
+            engine.shutdown()
+            tts.value = null
+        }
+    }
+
+    // Play self-destruct announcement when a 5-minute countdown first appears
+    // (room expiry OR owner-away cooldown), and deactivation when owner returns
+    // Only plays if the user has enabled self-destruct alerts in settings (default: off)
+    val selfDestructEnabled = currentUser?.selfDestructAlertEnabled == true
+    LaunchedEffect(uiState.roomExpiryRemainingMs, uiState.ownerAwayRemainingMs, selfDestructEnabled) {
+        val expiryActive = uiState.roomExpiryRemainingMs in 1..300_000L
+        val ownerAwayActive = uiState.ownerAwayRemainingMs in 1..300_000L
+        if (selfDestructEnabled && !selfDestructAnnounced && (expiryActive || ownerAwayActive)) {
+            selfDestructAnnounced = true
+            tts.value?.speak(
+                "Room self destruct sequence activated. Self destruct in T minus 5 minutes.",
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                "self_destruct"
+            )
+        } else if (selfDestructAnnounced && !expiryActive && !ownerAwayActive) {
+            selfDestructAnnounced = false
+            if (selfDestructEnabled) {
+                tts.value?.speak(
+                    "Self destruct sequence deactivated.",
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "self_destruct_off"
+                )
+            }
         }
     }
 
@@ -737,6 +834,12 @@ fun RoomScreen(
                         .padding(bottom = 64.dp, end = 8.dp)
                 )
             }
+
+            // Sliding gold broadcast banner for room gift events (just above the seat grid)
+            BroadcastBanner(
+                broadcasts = roomBroadcasts.toList(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
 
         if (showSettings && uiState.room != null) {
@@ -975,7 +1078,7 @@ fun RoomScreen(
                     showBackpackSheet = false
                     additionalBackpackRecipient = null
                 },
-                onNavigateToWallet = onNavigateToWallet,
+                onNavigateToWallet = { showWalletSheet = true },
                 onLongPressGift = { gift -> previewGift = gift }
             )
         }
@@ -1036,6 +1139,24 @@ fun RoomScreen(
                 user = currentUser,
                 onDismiss = { showSuperShySheet = false }
             )
+        }
+
+        // Coin purchase sheet (shown when user has insufficient coins)
+        if (showWalletSheet) {
+            val walletViewModel: WalletViewModel = org.koin.compose.viewmodel.koinViewModel()
+            val walletState by walletViewModel.uiState.collectAsStateWithLifecycle()
+
+            ModalBottomSheet(
+                onDismissRequest = { showWalletSheet = false }
+            ) {
+                com.shyden.shytalk.feature.shop.CoinPurchaseSheetContent(
+                    coinBalance = walletState.coinBalance,
+                    coinPackages = walletState.coinPackages,
+                    isPurchasing = walletState.isPurchasing,
+                    onTestPurchase = { coins -> walletViewModel.testPurchaseCoins(coins) },
+                    onDismiss = { showWalletSheet = false }
+                )
+            }
         }
 
         // Full-screen gift effect overlay (room-wide via AnimationQueue)

@@ -1257,6 +1257,7 @@ exports.sendGift = onCall({ region: "asia-southeast1" }, async (request) => {
           giftId,
           giftName: gift.name,
           coinValue: gift.coinValue,
+          quantity,
           timestamp: FieldValue.serverTimestamp(),
         },
       });
@@ -1410,6 +1411,7 @@ exports.sendGiftDirect = onCall({ region: "asia-southeast1" }, async (request) =
           giftId,
           giftName: gift.name,
           coinValue: gift.coinValue,
+          quantity,
           timestamp: FieldValue.serverTimestamp(),
         },
       });
@@ -1925,6 +1927,7 @@ exports.sendGiftBatch = onCall({ region: "asia-southeast1" }, async (request) =>
           giftId,
           giftName: gift.name,
           coinValue: gift.coinValue,
+          quantity: quantity * recipientDocs.length,
           timestamp: FieldValue.serverTimestamp(),
         },
       });
@@ -2179,6 +2182,7 @@ exports.sendEntireBackpack = onCall({ region: "asia-southeast1" }, async (reques
             giftId: g.giftId,
             giftName: g.giftName,
             coinValue: details.coinValue,
+            quantity: g.quantity,
             timestamp: FieldValue.serverTimestamp(),
           },
         });

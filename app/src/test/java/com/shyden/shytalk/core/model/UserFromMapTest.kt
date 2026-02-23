@@ -339,6 +339,35 @@ class UserFromMapTest {
         assertEquals(0, map["minGiftAnimationValue"])
     }
 
+    // ===== selfDestructAlertEnabled =====
+
+    @Test
+    fun `fromMap parses selfDestructAlertEnabled`() {
+        val map = mapOf<String, Any?>("selfDestructAlertEnabled" to true)
+        val user = User.fromMap(map, "u1")
+        assertTrue(user.selfDestructAlertEnabled)
+    }
+
+    @Test
+    fun `fromMap defaults selfDestructAlertEnabled to false when missing`() {
+        val user = User.fromMap(emptyMap(), "u1")
+        assertFalse(user.selfDestructAlertEnabled)
+    }
+
+    @Test
+    fun `toMap includes selfDestructAlertEnabled`() {
+        val user = User(selfDestructAlertEnabled = true)
+        val map = user.toMap()
+        assertEquals(true, map["selfDestructAlertEnabled"])
+    }
+
+    @Test
+    fun `toMap defaults selfDestructAlertEnabled to false`() {
+        val user = User()
+        val map = user.toMap()
+        assertEquals(false, map["selfDestructAlertEnabled"])
+    }
+
     @Test
     fun `fromMap of toMap roundtrip preserves suspension fields`() {
         val original = User(

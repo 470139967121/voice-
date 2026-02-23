@@ -1403,7 +1403,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         assertEquals("Test failed", vm.uiState.value.error)
-        assertFalse(vm.uiState.value.isLoading)
+        assertFalse(vm.uiState.value.isPurchasingSuperShy)
     }
 
     // ===== loadProfile - isFollowingTarget set from followerIds =====

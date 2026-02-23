@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.CircularProgressIndicator
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.ui.SuperShyGold
 
@@ -42,6 +43,7 @@ fun SuperShyBottomSheet(
     onPurchase: (String) -> Unit = {},
     onTestPurchase: ((String) -> Unit)? = null,
     onClaimTrial: (() -> Unit)? = null,
+    isPurchasing: Boolean = false,
     onDismiss: () -> Unit
 ) {
     val effectivePurchase: (String) -> Unit = onTestPurchase ?: onPurchase
@@ -209,8 +211,17 @@ fun SuperShyBottomSheet(
                     price = "$99.99",
                     description = "One-time payment",
                     onClick = { effectivePurchase("super_shy_lifetime") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isPurchasing
                 )
+                if (isPurchasing) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = SuperShyGold,
+                        strokeWidth = 2.dp
+                    )
+                }
             } else {
                 // Not Super Shy — show trial card + all pricing
                 if (onClaimTrial != null && !user.hasClaimedSuperShyTrial) {
@@ -268,14 +279,16 @@ fun SuperShyBottomSheet(
                         price = "$4.99",
                         description = "per month",
                         onClick = { effectivePurchase("super_shy_monthly") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = !isPurchasing
                     )
                     SuperShyPricingCard(
                         tier = "Yearly",
                         price = "$39.99",
                         description = "per year",
                         onClick = { effectivePurchase("super_shy_yearly") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = !isPurchasing
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -284,8 +297,17 @@ fun SuperShyBottomSheet(
                     price = "$99.99",
                     description = "One-time payment",
                     onClick = { effectivePurchase("super_shy_lifetime") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isPurchasing
                 )
+                if (isPurchasing) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = SuperShyGold,
+                        strokeWidth = 2.dp
+                    )
+                }
             }
         }
     }
@@ -297,10 +319,12 @@ private fun SuperShyPricingCard(
     price: String,
     description: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Card(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(

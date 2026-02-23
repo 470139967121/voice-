@@ -93,7 +93,7 @@ class WalletViewModel(
         }
     }
 
-    fun redeemBeans(amount: Int) {
+    fun redeemBeans(amount: Long) {
         if (amount < 1) return
         if (amount > _uiState.value.beanBalance) {
             _uiState.update { it.copy(error = "Not enough beans") }
@@ -107,7 +107,7 @@ class WalletViewModel(
                     _uiState.update {
                         it.copy(
                             isPurchasing = false,
-                            successMessage = "Redeemed ${formatNumber(amount.toLong())} beans$bonus"
+                            successMessage = "Redeemed ${formatNumber(amount)} beans$bonus"
                         )
                     }
                     loadData()

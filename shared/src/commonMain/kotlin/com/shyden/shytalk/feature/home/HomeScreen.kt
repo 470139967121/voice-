@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.runtime.collectAsState
+import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.ui.theme.CnyGold
 
 private val BannerBackground = Color(0xFF2A0808)
@@ -111,6 +112,7 @@ private fun CnyBanner(onClick: () -> Unit) {
 @Composable
 fun RoomListContent(
     onNavigateToRoom: (String) -> Unit,
+    onPrewarmRoom: (ChatRoom) -> Unit = {},
     onNavigateToLunarNewYear: () -> Unit = {},
     snackbarHostState: SnackbarHostState,
     showCreateDialog: Boolean,
@@ -198,7 +200,10 @@ fun RoomListContent(
                         RoomListItem(
                             room = room,
                             seatUsers = uiState.seatUsers,
-                            onClick = { onNavigateToRoom(room.roomId) },
+                            onClick = {
+                                onPrewarmRoom(room)
+                                onNavigateToRoom(room.roomId)
+                            },
                             modifier = Modifier.testTag("roomList_roomCard_${room.roomId}")
                         )
                     }

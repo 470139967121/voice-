@@ -340,6 +340,25 @@ class WalletViewModelTest {
     }
 
     @Test
+    fun `redeemBeans supports large Long values`() = runTest {
+        val largeBalance = 5_000_000_000L
+        coEvery { userRepository.getUser("u1") } returns Resource.Success(sampleUser.copy(shyBeans = largeBalance))
+        coEvery { economyRepository.redeemBeans(largeBalance) } returns Resource.Success(emptyMap())
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(largeBalance, vm.uiState.value.beanBalance)
+
+        vm.redeemBeans(largeBalance)
+        advanceUntilIdle()
+
+        assertNotNull(vm.uiState.value.successMessage)
+        assertTrue(vm.uiState.value.successMessage!!.contains("bonus"))
+        assertFalse(vm.uiState.value.isPurchasing)
+    }
+
+    @Test
     fun `clearSuccess clears success message`() = runTest {
         coEvery { economyRepository.addTestCoins(100) } returns Resource.Success(emptyMap())
 

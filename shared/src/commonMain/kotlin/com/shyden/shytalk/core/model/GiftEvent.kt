@@ -11,6 +11,7 @@ data class GiftEvent(
     val giftId: String = "",
     val giftName: String = "",
     val coinValue: Int = 0,
+    val quantity: Int = 1,
     val timestamp: Long = 0,
     val eventId: Long = Random.nextLong()
 ) {
@@ -23,6 +24,7 @@ data class GiftEvent(
             giftId = map["giftId"] as? String ?: "",
             giftName = map["giftName"] as? String ?: "",
             coinValue = (map["coinValue"] as? Long)?.toInt() ?: 0,
+            quantity = (map["quantity"] as? Long)?.toInt() ?: 1,
             timestamp = map["timestamp"]?.let { timestampToMillis(it) } ?: 0
         )
     }
