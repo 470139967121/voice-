@@ -2,10 +2,10 @@ v0.41 - Gacha, Gifting & UI Fixes
 
 - Gacha wheel locked to 16 slots (CF + client)
 - Admin: showOnWheel toggle now saves correctly
-- Broadcast banner for ALL gift sends (not just 5000+)
+- Broadcast banner for ALL gift sends
 - Send-all plays queued animations per gift type
 - Gift wall shows ALL gifts (locked/unlocked)
-- Backpack shows all items regardless of store visibility
+- Backpack shows all items regardless of store flag
 - Perfect square cells: gift wall, backpack, profile
 - System/gift messages no longer hidden under carousel
-- Admin dashboard UX: keyboard hints, GCS legend, mute, longer error toasts, gift row indicators
+- Admin UX: keyboard hints, GCS legend, mute, toasts
