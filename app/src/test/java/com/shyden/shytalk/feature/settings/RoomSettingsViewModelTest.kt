@@ -416,8 +416,9 @@ class RoomSettingsViewModelTest {
         )
         advanceUntilIdle()
 
-        // getUser should only be called once for the same ID
-        coVerify(exactly = 1) { userRepository.getUser(currentUserId) }
+        // getUser for resolveUserNames should only be called once for the same ID
+        // (loadRoom also calls getUser once for minGiftAnimationValue, so total is 2)
+        coVerify(exactly = 2) { userRepository.getUser(currentUserId) }
     }
 
     @Test
