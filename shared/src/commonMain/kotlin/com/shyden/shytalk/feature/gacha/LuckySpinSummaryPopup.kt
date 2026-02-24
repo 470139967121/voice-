@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -112,14 +113,18 @@ fun LuckySpinSummaryPopup(
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White,
-                    letterSpacing = 2.sp
+                    letterSpacing = 2.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Text(
                     text = "${wins.size} SPIN${if (wins.size > 1) "S" else ""}${if (spinTier.boostedDrop) "  \u2605 INCREASED DROP RATE" else ""}",
                     color = Color.White.copy(alpha = 0.35f),
                     fontSize = 11.sp,
-                    letterSpacing = 2.sp
+                    letterSpacing = 2.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -250,12 +255,12 @@ private fun WinCard(win: GroupedWin, index: Int) {
                 AsyncImage(
                     model = win.iconUrl,
                     contentDescription = win.giftName,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             } else {
                 Text(
                     text = giftEmoji(win.giftName),
-                    fontSize = 28.sp
+                    fontSize = 22.sp
                 )
             }
 

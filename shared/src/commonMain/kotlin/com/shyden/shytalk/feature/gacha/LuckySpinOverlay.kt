@@ -115,6 +115,12 @@ fun LuckySpinOverlay(
         onDispose { GachaSoundPlayer.release() }
     }
 
+    // Dismiss keyboard when overlay opens
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        keyboardController?.hide()
+    }
+
     // Inline panel states
     var showCoinShop by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
@@ -542,12 +548,13 @@ fun LuckySpinOverlay(
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Fixed-size area: same aspect ratio as the wheel so the panel doesn't resize
+            // Fixed-size area: 1:1 aspect ratio while spinning so the panel
+            // doesn't resize; summary popup drops it so content isn't clipped.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp)
-                    .aspectRatio(1f),
+                    .then(if (showSummary) Modifier else Modifier.aspectRatio(1f)),
                 contentAlignment = Alignment.Center
             ) {
                 if (showSummary && allWins.isNotEmpty()) {
@@ -837,7 +844,7 @@ private fun InlineCoinShop(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.heightIn(max = 300.dp)
+                    modifier = Modifier.heightIn(max = 260.dp)
                 ) {
                     items(coinPackages) { pkg ->
                         CoinPackageCard(
@@ -897,7 +904,7 @@ private fun InlineSpinHistory(
                 )
             } else {
                 LazyColumn(
-                    modifier = Modifier.heightIn(max = 400.dp),
+                    modifier = Modifier.heightIn(max = 320.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(transactions) { tx ->
@@ -996,7 +1003,7 @@ private fun InlinePrizeCatalog(
             Spacer(modifier = Modifier.height(12.dp))
 
             LazyColumn(
-                modifier = Modifier.heightIn(max = 400.dp),
+                modifier = Modifier.heightIn(max = 320.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(sorted) { gift ->

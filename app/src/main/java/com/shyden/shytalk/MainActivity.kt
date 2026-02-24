@@ -22,6 +22,9 @@ import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
 import com.shyden.shytalk.feature.update.ForceUpdateScreen
@@ -40,11 +43,7 @@ class MainActivity : ComponentActivity() {
     private val _navigateToRoom = mutableStateOf<String?>(null)
     private val _navigateToChat = mutableStateOf<Pair<String, Boolean>?>(null) // (id, isGroup)
     private val _showLeaveConfirmation = mutableStateOf(false)
-
-    companion object {
-        private const val PREFS_NAME = "shytalk_prefs"
-        private const val KEY_PRIVACY_ACCEPTED = "privacy_policy_accepted"
-    }
+    private var lastSeenJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -202,14 +201,32 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         activeRoomManager.isAppInForeground = true
-        authRepository.currentUserId?.let { uid ->
-            CoroutineScope(Dispatchers.IO).launch { userRepository.updateLastSeen(uid) }
-        }
+        startLastSeenUpdates()
     }
 
     override fun onStop() {
         super.onStop()
         activeRoomManager.isAppInForeground = false
+        lastSeenJob?.cancel()
+        lastSeenJob = null
+    }
+
+    private fun startLastSeenUpdates() {
+        lastSeenJob?.cancel()
+        lastSeenJob = CoroutineScope(Dispatchers.IO).launch {
+            while (isActive) {
+                authRepository.currentUserId?.let { uid ->
+                    userRepository.updateLastSeen(uid)
+                }
+                delay(LAST_SEEN_INTERVAL_MS)
+            }
+        }
+    }
+
+    companion object {
+        private const val PREFS_NAME = "shytalk_prefs"
+        private const val KEY_PRIVACY_ACCEPTED = "privacy_policy_accepted"
+        private const val LAST_SEEN_INTERVAL_MS = 180_000L // 3 minutes
     }
 
     override fun onNewIntent(intent: Intent) {

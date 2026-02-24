@@ -179,32 +179,18 @@ class UserRepositoryImpl(
 
     override suspend fun recordProfileVisit(profileUserId: String, visitorId: String): Resource<Unit> =
         firebaseCall("Failed to record visit") {
-            val stalkerRef = usersCollection.document(profileUserId)
+            // Write visit to stalker subcollection — counter increments and
+            // firstVisitedAt are handled by the onStalkerWrite Cloud Function.
+            usersCollection.document(profileUserId)
                 .collection("stalkers").document(visitorId)
-            val userRef = usersCollection.document(profileUserId)
-
-            val existing = stalkerRef.get().await().exists()
-            val batch = firestore.batch()
-
-            val stalkerData = mutableMapOf<String, Any>(
-                "visitorId" to visitorId,
-                "visitCount" to FieldValue.increment(1),
-                "lastVisitedAt" to FieldValue.serverTimestamp()
-            )
-            if (!existing) {
-                stalkerData["firstVisitedAt"] = FieldValue.serverTimestamp()
-            }
-            batch.set(stalkerRef, stalkerData, SetOptions.merge())
-
-            val countUpdates = mutableMapOf<String, Any>(
-                "newStalkerCount" to FieldValue.increment(1)
-            )
-            if (!existing) {
-                countUpdates["stalkerCount"] = FieldValue.increment(1)
-            }
-            batch.update(userRef, countUpdates)
-
-            batch.commit().await()
+                .set(
+                    mapOf(
+                        "visitorId" to visitorId,
+                        "visitCount" to FieldValue.increment(1),
+                        "lastVisitedAt" to FieldValue.serverTimestamp()
+                    ),
+                    SetOptions.merge()
+                ).await()
         }
 
     override suspend fun getStalkers(profileUserId: String): Resource<List<ProfileVisitor>> =

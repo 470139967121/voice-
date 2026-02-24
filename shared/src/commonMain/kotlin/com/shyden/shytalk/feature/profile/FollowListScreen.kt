@@ -65,6 +65,7 @@ fun FollowListScreen(
     tab: String = "followers",
     onNavigateBack: () -> Unit,
     onNavigateToUserProfile: (String) -> Unit,
+    onNavigateToSuperShy: () -> Unit = {},
     viewModel: FollowListViewModel = koinViewModel { parametersOf(userId, tab) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -144,8 +145,37 @@ fun FollowListScreen(
                     CircularProgressIndicator()
                 }
             } else if (uiState.selectedTab == FollowTab.STALKERS) {
-                // Stalkers tab content
-                if (uiState.stalkers.isEmpty()) {
+                // Stalkers tab content — SuperShy only
+                if (!uiState.isSuperShy) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Text(
+                                text = "Super Shy Benefit",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "See who's been visiting your profile! Profile stalkers is an exclusive Super Shy feature.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            androidx.compose.material3.FilledTonalButton(
+                                onClick = onNavigateToSuperShy
+                            ) {
+                                Text("Get Super Shy")
+                            }
+                        }
+                    }
+                } else if (uiState.stalkers.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center

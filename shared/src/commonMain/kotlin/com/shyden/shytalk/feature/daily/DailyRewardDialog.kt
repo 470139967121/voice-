@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -106,10 +107,10 @@ fun DailyRewardDialog(
                     // Mini streak preview (next 7 days)
                     Spacer(modifier = Modifier.height(12.dp))
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(7),
+                        columns = GridCells.Adaptive(32.dp),
                         contentPadding = PaddingValues(0.dp),
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        modifier = Modifier.height(50.dp)
+                        modifier = Modifier.heightIn(min = 36.dp)
                     ) {
                         val currentDay = state.currentStreak
                         items(7) { index ->

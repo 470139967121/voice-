@@ -22,6 +22,7 @@ let mockAdminTokens = {};
 let mockPresence = {};
 let mockGiftRankings = {};
 let mockConvSettings = {};
+let mockStalkers = {};
 let mockDocIdCounter = 0;
 
 function mockResetStores() {
@@ -41,6 +42,7 @@ function mockResetStores() {
   mockPresence = {};
   mockGiftRankings = {};
   mockConvSettings = {};
+  mockStalkers = {};
   mockDocIdCounter = 0;
 }
 
@@ -65,6 +67,7 @@ function mockGetStore(path) {
   if (path.includes("/transactions")) return mockTransactions;
   if (path === "giftRankings") return mockGiftRankings;
   if (path.includes("/settings")) return mockConvSettings;
+  if (path.includes("/stalkers")) return mockStalkers;
   return {};
 }
 
@@ -318,6 +321,7 @@ jest.mock("firebase-functions/v2/database", () => ({
 jest.mock("firebase-functions/v2/firestore", () => ({
   onDocumentUpdated: (opts, handler) => handler,
   onDocumentCreated: (opts, handler) => handler,
+  onDocumentWritten: (opts, handler) => handler,
 }));
 
 jest.mock("firebase-functions/v2/scheduler", () => ({
@@ -4152,5 +4156,87 @@ describe("pullGacha - broadcast trigger", () => {
     expect(result.gifts.length).toBe(1);
     // No broadcast for low-value gift
     expect(Object.keys(mockBroadcasts).length).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// onStalkerWrite (trigger)
+// ═══════════════════════════════════════════════════════════════
+describe("onStalkerWrite", () => {
+  test("first visit increments both stalkerCount and newStalkerCount", async () => {
+    mockUsers["profile-user"] = { stalkerCount: 0, newStalkerCount: 0 };
+    const fn = indexModule.onStalkerWrite;
+    const mockRef = mockBuildDocRef("users/profile-user/stalkers", "visitor-1");
+
+    await fn({
+      data: {
+        before: { exists: false },
+        after: { exists: true, ref: mockRef, data: () => ({ visitorId: "visitor-1", visitCount: 1 }) },
+      },
+      params: { uid: "profile-user", visitorId: "visitor-1" },
+    });
+
+    expect(mockUsers["profile-user"].stalkerCount).toBe(1);
+    expect(mockUsers["profile-user"].newStalkerCount).toBe(1);
+  });
+
+  test("repeat visit only increments newStalkerCount", async () => {
+    mockUsers["profile-user"] = { stalkerCount: 1, newStalkerCount: 0 };
+    const fn = indexModule.onStalkerWrite;
+    const mockRef = mockBuildDocRef("users/profile-user/stalkers", "visitor-1");
+
+    await fn({
+      data: {
+        before: { exists: true, data: () => ({ visitorId: "visitor-1", visitCount: 1 }) },
+        after: { exists: true, ref: mockRef, data: () => ({ visitorId: "visitor-1", visitCount: 2 }) },
+      },
+      params: { uid: "profile-user", visitorId: "visitor-1" },
+    });
+
+    expect(mockUsers["profile-user"].stalkerCount).toBe(1); // unchanged
+    expect(mockUsers["profile-user"].newStalkerCount).toBe(1); // incremented
+  });
+
+  test("first visit sets firstVisitedAt on stalker doc", async () => {
+    mockUsers["profile-user"] = { stalkerCount: 0, newStalkerCount: 0 };
+    const fn = indexModule.onStalkerWrite;
+    const mockRef = mockBuildDocRef("users/profile-user/stalkers", "visitor-1");
+
+    await fn({
+      data: {
+        before: { exists: false },
+        after: { exists: true, ref: mockRef, data: () => ({ visitorId: "visitor-1", visitCount: 1 }) },
+      },
+      params: { uid: "profile-user", visitorId: "visitor-1" },
+    });
+
+    // firstVisitedAt should be set (as serverTimestamp mock)
+    expect(mockRef.update).toHaveBeenCalled();
+  });
+
+  test("multiple first-time visitors increment stalkerCount each time", async () => {
+    mockUsers["profile-user"] = { stalkerCount: 0, newStalkerCount: 0 };
+    const fn = indexModule.onStalkerWrite;
+
+    // First visitor
+    await fn({
+      data: {
+        before: { exists: false },
+        after: { exists: true, ref: mockBuildDocRef("users/profile-user/stalkers", "v1"), data: () => ({}) },
+      },
+      params: { uid: "profile-user", visitorId: "v1" },
+    });
+
+    // Second visitor
+    await fn({
+      data: {
+        before: { exists: false },
+        after: { exists: true, ref: mockBuildDocRef("users/profile-user/stalkers", "v2"), data: () => ({}) },
+      },
+      params: { uid: "profile-user", visitorId: "v2" },
+    });
+
+    expect(mockUsers["profile-user"].stalkerCount).toBe(2);
+    expect(mockUsers["profile-user"].newStalkerCount).toBe(2);
   });
 });

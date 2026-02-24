@@ -491,7 +491,8 @@ fun NavGraph(
                 onNavigateBack = { navController.safePopBackStack() },
                 onNavigateToUserProfile = { uid ->
                     navController.navigate(Screen.UserProfile.createRoute(uid))
-                }
+                },
+                onNavigateToSuperShy = { navController.safePopBackStack() }
             )
         }
 

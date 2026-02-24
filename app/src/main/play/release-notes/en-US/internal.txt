@@ -1,13 +1,8 @@
-v0.44 - Gacha UX, Daily Gifts & QoL
+v0.45 - Bug Fixes & Improvements
 
-- Spin results show inline instead of fullscreen
-- Spin buttons stay visible during animation
-- Tap outside gacha panel to close
-- Configurable wheel inner ring threshold
-- Daily rewards can grant gifts for milestones
-- Super Shy trial shows success message
-- Backpack "Use" shows "Using..." feedback
-- Keyboard dismisses on tap outside chat
-- Fixed duplicate seat notification
-- Removed rarity terms and share profile
-- Kotlin upgraded to 2.3.10
+- Fixed stalkers not detecting profile visits
+- SuperShy gating: stalkers tab requires SuperShy subscription
+- Fixed activity indicator stopping after login
+- Keyboard auto-dismisses when opening gacha overlay
+- UI improvements for low-resolution screens
+- Added E2E test infrastructure for 42 device configurations
