@@ -6,6 +6,7 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import io.mockk.every
@@ -257,5 +258,32 @@ class UserRepositoryImplTest {
 
         assertTrue(result is Resource.Success)
         assertTrue((result as Resource.Success).data.isEmpty())
+    }
+
+    @Test
+    fun `recordProfileVisit writes to stalkers subcollection`() = runTest {
+        val stalkersCollection = mockk<CollectionReference>(relaxed = true)
+        val stalkerDocRef = mockk<DocumentReference>(relaxed = true)
+        every { docRef.collection("stalkers") } returns stalkersCollection
+        every { stalkersCollection.document("visitor-1") } returns stalkerDocRef
+        every { stalkerDocRef.set(any(), any<SetOptions>()) } returns Tasks.forResult(null)
+
+        val result = repo.recordProfileVisit("user-1", "visitor-1")
+
+        assertTrue(result is Resource.Success)
+        verify { stalkerDocRef.set(any(), any<SetOptions>()) }
+    }
+
+    @Test
+    fun `recordProfileVisit returns Error on failure`() = runTest {
+        val stalkersCollection = mockk<CollectionReference>(relaxed = true)
+        val stalkerDocRef = mockk<DocumentReference>(relaxed = true)
+        every { docRef.collection("stalkers") } returns stalkersCollection
+        every { stalkersCollection.document("visitor-1") } returns stalkerDocRef
+        every { stalkerDocRef.set(any(), any<SetOptions>()) } returns Tasks.forException(RuntimeException("Firestore error"))
+
+        val result = repo.recordProfileVisit("user-1", "visitor-1")
+
+        assertTrue(result is Resource.Error)
     }
 }

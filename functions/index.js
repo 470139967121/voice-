@@ -2385,6 +2385,33 @@ exports.activateSuperShyTrial = onCall({ region: "asia-southeast1" }, async (req
   });
 });
 
+// --- Stalker visit counter (profile visitors) ---
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+
+exports.onStalkerWrite = onDocumentWritten(
+  { document: "users/{uid}/stalkers/{visitorId}", region: "asia-southeast1" },
+  async (event) => {
+    const { uid } = event.params;
+    const db = getFirestore();
+    const userRef = db.collection("users").doc(uid);
+
+    const isCreate = !event.data.before.exists;
+    if (isCreate) {
+      // First visit — set firstVisitedAt and increment both counters
+      await event.data.after.ref.update({ firstVisitedAt: FieldValue.serverTimestamp() });
+      await userRef.update({
+        stalkerCount: FieldValue.increment(1),
+        newStalkerCount: FieldValue.increment(1),
+      });
+    } else {
+      // Repeat visit — only increment newStalkerCount
+      await userRef.update({
+        newStalkerCount: FieldValue.increment(1),
+      });
+    }
+  }
+);
+
 // --- Admin API ---
 const adminApp = require("./admin");
 exports.adminApi = onRequest({ region: "asia-southeast1" }, adminApp);

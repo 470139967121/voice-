@@ -671,4 +671,44 @@ class FollowListViewModelTest {
         assertFalse(vm.uiState.value.currentUserFollowingIds.contains("new-target"))
         assertEquals("follow failed", vm.uiState.value.error)
     }
+
+    // ===== SuperShy Gating Tests =====
+
+    @Test
+    fun `isSuperShy defaults to false in UiState`() {
+        assertFalse(FollowListUiState().isSuperShy)
+    }
+
+    @Test
+    fun `isSuperShy set to true when profile user is SuperShy`() = runTest {
+        val profileUser = TestData.createTestUser(
+            uid = currentUserId,
+            displayName = "Current User",
+            followerIds = setOf("follower-a"),
+            followingIds = setOf("following-1"),
+            isSuperShy = true
+        )
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(profileUser)
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(
+            listOf(
+                TestData.createTestUser(uid = "follower-a", displayName = "Follower A"),
+                TestData.createTestUser(uid = "following-1", displayName = "Following 1")
+            )
+        )
+        coEvery { userRepository.getStalkers(currentUserId) } returns Resource.Success(emptyList())
+
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isSuperShy)
+    }
+
+    @Test
+    fun `isSuperShy set to false when profile user is not SuperShy`() = runTest {
+        setupProfileWithStalkers()
+        val vm = createViewModel(initialTab = "stalkers")
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isSuperShy)
+    }
 }

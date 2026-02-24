@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -86,7 +87,7 @@ fun BackpackSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(420.dp)
+                .fillMaxHeight(0.65f)
                 .padding(horizontal = 12.dp)
         ) {
             // ── Recipient Row ──

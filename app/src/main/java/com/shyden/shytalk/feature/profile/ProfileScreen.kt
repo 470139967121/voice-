@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -1233,7 +1234,7 @@ private fun ProfileContent(
                         onDismissDetails = { giftWallViewModel.dismissDetails() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(400.dp)
+                            .heightIn(max = 400.dp)
                     )
                     1 -> if (isOwn && giftingState != null) {
                         BackpackContent(
@@ -1241,7 +1242,7 @@ private fun ProfileContent(
                             giftCatalog = giftingState.value.giftCatalog,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(400.dp)
+                                .heightIn(max = 400.dp)
                         )
                     }
                 }
@@ -1293,7 +1294,7 @@ private fun BackpackContent(
         }
     } else {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
+            columns = GridCells.Adaptive(72.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),

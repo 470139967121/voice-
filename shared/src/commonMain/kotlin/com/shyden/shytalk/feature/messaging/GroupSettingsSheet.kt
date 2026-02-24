@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -292,7 +293,7 @@ private fun MembersTab(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(300.dp)
+                .heightIn(max = 300.dp)
         ) {
             items(participants, key = { it.uid }) { user ->
                 val role = conversation?.roleOf(user.uid) ?: GroupRole.MEMBER

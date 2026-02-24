@@ -169,8 +169,8 @@ fun LuckySpinWheel(
             text = "SPIN",
             style = TextStyle(
                 color = Color(0xFFFFD700).copy(alpha = 0.3f),
-                fontSize = 10.sp,
-                letterSpacing = 2.sp
+                fontSize = (innerRingInner * 0.21f / density / fontScale).sp,
+                letterSpacing = (innerRingInner * 0.04f / density / fontScale).sp
             ),
             constraints = Constraints(maxWidth = (innerRingInner * 2).toInt().coerceAtLeast(1))
         )
@@ -178,21 +178,21 @@ fun LuckySpinWheel(
             textLayoutResult = spinLabel,
             topLeft = Offset(
                 center.x - spinLabel.size.width / 2f,
-                center.y - spinLabel.size.height / 2f + 12f
+                center.y - spinLabel.size.height / 2f + innerRingInner * 0.09f
             )
         )
 
         // Center emoji
         val centerEmoji = textMeasurer.measure(
             text = "\uD83C\uDFB0",
-            style = TextStyle(fontSize = 22.sp),
+            style = TextStyle(fontSize = (innerRingInner * 0.45f / density / fontScale).sp),
             constraints = Constraints(maxWidth = (innerRingInner * 2).toInt().coerceAtLeast(1))
         )
         drawText(
             textLayoutResult = centerEmoji,
             topLeft = Offset(
                 center.x - centerEmoji.size.width / 2f,
-                center.y - centerEmoji.size.height / 2f - 4f
+                center.y - centerEmoji.size.height / 2f - innerRingInner * 0.03f
             )
         )
     }
@@ -210,6 +210,8 @@ private fun DrawScope.drawRing(
     textMeasurer: TextMeasurer
 ) {
     if (gifts.isEmpty() || segmentAngle <= 0f) return
+
+    val ringThickness = rOuter - rInner
 
     for ((index, gift) in gifts.withIndex()) {
         val isLit = litIndex == index
@@ -294,12 +296,13 @@ private fun DrawScope.drawRing(
 
         // Won dot marker (green dot on outer edge)
         if (isPrevWon && !isLit) {
-            val dotR = rOuter - 8f
+            val dotR = rOuter - ringThickness * 0.045f
             val dotX = center.x + dotR * cos(midAngleRad)
             val dotY = center.y + dotR * sin(midAngleRad)
-            drawCircle(Color(0xFF00E676), radius = 5f, center = Offset(dotX, dotY))
+            val dotSize = ringThickness * 0.03f
+            drawCircle(Color(0xFF00E676), radius = dotSize, center = Offset(dotX, dotY))
             drawCircle(
-                Color(0xFF0D0D1A), radius = 5f, center = Offset(dotX, dotY),
+                Color(0xFF0D0D1A), radius = dotSize, center = Offset(dotX, dotY),
                 style = Stroke(1f)
             )
         }
@@ -314,7 +317,8 @@ private fun DrawScope.drawRing(
         val coinX = center.x + textR * cos(midAngleRad)
         val coinY = center.y + textR * sin(midAngleRad)
 
-        val emojiSize = if (isLit) 20.sp else 16.sp
+        val emojiPx = ringThickness * (if (isLit) 0.31f else 0.25f)
+        val emojiSize = (emojiPx / density / fontScale).sp
         val emojiText = giftEmoji(gift.name)
         val emojiMeasured = textMeasurer.measure(
             text = emojiText,
@@ -337,7 +341,7 @@ private fun DrawScope.drawRing(
             text = coinText,
             style = TextStyle(
                 color = if (isActive) Color.White else Color.White.copy(alpha = 0.2f),
-                fontSize = 9.sp
+                fontSize = (ringThickness * 0.14f / density / fontScale).sp
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

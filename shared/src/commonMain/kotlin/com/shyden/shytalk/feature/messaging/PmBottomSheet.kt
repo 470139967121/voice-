@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -99,7 +100,7 @@ private fun PmSheetListView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(500.dp)
+            .fillMaxHeight(0.7f)
     ) {
         Row(
             modifier = Modifier
@@ -180,7 +181,7 @@ private fun PmSheetChatView(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(500.dp)
+            .fillMaxHeight(0.7f)
     ) {
         PrivateChatScreen(
             otherUserId = otherUserId,
@@ -209,7 +210,7 @@ private fun PmSheetGroupChatView(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(500.dp)
+            .fillMaxHeight(0.7f)
     ) {
         PrivateChatScreen(
             conversationId = conversationId,

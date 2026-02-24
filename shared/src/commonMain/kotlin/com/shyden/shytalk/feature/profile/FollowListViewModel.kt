@@ -21,6 +21,7 @@ data class FollowListUiState(
     val profileUserId: String = "",
     val currentUserId: String = "",
     val isOwnList: Boolean = false,
+    val isSuperShy: Boolean = false,
     val selectedTab: FollowTab = FollowTab.FOLLOWERS,
     val followers: List<User> = emptyList(),
     val following: List<User> = emptyList(),
@@ -163,6 +164,7 @@ class FollowListViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = false,
+                    isSuperShy = profileUser.isSuperShy,
                     followers = followerIdsList.mapNotNull { id -> allUsers[id] },
                     following = followingIdsList.mapNotNull { id -> allUsers[id] },
                     currentUserFollowingIds = myFollowingIds,
