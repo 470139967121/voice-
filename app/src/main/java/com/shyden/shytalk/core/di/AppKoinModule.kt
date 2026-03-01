@@ -52,6 +52,8 @@ import com.shyden.shytalk.feature.daily.DailyRewardViewModel
 import com.shyden.shytalk.feature.splash.BannerImagePreloader
 import com.shyden.shytalk.feature.splash.CoilBannerImagePreloader
 import com.shyden.shytalk.feature.splash.FunFactSplashViewModel
+import com.shyden.shytalk.feature.splash.OkHttpWebContentPreloader
+import com.shyden.shytalk.feature.splash.WebContentPreloader
 import com.shyden.shytalk.feature.gacha.GachaViewModel
 import com.shyden.shytalk.feature.gifting.GiftingViewModel
 import com.shyden.shytalk.feature.profile.GiftWallViewModel
@@ -155,5 +157,6 @@ val appModule = module {
     viewModel { params -> GiftWallViewModel(params[0], get()) }
     viewModel { DailyRewardViewModel(get(), get()) }
     single<BannerImagePreloader> { CoilBannerImagePreloader(androidContext()) }
-    viewModel { FunFactSplashViewModel(get(), get(), get()) }
+    single<WebContentPreloader> { OkHttpWebContentPreloader(get()) }
+    viewModel { FunFactSplashViewModel(get(), get(), get(), get()) }
 }

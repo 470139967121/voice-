@@ -1,6 +1,7 @@
 package com.shyden.shytalk.core.ui
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.Build
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -38,6 +39,8 @@ actual fun PlatformWebView(url: String, modifier: Modifier) {
                         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                             settings.forceDark = android.webkit.WebSettings.FORCE_DARK_AUTO
                         }
+
+                        setBackgroundColor(Color.TRANSPARENT)
 
                         webViewClient = object : WebViewClient() {
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {

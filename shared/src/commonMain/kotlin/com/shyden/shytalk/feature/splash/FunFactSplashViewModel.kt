@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.BannerActionType
 import com.shyden.shytalk.core.model.FunFact
 import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.FunFactRepository
@@ -15,6 +16,7 @@ class FunFactSplashViewModel(
     private val bannerRepository: BannerRepository,
     private val funFactRepository: FunFactRepository,
     private val imagePreloader: BannerImagePreloader? = null,
+    private val webContentPreloader: WebContentPreloader? = null,
 ) : ViewModel() {
 
     private val _warmUpComplete = MutableStateFlow(false)
@@ -37,6 +39,13 @@ class FunFactSplashViewModel(
                                 try {
                                     imagePreloader?.preload(banner.imageUrl)
                                 } catch (_: Exception) { }
+                            }
+                            if (banner.actionType == BannerActionType.URL && !banner.actionValue.isNullOrBlank()) {
+                                launch {
+                                    try {
+                                        webContentPreloader?.preload(banner.actionValue!!)
+                                    } catch (_: Exception) { }
+                                }
                             }
                         }
                     } catch (_: Exception) { }
