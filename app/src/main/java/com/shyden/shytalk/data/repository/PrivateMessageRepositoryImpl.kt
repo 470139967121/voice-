@@ -78,7 +78,9 @@ class PrivateMessageRepositoryImpl(
                 }
                 emit(messages)
             } catch (_: Exception) { }
-            delay(3_000)
+            // WebSocket handles the fast path (instant new_message events);
+            // this is now just a safety-net poll
+            delay(30_000)
         }
     }.distinctUntilChanged()
 

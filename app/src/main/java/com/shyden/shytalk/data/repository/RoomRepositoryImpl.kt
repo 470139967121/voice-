@@ -33,7 +33,7 @@ class RoomRepositoryImpl(
                 }
                 emit(rooms)
             } catch (_: Exception) { }
-            delay(3_000)
+            delay(5_000)
         }
     }.distinctUntilChanged()
 

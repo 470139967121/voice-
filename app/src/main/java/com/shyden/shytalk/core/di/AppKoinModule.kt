@@ -11,7 +11,9 @@ import com.shyden.shytalk.data.remote.LiveKitTokenService
 import com.shyden.shytalk.data.remote.LiveKitVoiceService
 import com.shyden.shytalk.data.remote.AndroidAppConfigService
 import com.shyden.shytalk.data.remote.AppConfigService
+import com.shyden.shytalk.data.remote.ConversationWebSocketService
 import com.shyden.shytalk.data.remote.PresenceService
+import com.shyden.shytalk.data.remote.WebSocketConversationService
 import com.shyden.shytalk.data.remote.WebSocketPresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
@@ -82,7 +84,13 @@ val appModule = module {
     // Firebase Auth (free tier — kept for authentication)
     single { FirebaseAuth.getInstance() }
     // HTTP client
-    single { OkHttpClient.Builder().build() }
+    single {
+        OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
 
     // Worker API client (Cloudflare)
     single { WorkerApiClient(get(), BuildConfig.API_BASE_URL, get()) }
@@ -96,6 +104,7 @@ val appModule = module {
     single<TokenService> { LiveKitTokenService(get()) }
     single<VoiceService> { LiveKitVoiceService(androidContext(), get()) }
     single<PresenceService> { WebSocketPresenceService(get(), BuildConfig.API_BASE_URL, get()) }
+    single<ConversationWebSocketService> { WebSocketConversationService(get(), BuildConfig.API_BASE_URL, get()) }
     single<AppConfigService> { AndroidAppConfigService(androidContext(), get()) }
     single { BillingService(androidContext()) }
 
@@ -142,7 +151,8 @@ val appModule = module {
             reportRepository = get(),
             storageRepository = get(),
             stickerStorage = get(),
-            initialConversationId = values.getOrNull(1) as? String
+            initialConversationId = values.getOrNull(1) as? String,
+            conversationWs = get()
         )
     }
     viewModel { ReportReviewViewModel(get(), get()) }

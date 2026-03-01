@@ -19,6 +19,8 @@ import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.data.local.StickerStorage
+import com.shyden.shytalk.data.remote.ConversationEvent
+import com.shyden.shytalk.data.remote.ConversationWebSocketService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.ReportRepository
@@ -90,7 +92,8 @@ class PrivateChatViewModel(
         override suspend fun deleteImageByUrl(url: String) {}
     },
     private val stickerStorage: StickerStorage? = null,
-    private val initialConversationId: String? = null
+    private val initialConversationId: String? = null,
+    private val conversationWs: ConversationWebSocketService? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrivateChatUiState())
@@ -101,6 +104,7 @@ class PrivateChatViewModel(
     private var settingsJob: Job? = null
     private var typingJob: Job? = null
     private var typingResetJob: Job? = null
+    private var wsEventsJob: Job? = null
     private val olderMessages = mutableListOf<PrivateMessage>()
     private val pendingMessages = mutableMapOf<String, PrivateMessage>()
 
@@ -170,7 +174,7 @@ class PrivateChatViewModel(
                     _uiState.update { it.copy(conversationId = conversation.conversationId) }
                     observeMessages(conversation.conversationId)
                     observeSettings(conversation.conversationId)
-                    observeTyping(conversation.conversationId)
+                    connectConversationWs(conversation.conversationId)
                 }
                 is Resource.Error -> {
                     _uiState.update {
@@ -223,6 +227,7 @@ class PrivateChatViewModel(
                     observeSettings(conversationId)
                     observeMuteStatus(conversationId)
                     loadGroupMutes(conversationId)
+                    connectConversationWs(conversationId)
                 }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = result.message) }
@@ -504,35 +509,81 @@ class PrivateChatViewModel(
         val conversationId = _uiState.value.conversationId
         if (conversationId.isEmpty()) return
 
-        typingRepository.setTyping(conversationId, currentUserId, true)
+        if (conversationWs != null) {
+            conversationWs.sendTyping(true)
+        } else {
+            typingRepository.setTyping(conversationId, currentUserId, true)
+        }
 
         // Auto-reset typing after debounce
         typingResetJob?.cancel()
         typingResetJob = viewModelScope.launch {
             delay(Constants.TYPING_DEBOUNCE_MS)
-            typingRepository.setTyping(conversationId, currentUserId, false)
+            if (conversationWs != null) {
+                conversationWs.sendTyping(false)
+            } else {
+                typingRepository.setTyping(conversationId, currentUserId, false)
+            }
         }
     }
 
-    private fun observeTyping(conversationId: String) {
-        typingJob?.cancel()
-        typingJob = viewModelScope.launch {
-            typingRepository.observeTyping(conversationId, otherUserId).collect { isTyping ->
-                _uiState.update { it.copy(isOtherUserTyping = isTyping) }
+    /**
+     * Connect the conversation WebSocket for instant message and typing events.
+     * Falls back to the old TypingRepository WebSocket if conversationWs is null (e.g. iOS).
+     */
+    private fun connectConversationWs(conversationId: String) {
+        if (conversationWs != null) {
+            conversationWs.connect(conversationId, currentUserId)
+            wsEventsJob?.cancel()
+            wsEventsJob = viewModelScope.launch {
+                conversationWs.events.collect { event ->
+                    when (event) {
+                        is ConversationEvent.NewMessage -> {
+                            // Immediately refetch messages (bypass slow polling)
+                            refreshMessages(conversationId)
+                        }
+                        is ConversationEvent.Typing -> {
+                            // For 1-on-1, only show typing from the other user
+                            if (!_uiState.value.isGroup && event.userId != otherUserId) return@collect
+                            _uiState.update { it.copy(isOtherUserTyping = event.isTyping) }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Fallback: old TypingRepository WS (no new_message support)
+            typingJob?.cancel()
+            typingJob = viewModelScope.launch {
+                typingRepository.observeTyping(conversationId, otherUserId).collect { isTyping ->
+                    _uiState.update { it.copy(isOtherUserTyping = isTyping) }
+                }
             }
         }
+    }
+
+    /**
+     * Immediately restart the message polling flow to pick up new messages.
+     * This forces a fresh API call instead of waiting for the next poll cycle.
+     */
+    private fun refreshMessages(conversationId: String) {
+        observeMessages(conversationId)
     }
 
     private fun clearTyping() {
         val conversationId = _uiState.value.conversationId
         if (conversationId.isNotEmpty()) {
-            typingRepository.setTyping(conversationId, currentUserId, false)
+            if (conversationWs != null) {
+                conversationWs.sendTyping(false)
+            } else {
+                typingRepository.setTyping(conversationId, currentUserId, false)
+            }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
         clearTyping()
+        conversationWs?.disconnect()
     }
 
     fun reportMessage(message: PrivateMessage, reason: String, description: String) {

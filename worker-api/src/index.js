@@ -124,6 +124,9 @@ export default {
       if (authResult) return authResult; // auth failed, return error response
     }
 
+    // Attach execution context so route handlers can use ctx.waitUntil()
+    request.ctx = ctx;
+
     // Route matching
     const match = router.match(request.method, pathname);
     if (!match) {

@@ -22,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.core.room.RoomService
+import com.shyden.shytalk.data.remote.WorkerApiClient
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
 
     private val authRepository: AuthRepository by inject()
     private val userRepository: UserRepository by inject()
+    private val workerApiClient: WorkerApiClient by inject()
     private val activeRoomManager: RoomLifecycleManager by inject()
     private val appConfigService: AppConfigService by inject()
 
@@ -125,7 +127,10 @@ class MainActivity : ComponentActivity() {
                             NavGraph(
                                 navController = navController,
                                 startDestination = Screen.SignIn.route,
-                                onSignOut = { authRepository.signOut() }
+                                onSignOut = {
+                                    workerApiClient.clearTokenCache()
+                                    authRepository.signOut()
+                                }
                             )
 
                             if (softUpdateAvailable != null) {

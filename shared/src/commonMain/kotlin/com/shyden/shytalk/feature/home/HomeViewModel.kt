@@ -12,6 +12,7 @@ import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -230,9 +231,11 @@ class HomeViewModel(
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, lastRoomName = name) }
-            userRepository.updateProfile(userId, mapOf("lastRoomName" to name))
-            // Close any existing rooms owned by this user
-            roomRepository.closeAllRoomsByOwner(userId)
+            // Run independent pre-checks in parallel
+            val saveNameJob = async { userRepository.updateProfile(userId, mapOf("lastRoomName" to name)) }
+            val closeJob = async { roomRepository.closeAllRoomsByOwner(userId) }
+            saveNameJob.await()
+            closeJob.await()
             when (val result = roomRepository.createRoom(name, userId)) {
                 is Resource.Success -> {
                     _uiState.update { it.copy(isLoading = false, createdRoomId = result.data) }

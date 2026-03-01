@@ -23,11 +23,10 @@ import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.koin.android.ext.android.inject
 
 class RoomService : Service() {
@@ -144,7 +143,6 @@ class RoomService : Service() {
     private fun observeRoom() {
         observerJob?.cancel()
         observerJob = serviceScope.launch {
-            var lastOwnerId: String? = null
             activeRoomManager.activeRoom.collect { room ->
                 if (room == null) {
                     // Don't stopSelf() immediately — let observeRoomClosed show "Room Closed" on chathead
@@ -154,20 +152,9 @@ class RoomService : Service() {
                 getSystemService(NotificationManager::class.java)
                     ?.notify(Constants.ROOM_NOTIFICATION_ID, notification)
 
-                // Fetch owner photo when owner changes
-                val ownerId = room.ownerId
-                if (ownerId != lastOwnerId) {
-                    lastOwnerId = ownerId
-                    when (val result = userRepository.getUser(ownerId)) {
-                        is Resource.Success -> {
-                            val url = result.data.photoUrl
-                            ownerPhotoUrl = url
-                            chatHeadManager?.updatePhoto(url)
-                        }
-                        is Resource.Error -> {}
-
-                        else -> {}
-                    }
+                // Keep trying to resolve owner photo until we have one
+                if (ownerPhotoUrl.isNullOrEmpty()) {
+                    resolveOwnerPhoto(room.ownerId)
                 }
             }
         }
@@ -195,9 +182,41 @@ class RoomService : Service() {
                     chatHeadManager?.hide()
                 } else {
                     if (Settings.canDrawOverlays(this@RoomService)) {
-                        chatHeadManager?.show(ownerPhotoUrl)
+                        // Last-chance cache check before showing
+                        if (ownerPhotoUrl.isNullOrEmpty()) {
+                            val room = activeRoomManager.activeRoom.value
+                            if (room != null) {
+                                resolveOwnerPhoto(room.ownerId)
+                            }
+                        }
+                        val photoToShow = ownerPhotoUrl?.takeIf { it.isNotEmpty() }
+                        chatHeadManager?.show(photoToShow)
                     }
                 }
+            }
+        }
+    }
+
+    private fun resolveOwnerPhoto(ownerId: String) {
+        // 1. Check sharedUserCache (populated by RoomViewModel)
+        val cached = activeRoomManager.sharedUserCache[ownerId]
+        val url = cached?.photoUrl
+        if (!url.isNullOrEmpty()) {
+            ownerPhotoUrl = url
+            chatHeadManager?.updatePhoto(url)
+            return
+        }
+        // 2. Fall back to API (async) — uses UserRepositoryImpl's 60-second cache
+        serviceScope.launch {
+            when (val result = userRepository.getUser(ownerId)) {
+                is Resource.Success -> {
+                    val photo = result.data.photoUrl
+                    if (!photo.isNullOrEmpty()) {
+                        ownerPhotoUrl = photo
+                        chatHeadManager?.updatePhoto(photo)
+                    }
+                }
+                else -> { /* Will retry on next room emission */ }
             }
         }
     }
@@ -226,12 +245,18 @@ class RoomService : Service() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         android.util.Log.d("RoomService", "onTaskRemoved: app swiped from recents, calling leaveRoom")
-        // Process is being killed — use runBlocking to ensure Firestore cleanup completes
-        runBlocking {
-            withContext(NonCancellable) {
-                activeRoomManager.leaveRoom()
+        // Run cleanup on a background thread to avoid blocking the main thread (ANR)
+        Thread {
+            runBlocking {
+                try {
+                    withTimeout(2000L) {
+                        activeRoomManager.leaveRoom()
+                    }
+                } catch (_: Exception) {
+                    android.util.Log.w("RoomService", "onTaskRemoved: leaveRoom timed out or failed")
+                }
             }
-        }
+        }.start()
         stopSelf()
     }
 

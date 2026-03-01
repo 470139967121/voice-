@@ -12,6 +12,12 @@ const GOOGLE_CERTS_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/secu
 const CERTS_CACHE_KEY = 'firebase_certs';
 const CERTS_CACHE_TTL = 3600; // 1 hour in seconds
 
+// In-memory caches — persist within the same Worker isolate across requests
+const cryptoKeyCache = new Map(); // kid → CryptoKey
+const verifiedTokenCache = new Map(); // signature → { payload, expiresAt }
+const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const TOKEN_CACHE_MAX = 500;
+
 /**
  * Import an X.509 certificate as a CryptoKey for RS256 verification.
  */
@@ -200,6 +206,13 @@ async function verifyFirebaseToken(idToken, env) {
     throw new AuthError('Invalid subject', 401);
   }
 
+  // Check verified token cache (keyed by signature)
+  const signature = parts[2];
+  const cached = verifiedTokenCache.get(signature);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.payload;
+  }
+
   // Verify signature
   const kid = header.kid;
   if (!kid) {
@@ -212,7 +225,13 @@ async function verifyFirebaseToken(idToken, env) {
     throw new AuthError('Unknown key ID', 401);
   }
 
-  const publicKey = await importPublicKey(certPem);
+  // Use cached CryptoKey if available
+  let publicKey = cryptoKeyCache.get(kid);
+  if (!publicKey) {
+    publicKey = await importPublicKey(certPem);
+    cryptoKeyCache.set(kid, publicKey);
+  }
+
   const signatureData = base64UrlDecode(parts[2]);
   const signedContent = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
 
@@ -225,6 +244,13 @@ async function verifyFirebaseToken(idToken, env) {
 
   if (!valid) {
     throw new AuthError('Invalid signature', 401);
+  }
+
+  // Cache verified token
+  verifiedTokenCache.set(signature, { payload, expiresAt: Date.now() + TOKEN_CACHE_TTL });
+  if (verifiedTokenCache.size > TOKEN_CACHE_MAX) {
+    const firstKey = verifiedTokenCache.keys().next().value;
+    verifiedTokenCache.delete(firstKey);
   }
 
   return payload;
@@ -256,8 +282,36 @@ async function authMiddleware(request, env) {
 
   try {
     const decoded = await verifyFirebaseToken(idToken, env);
+    const uid = decoded.sub;
+
+    // Check suspension status (cached alongside token for 5 min)
+    const signature = idToken.split('.')[2];
+    const cached = verifiedTokenCache.get(signature);
+    let isSuspended = cached?.isSuspended;
+
+    if (isSuspended === undefined) {
+      const user = await env.DB.prepare(
+        'SELECT is_suspended FROM users WHERE uid = ?'
+      ).bind(uid).first();
+      isSuspended = !!user?.is_suspended;
+      // Update cache with suspension status
+      if (cached) {
+        cached.isSuspended = isSuspended;
+      }
+    }
+
+    if (isSuspended) {
+      // Allow suspended users to submit appeals and check their own status
+      const url = new URL(request.url);
+      const isSuspensionExempt = url.pathname === '/api/appeals'
+        || url.pathname.startsWith('/api/users/me');
+      if (!isSuspensionExempt) {
+        return jsonError('Account suspended', 403);
+      }
+    }
+
     request.auth = {
-      uid: decoded.sub,
+      uid,
       token: decoded,
     };
     return null; // success — continue to handler

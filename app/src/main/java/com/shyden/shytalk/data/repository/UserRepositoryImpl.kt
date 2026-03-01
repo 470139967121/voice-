@@ -24,10 +24,38 @@ class UserRepositoryImpl(
     private val _userUpdates = MutableSharedFlow<User>(replay = 1, extraBufferCapacity = 5)
     override val userUpdates: SharedFlow<User> = _userUpdates.asSharedFlow()
 
+    // In-memory user cache with TTL
+    private data class CachedUser(val user: User, val expiresAt: Long)
+    private val cache = LinkedHashMap<String, CachedUser>(64, 0.75f, true)
+    private val CACHE_TTL_MS = 60_000L // 60 seconds
+    private val CACHE_MAX_SIZE = 200
+
+    private fun getCached(userId: String): User? {
+        val entry = cache[userId] ?: return null
+        if (System.currentTimeMillis() > entry.expiresAt) {
+            cache.remove(userId)
+            return null
+        }
+        return entry.user
+    }
+
+    private fun putCache(user: User) {
+        cache[user.uid] = CachedUser(user, System.currentTimeMillis() + CACHE_TTL_MS)
+        if (cache.size > CACHE_MAX_SIZE) {
+            cache.remove(cache.keys.first())
+        }
+    }
+
+    private fun invalidateCache(userId: String) {
+        cache.remove(userId)
+    }
+
     private suspend fun emitUserUpdate(userId: String) {
         try {
             val json = api.get("/api/users/$userId")
-            _userUpdates.tryEmit(User.fromMap(json.toMap(), userId))
+            val user = User.fromMap(json.toMap(), userId)
+            putCache(user)
+            _userUpdates.tryEmit(user)
         } catch (_: Exception) {
             // Best-effort: don't fail the parent operation if re-fetch fails
         }
@@ -47,9 +75,14 @@ class UserRepositoryImpl(
         _userUpdates.tryEmit(user)
     }
 
-    override suspend fun getUser(userId: String): Resource<User> = firebaseCall("Failed to get user") {
-        val json = api.get("/api/users/$userId")
-        User.fromMap(json.toMap(), userId)
+    override suspend fun getUser(userId: String): Resource<User> {
+        getCached(userId)?.let { return Resource.Success(it) }
+        return firebaseCall("Failed to get user") {
+            val json = api.get("/api/users/$userId")
+            val user = User.fromMap(json.toMap(), userId)
+            putCache(user)
+            user
+        }
     }
 
     override suspend fun userExists(userId: String): Resource<Boolean> = firebaseCall("Failed to check user existence") {
@@ -59,11 +92,13 @@ class UserRepositoryImpl(
 
     override suspend fun updateDisplayName(userId: String, displayName: String): Resource<Unit> = firebaseCall("Failed to update display name") {
         api.patch("/api/users/$userId", JSONObject().put("displayName", displayName))
+        invalidateCache(userId)
         emitUserUpdate(userId)
     }
 
     override suspend fun updateAvatar(userId: String, avatarUrl: String): Resource<Unit> = firebaseCall("Failed to update avatar") {
         api.patch("/api/users/$userId", JSONObject().put("avatarUrl", avatarUrl))
+        invalidateCache(userId)
         emitUserUpdate(userId)
     }
 
@@ -77,6 +112,7 @@ class UserRepositoryImpl(
             body.put(k, v ?: JSONObject.NULL)
         }
         api.patch("/api/users/$userId", body)
+        invalidateCache(userId)
         if (fields.keys.any { it in profileVisibleFields }) {
             emitUserUpdate(userId)
         }
@@ -116,17 +152,26 @@ class UserRepositoryImpl(
             api.delete("/api/users/$userId/followers/$followerId")
         }
 
-    override suspend fun getUsers(userIds: List<String>): Resource<List<User>> =
-        firebaseCall("Failed to get users") {
-            if (userIds.isEmpty()) return@firebaseCall emptyList()
-            val body = JSONObject().put("uids", JSONArray(userIds))
+    override suspend fun getUsers(userIds: List<String>): Resource<List<User>> {
+        if (userIds.isEmpty()) return Resource.Success(emptyList())
+        val cached = mutableListOf<User>()
+        val uncachedIds = mutableListOf<String>()
+        for (id in userIds) {
+            val hit = getCached(id)
+            if (hit != null) cached.add(hit) else uncachedIds.add(id)
+        }
+        if (uncachedIds.isEmpty()) return Resource.Success(cached)
+        return firebaseCall("Failed to get users") {
+            val body = JSONObject().put("uids", JSONArray(uncachedIds))
             val arr = api.post("/api/users/batch", body).optJSONArray("users") ?: JSONArray()
-            (0 until arr.length()).mapNotNull { i ->
+            val fetched = (0 until arr.length()).mapNotNull { i ->
                 val obj = arr.getJSONObject(i)
                 val uid = obj.optString("uid", "")
-                if (uid.isNotEmpty()) User.fromMap(obj.toMap(), uid) else null
+                if (uid.isNotEmpty()) User.fromMap(obj.toMap(), uid).also { putCache(it) } else null
             }
+            cached + fetched
         }
+    }
 
     override suspend fun recordProfileVisit(profileUserId: String, visitorId: String): Resource<Unit> =
         firebaseCall("Failed to record visit") {
@@ -208,8 +253,10 @@ class UserRepositoryImpl(
             flow {
                 while (true) {
                     try {
-                        val json = api.get("/api/users/$userId")
-                        emit(User.fromMap(json.toMap(), userId))
+                        val json = api.get("/api/users/$userId/lite")
+                        val user = User.fromMap(json.toMap(), userId)
+                        putCache(user)
+                        emit(user)
                     } catch (_: Exception) {
                         // Silently skip failed polls
                     }

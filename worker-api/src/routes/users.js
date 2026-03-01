@@ -90,6 +90,11 @@ function registerUserRoutes(router) {
       return jsonError('No valid fields to update', 400);
     }
 
+    // Keep avatar_url in sync when profile photo changes
+    if (updates.profile_photo_url) {
+      updates.avatar_url = updates.profile_photo_url;
+    }
+
     const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
     const values = Object.values(updates);
 
@@ -253,6 +258,24 @@ function registerUserRoutes(router) {
     }
 
     return json({ users: results });
+  });
+
+  // ── Lightweight single user profile (no social graph queries) ──
+  router.get('/api/users/:uid/lite', async (request, env, params) => {
+    const user = await env.DB.prepare('SELECT * FROM users WHERE uid = ?')
+      .bind(params.uid).first();
+    if (!user) return jsonError('User not found', 404);
+
+    if (user.profile_photo_url && !user.avatar_url) {
+      user.avatar_url = user.profile_photo_url;
+    }
+
+    // Return empty arrays for social graph — caller doesn't need them
+    user.blockedUserIds = [];
+    user.followingIds = [];
+    user.followerIds = [];
+
+    return json(user);
   });
 
   // ── Record profile visit (stalker) ──
