@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -140,6 +141,7 @@ fun ChatPanel(
     val reversedMessages = remember(messages) { messages.asReversed() }
 
     val focusManager = LocalFocusManager.current
+    var isInputFocused by remember { mutableStateOf(false) }
 
     Column(modifier = modifier) {
         Box(
@@ -223,33 +225,36 @@ fun ChatPanel(
                 value = messageText,
                 onValueChange = { if (it.length <= 200) messageText = it },
                 placeholder = { Text(if (isEditing) "Edit message..." else "Message...") },
-                modifier = Modifier.weight(1f).testTag("room_chatInput"),
+                modifier = Modifier.weight(1f).testTag("room_chatInput")
+                    .onFocusChanged { isInputFocused = it.isFocused },
                 maxLines = 4,
                 shape = RoundedCornerShape(24.dp),
                 leadingIcon = if (isEditing) {
                     { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp)) }
                 } else null
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            IconButton(
-                onClick = {
-                    if (messageText.isNotBlank()) {
-                        if (isEditing) {
-                            onEditMessage(messageText)
-                        } else {
-                            onSendMessage(messageText)
+            if (isInputFocused || isEditing) {
+                Spacer(modifier = Modifier.width(4.dp))
+                IconButton(
+                    onClick = {
+                        if (messageText.isNotBlank()) {
+                            if (isEditing) {
+                                onEditMessage(messageText)
+                            } else {
+                                onSendMessage(messageText)
+                            }
+                            messageText = ""
                         }
-                        messageText = ""
-                    }
-                },
-                enabled = messageText.isNotBlank()
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = if (messageText.isNotBlank()) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    },
+                    enabled = messageText.isNotBlank()
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Send",
+                        tint = if (messageText.isNotBlank()) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             if (isSeated) {
