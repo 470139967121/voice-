@@ -6,9 +6,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,7 +82,12 @@ class MainActivity : ComponentActivity() {
                 }
 
                 when {
-                    !checkComplete -> { /* loading */ }
+                    !checkComplete -> {
+                        Surface(
+                            color = MaterialTheme.colorScheme.background,
+                            modifier = Modifier.fillMaxSize()
+                        ) {}
+                    }
                     isUnsafe -> { UnsafeDeviceScreen() }
                     updateRequired -> { ForceUpdateScreen() }
                     else -> {
