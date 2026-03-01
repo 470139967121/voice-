@@ -38,4 +38,7 @@ sealed class Screen(val route: String) {
     data object GiftWall : Screen("gift_wall/{userId}") {
         fun createRoute(userId: String) = "gift_wall/$userId"
     }
+    data object Browser : Screen("browser/{url}") {
+        fun createRoute(encodedUrl: String) = "browser/$encodedUrl"
+    }
 }

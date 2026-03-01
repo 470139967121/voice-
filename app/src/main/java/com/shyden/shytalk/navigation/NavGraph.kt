@@ -355,6 +355,9 @@ fun NavGraph(
                 onNavigateToWallet = {
                     navController.navigate(Screen.Wallet.route)
                 },
+                onNavigateToUrl = { url ->
+                    navController.navigate(Screen.Browser.createRoute(android.net.Uri.encode(url)))
+                },
                 messagesContent = { modifier ->
                     ConversationListScreen(
                         onNavigateToChat = { otherUserId ->
@@ -774,6 +777,18 @@ fun NavGraph(
             GiftWallScreen(
                 viewModel = giftWallViewModel,
                 onNavigateBack = { navController.safePopBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.Browser.route,
+            arguments = listOf(navArgument("url") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val encodedUrl = backStackEntry.arguments?.getString("url") ?: return@composable
+            val url = android.net.Uri.decode(encodedUrl)
+            com.shyden.shytalk.core.ui.PlatformWebView(
+                url = url,
+                modifier = Modifier.fillMaxSize().statusBarsPadding()
             )
         }
 

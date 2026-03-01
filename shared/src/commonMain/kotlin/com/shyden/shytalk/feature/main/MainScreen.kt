@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import com.shyden.shytalk.core.model.BannerActionType
 import com.shyden.shytalk.core.model.ChatRoom
@@ -53,6 +52,7 @@ fun MainScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToNewMessage: () -> Unit = {},
     onNavigateToWallet: () -> Unit = {},
+    onNavigateToUrl: (String) -> Unit = {},
     messagesContent: @Composable (Modifier) -> Unit = {},
     totalUnreadCount: Long = 0,
     profileContent: @Composable (Modifier) -> Unit
@@ -61,8 +61,6 @@ fun MainScreen(
     val selectedTab = BottomNavTab.valueOf(selectedTabName)
     var showCreateDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val uriHandler = LocalUriHandler.current
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -157,7 +155,7 @@ fun MainScreen(
                     onBannerAction = { banner ->
                         val value = banner.actionValue ?: return@RoomListContent
                         when (banner.actionType) {
-                            BannerActionType.URL -> uriHandler.openUri(value)
+                            BannerActionType.URL -> onNavigateToUrl(value)
                             BannerActionType.ROOM -> onNavigateToRoom(value)
                             BannerActionType.SCREEN -> when (value) {
                                 "wallet" -> onNavigateToWallet()
