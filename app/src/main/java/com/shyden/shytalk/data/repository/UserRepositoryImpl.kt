@@ -255,7 +255,7 @@ class UserRepositoryImpl(
                     try {
                         val json = api.get("/api/users/$userId/lite")
                         val user = User.fromMap(json.toMap(), userId)
-                        putCache(user)
+                        // Don't putCache — lite responses omit social graph data
                         emit(user)
                     } catch (_: Exception) {
                         // Silently skip failed polls

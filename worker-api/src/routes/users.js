@@ -322,7 +322,14 @@ function registerUserRoutes(router) {
       'SELECT * FROM stalkers WHERE profile_user_id = ? ORDER BY last_visited_at DESC'
     ).bind(params.uid).all();
 
-    return json(results);
+    return json({
+      stalkers: results.map(r => ({
+        visitorId: r.visitor_id,
+        visitCount: r.visit_count,
+        lastVisitedAt: r.last_visited_at,
+        firstVisitedAt: r.first_visited_at
+      }))
+    });
   });
 
   // ── Mark stalkers viewed ──
