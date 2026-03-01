@@ -40,6 +40,8 @@ import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.data.repository.UserRepositoryImpl
 import com.shyden.shytalk.data.repository.GiftRepository
 import com.shyden.shytalk.data.repository.GiftRepositoryImpl
+import com.shyden.shytalk.data.repository.BannerRepository
+import com.shyden.shytalk.data.repository.BannerRepositoryImpl
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.EconomyRepositoryImpl
 import com.shyden.shytalk.data.remote.BillingService
@@ -104,6 +106,7 @@ val appModule = module {
     singleOf(::NotificationRepositoryImpl) bind NotificationRepository::class
     singleOf(::GiftRepositoryImpl) bind GiftRepository::class
     singleOf(::EconomyRepositoryImpl) bind EconomyRepository::class
+    singleOf(::BannerRepositoryImpl) bind BannerRepository::class
     single { StickerStorage(androidContext()) }
 
     // ActiveRoomManager
@@ -112,7 +115,7 @@ val appModule = module {
 
     // ViewModels
     viewModel { AuthViewModel(get(), get(), get(), get(named("deviceId"))) }
-    viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }
     viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }

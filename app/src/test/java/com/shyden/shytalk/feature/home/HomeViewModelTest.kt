@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
@@ -41,6 +42,7 @@ class HomeViewModelTest {
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val authRepository = mockk<AuthRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
+    private val bannerRepository = mockk<BannerRepository>(relaxed = true)
 
     private val roomsFlow = MutableSharedFlow<List<ChatRoom>>()
     private val currentUserId = "current-user"
@@ -64,7 +66,8 @@ class HomeViewModelTest {
     private fun createViewModel() = HomeViewModel(
         roomRepository = roomRepository,
         authRepository = authRepository,
-        userRepository = userRepository
+        userRepository = userRepository,
+        bannerRepository = bannerRepository
     ).also { activeViewModels.add(it) }
 
     @Test

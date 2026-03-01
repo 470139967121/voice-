@@ -31,7 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
+import com.shyden.shytalk.core.model.BannerActionType
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.feature.home.RoomListContent
 
@@ -59,6 +61,7 @@ fun MainScreen(
     val selectedTab = BottomNavTab.valueOf(selectedTabName)
     var showCreateDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val uriHandler = LocalUriHandler.current
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -151,6 +154,19 @@ fun MainScreen(
                 RoomListContent(
                     onNavigateToRoom = onNavigateToRoom,
                     onPrewarmRoom = onPrewarmRoom,
+                    onBannerAction = { banner ->
+                        val value = banner.actionValue ?: return@RoomListContent
+                        when (banner.actionType) {
+                            BannerActionType.URL -> uriHandler.openUri(value)
+                            BannerActionType.ROOM -> onNavigateToRoom(value)
+                            BannerActionType.SCREEN -> when (value) {
+                                "wallet" -> onNavigateToWallet()
+                                "settings" -> onNavigateToSettings()
+                                else -> {}
+                            }
+                            BannerActionType.NONE -> {}
+                        }
+                    },
                     snackbarHostState = snackbarHostState,
                     showCreateDialog = showCreateDialog,
                     onDismissCreateDialog = { showCreateDialog = false },

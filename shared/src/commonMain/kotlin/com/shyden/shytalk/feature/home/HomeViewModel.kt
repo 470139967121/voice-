@@ -2,11 +2,13 @@ package com.shyden.shytalk.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.Banner
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.Job
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
+    val banners: List<Banner> = emptyList(),
     val rooms: List<ChatRoom> = emptyList(),
     val seatUsers: Map<String, User> = emptyMap(),
     val isLoading: Boolean = true,
@@ -31,7 +34,8 @@ data class HomeUiState(
 class HomeViewModel(
     private val roomRepository: RoomRepository,
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val bannerRepository: BannerRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -52,6 +56,16 @@ class HomeViewModel(
         loadLastRoomName()
         observeRooms()
         observeUserUpdates()
+        loadBanners()
+    }
+
+    private fun loadBanners() {
+        viewModelScope.launch {
+            try {
+                val banners = bannerRepository.getActiveBanners()
+                _uiState.update { it.copy(banners = banners) }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun loadLastRoomName() {
@@ -122,6 +136,7 @@ class HomeViewModel(
             }
             userCache.clear()
             filterAndEmitRooms()
+            loadBanners()
             _uiState.update { it.copy(isRefreshing = false) }
         }
     }
@@ -153,6 +168,7 @@ class HomeViewModel(
         }
         userCache.clear()
         filterAndEmitRooms()
+        loadBanners()
     }
 
     private suspend fun filterAndEmitRooms() {

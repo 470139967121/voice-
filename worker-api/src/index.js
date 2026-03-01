@@ -18,6 +18,7 @@ const { registerReportRoutes } = require('./routes/reports');
 const { registerNotificationRoutes } = require('./routes/notifications');
 const { registerRoomRoutes } = require('./routes/rooms');
 const { registerConversationRoutes } = require('./routes/conversations');
+const { registerBannerRoutes } = require('./routes/banners');
 
 // Re-export Durable Object classes
 export { RoomDurableObject, ConversationDurableObject };
@@ -33,6 +34,7 @@ registerReportRoutes(router);
 registerNotificationRoutes(router);
 registerRoomRoutes(router);
 registerConversationRoutes(router);
+registerBannerRoutes(router);
 
 // ── Health check (no auth) ──
 router.get('/api/health', async () => {
@@ -340,8 +342,17 @@ async function cleanupOrphanedStorage(env) {
     }
   }
 
+  // Banners → image_url
+  const { results: bannerRows } = await env.DB.prepare(
+    'SELECT image_url FROM banners WHERE image_url IS NOT NULL'
+  ).all();
+  for (const b of bannerRows) {
+    const k = extractKey(b.image_url);
+    if (k) referencedKeys.add(k);
+  }
+
   // List and delete orphaned R2 objects using native R2 API
-  const folders = ['pm_images/', 'stickers/', 'report_evidence/', 'profile_photos/', 'cover_photos/', 'group_photos/'];
+  const folders = ['pm_images/', 'stickers/', 'report_evidence/', 'profile_photos/', 'cover_photos/', 'group_photos/', 'banners/'];
   const results = {};
   let totalDeleted = 0;
 
