@@ -44,6 +44,8 @@ import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.BannerRepositoryImpl
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.EconomyRepositoryImpl
+import com.shyden.shytalk.data.repository.FunFactRepository
+import com.shyden.shytalk.data.repository.FunFactRepositoryImpl
 import com.shyden.shytalk.data.remote.BillingService
 import com.shyden.shytalk.feature.auth.AuthViewModel
 import com.shyden.shytalk.feature.daily.DailyRewardViewModel
@@ -110,6 +112,7 @@ val appModule = module {
     singleOf(::GiftRepositoryImpl) bind GiftRepository::class
     singleOf(::EconomyRepositoryImpl) bind EconomyRepository::class
     singleOf(::BannerRepositoryImpl) bind BannerRepository::class
+    single<FunFactRepository> { FunFactRepositoryImpl(get(), androidContext()) }
     single { StickerStorage(androidContext()) }
 
     // ActiveRoomManager
@@ -152,5 +155,5 @@ val appModule = module {
     viewModel { params -> GiftWallViewModel(params[0], get()) }
     viewModel { DailyRewardViewModel(get(), get()) }
     single<BannerImagePreloader> { CoilBannerImagePreloader(androidContext()) }
-    viewModel { FunFactSplashViewModel(get(), get()) }
+    viewModel { FunFactSplashViewModel(get(), get(), get()) }
 }

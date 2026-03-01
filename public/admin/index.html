@@ -2254,6 +2254,7 @@
             <button class="tab-btn" id="tab-maintenance">Maintenance</button>
             <button class="tab-btn" id="tab-monitor">Spin Monitor</button>
             <button class="tab-btn" id="tab-banners">Banners</button>
+            <button class="tab-btn" id="tab-funfacts">Fun Facts</button>
         </div>
         <button id="signout-btn">Sign Out</button>
     </div>
@@ -3150,6 +3151,56 @@
             </div>
         </div>
     </div>
+
+        <!-- Fun Facts Panel -->
+        <div id="funfacts-panel">
+            <h2 style="margin-bottom:16px;">Fun Facts</h2>
+            <p style="color:var(--text2);margin-bottom:12px;">Manage language and culture fun facts shown on the splash screen.</p>
+            <div style="margin-bottom:16px;">
+                <button id="funfact-add-btn" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">+ Add Fun Fact</button>
+            </div>
+            <div id="funfacts-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+
+        <!-- Fun Fact Add/Edit Dialog -->
+        <div id="funfact-dialog-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
+            <div style="background:var(--card);border-radius:12px;padding:24px;max-width:520px;width:90%;max-height:90vh;overflow-y:auto;">
+                <h3 id="funfact-dialog-title" style="margin-bottom:16px;">Add Fun Fact</h3>
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text2);">Fact Text *</label>
+                        <textarea id="funfact-text-input" placeholder="e.g. Japanese has three writing systems..." rows="3" style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;resize:vertical;font-family:inherit;"></textarea>
+                    </div>
+                    <div style="display:flex;gap:12px;">
+                        <div style="flex:1;">
+                            <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text2);">Category</label>
+                            <select id="funfact-category-input" style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
+                                <option value="language">Language</option>
+                                <option value="greeting">Greeting</option>
+                                <option value="culture">Culture</option>
+                                <option value="trivia">Trivia</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text2);">Emoji</label>
+                            <input type="text" id="funfact-emoji-input" placeholder="e.g. 🇯🇵" style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text2);">Source Language / Country</label>
+                        <input type="text" id="funfact-sourcelang-input" placeholder="e.g. Japanese, Swahili" style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="funfact-active-check" checked>
+                        <label for="funfact-active-check" style="font-size:14px;">Active</label>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                    <button id="funfact-dialog-cancel" style="padding:8px 18px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:14px;">Cancel</button>
+                    <button id="funfact-dialog-save" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">Save</button>
+                </div>
+            </div>
+        </div>
 </div>
 
 <!-- Toast -->
@@ -3288,7 +3339,7 @@
         loadEconomyConfig();
         // Restore saved tab and report filter
         const savedTab = localStorage.getItem("admin_tab");
-        if (savedTab && ["users", "appeals", "reports", "gifts", "economy", "maintenance", "monitor"].includes(savedTab)) {
+        if (savedTab && ["users", "appeals", "reports", "gifts", "economy", "maintenance", "monitor", "banners", "funfacts"].includes(savedTab)) {
           switchTab(savedTab);
         }
         const savedReportFilter = localStorage.getItem("admin_report_filter");
@@ -3813,6 +3864,7 @@
     const tabMaintenance = $("#tab-maintenance");
     const tabMonitor = $("#tab-monitor");
     const tabBanners = $("#tab-banners");
+    const tabFunfacts = $("#tab-funfacts");
     const appealsPanel = $("#appeals-panel");
     const reportsPanel = $("#reports-panel");
     const giftsPanel = $("#gifts-panel");
@@ -3820,6 +3872,7 @@
     const maintenancePanel = $("#maintenance-panel");
     const monitorPanel = $("#monitor-panel");
     const bannersPanel = $("#banners-panel");
+    const funfactsPanel = $("#funfacts-panel");
     let currentTab = "users";
 
     function switchTab(tab) {
@@ -3833,6 +3886,7 @@
       tabMaintenance.classList.toggle("active", tab === "maintenance");
       tabMonitor.classList.toggle("active", tab === "monitor");
       tabBanners.classList.toggle("active", tab === "banners");
+      tabFunfacts.classList.toggle("active", tab === "funfacts");
       $(".search-bar").style.display = tab === "users" ? "" : "none";
       userForm.style.display = tab === "users" ? "" : "none";
       appealsPanel.classList.toggle("visible", tab === "appeals");
@@ -3842,6 +3896,7 @@
       maintenancePanel.classList.toggle("visible", tab === "maintenance");
       monitorPanel.classList.toggle("visible", tab === "monitor");
       bannersPanel.classList.toggle("visible", tab === "banners");
+      funfactsPanel.classList.toggle("visible", tab === "funfacts");
 
       if (tab === "appeals") loadAppeals("pending");
       if (tab === "reports") { loadReports(); loadReportStats(); }
@@ -3849,6 +3904,7 @@
       if (tab === "economy") loadEconomyConfig();
       if (tab === "monitor") $("#monitor-uid-input")?.focus();
       if (tab === "banners") loadBanners();
+      if (tab === "funfacts") loadFunFacts();
     }
 
     tabUsers.addEventListener("click", () => switchTab("users"));
@@ -3859,6 +3915,7 @@
     tabMaintenance.addEventListener("click", () => switchTab("maintenance"));
     tabMonitor.addEventListener("click", () => switchTab("monitor"));
     tabBanners.addEventListener("click", () => switchTab("banners"));
+    tabFunfacts.addEventListener("click", () => switchTab("funfacts"));
 
     // --- Suspension section ---
     const suspensionSection = $("#suspension-section");
@@ -7338,6 +7395,177 @@
 
         closeBannerDialog();
         await loadBanners();
+      } catch (err) {
+        showToast("Save failed: " + err.message, "error");
+      } finally {
+        saveBtnEl.disabled = false;
+        saveBtnEl.textContent = "Save";
+      }
+    });
+
+    // ══════════════════════════════════════════════════════════════
+    // FUN FACTS MANAGEMENT
+    // ══════════════════════════════════════════════════════════════
+
+    let funFactsData = [];
+    let editingFunFactId = null;
+
+    async function loadFunFacts() {
+      try {
+        funFactsData = await workerApiCall("GET", "/api/admin/fun-facts");
+        renderFunFactsList();
+      } catch (err) {
+        showToast("Failed to load fun facts: " + err.message, "error");
+      }
+    }
+
+    function renderFunFactsList() {
+      const list = document.getElementById("funfacts-list");
+      list.textContent = "";
+
+      if (funFactsData.length === 0) {
+        const p = document.createElement("p");
+        p.style.cssText = "color:var(--text2);text-align:center;padding:32px;";
+        p.textContent = 'No fun facts yet. Click "+ Add Fun Fact" to create one.';
+        list.appendChild(p);
+        return;
+      }
+
+      const categoryLabels = { language: "Language", greeting: "Greeting", culture: "Culture", trivia: "Trivia" };
+      const categoryColors = { language: "#6366f1", greeting: "#2ecc71", culture: "#f39c12", trivia: "#e74c3c" };
+
+      funFactsData.forEach((f) => {
+        const card = document.createElement("div");
+        card.style.cssText = "display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:8px;";
+
+        // Emoji
+        const emoji = document.createElement("div");
+        emoji.style.cssText = "font-size:28px;flex-shrink:0;width:40px;text-align:center;";
+        emoji.textContent = f.emoji || "💡";
+        card.appendChild(emoji);
+
+        // Info
+        const info = document.createElement("div");
+        info.style.cssText = "flex:1;min-width:0;";
+
+        const topRow = document.createElement("div");
+        topRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;";
+
+        const badge = document.createElement("span");
+        const cat = f.category || "trivia";
+        badge.style.cssText = `padding:2px 8px;border-radius:4px;font-size:11px;color:#fff;background:${categoryColors[cat] || "#888"};`;
+        badge.textContent = categoryLabels[cat] || cat;
+        topRow.appendChild(badge);
+
+        if (f.source_language) {
+          const lang = document.createElement("span");
+          lang.style.cssText = "font-size:12px;color:var(--text2);";
+          lang.textContent = f.source_language;
+          topRow.appendChild(lang);
+        }
+
+        const activeBadge = document.createElement("span");
+        activeBadge.style.cssText = `padding:2px 8px;border-radius:4px;font-size:11px;color:#fff;background:${f.is_active ? "var(--success)" : "var(--danger)"};`;
+        activeBadge.textContent = f.is_active ? "Active" : "Inactive";
+        topRow.appendChild(activeBadge);
+
+        info.appendChild(topRow);
+
+        const textEl = document.createElement("div");
+        textEl.style.cssText = "font-size:14px;line-height:1.5;";
+        textEl.textContent = f.text;
+        info.appendChild(textEl);
+
+        card.appendChild(info);
+
+        // Actions
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;gap:6px;flex-shrink:0;";
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.style.cssText = "padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;";
+        editBtn.addEventListener("click", () => openFunFactDialog(f));
+        actions.appendChild(editBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.style.cssText = "padding:6px 14px;background:var(--danger);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;";
+        deleteBtn.addEventListener("click", async () => {
+          if (!confirm("Delete this fun fact? This cannot be undone.")) return;
+          try {
+            await workerApiCall("DELETE", `/api/admin/fun-facts/${f.id}`);
+            showToast("Fun fact deleted");
+            await loadFunFacts();
+          } catch (err) {
+            showToast("Delete failed: " + err.message, "error");
+          }
+        });
+        actions.appendChild(deleteBtn);
+
+        card.appendChild(actions);
+        list.appendChild(card);
+      });
+    }
+
+    // Fun fact dialog
+    const funfactDialogOverlay = document.getElementById("funfact-dialog-overlay");
+    const funfactDialogTitle = document.getElementById("funfact-dialog-title");
+    const funfactTextInput = document.getElementById("funfact-text-input");
+    const funfactCategoryInput = document.getElementById("funfact-category-input");
+    const funfactEmojiInput = document.getElementById("funfact-emoji-input");
+    const funfactSourcelangInput = document.getElementById("funfact-sourcelang-input");
+    const funfactActiveCheck = document.getElementById("funfact-active-check");
+
+    function openFunFactDialog(fact) {
+      editingFunFactId = fact ? fact.id : null;
+      funfactDialogTitle.textContent = fact ? "Edit Fun Fact" : "Add Fun Fact";
+      funfactTextInput.value = fact ? fact.text : "";
+      funfactCategoryInput.value = fact ? (fact.category || "trivia") : "language";
+      funfactEmojiInput.value = fact ? (fact.emoji || "") : "";
+      funfactSourcelangInput.value = fact ? (fact.source_language || "") : "";
+      funfactActiveCheck.checked = fact ? !!fact.is_active : true;
+      funfactDialogOverlay.style.display = "flex";
+    }
+
+    function closeFunFactDialog() {
+      funfactDialogOverlay.style.display = "none";
+      editingFunFactId = null;
+    }
+
+    document.getElementById("funfact-add-btn").addEventListener("click", () => openFunFactDialog(null));
+    document.getElementById("funfact-dialog-cancel").addEventListener("click", closeFunFactDialog);
+    funfactDialogOverlay.addEventListener("click", (e) => {
+      if (e.target === funfactDialogOverlay) closeFunFactDialog();
+    });
+
+    document.getElementById("funfact-dialog-save").addEventListener("click", async () => {
+      const text = funfactTextInput.value.trim();
+      if (!text) { showToast("Fact text is required", "error"); return; }
+
+      const saveBtnEl = document.getElementById("funfact-dialog-save");
+      saveBtnEl.disabled = true;
+      saveBtnEl.textContent = "Saving...";
+
+      try {
+        const payload = {
+          text,
+          category: funfactCategoryInput.value,
+          emoji: funfactEmojiInput.value.trim(),
+          source_language: funfactSourcelangInput.value.trim(),
+          is_active: funfactActiveCheck.checked,
+        };
+
+        if (editingFunFactId) {
+          await workerApiCall("PUT", `/api/admin/fun-facts/${editingFunFactId}`, payload);
+          showToast("Fun fact updated");
+        } else {
+          await workerApiCall("POST", "/api/admin/fun-facts", payload);
+          showToast("Fun fact created");
+        }
+
+        closeFunFactDialog();
+        await loadFunFacts();
       } catch (err) {
         showToast("Save failed: " + err.message, "error");
       } finally {

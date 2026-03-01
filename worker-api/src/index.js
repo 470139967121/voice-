@@ -19,6 +19,7 @@ const { registerNotificationRoutes } = require('./routes/notifications');
 const { registerRoomRoutes } = require('./routes/rooms');
 const { registerConversationRoutes } = require('./routes/conversations');
 const { registerBannerRoutes } = require('./routes/banners');
+const { registerFunFactRoutes } = require('./routes/fun-facts');
 
 // Re-export Durable Object classes
 export { RoomDurableObject, ConversationDurableObject };
@@ -35,6 +36,7 @@ registerNotificationRoutes(router);
 registerRoomRoutes(router);
 registerConversationRoutes(router);
 registerBannerRoutes(router);
+registerFunFactRoutes(router);
 
 // ── Health check (no auth) ──
 router.get('/api/health', async () => {

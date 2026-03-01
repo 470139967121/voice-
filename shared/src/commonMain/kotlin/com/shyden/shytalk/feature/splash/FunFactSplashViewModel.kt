@@ -2,7 +2,9 @@ package com.shyden.shytalk.feature.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.FunFact
 import com.shyden.shytalk.data.repository.BannerRepository
+import com.shyden.shytalk.data.repository.FunFactRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,19 +13,25 @@ import kotlinx.coroutines.launch
 
 class FunFactSplashViewModel(
     private val bannerRepository: BannerRepository,
+    private val funFactRepository: FunFactRepository,
     private val imagePreloader: BannerImagePreloader? = null,
 ) : ViewModel() {
 
     private val _warmUpComplete = MutableStateFlow(false)
     val warmUpComplete: StateFlow<Boolean> = _warmUpComplete.asStateFlow()
 
+    private val _funFacts = MutableStateFlow<List<FunFact>>(emptyList())
+    val funFacts: StateFlow<List<FunFact>> = _funFacts.asStateFlow()
+
     init {
+        // Show cached facts immediately while syncing fresh ones
+        _funFacts.value = funFactRepository.getCachedFacts().shuffled()
+
         viewModelScope.launch {
             val jobs = listOf(
                 launch {
                     try {
                         val banners = bannerRepository.getActiveBanners()
-                        // Preload banner images into Coil disk cache
                         banners.forEach { banner ->
                             launch {
                                 try {
@@ -32,6 +40,16 @@ class FunFactSplashViewModel(
                             }
                         }
                     } catch (_: Exception) { }
+                },
+                launch {
+                    try {
+                        val fresh = funFactRepository.syncFacts()
+                        if (fresh.isNotEmpty()) {
+                            _funFacts.value = fresh.shuffled()
+                        }
+                    } catch (_: Exception) {
+                        // Keep cached facts if sync fails
+                    }
                 },
             )
             jobs.joinAll()

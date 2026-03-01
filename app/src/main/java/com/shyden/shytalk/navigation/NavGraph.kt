@@ -204,8 +204,10 @@ fun NavGraph(
         composable(Screen.Splash.route) {
             val splashViewModel: FunFactSplashViewModel = org.koin.compose.viewmodel.koinViewModel()
             val warmUpComplete by splashViewModel.warmUpComplete.collectAsStateWithLifecycle()
+            val funFacts by splashViewModel.funFacts.collectAsStateWithLifecycle()
             FunFactSplashScreen(
                 warmUpComplete = warmUpComplete,
+                funFacts = funFacts,
                 onContinue = {
                     navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }

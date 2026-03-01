@@ -15,14 +15,16 @@ data class Banner(
             return Banner(
                 id = id,
                 title = map["title"] as? String,
-                imageUrl = map["image_url"] as? String ?: "",
+                imageUrl = (map["imageUrl"] ?: map["image_url"]) as? String ?: "",
                 actionType = try {
-                    BannerActionType.valueOf((map["action_type"] as? String ?: "NONE"))
+                    BannerActionType.valueOf(
+                        ((map["actionType"] ?: map["action_type"]) as? String ?: "NONE")
+                    )
                 } catch (_: Exception) {
                     BannerActionType.NONE
                 },
-                actionValue = map["action_value"] as? String,
-                sortOrder = (map["sort_order"] as? Number)?.toInt() ?: 0
+                actionValue = (map["actionValue"] ?: map["action_value"]) as? String,
+                sortOrder = ((map["sortOrder"] ?: map["sort_order"]) as? Number)?.toInt() ?: 0
             )
         }
     }
