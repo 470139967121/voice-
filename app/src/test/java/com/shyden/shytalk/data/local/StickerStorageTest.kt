@@ -212,4 +212,106 @@ class StickerStorageTest {
         val result = storage.readStickerBytes("non-existent")
         assertEquals(null, result)
     }
+
+    // ── URL storage (3-field index format) ──
+
+    @Test
+    fun `addSticker starts with empty URL`() {
+        val sticker = storage.addSticker("s1", byteArrayOf(1, 2, 3))
+        assertEquals("", sticker.url)
+
+        val loaded = storage.getStickers()
+        assertEquals(1, loaded.size)
+        assertEquals("", loaded[0].url)
+    }
+
+    @Test
+    fun `updateStickerUrl stores URL and getStickers returns it`() {
+        storage.addSticker("s1", byteArrayOf(1, 2, 3))
+        storage.updateStickerUrl("s1", "https://example.com/sticker.png")
+
+        val stickers = storage.getStickers()
+        assertEquals(1, stickers.size)
+        assertEquals("https://example.com/sticker.png", stickers[0].url)
+    }
+
+    @Test
+    fun `updateStickerUrl for non-existent id does not crash`() {
+        storage.addSticker("s1", byteArrayOf(1))
+        storage.updateStickerUrl("non-existent", "https://example.com/nope.png")
+
+        val stickers = storage.getStickers()
+        assertEquals(1, stickers.size)
+        assertEquals("", stickers[0].url)
+    }
+
+    @Test
+    fun `updateStickerUrl overwrites previous URL`() {
+        storage.addSticker("s1", byteArrayOf(1))
+        storage.updateStickerUrl("s1", "https://old.com/a.png")
+        storage.updateStickerUrl("s1", "https://new.com/b.png")
+
+        val stickers = storage.getStickers()
+        assertEquals("https://new.com/b.png", stickers[0].url)
+    }
+
+    @Test
+    fun `updateStickerUrl preserves other stickers`() {
+        storage.addSticker("s1", byteArrayOf(1))
+        storage.addSticker("s2", byteArrayOf(2))
+        storage.updateStickerUrl("s1", "https://example.com/s1.png")
+
+        val stickers = storage.getStickers()
+        assertEquals(2, stickers.size)
+        assertEquals("https://example.com/s1.png", stickers[0].url)
+        assertEquals("", stickers[1].url)
+    }
+
+    @Test
+    fun `backward compatible index parsing - old 2-field format`() {
+        // Manually write old-style index file (id|path — no URL field)
+        val stickerFile = File(tempDir, "stickers/old1.jpg")
+        File(tempDir, "stickers").mkdirs()
+        stickerFile.writeBytes(byteArrayOf(1, 2, 3))
+        val indexFile = File(tempDir, "stickers/index.txt")
+        indexFile.writeText("old1|${stickerFile.absolutePath}")
+
+        val stickers = storage.getStickers()
+        assertEquals(1, stickers.size)
+        assertEquals("old1", stickers[0].id)
+        assertEquals("", stickers[0].url) // empty URL for old format
+    }
+
+    @Test
+    fun `backward compatible - updateStickerUrl migrates 2-field to 3-field`() {
+        // Write old-style 2-field index
+        val stickerFile = File(tempDir, "stickers/old1.jpg")
+        File(tempDir, "stickers").mkdirs()
+        stickerFile.writeBytes(byteArrayOf(1, 2, 3))
+        val indexFile = File(tempDir, "stickers/index.txt")
+        indexFile.writeText("old1|${stickerFile.absolutePath}")
+
+        // Update URL on old entry
+        storage.updateStickerUrl("old1", "https://migrated.com/old1.png")
+
+        val stickers = storage.getStickers()
+        assertEquals(1, stickers.size)
+        assertEquals("https://migrated.com/old1.png", stickers[0].url)
+    }
+
+    @Test
+    fun `moveSticker preserves URL fields`() {
+        storage.addSticker("s1", byteArrayOf(1))
+        storage.addSticker("s2", byteArrayOf(2))
+        storage.updateStickerUrl("s2", "https://example.com/s2.png")
+
+        storage.moveSticker("s2", 0) // Move s2 to front
+
+        val stickers = storage.getStickers()
+        assertEquals(2, stickers.size)
+        assertEquals("s2", stickers[0].id)
+        assertEquals("https://example.com/s2.png", stickers[0].url)
+        assertEquals("s1", stickers[1].id)
+        assertEquals("", stickers[1].url)
+    }
 }

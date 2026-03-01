@@ -49,6 +49,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.shyden.shytalk.core.model.PrivateMessage
 import com.shyden.shytalk.core.model.PrivateMessageType
 import com.shyden.shytalk.core.model.SendStatus
@@ -261,7 +264,10 @@ fun PrivateMessageBubble(
                     // Sticker
                     if (message.type == PrivateMessageType.STICKER && !message.stickerUrl.isNullOrEmpty()) {
                         AsyncImage(
-                            model = message.stickerUrl,
+                            model = ImageRequest.Builder(LocalPlatformContext.current)
+                                .data(message.stickerUrl)
+                                .crossfade(false)
+                                .build(),
                             contentDescription = "Sticker",
                             modifier = Modifier
                                 .size(120.dp)

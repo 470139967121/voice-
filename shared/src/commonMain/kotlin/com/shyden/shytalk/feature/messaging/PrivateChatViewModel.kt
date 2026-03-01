@@ -789,12 +789,10 @@ class PrivateChatViewModel(
                 }
             }
         }
-        _uiState.update { it.copy(showStickerPicker = false) }
     }
 
     fun sendSticker(stickerUrl: String) {
         sendStickerMessage(stickerUrl)
-        _uiState.update { it.copy(showStickerPicker = false) }
     }
 
     private fun sendStickerMessage(stickerUrl: String) {
@@ -834,6 +832,27 @@ class PrivateChatViewModel(
         _uiState.update {
             it.copy(stickers = stickerStorage.getStickers())
         }
+        // Background pre-upload to R2 for instant sends later
+        viewModelScope.launch {
+            try {
+                val isGif = imageData.size >= 4 &&
+                    imageData[0] == 0x47.toByte() && imageData[1] == 0x49.toByte() &&
+                    imageData[2] == 0x46.toByte() && imageData[3] == 0x38.toByte()
+                val isWebp = imageData.size >= 12 &&
+                    imageData[0] == 0x52.toByte() && imageData[1] == 0x49.toByte() &&
+                    imageData[2] == 0x46.toByte() && imageData[3] == 0x46.toByte() &&
+                    imageData[8] == 0x57.toByte() && imageData[9] == 0x45.toByte() &&
+                    imageData[10] == 0x42.toByte() && imageData[11] == 0x50.toByte()
+                val uploadBytes = if (isGif || isWebp) imageData else compressImage(imageData)
+                when (val r = storageRepository.uploadImage(currentUserId, "stickers", uploadBytes)) {
+                    is Resource.Success -> {
+                        stickerStorage.updateStickerUrl(id, r.data)
+                        _uiState.update { it.copy(stickers = stickerStorage.getStickers()) }
+                    }
+                    else -> { /* Silently ignore — first send will upload as fallback */ }
+                }
+            } catch (_: Exception) { /* Pre-upload is best-effort */ }
+        }
     }
 
     fun saveStickerFromUrl(url: String) {
@@ -857,6 +876,7 @@ class PrivateChatViewModel(
                 }
                 val id = kotlinx.datetime.Clock.System.now().toEpochMilliseconds().toString()
                 stickerStorage.addSticker(id, bytes)
+                stickerStorage.updateStickerUrl(id, url)
                 _uiState.update {
                     it.copy(
                         stickers = stickerStorage.getStickers(),

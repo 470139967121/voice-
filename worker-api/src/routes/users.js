@@ -51,6 +51,11 @@ function registerUserRoutes(router) {
     user.followingIds = following.results.map(r => r.following_id);
     user.followerIds = followers.results.map(r => r.follower_id);
 
+    // Ensure avatar_url fallback for clients that read avatarUrl
+    if (user.profile_photo_url && !user.avatar_url) {
+      user.avatar_url = user.profile_photo_url;
+    }
+
     return json(user);
   });
 
@@ -67,7 +72,7 @@ function registerUserRoutes(router) {
     // Only allow whitelisted fields
     const allowedFields = [
       'display_name', 'description', 'nationality', 'date_of_birth', 'gender',
-      'profile_photo_url', 'cover_photo_url',
+      'profile_photo_url', 'avatar_url', 'cover_photo_url',
       'pm_privacy', 'pm_notifications_enabled', 'pm_sound_enabled',
       'pm_show_timestamps', 'pm_show_date_separators', 'pm_notification_preview',
       'hide_following', 'hide_online_status', 'hide_age',
@@ -117,10 +122,11 @@ function registerUserRoutes(router) {
     }
 
     // Insert new user
+    const photoUrl = body.profile_photo_url || null;
     await env.DB.prepare(`
-      INSERT INTO users (uid, display_name, profile_photo_url, created_at, last_seen_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(uid, body.display_name || null, body.profile_photo_url || null, now(), now()).run();
+      INSERT INTO users (uid, display_name, profile_photo_url, avatar_url, created_at, last_seen_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(uid, body.display_name || null, photoUrl, photoUrl, now(), now()).run();
 
     return json({ success: true, created: true });
   });
@@ -238,6 +244,13 @@ function registerUserRoutes(router) {
     const { results } = await env.DB.prepare(
       `SELECT * FROM users WHERE uid IN (${placeholders})`
     ).bind(...capped).all();
+
+    // Ensure avatar_url fallback for clients that read avatarUrl
+    for (const u of results) {
+      if (u.profile_photo_url && !u.avatar_url) {
+        u.avatar_url = u.profile_photo_url;
+      }
+    }
 
     return json({ users: results });
   });

@@ -77,7 +77,10 @@ import com.shyden.shytalk.feature.daily.DailyRewardDialog
 import com.shyden.shytalk.feature.daily.DailyRewardViewModel
 import com.shyden.shytalk.data.remote.BillingService
 import com.shyden.shytalk.feature.room.RoomScreen
+import com.shyden.shytalk.feature.splash.FunFactSplashScreen
+import com.shyden.shytalk.feature.splash.FunFactSplashViewModel
 import com.shyden.shytalk.feature.warning.WarningScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import org.koin.compose.koinInject
@@ -165,12 +168,12 @@ fun NavGraph(
                             popUpTo(Screen.SignIn.route) { inclusive = true }
                         }
                         needsLegalAcceptance -> {
-                            navController.navigate(Screen.Main.route) {
+                            navController.navigate(Screen.Splash.route) {
                                 popUpTo(Screen.SignIn.route) { inclusive = true }
                             }
                             navController.navigate(Screen.LegalAcceptance.route)
                         }
-                        else -> navController.navigate(Screen.Main.route) {
+                        else -> navController.navigate(Screen.Splash.route) {
                             popUpTo(Screen.SignIn.route) { inclusive = true }
                         }
                     }
@@ -181,7 +184,7 @@ fun NavGraph(
         composable(Screen.ProfileSetup.route) {
             ProfileSetupScreen(
                 onProfileComplete = {
-                    navController.navigate(Screen.Main.route) {
+                    navController.navigate(Screen.Splash.route) {
                         popUpTo(Screen.ProfileSetup.route) { inclusive = true }
                     }
                 }
@@ -191,8 +194,21 @@ fun NavGraph(
         composable(Screen.RequiredDOB.route) {
             RequiredDOBScreen(
                 onComplete = {
-                    navController.navigate(Screen.Main.route) {
+                    navController.navigate(Screen.Splash.route) {
                         popUpTo(Screen.RequiredDOB.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Splash.route) {
+            val splashViewModel: FunFactSplashViewModel = org.koin.compose.viewmodel.koinViewModel()
+            val warmUpComplete by splashViewModel.warmUpComplete.collectAsStateWithLifecycle()
+            FunFactSplashScreen(
+                warmUpComplete = warmUpComplete,
+                onContinue = {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
             )

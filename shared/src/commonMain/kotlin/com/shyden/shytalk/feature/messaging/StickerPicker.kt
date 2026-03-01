@@ -35,6 +35,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 
 data class Sticker(
     val id: String,
@@ -104,7 +107,10 @@ fun StickerPicker(
                 }
                 items(stickers, key = { it.id }) { sticker ->
                     AsyncImage(
-                        model = sticker.localPath ?: sticker.url,
+                        model = ImageRequest.Builder(LocalPlatformContext.current)
+                            .data(sticker.localPath ?: sticker.url)
+                            .crossfade(false)
+                            .build(),
                         contentDescription = "Sticker",
                         modifier = Modifier
                             .size(72.dp)

@@ -82,6 +82,7 @@ import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.formatRelativeTime
 import com.shyden.shytalk.ui.theme.SpeakingGreen
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -143,6 +144,7 @@ fun PrivateChatScreen(
     val isKeyboardVisible = WindowInsets.isImeVisible
     LaunchedEffect(isKeyboardVisible) {
         if (isKeyboardVisible && uiState.messages.isNotEmpty() && hasScrolledToBottom) {
+            delay(400) // Wait for IME animation to complete before scrolling
             listState.animateScrollToItem(uiState.messages.size - 1)
         }
     }
