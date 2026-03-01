@@ -72,20 +72,32 @@ fun FunFactSplashScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Continue button — only enabled when warm-up is complete
-            Button(
-                onClick = onContinue,
-                enabled = warmUpComplete,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
-            ) {
-                if (warmUpComplete) {
-                    Text("Continue")
+            AnimatedContent(
+                targetState = warmUpComplete,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "splash_bottom"
+            ) { ready ->
+                if (ready) {
+                    Button(
+                        onClick = onContinue,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+                    ) {
+                        Text("Continue")
+                    }
                 } else {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Warming up...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
 

@@ -9,6 +9,7 @@ actual fun currentTimeMillis(): Long =
 actual fun timestampToMillis(value: Any?): Long = when (value) {
     is Long -> value
     is Double -> value.toLong()
+    is String -> value.toLongOrNull() ?: value.toDoubleOrNull()?.toLong() ?: currentTimeMillis()
     null -> currentTimeMillis()
     else -> currentTimeMillis()
 }
