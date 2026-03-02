@@ -112,61 +112,61 @@ class ConversationListViewModel(
             }
         }
 
-        // Fetch settings for each conversation
-        val conversationsWithDetails = conversations.mapNotNull { conversation ->
-            // Fetch settings (always re-fetch to pick up unread count changes)
-            val settings = when (val result = pmRepository.getConversationSettings(conversation.conversationId, currentUserId)) {
-                is Resource.Success -> {
-                    settingsCache[conversation.conversationId] = result.data
-                    result.data
-                }
-                else -> settingsCache[conversation.conversationId]
-            }
+        // Show conversations immediately with cached settings (no blocking network calls)
+        val conversationsWithDetails = buildConversationList(conversations, blockedByMe)
+        emitSortedConversations(conversationsWithDetails)
 
-            // Filter hidden conversations (unless a new message arrived after hiding)
-            if (settings?.isHidden == true) {
-                val hiddenAt = settings.hiddenAt ?: 0
-                if (conversation.lastMessageAt <= hiddenAt) return@mapNotNull null
-            }
+        // Then refresh settings in background for accurate unread counts
+        refreshSettingsInBackground(conversations)
+    }
 
-            if (conversation.isGroup) {
-                // Skip closed groups
-                if (conversation.isClosed) return@mapNotNull null
-                ConversationWithUser(
-                    conversation = conversation,
-                    otherUser = null,
-                    settings = settings,
-                    isBlocked = false,
-                    isGroup = true,
-                    groupName = conversation.groupName,
-                    groupPhotoUrl = conversation.groupPhotoUrl
-                )
-            } else {
-                val otherUserId = conversation.otherUserId(currentUserId) ?: return@mapNotNull null
-                val otherUser = userCache[otherUserId]
+    private fun buildConversationList(
+        conversations: List<Conversation>,
+        blockedByMe: Set<String>
+    ): List<ConversationWithUser> = conversations.mapNotNull { conversation ->
+        val settings = settingsCache[conversation.conversationId]
 
-                // Skip blocking checks for system user
-                val isSystemConversation = otherUserId == Constants.SYSTEM_USER_ID
-                if (!isSystemConversation) {
-                    // Check block status bidirectionally
-                    val blockedByTarget = otherUser?.blockedUserIds?.contains(currentUserId) == true
-                    val isBlocked = otherUserId in blockedByMe || blockedByTarget
-
-                    // Skip blocked conversations
-                    if (isBlocked) return@mapNotNull null
-                }
-
-                ConversationWithUser(
-                    conversation = conversation,
-                    otherUser = otherUser,
-                    settings = settings,
-                    isBlocked = false
-                )
-            }
+        // Filter hidden conversations (unless a new message arrived after hiding)
+        if (settings?.isHidden == true) {
+            val hiddenAt = settings.hiddenAt ?: 0
+            if (conversation.lastMessageAt <= hiddenAt) return@mapNotNull null
         }
 
-        // Sort: system conversations first, then pinned, then by lastMessageAt desc
-        val sorted = conversationsWithDetails.sortedWith(
+        if (conversation.isGroup) {
+            // Skip closed groups
+            if (conversation.isClosed) return@mapNotNull null
+            ConversationWithUser(
+                conversation = conversation,
+                otherUser = null,
+                settings = settings,
+                isBlocked = false,
+                isGroup = true,
+                groupName = conversation.groupName,
+                groupPhotoUrl = conversation.groupPhotoUrl
+            )
+        } else {
+            val otherUserId = conversation.otherUserId(currentUserId) ?: return@mapNotNull null
+            val otherUser = userCache[otherUserId]
+
+            // Skip blocking checks for system user
+            val isSystemConversation = otherUserId == Constants.SYSTEM_USER_ID
+            if (!isSystemConversation) {
+                val blockedByTarget = otherUser?.blockedUserIds?.contains(currentUserId) == true
+                val isBlocked = otherUserId in blockedByMe || blockedByTarget
+                if (isBlocked) return@mapNotNull null
+            }
+
+            ConversationWithUser(
+                conversation = conversation,
+                otherUser = otherUser,
+                settings = settings,
+                isBlocked = false
+            )
+        }
+    }
+
+    private fun emitSortedConversations(list: List<ConversationWithUser>) {
+        val sorted = list.sortedWith(
             compareByDescending<ConversationWithUser> {
                 it.conversation.otherUserId(currentUserId) == Constants.SYSTEM_USER_ID
             }
@@ -184,6 +184,34 @@ class ConversationListViewModel(
                 isLoading = false,
                 totalUnreadCount = totalUnread
             )
+        }
+    }
+
+    private fun refreshSettingsInBackground(conversations: List<Conversation>) {
+        viewModelScope.launch {
+            var anyChanged = false
+            for (conversation in conversations) {
+                val result = pmRepository.getConversationSettings(
+                    conversation.conversationId, currentUserId
+                )
+                if (result is Resource.Success) {
+                    val old = settingsCache[conversation.conversationId]
+                    if (old != result.data) {
+                        settingsCache[conversation.conversationId] = result.data
+                        anyChanged = true
+                    }
+                }
+            }
+            // Re-render once if any settings changed (e.g. unread counts)
+            if (anyChanged) {
+                val currentUser = when (val result = userRepository.getUser(currentUserId)) {
+                    is Resource.Success -> result.data
+                    else -> null
+                }
+                val blockedByMe = currentUser?.blockedUserIds ?: emptySet()
+                val refreshed = buildConversationList(conversations, blockedByMe)
+                emitSortedConversations(refreshed)
+            }
         }
     }
 
