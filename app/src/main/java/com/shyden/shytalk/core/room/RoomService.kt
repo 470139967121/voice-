@@ -23,11 +23,14 @@ import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import android.util.Log
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.android.ext.android.inject
 
 class RoomService : Service() {
@@ -43,6 +46,7 @@ class RoomService : Service() {
     private var ownerPhotoUrl: String? = null
 
     companion object {
+        private const val TAG = "RoomService"
         fun start(context: Context, roomId: String) {
             val intent = Intent(context, RoomService::class.java).apply {
                 putExtra("roomId", roomId)
@@ -123,28 +127,45 @@ class RoomService : Service() {
 
     private fun performDismiss() {
         serviceScope.launch {
-            val isOwner = activeRoomManager.activeRoom.value?.ownerId == activeRoomManager.currentUserId
-            if (isOwner) {
-                activeRoomManager.closeRoom()
-            } else {
-                activeRoomManager.leaveRoom()
+            val roomId = activeRoomManager.activeRoomId.value
+            val room = activeRoomManager.activeRoom.value
+            val userId = activeRoomManager.currentUserId
+            Log.d(TAG, "performDismiss: roomId=$roomId ownerId=${room?.ownerId} userId=$userId")
+
+            try {
+                if (roomId != null) {
+                    val isOwner = room?.ownerId == userId
+                    if (isOwner || room == null) {
+                        // Owner closes the room. If room data is null (race condition),
+                        // default to close as the safest option.
+                        activeRoomManager.closeRoom()
+                    } else {
+                        activeRoomManager.leaveRoom()
+                    }
+                } else {
+                    Log.w(TAG, "performDismiss: no active room — cleaning up chathead only")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "performDismiss: error during close/leave", e)
             }
-        }
-        if (!activeRoomManager.isAppInForeground) {
-            val finishIntent = Intent(this, MainActivity::class.java).apply {
-                action = "FINISH_APP"
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+            // Hide chathead after API call completes
+            chatHeadManager?.hide()
+            if (!activeRoomManager.isAppInForeground) {
+                val finishIntent = Intent(this@RoomService, MainActivity::class.java).apply {
+                    action = "FINISH_APP"
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                startActivity(finishIntent)
             }
-            startActivity(finishIntent)
+            stopSelf()
         }
-        stopSelf()
     }
 
     private fun observeRoom() {
         observerJob?.cancel()
         observerJob = serviceScope.launch {
-            var lastOwnerId: String? = null
             activeRoomManager.activeRoom.collect { room ->
                 if (room == null) {
                     // Don't stopSelf() immediately — let observeRoomClosed show "Room Closed" on chathead
@@ -154,20 +175,9 @@ class RoomService : Service() {
                 getSystemService(NotificationManager::class.java)
                     ?.notify(Constants.ROOM_NOTIFICATION_ID, notification)
 
-                // Fetch owner photo when owner changes
-                val ownerId = room.ownerId
-                if (ownerId != lastOwnerId) {
-                    lastOwnerId = ownerId
-                    when (val result = userRepository.getUser(ownerId)) {
-                        is Resource.Success -> {
-                            val url = result.data.photoUrl
-                            ownerPhotoUrl = url
-                            chatHeadManager?.updatePhoto(url)
-                        }
-                        is Resource.Error -> {}
-
-                        else -> {}
-                    }
+                // Keep trying to resolve owner photo until we have one
+                if (ownerPhotoUrl.isNullOrEmpty()) {
+                    resolveOwnerPhoto(room.ownerId)
                 }
             }
         }
@@ -178,9 +188,11 @@ class RoomService : Service() {
         roomClosedJob = serviceScope.launch {
             activeRoomManager.roomClosed.collect { closed ->
                 if (closed) {
+                    Log.d(TAG, "observeRoomClosed: room closed — showing animation")
                     chatHeadManager?.showRoomClosed()
                     // Stop service after chathead finishes displaying "Room Closed"
                     kotlinx.coroutines.delay(3500L)
+                    Log.d(TAG, "observeRoomClosed: animation done — stopping service")
                     stopSelf()
                 }
             }
@@ -195,9 +207,56 @@ class RoomService : Service() {
                     chatHeadManager?.hide()
                 } else {
                     if (Settings.canDrawOverlays(this@RoomService)) {
-                        chatHeadManager?.show(ownerPhotoUrl)
+                        // Resolve photo before showing — brief wait for room data if needed
+                        if (ownerPhotoUrl.isNullOrEmpty()) {
+                            var room = activeRoomManager.activeRoom.value
+                            if (room == null) {
+                                Log.d(TAG, "observeRoomScreenVisibility: room data not yet available, waiting briefly...")
+                                room = withTimeoutOrNull(1000L) {
+                                    activeRoomManager.activeRoom.filterNotNull().first()
+                                }
+                            }
+                            if (room != null) {
+                                resolveOwnerPhoto(room.ownerId)
+                            } else {
+                                Log.d(TAG, "observeRoomScreenVisibility: no room data — showing chathead without photo")
+                            }
+                        }
+                        val photoToShow = ownerPhotoUrl?.takeIf { it.isNotEmpty() }
+                        Log.d(TAG, "observeRoomScreenVisibility: showing chathead with photo=$photoToShow")
+                        chatHeadManager?.show(photoToShow)
                     }
                 }
+            }
+        }
+    }
+
+    private suspend fun resolveOwnerPhoto(ownerId: String) {
+        // 1. Check sharedUserCache (populated by RoomViewModel)
+        val cached = activeRoomManager.sharedUserCache[ownerId]
+        val url = cached?.photoUrl
+        if (!url.isNullOrEmpty()) {
+            Log.d(TAG, "resolveOwnerPhoto: found in cache url=$url")
+            ownerPhotoUrl = url
+            chatHeadManager?.updatePhoto(url)
+            return
+        }
+        // 2. Fall back to API — suspend until result arrives
+        Log.d(TAG, "resolveOwnerPhoto: cache miss for ownerId=$ownerId, calling API")
+        when (val result = userRepository.getUser(ownerId)) {
+            is Resource.Success -> {
+                val photo = result.data.photoUrl
+                Log.d(TAG, "resolveOwnerPhoto: API returned photoUrl=$photo")
+                if (!photo.isNullOrEmpty()) {
+                    ownerPhotoUrl = photo
+                    chatHeadManager?.updatePhoto(photo)
+                }
+            }
+            is Resource.Error -> {
+                Log.w(TAG, "resolveOwnerPhoto: API error: ${result.message}")
+            }
+            else -> {
+                Log.w(TAG, "resolveOwnerPhoto: unexpected result: $result")
             }
         }
     }
@@ -226,12 +285,18 @@ class RoomService : Service() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         android.util.Log.d("RoomService", "onTaskRemoved: app swiped from recents, calling leaveRoom")
-        // Process is being killed — use runBlocking to ensure Firestore cleanup completes
-        runBlocking {
-            withContext(NonCancellable) {
-                activeRoomManager.leaveRoom()
+        // Run cleanup on a background thread to avoid blocking the main thread (ANR)
+        Thread {
+            runBlocking {
+                try {
+                    withTimeout(2000L) {
+                        activeRoomManager.leaveRoom()
+                    }
+                } catch (_: Exception) {
+                    android.util.Log.w("RoomService", "onTaskRemoved: leaveRoom timed out or failed")
+                }
             }
-        }
+        }.start()
         stopSelf()
     }
 

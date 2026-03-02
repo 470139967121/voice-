@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.messaging
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.Conversation
 import com.shyden.shytalk.core.model.ConversationSettings
 import com.shyden.shytalk.core.model.GroupPermissions
@@ -11,6 +12,8 @@ import com.shyden.shytalk.core.model.MuteInfo
 import com.shyden.shytalk.core.model.PmPrivacy
 import com.shyden.shytalk.core.model.PrivateMessage
 import com.shyden.shytalk.core.model.PrivateMessageType
+import com.shyden.shytalk.core.model.RoomState
+import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.SendStatus
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
@@ -19,9 +22,12 @@ import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.data.local.StickerStorage
+import com.shyden.shytalk.data.remote.ConversationEvent
+import com.shyden.shytalk.data.remote.ConversationWebSocketService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.ReportRepository
+import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.TypingRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -35,6 +41,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+data class RoomInvitePreview(
+    val room: ChatRoom,
+    val seatUsers: Map<String, User>
+)
 
 data class PrivateChatUiState(
     val messages: List<PrivateMessage> = emptyList(),
@@ -75,7 +86,9 @@ data class PrivateChatUiState(
     val stickers: List<Sticker> = emptyList(),
     val isSystemConversation: Boolean = false,
     val isRefreshing: Boolean = false,
-    val aliases: Map<String, String> = emptyMap()
+    val aliases: Map<String, String> = emptyMap(),
+    // Room invite preview data: roomId → (room, seatUsers)
+    val roomInvites: Map<String, RoomInvitePreview> = emptyMap()
 )
 
 class PrivateChatViewModel(
@@ -90,7 +103,9 @@ class PrivateChatViewModel(
         override suspend fun deleteImageByUrl(url: String) {}
     },
     private val stickerStorage: StickerStorage? = null,
-    private val initialConversationId: String? = null
+    private val initialConversationId: String? = null,
+    private val conversationWs: ConversationWebSocketService? = null,
+    private val roomRepository: RoomRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrivateChatUiState())
@@ -101,6 +116,7 @@ class PrivateChatViewModel(
     private var settingsJob: Job? = null
     private var typingJob: Job? = null
     private var typingResetJob: Job? = null
+    private var wsEventsJob: Job? = null
     private val olderMessages = mutableListOf<PrivateMessage>()
     private val pendingMessages = mutableMapOf<String, PrivateMessage>()
 
@@ -170,7 +186,7 @@ class PrivateChatViewModel(
                     _uiState.update { it.copy(conversationId = conversation.conversationId) }
                     observeMessages(conversation.conversationId)
                     observeSettings(conversation.conversationId)
-                    observeTyping(conversation.conversationId)
+                    connectConversationWs(conversation.conversationId)
                 }
                 is Resource.Error -> {
                     _uiState.update {
@@ -223,6 +239,7 @@ class PrivateChatViewModel(
                     observeSettings(conversationId)
                     observeMuteStatus(conversationId)
                     loadGroupMutes(conversationId)
+                    connectConversationWs(conversationId)
                 }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = result.message) }
@@ -268,6 +285,7 @@ class PrivateChatViewModel(
                     .distinctBy { it.messageId }
                     .sortedBy { it.createdAt }
                 _uiState.update { it.copy(messages = combined) }
+                resolveRoomInvites(combined)
             }
         }
     }
@@ -504,35 +522,81 @@ class PrivateChatViewModel(
         val conversationId = _uiState.value.conversationId
         if (conversationId.isEmpty()) return
 
-        typingRepository.setTyping(conversationId, currentUserId, true)
+        if (conversationWs != null) {
+            conversationWs.sendTyping(true)
+        } else {
+            typingRepository.setTyping(conversationId, currentUserId, true)
+        }
 
         // Auto-reset typing after debounce
         typingResetJob?.cancel()
         typingResetJob = viewModelScope.launch {
             delay(Constants.TYPING_DEBOUNCE_MS)
-            typingRepository.setTyping(conversationId, currentUserId, false)
+            if (conversationWs != null) {
+                conversationWs.sendTyping(false)
+            } else {
+                typingRepository.setTyping(conversationId, currentUserId, false)
+            }
         }
     }
 
-    private fun observeTyping(conversationId: String) {
-        typingJob?.cancel()
-        typingJob = viewModelScope.launch {
-            typingRepository.observeTyping(conversationId, otherUserId).collect { isTyping ->
-                _uiState.update { it.copy(isOtherUserTyping = isTyping) }
+    /**
+     * Connect the conversation WebSocket for instant message and typing events.
+     * Falls back to the old TypingRepository WebSocket if conversationWs is null (e.g. iOS).
+     */
+    private fun connectConversationWs(conversationId: String) {
+        if (conversationWs != null) {
+            conversationWs.connect(conversationId, currentUserId)
+            wsEventsJob?.cancel()
+            wsEventsJob = viewModelScope.launch {
+                conversationWs.events.collect { event ->
+                    when (event) {
+                        is ConversationEvent.NewMessage -> {
+                            // Immediately refetch messages (bypass slow polling)
+                            refreshMessages(conversationId)
+                        }
+                        is ConversationEvent.Typing -> {
+                            // For 1-on-1, only show typing from the other user
+                            if (!_uiState.value.isGroup && event.userId != otherUserId) return@collect
+                            _uiState.update { it.copy(isOtherUserTyping = event.isTyping) }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Fallback: old TypingRepository WS (no new_message support)
+            typingJob?.cancel()
+            typingJob = viewModelScope.launch {
+                typingRepository.observeTyping(conversationId, otherUserId).collect { isTyping ->
+                    _uiState.update { it.copy(isOtherUserTyping = isTyping) }
+                }
             }
         }
+    }
+
+    /**
+     * Immediately restart the message polling flow to pick up new messages.
+     * This forces a fresh API call instead of waiting for the next poll cycle.
+     */
+    private fun refreshMessages(conversationId: String) {
+        observeMessages(conversationId)
     }
 
     private fun clearTyping() {
         val conversationId = _uiState.value.conversationId
         if (conversationId.isNotEmpty()) {
-            typingRepository.setTyping(conversationId, currentUserId, false)
+            if (conversationWs != null) {
+                conversationWs.sendTyping(false)
+            } else {
+                typingRepository.setTyping(conversationId, currentUserId, false)
+            }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
         clearTyping()
+        conversationWs?.disconnect()
     }
 
     fun reportMessage(message: PrivateMessage, reason: String, description: String) {
@@ -789,12 +853,10 @@ class PrivateChatViewModel(
                 }
             }
         }
-        _uiState.update { it.copy(showStickerPicker = false) }
     }
 
     fun sendSticker(stickerUrl: String) {
         sendStickerMessage(stickerUrl)
-        _uiState.update { it.copy(showStickerPicker = false) }
     }
 
     private fun sendStickerMessage(stickerUrl: String) {
@@ -834,6 +896,27 @@ class PrivateChatViewModel(
         _uiState.update {
             it.copy(stickers = stickerStorage.getStickers())
         }
+        // Background pre-upload to R2 for instant sends later
+        viewModelScope.launch {
+            try {
+                val isGif = imageData.size >= 4 &&
+                    imageData[0] == 0x47.toByte() && imageData[1] == 0x49.toByte() &&
+                    imageData[2] == 0x46.toByte() && imageData[3] == 0x38.toByte()
+                val isWebp = imageData.size >= 12 &&
+                    imageData[0] == 0x52.toByte() && imageData[1] == 0x49.toByte() &&
+                    imageData[2] == 0x46.toByte() && imageData[3] == 0x46.toByte() &&
+                    imageData[8] == 0x57.toByte() && imageData[9] == 0x45.toByte() &&
+                    imageData[10] == 0x42.toByte() && imageData[11] == 0x50.toByte()
+                val uploadBytes = if (isGif || isWebp) imageData else compressImage(imageData)
+                when (val r = storageRepository.uploadImage(currentUserId, "stickers", uploadBytes)) {
+                    is Resource.Success -> {
+                        stickerStorage.updateStickerUrl(id, r.data)
+                        _uiState.update { it.copy(stickers = stickerStorage.getStickers()) }
+                    }
+                    else -> { /* Silently ignore — first send will upload as fallback */ }
+                }
+            } catch (_: Exception) { /* Pre-upload is best-effort */ }
+        }
     }
 
     fun saveStickerFromUrl(url: String) {
@@ -857,6 +940,7 @@ class PrivateChatViewModel(
                 }
                 val id = kotlinx.datetime.Clock.System.now().toEpochMilliseconds().toString()
                 stickerStorage.addSticker(id, bytes)
+                stickerStorage.updateStickerUrl(id, url)
                 _uiState.update {
                     it.copy(
                         stickers = stickerStorage.getStickers(),
@@ -1090,6 +1174,51 @@ class PrivateChatViewModel(
                 is Resource.Success -> {}
                 is Resource.Error -> _uiState.update { it.copy(error = "Failed to update notify mode") }
                 is Resource.Loading -> {}
+            }
+        }
+    }
+
+    // --- Room Invite Preview ---
+
+    private val fetchedRoomIds = mutableSetOf<String>()
+
+    private fun resolveRoomInvites(messages: List<PrivateMessage>) {
+        val repo = roomRepository ?: return
+        val roomIds = messages
+            .filter { it.type == PrivateMessageType.ROOM_INVITE && !it.roomInviteId.isNullOrEmpty() }
+            .mapNotNull { it.roomInviteId }
+            .distinct()
+            .filter { it !in fetchedRoomIds }
+        if (roomIds.isEmpty()) return
+
+        fetchedRoomIds.addAll(roomIds)
+        viewModelScope.launch {
+            for (roomId in roomIds) {
+                val result = repo.getRoom(roomId)
+                if (result !is Resource.Success) continue
+                val room = result.data
+
+                // Collect seated user IDs — for closed rooms, use historical data
+                val seatedUserIds = if (room.state == RoomState.CLOSED) {
+                    room.allTimeSeatUserIds.toList()
+                } else {
+                    room.seats.values
+                        .filter { it.state == SeatState.OCCUPIED && it.userId != null }
+                        .mapNotNull { it.userId }
+                }
+
+                // Batch-fetch users
+                val seatUsers = mutableMapOf<String, User>()
+                if (seatedUserIds.isNotEmpty()) {
+                    when (val usersResult = userRepository.getUsers(seatedUserIds)) {
+                        is Resource.Success -> usersResult.data.forEach { seatUsers[it.uid] = it }
+                        else -> {}
+                    }
+                }
+
+                _uiState.update { state ->
+                    state.copy(roomInvites = state.roomInvites + (roomId to RoomInvitePreview(room, seatUsers)))
+                }
             }
         }
     }

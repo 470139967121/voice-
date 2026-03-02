@@ -82,6 +82,7 @@ import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.formatRelativeTime
 import com.shyden.shytalk.ui.theme.SpeakingGreen
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -139,10 +140,18 @@ fun PrivateChatScreen(
         }
     }
 
+    // Re-scroll when room invite previews load (bubble height changes)
+    LaunchedEffect(uiState.roomInvites.size) {
+        if (uiState.roomInvites.isNotEmpty() && uiState.messages.isNotEmpty() && hasScrolledToBottom) {
+            listState.animateScrollToItem(uiState.messages.size - 1)
+        }
+    }
+
     // Scroll to bottom when the keyboard opens so the latest messages stay visible
     val isKeyboardVisible = WindowInsets.isImeVisible
     LaunchedEffect(isKeyboardVisible) {
         if (isKeyboardVisible && uiState.messages.isNotEmpty() && hasScrolledToBottom) {
+            delay(400) // Wait for IME animation to complete before scrolling
             listState.animateScrollToItem(uiState.messages.size - 1)
         }
     }
@@ -515,6 +524,7 @@ fun PrivateChatScreen(
                             onToggleReaction = { emoji -> viewModel.toggleReaction(message.messageId, emoji) },
                             onImageClick = { urls, index -> showImageViewer = urls to index },
                             onRoomInviteTap = onNavigateToRoom?.let { nav -> { roomId: String -> nav(roomId) } },
+                            roomInvitePreview = message.roomInviteId?.let { uiState.roomInvites[it] },
                             onRecall = { viewModel.recallMessage(message.messageId) },
                             onSaveSticker = { url -> viewModel.saveStickerFromUrl(url) },
                             onHideMessage = if (uiState.isGroup &&

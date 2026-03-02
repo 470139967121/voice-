@@ -2,14 +2,17 @@ package com.shyden.shytalk.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.Banner
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
+    val banners: List<Banner> = emptyList(),
     val rooms: List<ChatRoom> = emptyList(),
     val seatUsers: Map<String, User> = emptyMap(),
     val isLoading: Boolean = true,
@@ -31,7 +35,8 @@ data class HomeUiState(
 class HomeViewModel(
     private val roomRepository: RoomRepository,
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val bannerRepository: BannerRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -52,6 +57,16 @@ class HomeViewModel(
         loadLastRoomName()
         observeRooms()
         observeUserUpdates()
+        loadBanners()
+    }
+
+    private fun loadBanners() {
+        viewModelScope.launch {
+            try {
+                val banners = bannerRepository.getActiveBanners()
+                _uiState.update { it.copy(banners = banners) }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun loadLastRoomName() {
@@ -122,6 +137,7 @@ class HomeViewModel(
             }
             userCache.clear()
             filterAndEmitRooms()
+            loadBanners()
             _uiState.update { it.copy(isRefreshing = false) }
         }
     }
@@ -153,6 +169,7 @@ class HomeViewModel(
         }
         userCache.clear()
         filterAndEmitRooms()
+        loadBanners()
     }
 
     private suspend fun filterAndEmitRooms() {
@@ -214,9 +231,11 @@ class HomeViewModel(
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, lastRoomName = name) }
-            userRepository.updateProfile(userId, mapOf("lastRoomName" to name))
-            // Close any existing rooms owned by this user
-            roomRepository.closeAllRoomsByOwner(userId)
+            // Run independent pre-checks in parallel
+            val saveNameJob = async { userRepository.updateProfile(userId, mapOf("lastRoomName" to name)) }
+            val closeJob = async { roomRepository.closeAllRoomsByOwner(userId) }
+            saveNameJob.await()
+            closeJob.await()
             when (val result = roomRepository.createRoom(name, userId)) {
                 is Resource.Success -> {
                     _uiState.update { it.copy(isLoading = false, createdRoomId = result.data) }

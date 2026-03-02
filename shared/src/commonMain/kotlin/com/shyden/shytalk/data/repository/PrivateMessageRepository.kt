@@ -101,4 +101,6 @@ interface PrivateMessageRepository {
 
     // Counting
     suspend fun getOwnedGroupCount(userId: String): Resource<Int>
+
+    suspend fun prefetchConversations() {}
 }

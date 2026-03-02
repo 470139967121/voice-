@@ -6,9 +6,22 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +31,7 @@ import androidx.navigation.compose.rememberNavController
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.core.room.RoomService
+import com.shyden.shytalk.data.remote.WorkerApiClient
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +54,7 @@ class MainActivity : ComponentActivity() {
 
     private val authRepository: AuthRepository by inject()
     private val userRepository: UserRepository by inject()
+    private val workerApiClient: WorkerApiClient by inject()
     private val activeRoomManager: RoomLifecycleManager by inject()
     private val appConfigService: AppConfigService by inject()
 
@@ -78,7 +93,36 @@ class MainActivity : ComponentActivity() {
                 }
 
                 when {
-                    !checkComplete -> { /* loading */ }
+                    !checkComplete -> {
+                        Surface(
+                            color = MaterialTheme.colorScheme.background,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                                    contentDescription = "ShyTalk",
+                                    modifier = Modifier.size(160.dp)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "ShyTalk",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Your voice, your vibe",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                     isUnsafe -> { UnsafeDeviceScreen() }
                     updateRequired -> { ForceUpdateScreen() }
                     else -> {
@@ -116,7 +160,10 @@ class MainActivity : ComponentActivity() {
                             NavGraph(
                                 navController = navController,
                                 startDestination = Screen.SignIn.route,
-                                onSignOut = { authRepository.signOut() }
+                                onSignOut = {
+                                    workerApiClient.clearTokenCache()
+                                    authRepository.signOut()
+                                }
                             )
 
                             if (softUpdateAvailable != null) {

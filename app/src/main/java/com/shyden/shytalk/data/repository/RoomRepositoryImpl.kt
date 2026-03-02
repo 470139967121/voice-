@@ -22,8 +22,24 @@ class RoomRepositoryImpl(
     private val presenceService: PresenceService
 ) : RoomRepository {
 
+    @Volatile private var prefetchedRooms: List<ChatRoom>? = null
+
+    override suspend fun prefetchActiveRooms() {
+        try {
+            val arr = api.getArray("/api/rooms/active")
+            prefetchedRooms = (0 until arr.length()).mapNotNull { i ->
+                val obj = arr.getJSONObject(i)
+                ChatRoom.fromMap(obj.toMap(), obj.getString("roomId"))
+            }
+        } catch (_: Exception) { }
+    }
+
     // Active rooms list is not tied to a specific room's DO — keep polling
     override fun getActiveRooms(): Flow<List<ChatRoom>> = flow {
+        prefetchedRooms?.let {
+            emit(it)
+            prefetchedRooms = null
+        }
         while (true) {
             try {
                 val arr = api.getArray("/api/rooms/active")
@@ -33,7 +49,7 @@ class RoomRepositoryImpl(
                 }
                 emit(rooms)
             } catch (_: Exception) { }
-            delay(3_000)
+            delay(5_000)
         }
     }.distinctUntilChanged()
 
@@ -50,6 +66,11 @@ class RoomRepositoryImpl(
             emit(ChatRoom.fromMap(json.toMap(), json.getString("roomId")))
         } catch (_: Exception) { }
     }.distinctUntilChanged()
+
+    override suspend fun getRoom(roomId: String): Resource<ChatRoom> = firebaseCall("Failed to get room") {
+        val json = api.get("/api/rooms/$roomId")
+        ChatRoom.fromMap(json.toMap(), json.getString("roomId"))
+    }
 
     override suspend fun createRoom(name: String, ownerId: String): Resource<String> = firebaseCall("Failed to create room") {
         val body = JSONObject().apply { put("name", name) }

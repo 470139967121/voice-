@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.home
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.collectLatest
 
 data class BannerItem(
     val key: String,
+    val onClick: (() -> Unit)? = null,
     val content: @Composable () -> Unit,
 )
 
@@ -49,7 +51,11 @@ fun BannerCarousel(
             state = pagerState,
             modifier = Modifier.fillMaxWidth(),
         ) { page ->
-            banners[page].content()
+            val item = banners[page]
+            val clickModifier = item.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier
+            Box(modifier = clickModifier) {
+                item.content()
+            }
         }
 
         if (banners.size > 1) {

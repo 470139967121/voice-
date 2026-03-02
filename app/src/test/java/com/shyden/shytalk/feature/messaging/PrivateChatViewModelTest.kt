@@ -63,10 +63,10 @@ class PrivateChatViewModelTest {
     private val otherUserId = "other-user"
     private val conversationId = "current-user_other-user"
 
-    private val messagesFlow = MutableSharedFlow<List<PrivateMessage>>()
-    private val settingsFlow = MutableSharedFlow<ConversationSettings>()
+    private lateinit var messagesFlow: MutableSharedFlow<List<PrivateMessage>>
+    private lateinit var settingsFlow: MutableSharedFlow<ConversationSettings>
     private val activeViewModels = mutableListOf<PrivateChatViewModel>()
-    private val typingFlow = MutableSharedFlow<Boolean>()
+    private lateinit var typingFlow: MutableSharedFlow<Boolean>
 
     @After
     fun tearDown() = runBlocking {
@@ -76,6 +76,10 @@ class PrivateChatViewModelTest {
 
     @Before
     fun setup() {
+        messagesFlow = MutableSharedFlow()
+        settingsFlow = MutableSharedFlow()
+        typingFlow = MutableSharedFlow()
+
         ModerationFilter.reset()
         ModerationFilter.updateProhibitedWords(emptyList())
 
@@ -86,6 +90,7 @@ class PrivateChatViewModelTest {
 
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(currentUser)
         coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(otherUser)
+        coEvery { userRepository.getAliases(any()) } returns Resource.Success(emptyMap())
 
         val conversation = TestData.createTestConversation(
             conversationId = conversationId,

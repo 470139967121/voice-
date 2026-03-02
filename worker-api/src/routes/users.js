@@ -51,6 +51,11 @@ function registerUserRoutes(router) {
     user.followingIds = following.results.map(r => r.following_id);
     user.followerIds = followers.results.map(r => r.follower_id);
 
+    // Ensure avatar_url fallback for clients that read avatarUrl
+    if (user.profile_photo_url && !user.avatar_url) {
+      user.avatar_url = user.profile_photo_url;
+    }
+
     return json(user);
   });
 
@@ -67,7 +72,7 @@ function registerUserRoutes(router) {
     // Only allow whitelisted fields
     const allowedFields = [
       'display_name', 'description', 'nationality', 'date_of_birth', 'gender',
-      'profile_photo_url', 'cover_photo_url',
+      'profile_photo_url', 'avatar_url', 'cover_photo_url',
       'pm_privacy', 'pm_notifications_enabled', 'pm_sound_enabled',
       'pm_show_timestamps', 'pm_show_date_separators', 'pm_notification_preview',
       'hide_following', 'hide_online_status', 'hide_age',
@@ -83,6 +88,11 @@ function registerUserRoutes(router) {
 
     if (Object.keys(updates).length === 0) {
       return jsonError('No valid fields to update', 400);
+    }
+
+    // Keep avatar_url in sync when profile photo changes
+    if (updates.profile_photo_url) {
+      updates.avatar_url = updates.profile_photo_url;
     }
 
     const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
@@ -117,10 +127,11 @@ function registerUserRoutes(router) {
     }
 
     // Insert new user
+    const photoUrl = body.profile_photo_url || null;
     await env.DB.prepare(`
-      INSERT INTO users (uid, display_name, profile_photo_url, created_at, last_seen_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(uid, body.display_name || null, body.profile_photo_url || null, now(), now()).run();
+      INSERT INTO users (uid, display_name, profile_photo_url, avatar_url, created_at, last_seen_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(uid, body.display_name || null, photoUrl, photoUrl, now(), now()).run();
 
     return json({ success: true, created: true });
   });
@@ -239,7 +250,32 @@ function registerUserRoutes(router) {
       `SELECT * FROM users WHERE uid IN (${placeholders})`
     ).bind(...capped).all();
 
+    // Ensure avatar_url fallback for clients that read avatarUrl
+    for (const u of results) {
+      if (u.profile_photo_url && !u.avatar_url) {
+        u.avatar_url = u.profile_photo_url;
+      }
+    }
+
     return json({ users: results });
+  });
+
+  // ── Lightweight single user profile (no social graph queries) ──
+  router.get('/api/users/:uid/lite', async (request, env, params) => {
+    const user = await env.DB.prepare('SELECT * FROM users WHERE uid = ?')
+      .bind(params.uid).first();
+    if (!user) return jsonError('User not found', 404);
+
+    if (user.profile_photo_url && !user.avatar_url) {
+      user.avatar_url = user.profile_photo_url;
+    }
+
+    // Return empty arrays for social graph — caller doesn't need them
+    user.blockedUserIds = [];
+    user.followingIds = [];
+    user.followerIds = [];
+
+    return json(user);
   });
 
   // ── Record profile visit (stalker) ──
@@ -286,7 +322,14 @@ function registerUserRoutes(router) {
       'SELECT * FROM stalkers WHERE profile_user_id = ? ORDER BY last_visited_at DESC'
     ).bind(params.uid).all();
 
-    return json(results);
+    return json({
+      stalkers: results.map(r => ({
+        visitorId: r.visitor_id,
+        visitCount: r.visit_count,
+        lastVisitedAt: r.last_visited_at,
+        firstVisitedAt: r.first_visited_at
+      }))
+    });
   });
 
   // ── Mark stalkers viewed ──

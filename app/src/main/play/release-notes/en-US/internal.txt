@@ -1,6 +1,7 @@
-v0.47 — Performance & Bug Fixes
+v0.48 — Closed Room UX & Chat Fixes
 
-- Room re-entry is now instant — cached room data, messages and user profiles load immediately
-- Fixed chat head not showing room owner's photo when leaving a room
-- Improved image caching reliability across app restarts
-- Backend API response parsing improvements for faster data loading
+- Closed rooms now show speaker photos and visitor count instead of empty cards
+- Room invite previews in chat auto-scroll into view when they load
+- Smoother room closing experience with loading indicator
+- Conversation list loads instantly when returning from a chat
+- Fixed a test stability issue with coroutine lifecycle management

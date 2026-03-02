@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.shyden.shytalk.core.model.ChatRoom
+import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.flagEmojiForCode
@@ -53,25 +54,34 @@ fun RoomListItem(
     val totalSeats = room.seats.size
 
     // Build ordered list of seated users + nationality flags in a single pass
-    val (seatedUserList, nationalityFlags) = remember(room.seats, seatUsers) {
-        val nationalities = mutableSetOf<String>()
-        val users = buildList {
-            // Owner seat first
-            room.seats["0"]?.let { seat ->
-                if (seat.state == SeatState.OCCUPIED && seat.userId != null) {
-                    seatUsers[seat.userId]?.let { add(it); it.nationality?.let(nationalities::add) }
-                }
-            }
-            // Then remaining seats in order
-            for (i in 1 until totalSeats) {
-                room.seats[i.toString()]?.let { seat ->
+    val (seatedUserList, nationalityFlags) = remember(room.seats, room.state, seatUsers) {
+        if (room.state == RoomState.CLOSED) {
+            // Closed rooms: seats are cleared, so use seatUsers directly
+            // (populated from allTimeSeatUserIds by the ViewModel)
+            val users = seatUsers.values.toList()
+            val nationalities = users.mapNotNull { it.nationality }.toSet()
+            users to nationalities.map { flagEmojiForCode(it) }
+        } else {
+            // Active rooms: use live seat occupancy
+            val nationalities = mutableSetOf<String>()
+            val users = buildList {
+                // Owner seat first
+                room.seats["0"]?.let { seat ->
                     if (seat.state == SeatState.OCCUPIED && seat.userId != null) {
                         seatUsers[seat.userId]?.let { add(it); it.nationality?.let(nationalities::add) }
                     }
                 }
+                // Then remaining seats in order
+                for (i in 1 until totalSeats) {
+                    room.seats[i.toString()]?.let { seat ->
+                        if (seat.state == SeatState.OCCUPIED && seat.userId != null) {
+                            seatUsers[seat.userId]?.let { add(it); it.nationality?.let(nationalities::add) }
+                        }
+                    }
+                }
             }
+            users to nationalities.map { flagEmojiForCode(it) }
         }
-        users to nationalities.map { flagEmojiForCode(it) }
     }
 
     Card(
@@ -151,7 +161,9 @@ fun RoomListItem(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "$occupiedSeats/$totalSeats seats",
+                            text = if (room.state == RoomState.CLOSED)
+                                "${seatUsers.size}/$totalSeats speakers"
+                            else "$occupiedSeats/$totalSeats seats",
                             style = MaterialTheme.typography.bodySmall,
                             color = WhiteAlpha80
                         )
@@ -159,7 +171,9 @@ fun RoomListItem(
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "${room.participantIds.size} in room",
+                            text = if (room.state == RoomState.CLOSED)
+                                "${room.firstJoinTimestamps.size} visitors"
+                            else "${room.participantIds.size} in room",
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White
                         )

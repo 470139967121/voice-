@@ -1,4 +1,5 @@
 name = "shytalk-api"
+account_id = "9315582c39b627dca58dfa83602db385"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
@@ -36,7 +37,7 @@ new_sqlite_classes = ["RoomDurableObject", "ConversationDurableObject"]
 # FIREBASE_PROJECT_ID      — for JWT audience check
 # LIVEKIT_API_KEY           — for LiveKit token generation
 # LIVEKIT_API_SECRET        — for LiveKit token generation
-# CF_ACCOUNT_ID             — for R2 S3-compatible API
+# CLOUDFLARE_ACCOUNT_ID     — for R2 S3-compatible API (set in wrangler.toml as account_id)
 # R2_ACCESS_KEY             — for R2 S3-compatible API
 # R2_SECRET_KEY             — for R2 S3-compatible API
 
@@ -47,6 +48,7 @@ crons = [
   "0 4 * * *",    # cleanupOrphanedStorage — daily 04:00 UTC
   "0 0 * * *",    # checkSubscriptionStatus + cleanExpiredBackpackItems — daily 00:00 UTC
   "0 * * * *",    # updateGiftRankings — hourly
+  "*/5 * * * *",  # closeStaleOwnerAwayRooms — every 5 minutes
 ]
 
 # ── Environment ──────────────────────────────────────────────────

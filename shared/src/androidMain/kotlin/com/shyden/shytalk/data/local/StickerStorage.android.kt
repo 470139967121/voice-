@@ -9,7 +9,7 @@ actual class StickerStorage(private val context: Context) {
     private val stickersDir: File
         get() = File(context.filesDir, "stickers").also { it.mkdirs() }
 
-    /** Each line: id|localPath */
+    /** Each line: id|localPath|url (url may be empty) */
     private val indexFile: File
         get() = File(stickersDir, "index.txt")
 
@@ -17,13 +17,13 @@ actual class StickerStorage(private val context: Context) {
     private val recentsFile: File
         get() = File(stickersDir, "recents.txt")
 
-    private fun readIndex(): List<Pair<String, String>> {
+    private fun readIndex(): List<Triple<String, String, String>> {
         if (!indexFile.exists()) return emptyList()
         return try {
             indexFile.readLines().mapNotNull { line ->
-                val parts = line.split("|", limit = 2)
-                if (parts.size == 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
-                    parts[0] to parts[1]
+                val parts = line.split("|", limit = 3)
+                if (parts.size >= 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
+                    Triple(parts[0], parts[1], parts.getOrElse(2) { "" })
                 } else null
             }
         } catch (_: Exception) {
@@ -31,8 +31,8 @@ actual class StickerStorage(private val context: Context) {
         }
     }
 
-    private fun writeIndex(entries: List<Pair<String, String>>) {
-        indexFile.writeText(entries.joinToString("\n") { "${it.first}|${it.second}" })
+    private fun writeIndex(entries: List<Triple<String, String, String>>) {
+        indexFile.writeText(entries.joinToString("\n") { "${it.first}|${it.second}|${it.third}" })
     }
 
     private fun readRecents(): List<String> {
@@ -49,8 +49,8 @@ actual class StickerStorage(private val context: Context) {
     }
 
     actual fun getStickers(): List<Sticker> {
-        return readIndex().mapNotNull { (id, localPath) ->
-            if (File(localPath).exists()) Sticker(id = id, url = "", localPath = localPath)
+        return readIndex().mapNotNull { (id, localPath, url) ->
+            if (File(localPath).exists()) Sticker(id = id, url = url, localPath = localPath)
             else null
         }
     }
@@ -61,14 +61,13 @@ actual class StickerStorage(private val context: Context) {
         file.writeBytes(imageData)
 
         val entries = readIndex().toMutableList()
-        entries.add(id to file.absolutePath)
+        entries.add(Triple(id, file.absolutePath, ""))
         writeIndex(entries)
 
         return Sticker(id = id, url = "", localPath = file.absolutePath)
     }
 
     actual fun removeSticker(id: String) {
-        // Delete using path from index (supports any extension)
         val entries = readIndex()
         val entry = entries.find { it.first == id }
         if (entry != null) {
@@ -79,6 +78,15 @@ actual class StickerStorage(private val context: Context) {
 
         val recents = readRecents().filter { it != id }
         writeRecents(recents)
+    }
+
+    actual fun updateStickerUrl(id: String, url: String) {
+        val entries = readIndex().toMutableList()
+        val idx = entries.indexOfFirst { it.first == id }
+        if (idx < 0) return
+        val old = entries[idx]
+        entries[idx] = Triple(old.first, old.second, url)
+        writeIndex(entries)
     }
 
     actual fun moveSticker(id: String, toIndex: Int) {

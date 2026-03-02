@@ -158,7 +158,7 @@ class ChatHeadManager(
         val photoView = view.findViewById<ImageView>(R.id.ownerPhoto)
         val micIcon = view.findViewById<ImageView>(R.id.micIcon)
 
-        if (ownerPhotoUrl != null) {
+        if (!ownerPhotoUrl.isNullOrEmpty()) {
             photoView.visibility = View.VISIBLE
             micIcon.visibility = View.GONE
 

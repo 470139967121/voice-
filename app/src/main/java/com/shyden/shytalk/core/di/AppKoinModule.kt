@@ -11,7 +11,9 @@ import com.shyden.shytalk.data.remote.LiveKitTokenService
 import com.shyden.shytalk.data.remote.LiveKitVoiceService
 import com.shyden.shytalk.data.remote.AndroidAppConfigService
 import com.shyden.shytalk.data.remote.AppConfigService
+import com.shyden.shytalk.data.remote.ConversationWebSocketService
 import com.shyden.shytalk.data.remote.PresenceService
+import com.shyden.shytalk.data.remote.WebSocketConversationService
 import com.shyden.shytalk.data.remote.WebSocketPresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
@@ -40,11 +42,20 @@ import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.data.repository.UserRepositoryImpl
 import com.shyden.shytalk.data.repository.GiftRepository
 import com.shyden.shytalk.data.repository.GiftRepositoryImpl
+import com.shyden.shytalk.data.repository.BannerRepository
+import com.shyden.shytalk.data.repository.BannerRepositoryImpl
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.EconomyRepositoryImpl
+import com.shyden.shytalk.data.repository.FunFactRepository
+import com.shyden.shytalk.data.repository.FunFactRepositoryImpl
 import com.shyden.shytalk.data.remote.BillingService
 import com.shyden.shytalk.feature.auth.AuthViewModel
 import com.shyden.shytalk.feature.daily.DailyRewardViewModel
+import com.shyden.shytalk.feature.splash.BannerImagePreloader
+import com.shyden.shytalk.feature.splash.CoilBannerImagePreloader
+import com.shyden.shytalk.feature.splash.FunFactSplashViewModel
+import com.shyden.shytalk.feature.splash.OkHttpWebContentPreloader
+import com.shyden.shytalk.feature.splash.WebContentPreloader
 import com.shyden.shytalk.feature.gacha.GachaViewModel
 import com.shyden.shytalk.feature.gifting.GiftingViewModel
 import com.shyden.shytalk.feature.profile.GiftWallViewModel
@@ -73,7 +84,13 @@ val appModule = module {
     // Firebase Auth (free tier — kept for authentication)
     single { FirebaseAuth.getInstance() }
     // HTTP client
-    single { OkHttpClient.Builder().build() }
+    single {
+        OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
 
     // Worker API client (Cloudflare)
     single { WorkerApiClient(get(), BuildConfig.API_BASE_URL, get()) }
@@ -87,6 +104,7 @@ val appModule = module {
     single<TokenService> { LiveKitTokenService(get()) }
     single<VoiceService> { LiveKitVoiceService(androidContext(), get()) }
     single<PresenceService> { WebSocketPresenceService(get(), BuildConfig.API_BASE_URL, get()) }
+    single<ConversationWebSocketService> { WebSocketConversationService(get(), BuildConfig.API_BASE_URL, get()) }
     single<AppConfigService> { AndroidAppConfigService(androidContext(), get()) }
     single { BillingService(androidContext()) }
 
@@ -104,6 +122,8 @@ val appModule = module {
     singleOf(::NotificationRepositoryImpl) bind NotificationRepository::class
     singleOf(::GiftRepositoryImpl) bind GiftRepository::class
     singleOf(::EconomyRepositoryImpl) bind EconomyRepository::class
+    singleOf(::BannerRepositoryImpl) bind BannerRepository::class
+    single<FunFactRepository> { FunFactRepositoryImpl(get(), androidContext()) }
     single { StickerStorage(androidContext()) }
 
     // ActiveRoomManager
@@ -112,7 +132,7 @@ val appModule = module {
 
     // ViewModels
     viewModel { AuthViewModel(get(), get(), get(), get(named("deviceId"))) }
-    viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }
     viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }
@@ -131,7 +151,9 @@ val appModule = module {
             reportRepository = get(),
             storageRepository = get(),
             stickerStorage = get(),
-            initialConversationId = values.getOrNull(1) as? String
+            initialConversationId = values.getOrNull(1) as? String,
+            conversationWs = get(),
+            roomRepository = get()
         )
     }
     viewModel { ReportReviewViewModel(get(), get()) }
@@ -145,4 +167,7 @@ val appModule = module {
     viewModel { GiftingViewModel(get(), get(), get()) }
     viewModel { params -> GiftWallViewModel(params[0], get()) }
     viewModel { DailyRewardViewModel(get(), get()) }
+    single<BannerImagePreloader> { CoilBannerImagePreloader(androidContext()) }
+    single<WebContentPreloader> { OkHttpWebContentPreloader(get()) }
+    viewModel { FunFactSplashViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
 }

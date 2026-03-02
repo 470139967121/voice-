@@ -16,6 +16,7 @@
 
 const { json, jsonError, generateId, now, parseBody } = require('../utils');
 const { requireAdmin } = require('../middleware/auth');
+const { sendFcmToTokens, cleanupInvalidTokens } = require('../utils/fcm');
 
 function registerReportRoutes(router) {
   // ── Submit report ──
@@ -56,15 +57,28 @@ function registerReportRoutes(router) {
       now()
     ).run();
 
-    // Send push notification to admin tokens
-    const { results: adminTokens } = await env.DB.prepare(
-      'SELECT token FROM admin_tokens'
-    ).all();
-
-    if (adminTokens.length > 0) {
-      // FCM push via HTTP v1 API (Phase 7 will implement full FCM sender)
-      // For now, this is a placeholder that logs the intent
-      console.log(`New report ${reportId}: ${reason} against ${reportedUserName} — ${adminTokens.length} admin tokens`);
+    // Fire-and-forget: FCM push notification to admin tokens
+    const ctx = request.ctx;
+    if (ctx) {
+      ctx.waitUntil((async () => {
+        try {
+          const { results: adminTokens } = await env.DB.prepare(
+            'SELECT token FROM admin_tokens'
+          ).all();
+          if (adminTokens.length > 0) {
+            const data = {
+              type: 'ADMIN_NEW_REPORT',
+              reportId,
+              reason,
+              reportedUserName: reportedUserName || 'Unknown',
+            };
+            const invalid = await sendFcmToTokens(env, adminTokens.map(t => t.token), data);
+            await cleanupInvalidTokens(env, invalid, 'admin_tokens');
+          }
+        } catch (err) {
+          console.error('Failed to send report notification:', err);
+        }
+      })());
     }
 
     return json({ success: true, reportId });
@@ -151,30 +165,46 @@ function registerReportRoutes(router) {
 
     if (!user) return jsonError('User not found', 404);
 
-    await env.DB.prepare(`
-      UPDATE users SET
-        is_suspended = 1,
-        suspension_reason = ?,
-        suspension_start_date = ?,
-        suspension_end_date = ?,
-        suspension_can_appeal = ?,
-        suspended_by = ?,
-        pre_suspension_display_name = ?,
-        pre_suspension_photo_url = ?,
-        pre_suspension_cover_url = ?
-      WHERE uid = ?
-    `).bind(
-      body.reason.trim(), now(), endTimestamp,
-      body.canAppeal ? 1 : 0, request.auth.uid,
-      user.display_name, user.profile_photo_url, user.cover_photo_url,
-      params.uid
-    ).run();
+    const timestamp = now();
+    const stmts = [
+      // Save pre-suspension values and mask profile
+      env.DB.prepare(`
+        UPDATE users SET
+          is_suspended = 1,
+          suspension_reason = ?,
+          suspension_start_date = ?,
+          suspension_end_date = ?,
+          suspension_can_appeal = ?,
+          suspended_by = ?,
+          pre_suspension_display_name = ?,
+          pre_suspension_photo_url = ?,
+          pre_suspension_cover_url = ?,
+          display_name = 'Suspended Account',
+          profile_photo_url = NULL,
+          cover_photo_url = NULL,
+          avatar_url = NULL,
+          bio = NULL,
+          current_room_id = NULL
+        WHERE uid = ?
+      `).bind(
+        body.reason.trim(), timestamp, endTimestamp,
+        body.canAppeal ? 1 : 0, request.auth.uid,
+        user.display_name, user.profile_photo_url, user.cover_photo_url,
+        params.uid
+      ),
+      // Audit log
+      env.DB.prepare(`
+        INSERT INTO admin_audit_log (id, admin_id, action, target_user_id, details, created_at)
+        VALUES (?, ?, 'SUSPEND', ?, ?, ?)
+      `).bind(generateId(), request.auth.uid, params.uid, body.reason, timestamp),
+    ];
+    await env.DB.batch(stmts);
 
-    // Audit log
-    await env.DB.prepare(`
-      INSERT INTO admin_audit_log (id, admin_id, action, target_user_id, details, created_at)
-      VALUES (?, ?, 'SUSPEND', ?, ?, ?)
-    `).bind(generateId(), request.auth.uid, params.uid, body.reason, now()).run();
+    // Evict from rooms (fire-and-forget)
+    const ctx = request.ctx;
+    if (ctx) {
+      ctx.waitUntil(evictSuspendedUser(env, params.uid));
+    }
 
     return json({ success: true });
   });
@@ -378,6 +408,56 @@ function registerReportRoutes(router) {
 
     return json(results);
   });
+}
+
+/**
+ * Evict a suspended user from all rooms they're in.
+ * If they own a room, close it via the RoomDO. Otherwise remove them as participant.
+ */
+async function evictSuspendedUser(env, userId) {
+  try {
+    const { results: participations } = await env.DB.prepare(
+      'SELECT room_id FROM room_participants WHERE user_id = ?'
+    ).bind(userId).all();
+
+    for (const { room_id: roomId } of participations) {
+      const room = await env.DB.prepare(
+        'SELECT owner_id FROM rooms WHERE id = ?'
+      ).bind(roomId).first();
+
+      if (!room) continue;
+
+      if (room.owner_id === userId) {
+        // Owner — close the room via DurableObject
+        try {
+          const doId = env.ROOM_DO.idFromName(roomId);
+          const stub = env.ROOM_DO.get(doId);
+          await stub.fetch(new Request('https://do/broadcast', {
+            method: 'POST',
+            body: JSON.stringify({ type: 'room_closed' }),
+          }));
+        } catch {}
+        await env.DB.prepare("UPDATE rooms SET status = 'CLOSED' WHERE id = ?").bind(roomId).run();
+      } else {
+        // Participant — remove from room
+        await env.DB.batch([
+          env.DB.prepare('DELETE FROM room_participants WHERE room_id = ? AND user_id = ?').bind(roomId, userId),
+          env.DB.prepare('DELETE FROM room_seats WHERE room_id = ? AND user_id = ?').bind(roomId, userId),
+        ]);
+        // Broadcast room update
+        try {
+          const doId = env.ROOM_DO.idFromName(roomId);
+          const stub = env.ROOM_DO.get(doId);
+          await stub.fetch(new Request('https://do/broadcast', {
+            method: 'POST',
+            body: JSON.stringify({ type: 'room_updated' }),
+          }));
+        } catch {}
+      }
+    }
+  } catch (err) {
+    console.error(`Failed to evict suspended user ${userId} from rooms:`, err);
+  }
 }
 
 module.exports = { registerReportRoutes };

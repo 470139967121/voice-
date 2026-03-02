@@ -16,6 +16,11 @@ class FakeRoomRepository : RoomRepository {
     override fun getRoomFlow(roomId: String): Flow<ChatRoom?> =
         rooms.map { list -> list.find { it.roomId == roomId } }
 
+    override suspend fun getRoom(roomId: String): Resource<ChatRoom> {
+        val room = rooms.value.find { it.roomId == roomId }
+        return if (room != null) Resource.Success(room) else Resource.Error("Not found")
+    }
+
     override suspend fun createRoom(name: String, ownerId: String): Resource<String> {
         val newRoom = ChatRoom(roomId = "room-new", name = name, ownerId = ownerId)
         rooms.value = rooms.value + newRoom

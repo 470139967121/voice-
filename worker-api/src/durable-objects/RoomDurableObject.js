@@ -179,12 +179,13 @@ export class RoomDurableObject {
     if (!roomId) return;
 
     try {
+      const timestamp = Date.now();
       await this.env.DB.batch([
         this.env.DB.prepare(
-          `UPDATE rooms SET state = 'CLOSED', owner_left_at = NULL WHERE id = ?`
-        ).bind(roomId),
+          `UPDATE rooms SET state = 'CLOSED', closed_at = ?, owner_left_at = NULL WHERE id = ?`
+        ).bind(timestamp, roomId),
         this.env.DB.prepare(
-          `DELETE FROM room_seats WHERE room_id = ?`
+          `UPDATE room_seats SET user_id = NULL, state = 'EMPTY', is_muted = 0 WHERE room_id = ?`
         ).bind(roomId),
         this.env.DB.prepare(
           `DELETE FROM room_participants WHERE room_id = ?`

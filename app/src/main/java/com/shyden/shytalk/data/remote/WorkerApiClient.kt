@@ -25,103 +25,130 @@ class WorkerApiClient(
     private val baseUrl: String,
     private val auth: FirebaseAuth
 ) {
-    private suspend fun getIdToken(): String {
-        return auth.currentUser?.getIdToken(false)?.await()?.token
+    @Volatile private var cachedToken: String? = null
+    @Volatile private var tokenExpiresAt: Long = 0L
+
+    private suspend fun getIdToken(forceRefresh: Boolean = false): String {
+        if (!forceRefresh) {
+            val now = System.currentTimeMillis()
+            cachedToken?.let { if (now < tokenExpiresAt) return it }
+        }
+        val token = auth.currentUser?.getIdToken(forceRefresh)?.await()?.token
             ?: throw IllegalStateException("Not signed in")
+        cachedToken = token
+        tokenExpiresAt = System.currentTimeMillis() + 50 * 60 * 1000L
+        return token
     }
 
-    suspend fun get(path: String): JSONObject {
-        val token = getIdToken()
-        val request = Request.Builder()
-            .url("$baseUrl$path")
-            .header("Authorization", "Bearer $token")
-            .get()
-            .build()
-        return executeForJson(request)
+    fun clearTokenCache() {
+        cachedToken = null
+        tokenExpiresAt = 0L
     }
 
-    suspend fun getArray(path: String): JSONArray {
-        val token = getIdToken()
-        val request = Request.Builder()
-            .url("$baseUrl$path")
-            .header("Authorization", "Bearer $token")
-            .get()
-            .build()
-        return executeForJsonArray(request)
-    }
-
-    suspend fun post(path: String, body: JSONObject = JSONObject()): JSONObject {
-        val token = getIdToken()
-        val request = Request.Builder()
-            .url("$baseUrl$path")
-            .header("Authorization", "Bearer $token")
-            .post(body.toString().toRequestBody("application/json".toMediaType()))
-            .build()
-        return executeForJson(request)
-    }
-
-    suspend fun patch(path: String, body: JSONObject): JSONObject {
-        val token = getIdToken()
-        val request = Request.Builder()
-            .url("$baseUrl$path")
-            .header("Authorization", "Bearer $token")
-            .patch(body.toString().toRequestBody("application/json".toMediaType()))
-            .build()
-        return executeForJson(request)
-    }
-
-    suspend fun put(path: String, body: JSONObject = JSONObject()): JSONObject {
-        val token = getIdToken()
-        val request = Request.Builder()
-            .url("$baseUrl$path")
-            .header("Authorization", "Bearer $token")
-            .put(body.toString().toRequestBody("application/json".toMediaType()))
-            .build()
-        return executeForJson(request)
-    }
-
-    suspend fun delete(path: String): JSONObject {
-        val token = getIdToken()
-        val request = Request.Builder()
-            .url("$baseUrl$path")
-            .header("Authorization", "Bearer $token")
-            .delete()
-            .build()
-        return executeForJson(request)
-    }
-
-    suspend fun delete(path: String, body: JSONObject): JSONObject {
-        val token = getIdToken()
-        val request = Request.Builder()
-            .url("$baseUrl$path")
-            .header("Authorization", "Bearer $token")
-            .delete(body.toString().toRequestBody("application/json".toMediaType()))
-            .build()
-        return executeForJson(request)
-    }
-
-    private suspend fun executeForJson(request: Request): JSONObject {
-        val response = httpClient.newCall(request).executeAsync()
-        response.use {
-            val bodyStr = it.body?.string() ?: "{}"
-            if (!it.isSuccessful) {
-                val error = try { JSONObject(bodyStr).optString("error", "Request failed") } catch (_: Exception) { "HTTP ${it.code}" }
-                throw ApiException(it.code, error)
-            }
-            return JSONObject(bodyStr)
+    suspend fun get(path: String): JSONObject =
+        executeWithRetry(path) { url, token ->
+            Request.Builder().url(url).header("Authorization", "Bearer $token").get().build()
         }
+
+    suspend fun getArray(path: String): JSONArray =
+        executeArrayWithRetry(path) { url, token ->
+            Request.Builder().url(url).header("Authorization", "Bearer $token").get().build()
+        }
+
+    suspend fun post(path: String, body: JSONObject = JSONObject()): JSONObject =
+        executeWithRetry(path) { url, token ->
+            Request.Builder().url(url).header("Authorization", "Bearer $token")
+                .post(body.toString().toRequestBody(JSON_MEDIA_TYPE)).build()
+        }
+
+    suspend fun patch(path: String, body: JSONObject): JSONObject =
+        executeWithRetry(path) { url, token ->
+            Request.Builder().url(url).header("Authorization", "Bearer $token")
+                .patch(body.toString().toRequestBody(JSON_MEDIA_TYPE)).build()
+        }
+
+    suspend fun put(path: String, body: JSONObject = JSONObject()): JSONObject =
+        executeWithRetry(path) { url, token ->
+            Request.Builder().url(url).header("Authorization", "Bearer $token")
+                .put(body.toString().toRequestBody(JSON_MEDIA_TYPE)).build()
+        }
+
+    suspend fun delete(path: String): JSONObject =
+        executeWithRetry(path) { url, token ->
+            Request.Builder().url(url).header("Authorization", "Bearer $token").delete().build()
+        }
+
+    suspend fun delete(path: String, body: JSONObject): JSONObject =
+        executeWithRetry(path) { url, token ->
+            Request.Builder().url(url).header("Authorization", "Bearer $token")
+                .delete(body.toString().toRequestBody(JSON_MEDIA_TYPE)).build()
+        }
+
+    private suspend fun executeWithRetry(
+        path: String,
+        buildRequest: (String, String) -> Request
+    ): JSONObject {
+        val url = "$baseUrl$path"
+        val token = getIdToken()
+        val request = buildRequest(url, token)
+        val response = httpClient.newCall(request).executeAsync()
+        val bodyStr = response.use { it.body?.string() ?: "{}" }
+        val code = response.code
+
+        if (code == 401) {
+            // Token rejected — force refresh and retry once
+            clearTokenCache()
+            val freshToken = getIdToken(forceRefresh = true)
+            val retryRequest = buildRequest(url, freshToken)
+            val retryResponse = httpClient.newCall(retryRequest).executeAsync()
+            val retryBody = retryResponse.use { it.body?.string() ?: "{}" }
+            if (!retryResponse.isSuccessful) {
+                val error = try { JSONObject(retryBody).optString("error", "Request failed") } catch (_: Exception) { "HTTP ${retryResponse.code}" }
+                throw ApiException(retryResponse.code, error)
+            }
+            return JSONObject(retryBody)
+        }
+
+        if (!response.isSuccessful) {
+            val error = try { JSONObject(bodyStr).optString("error", "Request failed") } catch (_: Exception) { "HTTP $code" }
+            throw ApiException(code, error)
+        }
+        return JSONObject(bodyStr)
     }
 
-    private suspend fun executeForJsonArray(request: Request): JSONArray {
+    private suspend fun executeArrayWithRetry(
+        path: String,
+        buildRequest: (String, String) -> Request
+    ): JSONArray {
+        val url = "$baseUrl$path"
+        val token = getIdToken()
+        val request = buildRequest(url, token)
         val response = httpClient.newCall(request).executeAsync()
-        response.use {
-            val bodyStr = it.body?.string() ?: "[]"
-            if (!it.isSuccessful) {
-                val error = try { JSONObject(bodyStr).optString("error", "Request failed") } catch (_: Exception) { "HTTP ${it.code}" }
-                throw ApiException(it.code, error)
+        val bodyStr = response.use { it.body?.string() ?: "[]" }
+        val code = response.code
+
+        if (code == 401) {
+            clearTokenCache()
+            val freshToken = getIdToken(forceRefresh = true)
+            val retryRequest = buildRequest(url, freshToken)
+            val retryResponse = httpClient.newCall(retryRequest).executeAsync()
+            val retryBody = retryResponse.use { it.body?.string() ?: "[]" }
+            if (!retryResponse.isSuccessful) {
+                val error = try { JSONObject(retryBody).optString("error", "Request failed") } catch (_: Exception) { "HTTP ${retryResponse.code}" }
+                throw ApiException(retryResponse.code, error)
             }
-            return JSONArray(bodyStr)
+            return JSONArray(retryBody)
         }
+
+        if (!response.isSuccessful) {
+            val error = try { JSONObject(bodyStr).optString("error", "Request failed") } catch (_: Exception) { "HTTP $code" }
+            throw ApiException(code, error)
+        }
+        return JSONArray(bodyStr)
+    }
+
+    companion object {
+        private val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }
 

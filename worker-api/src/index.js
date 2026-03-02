@@ -18,6 +18,8 @@ const { registerReportRoutes } = require('./routes/reports');
 const { registerNotificationRoutes } = require('./routes/notifications');
 const { registerRoomRoutes } = require('./routes/rooms');
 const { registerConversationRoutes } = require('./routes/conversations');
+const { registerBannerRoutes } = require('./routes/banners');
+const { registerFunFactRoutes } = require('./routes/fun-facts');
 
 // Re-export Durable Object classes
 export { RoomDurableObject, ConversationDurableObject };
@@ -33,6 +35,8 @@ registerReportRoutes(router);
 registerNotificationRoutes(router);
 registerRoomRoutes(router);
 registerConversationRoutes(router);
+registerBannerRoutes(router);
+registerFunFactRoutes(router);
 
 // ── Health check (no auth) ──
 router.get('/api/health', async () => {
@@ -120,6 +124,9 @@ export default {
       if (authResult) return authResult; // auth failed, return error response
     }
 
+    // Attach execution context so route handlers can use ctx.waitUntil()
+    request.ctx = ctx;
+
     // Route matching
     const match = router.match(request.method, pathname);
     if (!match) {
@@ -157,6 +164,10 @@ export default {
 
       case '0 * * * *': // Update gift rankings (hourly)
         await updateGiftRankings(env);
+        break;
+
+      case '*/5 * * * *': // Close stale OWNER_AWAY rooms (every 5 minutes)
+        await closeStaleOwnerAwayRooms(env);
         break;
 
       default:
@@ -264,6 +275,29 @@ async function updateGiftRankings(env) {
   console.log('Gift rankings updated');
 }
 
+async function closeStaleOwnerAwayRooms(env) {
+  // Safety net: close rooms stuck in OWNER_AWAY for more than 10 minutes
+  // (normal flow: DO alarm fires at 5 min, client countdown closes at 5 min)
+  const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+
+  const { results: staleRooms } = await env.DB.prepare(`
+    SELECT id FROM rooms
+    WHERE state = 'OWNER_AWAY' AND owner_left_at IS NOT NULL AND owner_left_at < ?
+  `).bind(tenMinutesAgo).all();
+
+  if (staleRooms.length === 0) return;
+
+  const timestamp = Date.now();
+  const stmts = [];
+  for (const room of staleRooms) {
+    stmts.push(env.DB.prepare("UPDATE rooms SET state = 'CLOSED', closed_at = ?, owner_left_at = NULL WHERE id = ?").bind(timestamp, room.id));
+    stmts.push(env.DB.prepare("UPDATE room_seats SET user_id = NULL, state = 'EMPTY', is_muted = 0 WHERE room_id = ?").bind(room.id));
+    stmts.push(env.DB.prepare("DELETE FROM room_participants WHERE room_id = ?").bind(room.id));
+  }
+  await env.DB.batch(stmts);
+  console.log(`Closed ${staleRooms.length} stale OWNER_AWAY rooms`);
+}
+
 async function cleanExpiredBackpackItems(env) {
   const result = await env.DB.prepare(`
     DELETE FROM backpack_items WHERE expires_at IS NOT NULL AND expires_at <= ?
@@ -340,8 +374,17 @@ async function cleanupOrphanedStorage(env) {
     }
   }
 
+  // Banners → image_url
+  const { results: bannerRows } = await env.DB.prepare(
+    'SELECT image_url FROM banners WHERE image_url IS NOT NULL'
+  ).all();
+  for (const b of bannerRows) {
+    const k = extractKey(b.image_url);
+    if (k) referencedKeys.add(k);
+  }
+
   // List and delete orphaned R2 objects using native R2 API
-  const folders = ['pm_images/', 'stickers/', 'report_evidence/', 'profile_photos/', 'cover_photos/', 'group_photos/'];
+  const folders = ['pm_images/', 'stickers/', 'report_evidence/', 'profile_photos/', 'cover_photos/', 'group_photos/', 'banners/'];
   const results = {};
   let totalDeleted = 0;
 

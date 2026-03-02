@@ -843,7 +843,8 @@ describe("checkSubscriptionStatus", () => {
 // ═══════════════════════════════════════════════════════════════
 // onPresenceRemoved (trigger)
 // ═══════════════════════════════════════════════════════════════
-describe("onPresenceRemoved", () => {
+// Migrated to Worker API — see worker-api/src/
+describe.skip("onPresenceRemoved", () => {
   beforeEach(() => {
     jest.useFakeTimers();
   });
@@ -998,7 +999,8 @@ describe("onPresenceRemoved", () => {
 // ═══════════════════════════════════════════════════════════════
 // onUserSuspended (trigger)
 // ═══════════════════════════════════════════════════════════════
-describe("onUserSuspended", () => {
+// Migrated to Worker API — see worker-api/src/routes/reports.js
+describe.skip("onUserSuspended", () => {
   test("revokes tokens on suspension", async () => {
     const fn = indexModule.onUserSuspended;
     await fn({
@@ -1127,7 +1129,8 @@ describe("onUserSuspended", () => {
 // ═══════════════════════════════════════════════════════════════
 // sendPmNotification (trigger)
 // ═══════════════════════════════════════════════════════════════
-describe("sendPmNotification", () => {
+// Migrated to Worker API — see worker-api/src/routes/conversations.js
+describe.skip("sendPmNotification", () => {
   test("sends notification to recipient", async () => {
     mockConversations["conv-1"] = {
       participantIds: ["sender-1", "recipient-1"],
@@ -1690,7 +1693,8 @@ describe("pullGacha with guaranteedNextPull", () => {
 // ═══════════════════════════════════════════════════════════════
 // onNewReport
 // ═══════════════════════════════════════════════════════════════
-describe("onNewReport", () => {
+// Migrated to Worker API — see worker-api/src/routes/reports.js
+describe.skip("onNewReport", () => {
   test("sends notification to all admin tokens", async () => {
     mockAdminTokens["admin1"] = { token: "token-a", uid: "admin-a" };
     mockAdminTokens["admin2"] = { token: "token-b", uid: "admin-b" };
@@ -1763,7 +1767,8 @@ describe("onNewReport", () => {
 // ═══════════════════════════════════════════════════════════════
 // onModAction
 // ═══════════════════════════════════════════════════════════════
-describe("onModAction", () => {
+// Migrated to Worker API — see worker-api/src/routes/conversations.js
+describe.skip("onModAction", () => {
   test("sends notification to owner only when modNotifyMode is OWNER_ONLY", async () => {
     mockConversations["conv-1"] = {
       modNotifyMode: "OWNER_ONLY",
@@ -3664,7 +3669,8 @@ describe("checkSubscriptionStatus - edge cases", () => {
 // ═══════════════════════════════════════════════════════════════
 // Pass 10: sendPmNotification - remaining message types
 // ═══════════════════════════════════════════════════════════════
-describe("sendPmNotification - remaining edge cases", () => {
+// Migrated to Worker API — see worker-api/src/routes/conversations.js
+describe.skip("sendPmNotification - remaining edge cases", () => {
   test("STICKER message type uses correct body text", async () => {
     mockConversations["conv-1"] = {
       participantIds: ["sender-1", "recipient-1"],
@@ -3958,7 +3964,8 @@ describe("archiveOldReports - edge cases", () => {
 // ═══════════════════════════════════════════════════════════════
 // Pass 10: onPresenceRemoved - remaining edge cases
 // ═══════════════════════════════════════════════════════════════
-describe("onPresenceRemoved - remaining edge cases", () => {
+// Migrated to Worker API — see worker-api/src/durable-objects/RoomDurableObject.js
+describe.skip("onPresenceRemoved - remaining edge cases", () => {
   beforeEach(() => {
     jest.useFakeTimers();
   });
@@ -4026,7 +4033,8 @@ describe("onPresenceRemoved - remaining edge cases", () => {
 // ═══════════════════════════════════════════════════════════════
 // Pass 10: onUserSuspended - presence cleanup
 // ═══════════════════════════════════════════════════════════════
-describe("onUserSuspended - presence cleanup", () => {
+// Migrated to Worker API — see worker-api/src/routes/reports.js
+describe.skip("onUserSuspended - presence cleanup", () => {
   test("removes RTDB presence entry on suspension", async () => {
     mockPresence["room-1"] = { "user-1": true };
     mockUsers["user-1"] = { displayName: "User", currentRoomId: null };

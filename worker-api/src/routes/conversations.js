@@ -39,6 +39,7 @@
  */
 
 const { json, jsonError, generateId, now, parseBody } = require('../utils');
+const { sendFcmToTokens, cleanupInvalidTokens } = require('../utils/fcm');
 
 const DEFAULT_MESSAGE_LIMIT = 50;
 const MAX_MESSAGE_LIMIT = 200;
@@ -398,7 +399,20 @@ function registerConversationRoutes(router) {
 
     await env.DB.batch(stmts);
 
-    // TODO: FCM push notification to recipients (Phase 7)
+    // Fire-and-forget: FCM notifications + ConversationDO broadcast
+    const ctx = request.ctx;
+    if (ctx) {
+      const conv = await env.DB.prepare(
+        'SELECT is_group, group_name FROM conversations WHERE id = ?'
+      ).bind(conversationId).first();
+      const isGroup = !!conv?.is_group;
+      const groupName = conv?.group_name;
+
+      ctx.waitUntil(sendMessageNotifications(
+        env, conversationId, senderId, senderName, previewText, type, participants, isGroup, groupName
+      ));
+      ctx.waitUntil(broadcastToConversation(env, conversationId, { type: 'new_message' }));
+    }
 
     return json(buildMessage({
       id: messageId,
@@ -886,7 +900,14 @@ function registerConversationRoutes(router) {
       body.details ? JSON.stringify(body.details) : null, now(),
     ).run();
 
-    // TODO: FCM notification to admins (Phase 7)
+    // Fire-and-forget: FCM notification to group owner/admins
+    const ctx = request.ctx;
+    if (ctx) {
+      ctx.waitUntil(sendModActionNotifications(
+        env, params.id, body.actorId || request.auth.uid, body.actorName || '',
+        body.action, body.targetName || ''
+      ));
+    }
 
     return json({ success: true, logId });
   });
@@ -979,6 +1000,139 @@ function registerConversationRoutes(router) {
 function getConversationDO(env, conversationId) {
   const id = env.CONVERSATION_DO.idFromName(conversationId);
   return env.CONVERSATION_DO.get(id);
+}
+
+/**
+ * Send FCM push notifications to conversation participants (except sender).
+ * Checks DND schedule, muted conversations, and notification preferences.
+ */
+async function sendMessageNotifications(
+  env, conversationId, senderId, senderName, previewText, type, participants, isGroup, groupName
+) {
+  try {
+    for (const p of participants) {
+      const recipientId = p.user_id;
+
+      // Fetch user notification settings
+      const user = await env.DB.prepare(`
+        SELECT pm_notifications_enabled, dnd_enabled, dnd_start_hour, dnd_start_minute,
+               dnd_end_hour, dnd_end_minute, pm_notification_preview
+        FROM users WHERE uid = ?
+      `).bind(recipientId).first();
+
+      if (!user || user.pm_notifications_enabled === 0) continue;
+
+      // Check DND schedule
+      if (user.dnd_enabled) {
+        const utcNow = new Date();
+        const currentMinutes = utcNow.getUTCHours() * 60 + utcNow.getUTCMinutes();
+        const dndStart = (user.dnd_start_hour || 0) * 60 + (user.dnd_start_minute || 0);
+        const dndEnd = (user.dnd_end_hour || 0) * 60 + (user.dnd_end_minute || 0);
+
+        if (dndStart <= dndEnd) {
+          if (currentMinutes >= dndStart && currentMinutes < dndEnd) continue;
+        } else {
+          // Wraps past midnight
+          if (currentMinutes >= dndStart || currentMinutes < dndEnd) continue;
+        }
+      }
+
+      // Check if conversation is muted
+      const settings = await env.DB.prepare(
+        'SELECT is_muted FROM conversation_settings WHERE conversation_id = ? AND user_id = ?'
+      ).bind(conversationId, recipientId).first();
+
+      if (settings?.is_muted) continue;
+
+      // Get FCM tokens
+      const { results: tokens } = await env.DB.prepare(
+        'SELECT token FROM fcm_tokens WHERE user_id = ?'
+      ).bind(recipientId).all();
+
+      if (tokens.length === 0) continue;
+
+      const showPreview = user.pm_notification_preview !== 0;
+      const data = {
+        type: 'PM',
+        senderId,
+        senderName: isGroup ? `${senderName} (${groupName || 'Group'})` : senderName,
+        messageText: showPreview ? previewText : 'New message',
+        conversationId,
+        isGroup: String(isGroup),
+        showPreview: String(showPreview),
+      };
+
+      const invalid = await sendFcmToTokens(env, tokens.map(t => t.token), data);
+      await cleanupInvalidTokens(env, invalid, 'fcm_tokens');
+    }
+  } catch (err) {
+    console.error('Failed to send message notifications:', err);
+  }
+}
+
+/**
+ * Send FCM notifications for mod actions to group owner/admins.
+ * Respects the conversation's mod_notify_mode setting.
+ */
+async function sendModActionNotifications(env, conversationId, actorId, actorName, action, targetName) {
+  try {
+    const conv = await env.DB.prepare(
+      'SELECT mod_notify_mode, created_by FROM conversations WHERE id = ?'
+    ).bind(conversationId).first();
+
+    if (!conv) return;
+
+    const mode = conv.mod_notify_mode || 'ALL_ADMINS';
+    let recipientIds = [];
+
+    if (mode === 'OWNER_ONLY') {
+      if (conv.created_by) recipientIds = [conv.created_by];
+    } else {
+      // ALL_ADMINS: owner + all admin-role participants
+      const { results: admins } = await env.DB.prepare(
+        "SELECT user_id FROM conversation_participants WHERE conversation_id = ? AND role IN ('OWNER', 'ADMIN')"
+      ).bind(conversationId).all();
+      recipientIds = admins.map(a => a.user_id);
+    }
+
+    // Exclude the actor (the mod who performed the action)
+    recipientIds = recipientIds.filter(id => id !== actorId);
+    if (recipientIds.length === 0) return;
+
+    for (const recipientId of recipientIds) {
+      const { results: tokens } = await env.DB.prepare(
+        'SELECT token FROM fcm_tokens WHERE user_id = ?'
+      ).bind(recipientId).all();
+
+      if (tokens.length === 0) continue;
+
+      const data = {
+        type: 'MOD_ACTION',
+        action,
+        actorName,
+        targetName,
+        conversationId,
+      };
+
+      const invalid = await sendFcmToTokens(env, tokens.map(t => t.token), data);
+      await cleanupInvalidTokens(env, invalid, 'fcm_tokens');
+    }
+  } catch (err) {
+    console.error('Failed to send mod action notifications:', err);
+  }
+}
+
+/** Broadcast an event to all WebSocket clients connected to a conversation's DO. */
+async function broadcastToConversation(env, conversationId, data) {
+  try {
+    const stub = getConversationDO(env, conversationId);
+    await stub.fetch(new Request('https://do/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }));
+  } catch (err) {
+    console.error(`Failed to broadcast to conversation ${conversationId}:`, err);
+  }
 }
 
 module.exports = { registerConversationRoutes };
