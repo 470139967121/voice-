@@ -22,6 +22,7 @@ const { requireAdmin } = require('../middleware/auth');
 const { sendFcmToTokens, cleanupInvalidTokens } = require('../utils/fcm');
 const { sendSystemPm } = require('../utils/system-pm');
 const { computeDisplayScore } = require('../utils/gcs');
+const { writeRtdb, deleteRtdb } = require('../utils/rtdb');
 
 function registerReportRoutes(router) {
   // ── Submit report ──
@@ -782,13 +783,9 @@ async function evictSuspendedUser(env, userId) {
 
       if (room.owner_id === userId) {
         try {
-          const doId = env.ROOM_DO.idFromName(roomId);
-          const stub = env.ROOM_DO.get(doId);
-          await stub.fetch(new Request('https://do/broadcast', {
-            method: 'POST',
-            body: JSON.stringify({ type: 'room_closed' }),
-          }));
+          await writeRtdb(env, `rooms/${roomId}/events/lastEvent`, { type: 'room_closed', ts: Date.now() });
         } catch {}
+        try { await deleteRtdb(env, `rooms/${roomId}`); } catch {}
         await env.DB.prepare("UPDATE rooms SET status = 'CLOSED' WHERE id = ?").bind(roomId).run();
       } else {
         await env.DB.batch([
@@ -796,12 +793,7 @@ async function evictSuspendedUser(env, userId) {
           env.DB.prepare('DELETE FROM room_seats WHERE room_id = ? AND user_id = ?').bind(roomId, userId),
         ]);
         try {
-          const doId = env.ROOM_DO.idFromName(roomId);
-          const stub = env.ROOM_DO.get(doId);
-          await stub.fetch(new Request('https://do/broadcast', {
-            method: 'POST',
-            body: JSON.stringify({ type: 'room_updated' }),
-          }));
+          await writeRtdb(env, `rooms/${roomId}/events/lastEvent`, { type: 'room_updated', ts: Date.now() });
         } catch {}
       }
     }

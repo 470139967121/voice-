@@ -6,6 +6,7 @@
  */
 
 const { generateId, now } = require('../utils');
+const { writeRtdb } = require('./rtdb');
 
 const SYSTEM_UID = 'SHYTALK_SYSTEM';
 const SYSTEM_DISPLAY_NAME = 'ShyTalk System';
@@ -91,20 +92,13 @@ async function sendSystemPm(env, recipientUid, text) {
 
   await env.DB.batch(stmts);
 
-  // Try to broadcast via ConversationDO if available
+  // Broadcast via RTDB
   try {
-    if (env.CONVERSATION_DO) {
-      const doId = env.CONVERSATION_DO.idFromName(convId);
-      const stub = env.CONVERSATION_DO.get(doId);
-      await stub.fetch(new Request('https://do/broadcast', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'new_message',
-          message: { id: msgId, conversationId: convId, senderId: SYSTEM_UID, text, type: 'SYSTEM', createdAt: timestamp },
-        }),
-      }));
-    }
-  } catch (_) { /* DO broadcast is best-effort */ }
+    await writeRtdb(env, `conversations/${convId}/events/lastEvent`, {
+      type: 'new_message',
+      ts: Date.now(),
+    });
+  } catch (_) { /* RTDB broadcast is best-effort */ }
 }
 
 module.exports = { sendSystemPm, SYSTEM_UID, systemConversationId };

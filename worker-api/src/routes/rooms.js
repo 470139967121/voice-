@@ -34,32 +34,26 @@
  * POST   /api/rooms/:roomId/seat-requests/:reqId/deny    → Deny request
  * POST   /api/rooms/:roomId/seat-requests/:reqId/cancel  → Cancel request
  * GET    /api/rooms/by-owner/:ownerId        → Find active room by owner
- * GET    /api/rooms/:roomId/ws              → WebSocket upgrade (real-time presence)
  */
 
 const { json, jsonError, generateId, now, parseBody } = require('../utils');
+const { writeRtdb, deleteRtdb } = require('../utils/rtdb');
 
 const MAX_SEATS = 8;
 const OWNER_SEAT_INDEX = 0;
 const MAX_ROOM_MESSAGES = 200;
 const ACTIVE_ROOMS_LIMIT = 100;
 
-/** Get a Durable Object stub for a room. */
-function getRoomDO(env, roomId) {
-  const id = env.ROOM_DO.idFromName(roomId);
-  return env.ROOM_DO.get(id);
-}
-
-/** Broadcast a message to all WebSocket clients connected to a room's DO. */
+/** Broadcast a room event via RTDB. */
 async function broadcastToRoom(env, roomId, data) {
   try {
-    const stub = getRoomDO(env, roomId);
-    await stub.fetch(new Request('https://do/broadcast', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }));
+    await writeRtdb(env, `rooms/${roomId}/events/lastEvent`, {
+      type: data.type,
+      ts: Date.now(),
+      ...(data.userId ? { userId: data.userId } : {}),
+    });
   } catch (err) {
-    console.error(`Failed to broadcast to room ${roomId}:`, err);
+    console.error(`Failed to write RTDB event for room ${roomId}:`, err);
   }
 }
 
@@ -237,41 +231,7 @@ function registerRoomRoutes(router) {
 
     await env.DB.batch(stmts);
 
-    // Initialize the Durable Object for this room
-    const stub = getRoomDO(env, roomId);
-    await stub.fetch(new Request('https://do/init', {
-      method: 'POST',
-      body: JSON.stringify({ roomId, ownerId: uid }),
-    }));
-
     return json({ roomId, voiceRoomName: roomId });
-  });
-
-  // ── WebSocket upgrade for real-time presence ──
-  router.get('/api/rooms/:roomId/ws', async (request, env, params) => {
-    if (request.headers.get('Upgrade') !== 'websocket') {
-      return jsonError('Expected WebSocket upgrade', 426);
-    }
-
-    const roomId = params.roomId;
-    const userId = request.auth.uid;
-
-    // Ensure DO knows about this room
-    const stub = getRoomDO(env, roomId);
-    const room = await env.DB.prepare('SELECT owner_id FROM rooms WHERE id = ?').bind(roomId).first();
-    if (!room) return jsonError('Room not found', 404);
-
-    await stub.fetch(new Request('https://do/init', {
-      method: 'POST',
-      body: JSON.stringify({ roomId, ownerId: room.owner_id }),
-    }));
-
-    // Forward the WebSocket upgrade to the Durable Object
-    const doUrl = new URL(request.url);
-    doUrl.pathname = '/ws';
-    doUrl.searchParams.set('userId', userId);
-
-    return stub.fetch(new Request(doUrl.toString(), request));
   });
 
   // ── List active rooms ──
@@ -337,10 +297,8 @@ function registerRoomRoutes(router) {
     await env.DB.batch(stmts);
 
     if (shouldClose) {
-      try {
-        const stub = getRoomDO(env, roomId);
-        await stub.fetch(new Request('https://do/close', { method: 'POST' }));
-      } catch {}
+      await broadcastToRoom(env, roomId, { type: 'room_closed' });
+      try { await deleteRtdb(env, `rooms/${roomId}`); } catch {}
     } else {
       await broadcastToRoom(env, roomId, { type: 'room_updated' });
     }
@@ -352,11 +310,8 @@ function registerRoomRoutes(router) {
   router.post('/api/rooms/:roomId/close', async (request, env, params) => {
     await env.DB.batch(buildCloseStmts(env, params.roomId));
 
-    // Notify DO to close all WebSocket connections
-    try {
-      const stub = getRoomDO(env, params.roomId);
-      await stub.fetch(new Request('https://do/close', { method: 'POST' }));
-    } catch {}
+    await broadcastToRoom(env, params.roomId, { type: 'room_closed' });
+    try { await deleteRtdb(env, `rooms/${params.roomId}`); } catch {}
 
     return json({ success: true });
   });
@@ -737,12 +692,10 @@ function registerRoomRoutes(router) {
     }
     await env.DB.batch(stmts);
 
-    // Notify all DOs to close WebSocket connections
-    await Promise.all(rooms.map(room => {
-      try {
-        const stub = getRoomDO(env, room.id);
-        return stub.fetch(new Request('https://do/close', { method: 'POST' }));
-      } catch { return Promise.resolve(); }
+    // Broadcast close + clean RTDB for all rooms
+    await Promise.all(rooms.map(async (room) => {
+      await broadcastToRoom(env, room.id, { type: 'room_closed' });
+      try { await deleteRtdb(env, `rooms/${room.id}`); } catch {}
     }));
 
     return json({ success: true, roomsClosed: rooms.length });

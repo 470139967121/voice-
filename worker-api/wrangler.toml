@@ -21,16 +21,10 @@ bucket_name = "shytalk-media"
 binding = "KV"
 id = "dc68f6d3e52645f19413afc3ba635860"
 
-# ── Durable Objects ──────────────────────────────────────────────
-[durable_objects]
-bindings = [
-  { name = "ROOM_DO", class_name = "RoomDurableObject" },
-  { name = "CONVERSATION_DO", class_name = "ConversationDurableObject" },
-]
-
+# ── Durable Object migration (delete previous DO classes) ────────
 [[migrations]]
-tag = "v1"
-new_sqlite_classes = ["RoomDurableObject", "ConversationDurableObject"]
+tag = "v2"
+deleted_classes = ["RoomDurableObject", "ConversationDurableObject"]
 
 # ── Secrets (set via `wrangler secret put`) ──────────────────────
 # FIREBASE_API_KEY         — for Firebase ID token verification

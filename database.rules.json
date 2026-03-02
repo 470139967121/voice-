@@ -1,18 +1,36 @@
 {
   "rules": {
-    "typing": {
-      "$conversationId": {
-        ".read": "auth != null",
-        "$userId": {
-          ".write": "auth != null && auth.uid == $userId"
+    "rooms": {
+      "$roomId": {
+        "presence": {
+          ".read": "auth != null",
+          "$userId": {
+            ".write": "auth != null && auth.uid == $userId",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "events": {
+          "lastEvent": {
+            ".read": "auth != null",
+            ".write": false
+          }
         }
       }
     },
-    "presence": {
-      "$roomId": {
-        ".read": "auth != null",
-        "$userId": {
-          ".write": "auth != null && auth.uid == $userId"
+    "conversations": {
+      "$convId": {
+        "typing": {
+          ".read": "auth != null",
+          "$userId": {
+            ".write": "auth != null && auth.uid == $userId",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "events": {
+          "lastEvent": {
+            ".read": "auth != null",
+            ".write": false
+          }
         }
       }
     },

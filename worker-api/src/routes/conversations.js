@@ -31,7 +31,6 @@
  * DELETE /api/conversations/:id/mutes/:userId          → Unmute group member
  * GET    /api/conversations/:id/mutes                  → Get active mutes
  * POST   /api/conversations/:id/mod-log                → Add mod log entry
- * GET    /api/conversations/:id/ws                     → WebSocket upgrade (typing)
  * GET    /api/conversations/search-messages            → Search messages
  * GET    /api/conversations/search-users               → Search users
  * GET    /api/conversations/owned-group-count           → Get owned group count
@@ -40,6 +39,7 @@
 
 const { json, jsonError, generateId, now, parseBody } = require('../utils');
 const { sendFcmToTokens, cleanupInvalidTokens } = require('../utils/fcm');
+const { writeRtdb } = require('../utils/rtdb');
 
 const DEFAULT_MESSAGE_LIMIT = 50;
 const MAX_MESSAGE_LIMIT = 200;
@@ -940,27 +940,6 @@ function registerConversationRoutes(router) {
   });
 
   // ══════════════════════════════════════════════════════════════
-  // WEBSOCKET (typing indicators)
-  // ══════════════════════════════════════════════════════════════
-
-  router.get('/api/conversations/:id/ws', async (request, env, params) => {
-    if (request.headers.get('Upgrade') !== 'websocket') {
-      return jsonError('Expected WebSocket upgrade', 426);
-    }
-
-    const conversationId = params.id;
-    const userId = request.auth.uid;
-
-    const stub = getConversationDO(env, conversationId);
-
-    const doUrl = new URL(request.url);
-    doUrl.pathname = '/ws';
-    doUrl.searchParams.set('userId', userId);
-
-    return stub.fetch(new Request(doUrl.toString(), request));
-  });
-
-  // ══════════════════════════════════════════════════════════════
   // SEARCH & UTILITIES
   // ══════════════════════════════════════════════════════════════
 
@@ -1023,11 +1002,6 @@ function registerConversationRoutes(router) {
   });
 }
 
-/** Get a Durable Object stub for a conversation. */
-function getConversationDO(env, conversationId) {
-  const id = env.CONVERSATION_DO.idFromName(conversationId);
-  return env.CONVERSATION_DO.get(id);
-}
 
 /**
  * Send FCM push notifications to conversation participants (except sender).
@@ -1149,16 +1123,15 @@ async function sendModActionNotifications(env, conversationId, actorId, actorNam
   }
 }
 
-/** Broadcast an event to all WebSocket clients connected to a conversation's DO. */
+/** Broadcast a conversation event via RTDB. */
 async function broadcastToConversation(env, conversationId, data) {
   try {
-    const stub = getConversationDO(env, conversationId);
-    await stub.fetch(new Request('https://do/broadcast', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }));
+    await writeRtdb(env, `conversations/${conversationId}/events/lastEvent`, {
+      type: data.type,
+      ts: Date.now(),
+    });
   } catch (err) {
-    console.error(`Failed to broadcast to conversation ${conversationId}:`, err);
+    console.error(`Failed to write RTDB event for conversation ${conversationId}:`, err);
   }
 }
 

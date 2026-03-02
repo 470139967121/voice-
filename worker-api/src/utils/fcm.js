@@ -69,7 +69,7 @@ async function getAccessToken(env) {
   const header = { alg: 'RS256', typ: 'JWT' };
   const payload = {
     iss: email,
-    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    scope: 'https://www.googleapis.com/auth/firebase.messaging https://www.googleapis.com/auth/firebase.database',
     aud: 'https://oauth2.googleapis.com/token',
     iat: now,
     exp: now + 3600,
