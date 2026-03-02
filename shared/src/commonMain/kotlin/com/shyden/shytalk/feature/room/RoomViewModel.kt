@@ -483,6 +483,7 @@ class RoomViewModel(
         if (isReEntry) {
             _uiState.update { it.copy(room = room, currentRole = role, isLoading = false) }
             joinRoom()
+            roomLifecycleManager.updateTrackedRoom(room)
             loadSeatUsers(room)
             loadParticipantUsers(room)
             observeRemoteUserChanges(collectRoomUserIds(room, userId))
@@ -503,6 +504,7 @@ class RoomViewModel(
         } else {
             checkBlockConflicts(room)
         }
+        roomLifecycleManager.updateTrackedRoom(room)
         loadSeatUsers(room)
         loadParticipantUsers(room)
         observeRemoteUserChanges(collectRoomUserIds(room, userId))

@@ -166,6 +166,10 @@ export default {
         await updateGiftRankings(env);
         break;
 
+      case '*/5 * * * *': // Close stale OWNER_AWAY rooms (every 5 minutes)
+        await closeStaleOwnerAwayRooms(env);
+        break;
+
       default:
         console.log(`Unknown cron: ${cron}`);
     }
@@ -269,6 +273,29 @@ async function updateGiftRankings(env) {
   }
 
   console.log('Gift rankings updated');
+}
+
+async function closeStaleOwnerAwayRooms(env) {
+  // Safety net: close rooms stuck in OWNER_AWAY for more than 10 minutes
+  // (normal flow: DO alarm fires at 5 min, client countdown closes at 5 min)
+  const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+
+  const { results: staleRooms } = await env.DB.prepare(`
+    SELECT id FROM rooms
+    WHERE state = 'OWNER_AWAY' AND owner_left_at IS NOT NULL AND owner_left_at < ?
+  `).bind(tenMinutesAgo).all();
+
+  if (staleRooms.length === 0) return;
+
+  const timestamp = Date.now();
+  const stmts = [];
+  for (const room of staleRooms) {
+    stmts.push(env.DB.prepare("UPDATE rooms SET state = 'CLOSED', closed_at = ?, owner_left_at = NULL WHERE id = ?").bind(timestamp, room.id));
+    stmts.push(env.DB.prepare("UPDATE room_seats SET user_id = NULL, state = 'EMPTY', is_muted = 0 WHERE room_id = ?").bind(room.id));
+    stmts.push(env.DB.prepare("DELETE FROM room_participants WHERE room_id = ?").bind(room.id));
+  }
+  await env.DB.batch(stmts);
+  console.log(`Closed ${staleRooms.length} stale OWNER_AWAY rooms`);
 }
 
 async function cleanExpiredBackpackItems(env) {

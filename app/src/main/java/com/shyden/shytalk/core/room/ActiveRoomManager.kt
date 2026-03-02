@@ -186,7 +186,12 @@ class ActiveRoomManager(
             return
         }
         val room = _activeRoom.value ?: run {
-            Log.d(TAG, "leaveRoom: no activeRoom, returning")
+            // Room data lost but we still have the ID — close as safest option
+            Log.w(TAG, "leaveRoom: no activeRoom (data lost), forcing close for roomId=$roomId")
+            presenceService.removePresence()
+            voiceService.leaveChannel()
+            roomRepository.closeRoom(roomId)
+            cleanup()
             return
         }
         val userId = currentUserId
@@ -242,7 +247,7 @@ class ActiveRoomManager(
     private fun isUserSeated(room: ChatRoom, userId: String = currentUserId) =
         room.findUserSeat(userId) != null
 
-    private fun cleanup() {
+    private fun cleanup(stopService: Boolean = true) {
         roomObserverJob?.cancel()
         messageObserverJob?.cancel()
         ownerAwayCountdownJob?.cancel()
@@ -254,10 +259,13 @@ class ActiveRoomManager(
         _messages.value = emptyList()
         _sharedUserCache.clear()
         _ownerAwayRemainingMs.value = 0L
-        _roomClosed.value = false
         _disconnectedUserIds.value = emptySet()
+        // Note: _roomClosed is NOT reset here — it's reset when entering a new room.
+        // This allows RoomService.observeRoomClosed() to show the "Room Closed" animation.
 
-        RoomService.stop(context)
+        if (stopService) {
+            RoomService.stop(context)
+        }
     }
 
     private suspend fun loadUserName() {
@@ -276,9 +284,12 @@ class ActiveRoomManager(
                 .catch { e -> _error.value = e.message }
                 .collect { room ->
                     if (room == null || room.state == RoomState.CLOSED) {
+                        Log.d(TAG, "Room observation: room=${room?.roomId} state=${room?.state} — closing")
                         voiceService.leaveChannel()
+                        presenceService.removePresence()
                         _roomClosed.value = true
-                        cleanup()
+                        // Don't stop service — let RoomService.observeRoomClosed() show animation first
+                        cleanup(stopService = false)
                         return@collect
                     }
 
@@ -286,9 +297,11 @@ class ActiveRoomManager(
 
                     // Detect if user was kicked
                     if (userId !in room.participantIds || userId in room.bannedUserIds) {
+                        Log.d(TAG, "Room observation: user kicked from room=${room.roomId}")
                         voiceService.leaveChannel()
+                        presenceService.removePresence()
                         _roomClosed.value = true
-                        cleanup()
+                        cleanup(stopService = false)
                         return@collect
                     }
 
@@ -607,10 +620,17 @@ class ActiveRoomManager(
 
     suspend fun closeRoom() {
         val roomId = _activeRoomId.value ?: return
+        Log.d(TAG, "closeRoom: roomId=$roomId")
+        presenceService.removePresence()
         voiceService.leaveChannel()
-        roomRepository.closeRoom(roomId)
+        val result = roomRepository.closeRoom(roomId)
+        Log.d(TAG, "closeRoom: API result=$result")
+        if (result is Resource.Error) {
+            Log.e(TAG, "closeRoom: API FAILED: ${result.message}")
+        }
         _roomClosed.value = true
-        cleanup()
+        // Don't stop service — let RoomService.observeRoomClosed() show animation first
+        cleanup(stopService = false)
     }
 
     fun clearError() {

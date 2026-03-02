@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.messaging
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.Conversation
 import com.shyden.shytalk.core.model.ConversationSettings
 import com.shyden.shytalk.core.model.GroupPermissions
@@ -11,6 +12,8 @@ import com.shyden.shytalk.core.model.MuteInfo
 import com.shyden.shytalk.core.model.PmPrivacy
 import com.shyden.shytalk.core.model.PrivateMessage
 import com.shyden.shytalk.core.model.PrivateMessageType
+import com.shyden.shytalk.core.model.RoomState
+import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.SendStatus
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
@@ -24,6 +27,7 @@ import com.shyden.shytalk.data.remote.ConversationWebSocketService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.ReportRepository
+import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.TypingRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -37,6 +41,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+data class RoomInvitePreview(
+    val room: ChatRoom,
+    val seatUsers: Map<String, User>
+)
 
 data class PrivateChatUiState(
     val messages: List<PrivateMessage> = emptyList(),
@@ -77,7 +86,9 @@ data class PrivateChatUiState(
     val stickers: List<Sticker> = emptyList(),
     val isSystemConversation: Boolean = false,
     val isRefreshing: Boolean = false,
-    val aliases: Map<String, String> = emptyMap()
+    val aliases: Map<String, String> = emptyMap(),
+    // Room invite preview data: roomId → (room, seatUsers)
+    val roomInvites: Map<String, RoomInvitePreview> = emptyMap()
 )
 
 class PrivateChatViewModel(
@@ -93,7 +104,8 @@ class PrivateChatViewModel(
     },
     private val stickerStorage: StickerStorage? = null,
     private val initialConversationId: String? = null,
-    private val conversationWs: ConversationWebSocketService? = null
+    private val conversationWs: ConversationWebSocketService? = null,
+    private val roomRepository: RoomRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrivateChatUiState())
@@ -273,6 +285,7 @@ class PrivateChatViewModel(
                     .distinctBy { it.messageId }
                     .sortedBy { it.createdAt }
                 _uiState.update { it.copy(messages = combined) }
+                resolveRoomInvites(combined)
             }
         }
     }
@@ -1161,6 +1174,51 @@ class PrivateChatViewModel(
                 is Resource.Success -> {}
                 is Resource.Error -> _uiState.update { it.copy(error = "Failed to update notify mode") }
                 is Resource.Loading -> {}
+            }
+        }
+    }
+
+    // --- Room Invite Preview ---
+
+    private val fetchedRoomIds = mutableSetOf<String>()
+
+    private fun resolveRoomInvites(messages: List<PrivateMessage>) {
+        val repo = roomRepository ?: return
+        val roomIds = messages
+            .filter { it.type == PrivateMessageType.ROOM_INVITE && !it.roomInviteId.isNullOrEmpty() }
+            .mapNotNull { it.roomInviteId }
+            .distinct()
+            .filter { it !in fetchedRoomIds }
+        if (roomIds.isEmpty()) return
+
+        fetchedRoomIds.addAll(roomIds)
+        viewModelScope.launch {
+            for (roomId in roomIds) {
+                val result = repo.getRoom(roomId)
+                if (result !is Resource.Success) continue
+                val room = result.data
+
+                // Collect seated user IDs — for closed rooms, use historical data
+                val seatedUserIds = if (room.state == RoomState.CLOSED) {
+                    room.allTimeSeatUserIds.toList()
+                } else {
+                    room.seats.values
+                        .filter { it.state == SeatState.OCCUPIED && it.userId != null }
+                        .mapNotNull { it.userId }
+                }
+
+                // Batch-fetch users
+                val seatUsers = mutableMapOf<String, User>()
+                if (seatedUserIds.isNotEmpty()) {
+                    when (val usersResult = userRepository.getUsers(seatedUserIds)) {
+                        is Resource.Success -> usersResult.data.forEach { seatUsers[it.uid] = it }
+                        else -> {}
+                    }
+                }
+
+                _uiState.update { state ->
+                    state.copy(roomInvites = state.roomInvites + (roomId to RoomInvitePreview(room, seatUsers)))
+                }
             }
         }
     }

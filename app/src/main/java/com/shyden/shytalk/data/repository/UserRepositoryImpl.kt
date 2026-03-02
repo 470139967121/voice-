@@ -30,6 +30,11 @@ class UserRepositoryImpl(
     private val CACHE_TTL_MS = 60_000L // 60 seconds
     private val CACHE_MAX_SIZE = 200
 
+    // Blocked user IDs cache with TTL
+    @Volatile private var cachedBlockedIds: Set<String>? = null
+    @Volatile private var blockedIdsCachedAt: Long = 0L
+    private val BLOCKED_CACHE_TTL_MS = 60_000L
+
     private fun getCached(userId: String): User? {
         val entry = cache[userId] ?: return null
         if (System.currentTimeMillis() > entry.expiresAt) {
@@ -125,16 +130,27 @@ class UserRepositoryImpl(
 
     override suspend fun blockUser(userId: String, blockedUserId: String): Resource<Unit> = firebaseCall("Failed to block user") {
         api.post("/api/users/$userId/block", JSONObject().put("blockedUserId", blockedUserId))
+        cachedBlockedIds = null
     }
 
     override suspend fun unblockUser(userId: String, blockedUserId: String): Resource<Unit> = firebaseCall("Failed to unblock user") {
         api.delete("/api/users/$userId/block/$blockedUserId")
+        cachedBlockedIds = null
     }
 
-    override suspend fun getBlockedUserIds(userId: String): Resource<Set<String>> = firebaseCall("Failed to get blocked users") {
-        val json = api.get("/api/users/$userId/blocked")
-        val arr = json.optJSONArray("blockedUserIds") ?: JSONArray()
-        (0 until arr.length()).map { arr.getString(it) }.toSet()
+    override suspend fun getBlockedUserIds(userId: String): Resource<Set<String>> {
+        val now = System.currentTimeMillis()
+        cachedBlockedIds?.let {
+            if (now - blockedIdsCachedAt < BLOCKED_CACHE_TTL_MS) return Resource.Success(it)
+        }
+        return firebaseCall("Failed to get blocked users") {
+            val json = api.get("/api/users/$userId/blocked")
+            val arr = json.optJSONArray("blockedUserIds") ?: JSONArray()
+            val ids = (0 until arr.length()).map { arr.getString(it) }.toSet()
+            cachedBlockedIds = ids
+            blockedIdsCachedAt = System.currentTimeMillis()
+            ids
+        }
     }
 
     override suspend fun followUser(currentUserId: String, targetUserId: String): Resource<Unit> =
@@ -154,22 +170,15 @@ class UserRepositoryImpl(
 
     override suspend fun getUsers(userIds: List<String>): Resource<List<User>> {
         if (userIds.isEmpty()) return Resource.Success(emptyList())
-        val cached = mutableListOf<User>()
-        val uncachedIds = mutableListOf<String>()
-        for (id in userIds) {
-            val hit = getCached(id)
-            if (hit != null) cached.add(hit) else uncachedIds.add(id)
-        }
-        if (uncachedIds.isEmpty()) return Resource.Success(cached)
+        // Don't use cache here — batch endpoint omits social graph data
         return firebaseCall("Failed to get users") {
-            val body = JSONObject().put("uids", JSONArray(uncachedIds))
+            val body = JSONObject().put("uids", JSONArray(userIds))
             val arr = api.post("/api/users/batch", body).optJSONArray("users") ?: JSONArray()
-            val fetched = (0 until arr.length()).mapNotNull { i ->
+            (0 until arr.length()).mapNotNull { i ->
                 val obj = arr.getJSONObject(i)
                 val uid = obj.optString("uid", "")
-                if (uid.isNotEmpty()) User.fromMap(obj.toMap(), uid).also { putCache(it) } else null
+                if (uid.isNotEmpty()) User.fromMap(obj.toMap(), uid) else null
             }
-            cached + fetched
         }
     }
 

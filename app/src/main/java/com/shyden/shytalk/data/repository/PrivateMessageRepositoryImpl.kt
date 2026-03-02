@@ -23,7 +23,25 @@ class PrivateMessageRepositoryImpl(
     private val api: WorkerApiClient
 ) : PrivateMessageRepository {
 
+    @Volatile private var prefetchedConversations: List<Conversation>? = null
+    private var conversationCache: List<Conversation>? = null
+    private val messageCache = mutableMapOf<String, List<PrivateMessage>>()
+
+    override suspend fun prefetchConversations() {
+        try {
+            val arr = api.getArray("/api/conversations")
+            prefetchedConversations = (0 until arr.length()).map { i ->
+                val obj = arr.getJSONObject(i)
+                Conversation.fromMap(obj.toMap(), obj.getString("id"))
+            }
+        } catch (_: Exception) { }
+    }
+
     override fun getConversations(userId: String): Flow<List<Conversation>> = flow {
+        // Emit prefetched data (from splash) or cached data from previous collection
+        val instant = prefetchedConversations ?: conversationCache
+        instant?.let { emit(it) }
+        prefetchedConversations = null
         while (true) {
             try {
                 val arr = api.getArray("/api/conversations")
@@ -31,6 +49,7 @@ class PrivateMessageRepositoryImpl(
                     val obj = arr.getJSONObject(i)
                     Conversation.fromMap(obj.toMap(), obj.getString("id"))
                 }
+                conversationCache = conversations
                 emit(conversations)
             } catch (_: Exception) { }
             delay(5_000)
@@ -69,6 +88,8 @@ class PrivateMessageRepositoryImpl(
     }.distinctUntilChanged()
 
     override fun getMessages(conversationId: String, limit: Int): Flow<List<PrivateMessage>> = flow {
+        // Emit cached messages instantly so the UI isn't blank on re-open
+        messageCache[conversationId]?.let { emit(it) }
         while (true) {
             try {
                 val arr = api.getArray("/api/conversations/$conversationId/messages?limit=$limit")
@@ -76,6 +97,7 @@ class PrivateMessageRepositoryImpl(
                     val obj = arr.getJSONObject(i)
                     PrivateMessage.fromMap(obj.toMap(), obj.getString("id"))
                 }
+                messageCache[conversationId] = messages
                 emit(messages)
             } catch (_: Exception) { }
             // WebSocket handles the fast path (instant new_message events);

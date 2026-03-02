@@ -78,70 +78,90 @@ fun RoomListContent(
             ) {
                 CircularProgressIndicator()
             }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize()
+        } else if (uiState.rooms.isEmpty() && uiState.banners.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("roomList_emptyState"),
+                contentAlignment = Alignment.Center
             ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No active rooms",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Tap + to create one",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
                 if (uiState.banners.isNotEmpty()) {
-                    item(key = "banners") {
-                        BannerCarousel(
-                            banners = uiState.banners.map { banner ->
-                                BannerItem(
-                                    key = banner.id,
-                                    onClick = { onBannerAction(banner) },
-                                    content = {
-                                        AsyncImage(
-                                            model = banner.imageUrl,
-                                            contentDescription = banner.title,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(160.dp)
-                                                .clip(RoundedCornerShape(12.dp)),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
-                                )
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                        )
-                    }
+                    BannerCarousel(
+                        banners = uiState.banners.map { banner ->
+                            BannerItem(
+                                key = banner.id,
+                                onClick = { onBannerAction(banner) },
+                                content = {
+                                    AsyncImage(
+                                        model = banner.imageUrl,
+                                        contentDescription = banner.title,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(160.dp)
+                                            .clip(RoundedCornerShape(12.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                            )
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
                 }
                 if (uiState.rooms.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillParentMaxSize()
-                                .testTag("roomList_emptyState"),
-                            contentAlignment = Alignment.Center
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("roomList_emptyState"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "No active rooms",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Tap + to create one",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = "No active rooms",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Tap + to create one",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 } else {
-                    items(uiState.rooms, key = { it.roomId }) { room ->
-                        RoomListItem(
-                            room = room,
-                            seatUsers = uiState.seatUsers,
-                            onClick = {
-                                onPrewarmRoom(room)
-                                onNavigateToRoom(room.roomId)
-                            },
-                            modifier = Modifier.testTag("roomList_roomCard_${room.roomId}")
-                        )
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(uiState.rooms, key = { it.roomId }) { room ->
+                            RoomListItem(
+                                room = room,
+                                seatUsers = uiState.seatUsers,
+                                onClick = {
+                                    onPrewarmRoom(room)
+                                    onNavigateToRoom(room.roomId)
+                                },
+                                modifier = Modifier.testTag("roomList_roomCard_${room.roomId}")
+                            )
+                        }
                     }
                 }
             }

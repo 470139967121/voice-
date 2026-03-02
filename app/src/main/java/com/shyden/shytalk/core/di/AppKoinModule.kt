@@ -152,7 +152,8 @@ val appModule = module {
             storageRepository = get(),
             stickerStorage = get(),
             initialConversationId = values.getOrNull(1) as? String,
-            conversationWs = get()
+            conversationWs = get(),
+            roomRepository = get()
         )
     }
     viewModel { ReportReviewViewModel(get(), get()) }
@@ -168,5 +169,5 @@ val appModule = module {
     viewModel { DailyRewardViewModel(get(), get()) }
     single<BannerImagePreloader> { CoilBannerImagePreloader(androidContext()) }
     single<WebContentPreloader> { OkHttpWebContentPreloader(get()) }
-    viewModel { FunFactSplashViewModel(get(), get(), get(), get()) }
+    viewModel { FunFactSplashViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
 }

@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 interface RoomRepository {
     fun getActiveRooms(): Flow<List<ChatRoom>>
     fun getRoomFlow(roomId: String): Flow<ChatRoom?>
+    suspend fun getRoom(roomId: String): Resource<ChatRoom>
     suspend fun createRoom(name: String, ownerId: String): Resource<String>
     suspend fun joinRoom(roomId: String, userId: String): Resource<Unit>
     suspend fun leaveRoom(roomId: String, userId: String): Resource<Unit>
@@ -31,4 +32,5 @@ interface RoomRepository {
     suspend fun leaveAllRooms(userId: String, exceptRoomId: String? = null): Resource<Unit>
     suspend fun closeAllRoomsByOwner(ownerId: String): Resource<Unit>
     suspend fun removeDisconnectedUser(roomId: String, userId: String): Resource<Unit>
+    suspend fun prefetchActiveRooms() {}
 }

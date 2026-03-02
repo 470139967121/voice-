@@ -140,6 +140,13 @@ fun PrivateChatScreen(
         }
     }
 
+    // Re-scroll when room invite previews load (bubble height changes)
+    LaunchedEffect(uiState.roomInvites.size) {
+        if (uiState.roomInvites.isNotEmpty() && uiState.messages.isNotEmpty() && hasScrolledToBottom) {
+            listState.animateScrollToItem(uiState.messages.size - 1)
+        }
+    }
+
     // Scroll to bottom when the keyboard opens so the latest messages stay visible
     val isKeyboardVisible = WindowInsets.isImeVisible
     LaunchedEffect(isKeyboardVisible) {
@@ -517,6 +524,7 @@ fun PrivateChatScreen(
                             onToggleReaction = { emoji -> viewModel.toggleReaction(message.messageId, emoji) },
                             onImageClick = { urls, index -> showImageViewer = urls to index },
                             onRoomInviteTap = onNavigateToRoom?.let { nav -> { roomId: String -> nav(roomId) } },
+                            roomInvitePreview = message.roomInviteId?.let { uiState.roomInvites[it] },
                             onRecall = { viewModel.recallMessage(message.messageId) },
                             onSaveSticker = { url -> viewModel.saveStickerFromUrl(url) },
                             onHideMessage = if (uiState.isGroup &&
