@@ -1,42 +1,34 @@
 package com.shyden.shytalk.data.repository
 
-import com.google.firebase.auth.FirebaseAuth
-import io.mockk.mockk
-import okhttp3.OkHttpClient
 import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Unit tests for RtdbTypingRepository.
+ *
+ * Note: RTDB interactions require the Firebase emulator for integration testing.
+ * These unit tests verify the service can be created and basic API contracts hold.
+ * Full integration testing is done via E2E tests (connectedDebugAndroidTest).
+ */
 class TypingRepositoryImplTest {
 
-    private lateinit var httpClient: OkHttpClient
-    private lateinit var auth: FirebaseAuth
-    private lateinit var repo: TypingRepositoryImpl
+    private lateinit var repo: RtdbTypingRepository
 
     @Before
     fun setup() {
-        httpClient = mockk(relaxed = true)
-        auth = mockk(relaxed = true)
-        repo = TypingRepositoryImpl(httpClient, "https://api.example.com", auth)
+        repo = RtdbTypingRepository()
     }
 
     @Test
-    fun `setTyping does not throw when no active WebSocket`() {
-        // Should silently no-op when no WebSocket is connected
-        repo.setTyping("conv-1", "user-1", true)
-        repo.setTyping("conv-1", "user-1", false)
+    fun `repository implements TypingRepository interface`() {
+        val typingRepo: TypingRepository = repo
+        assertNotNull(typingRepo)
     }
 
     @Test
     fun `observeTyping returns a Flow`() {
         val flow = repo.observeTyping("conv-1", "user-2")
         assertNotNull(flow)
-    }
-
-    @Test
-    fun `setTyping for wrong conversationId is ignored`() {
-        // No WebSocket connected, so both calls should be silent no-ops
-        repo.setTyping("conv-1", "user-1", true)
-        repo.setTyping("conv-2", "user-1", true) // Different conversation
     }
 }

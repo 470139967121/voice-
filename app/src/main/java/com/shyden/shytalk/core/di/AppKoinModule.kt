@@ -13,8 +13,8 @@ import com.shyden.shytalk.data.remote.AndroidAppConfigService
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.remote.ConversationWebSocketService
 import com.shyden.shytalk.data.remote.PresenceService
-import com.shyden.shytalk.data.remote.WebSocketConversationService
-import com.shyden.shytalk.data.remote.WebSocketPresenceService
+import com.shyden.shytalk.data.remote.RtdbConversationService
+import com.shyden.shytalk.data.remote.RtdbPresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.remote.WorkerApiClient
@@ -31,7 +31,7 @@ import com.shyden.shytalk.data.repository.PrivateMessageRepositoryImpl
 import com.shyden.shytalk.data.repository.ReportRepository
 import com.shyden.shytalk.data.repository.ReportRepositoryImpl
 import com.shyden.shytalk.data.repository.TypingRepository
-import com.shyden.shytalk.data.repository.TypingRepositoryImpl
+import com.shyden.shytalk.data.repository.RtdbTypingRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.RoomRepositoryImpl
 import com.shyden.shytalk.data.repository.SeatRequestRepository
@@ -103,8 +103,8 @@ val appModule = module {
     // Services
     single<TokenService> { LiveKitTokenService(get()) }
     single<VoiceService> { LiveKitVoiceService(androidContext(), get()) }
-    single<PresenceService> { WebSocketPresenceService(get(), BuildConfig.API_BASE_URL, get()) }
-    single<ConversationWebSocketService> { WebSocketConversationService(get(), BuildConfig.API_BASE_URL, get()) }
+    single<PresenceService> { RtdbPresenceService(get(), BuildConfig.API_BASE_URL) }
+    single<ConversationWebSocketService> { RtdbConversationService() }
     single<AppConfigService> { AndroidAppConfigService(androidContext(), get()) }
     single { BillingService(androidContext()) }
 
@@ -118,7 +118,7 @@ val appModule = module {
     singleOf(::DeviceRepositoryImpl) bind DeviceRepository::class
     singleOf(::PrivateMessageRepositoryImpl) bind PrivateMessageRepository::class
     singleOf(::ReportRepositoryImpl) bind ReportRepository::class
-    single<TypingRepository> { TypingRepositoryImpl(get(), BuildConfig.API_BASE_URL, get()) }
+    single<TypingRepository> { RtdbTypingRepository() }
     singleOf(::NotificationRepositoryImpl) bind NotificationRepository::class
     singleOf(::GiftRepositoryImpl) bind GiftRepository::class
     singleOf(::EconomyRepositoryImpl) bind EconomyRepository::class

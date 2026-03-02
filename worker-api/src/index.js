@@ -5,9 +5,6 @@
  * Handles CORS, authentication, and cron triggers.
  */
 
-import { RoomDurableObject } from './durable-objects/RoomDurableObject';
-import { ConversationDurableObject } from './durable-objects/ConversationDurableObject';
-
 const { authMiddleware, optionalAuth } = require('./middleware/auth');
 const { Router, json, jsonError, corsResponse } = require('./utils');
 const { registerConfigRoutes } = require('./routes/config');
@@ -24,9 +21,6 @@ const { registerAdminUserRoutes } = require('./routes/admin-users');
 const { registerAdminEconomyRoutes } = require('./routes/admin-economy');
 const { registerAdminGiftRoutes } = require('./routes/admin-gifts');
 const { registerAdminCleanupRoutes } = require('./routes/admin-cleanup');
-
-// Re-export Durable Object classes
-export { RoomDurableObject, ConversationDurableObject };
 
 const router = new Router();
 
