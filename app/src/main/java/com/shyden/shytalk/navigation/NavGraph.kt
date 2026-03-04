@@ -104,6 +104,7 @@ private fun NavController.safePopBackStack(): Boolean {
 fun NavGraph(
     navController: NavHostController,
     startDestination: String,
+    isBackendDegraded: Boolean = false,
     onSignOut: () -> Unit
 ) {
     val activeRoomManager: RoomLifecycleManager = koinInject()
@@ -338,6 +339,7 @@ fun NavGraph(
             val voiceService: VoiceService = koinInject()
 
             MainScreen(
+                isBackendDegraded = isBackendDegraded,
                 onNavigateToRoom = { roomId ->
                     navController.navigate(Screen.Room.createRoute(roomId))
                 },
@@ -408,6 +410,7 @@ fun NavGraph(
             val roomId = backStackEntry.arguments?.getString("roomId") ?: return@composable
             RoomScreen(
                 roomId = roomId,
+                isBackendDegraded = isBackendDegraded,
                 onNavigateBack = { navController.safePopBackStack() },
                 onNavigateToUserProfile = { userId ->
                     navController.navigate(Screen.UserProfile.createRoute(userId))
@@ -600,11 +603,13 @@ fun NavGraph(
                 onAccept = {
                     legalScope.launch {
                         val userId = authRepository.currentUserId ?: return@launch
-                        legalUserRepository.updateProfile(
+                        val result = legalUserRepository.updateProfile(
                             userId,
                             mapOf("acceptedLegalVersion" to CURRENT_LEGAL_VERSION)
                         )
-                        navController.safePopBackStack()
+                        if (result is Resource.Success) {
+                            navController.safePopBackStack()
+                        }
                     }
                 },
                 onViewPrivacyPolicy = {

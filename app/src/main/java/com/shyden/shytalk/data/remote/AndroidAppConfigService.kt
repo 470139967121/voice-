@@ -25,6 +25,30 @@ class AndroidAppConfigService(
         }
     }
 
+    override suspend fun checkBackendHealth(): Resource<BackendHealthStatus> {
+        return try {
+            val json = api.get("/api/health")
+            val data = json.toMap()
+            Resource.Success(BackendHealthStatus(
+                status = data["status"] as? String ?: "ok",
+                firestoreAvailable = data["firestoreAvailable"] as? Boolean ?: true,
+                timestamp = (data["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis()
+            ))
+        } catch (e: Exception) {
+            // If we can't reach the health endpoint at all (429, network error, etc.),
+            // the backend is effectively degraded
+            Resource.Success(BackendHealthStatus(
+                status = "degraded",
+                firestoreAvailable = false,
+                timestamp = System.currentTimeMillis()
+            ))
+        }
+    }
+
+    override fun getCacheSizeBytes(): Long {
+        return context.cacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    }
+
     override fun clearAppCache() {
         context.cacheDir.listFiles()?.forEach { file -> file.deleteRecursively() }
     }
