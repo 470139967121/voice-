@@ -223,6 +223,20 @@ class ActiveRoomManager(
         // Non-owners leave the participant list
         if (!isOwner) {
             roomRepository.leaveRoom(roomId, userId)
+
+            // If no non-owner seats remain in an OWNER_AWAY room, close it —
+            // don't count unseated visitors, only seated users matter.
+            if (room.state == RoomState.OWNER_AWAY) {
+                val othersStillSeated = room.seats.any { (_, seat) ->
+                    seat.userId != null && seat.userId != userId
+                        && seat.userId != room.ownerId
+                        && seat.state == SeatState.OCCUPIED
+                }
+                if (!othersStillSeated) {
+                    Log.d(TAG, "leaveRoom: no seated non-owners left in OWNER_AWAY room → closeRoom")
+                    roomRepository.closeRoom(roomId)
+                }
+            }
         }
 
         cleanup()
@@ -330,6 +344,15 @@ class ActiveRoomManager(
                     }
 
                     _activeRoom.value = room
+
+                    // Close OWNER_AWAY room immediately if no non-owner seats remain
+                    if (room.state == RoomState.OWNER_AWAY && !room.hasSeatedNonOwners()) {
+                        Log.d(TAG, "Room observation: OWNER_AWAY with no seated non-owners → closeRoom")
+                        ownerAwayCountdownJob?.cancel()
+                        roomRepository.closeRoom(room.roomId)
+                        return@collect
+                    }
+
                     handleOwnerAwayCountdown(room)
                 }
         }
@@ -430,7 +453,15 @@ class ActiveRoomManager(
                         if (userId in graceTimers) continue
                         graceTimers[userId] = scope.launch {
                             delay(Constants.PRESENCE_TIMEOUT_MS)
-                            roomRepository.removeDisconnectedUser(roomId, userId)
+
+                            // Owner disconnect → transition to OWNER_AWAY instead of removing
+                            val latestRoom = _activeRoom.value
+                            if (userId == latestRoom?.ownerId && latestRoom.state == RoomState.ACTIVE) {
+                                Log.d(TAG, "presenceMonitor: owner absent → setOwnerAway")
+                                roomRepository.setOwnerAway(roomId)
+                            } else {
+                                roomRepository.removeDisconnectedUser(roomId, userId)
+                            }
                             graceTimers.remove(userId)
                             emitDisconnectedIds()
                         }

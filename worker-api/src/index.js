@@ -23,6 +23,7 @@ const { registerAdminUserRoutes } = require('./routes/admin-users');
 const { registerAdminEconomyRoutes } = require('./routes/admin-economy');
 const { registerAdminGiftRoutes } = require('./routes/admin-gifts');
 const { registerAdminCleanupRoutes } = require('./routes/admin-cleanup');
+const { registerAdminBackupRoutes } = require('./routes/admin-backup');
 const {
   isCircuitOpen,
   getDoc, setDoc, updateDoc, deleteDoc,
@@ -47,6 +48,7 @@ registerAdminUserRoutes(router);
 registerAdminEconomyRoutes(router);
 registerAdminGiftRoutes(router);
 registerAdminCleanupRoutes(router);
+registerAdminBackupRoutes(router);
 
 // ── Health check (no auth) ──
 router.get('/api/health', async (request, env) => {
@@ -190,6 +192,10 @@ export default {
         await closeStaleOwnerAwayRooms(env);
         break;
 
+      case '0 2 * * *': // Backup user profiles to R2 (daily 02:00)
+        await backupUserProfiles(env);
+        break;
+
       default:
         console.log(`Unknown cron: ${cron}`);
     }
@@ -328,6 +334,38 @@ async function cleanExpiredBackpackItems(env) {
   }
 
   console.log(`Cleaned ${totalCleaned} expired backpack items`);
+}
+
+async function backupUserProfiles(env) {
+  const users = await queryCollection(env, 'users', { limit: 5000 });
+  if (users.length === 0) {
+    console.log('Backup: no users to back up');
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const key = `backups/users/${today}.json`;
+  const json = JSON.stringify(users, null, 2);
+
+  await env.R2_BUCKET.put(key, json, {
+    httpMetadata: { contentType: 'application/json' },
+    customMetadata: { userCount: String(users.length), createdAt: new Date().toISOString() },
+  });
+  console.log(`Backup: saved ${users.length} users to ${key} (${json.length} bytes)`);
+
+  // Prune backups older than 7 days
+  const listed = await env.R2_BUCKET.list({ prefix: 'backups/users/' });
+  const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+
+  for (const obj of listed.objects) {
+    // Parse date from key: backups/users/YYYY-MM-DD.json
+    const dateStr = obj.key.replace('backups/users/', '').replace('.json', '');
+    const backupDate = new Date(dateStr + 'T00:00:00Z');
+    if (!isNaN(backupDate.getTime()) && backupDate.getTime() < sevenDaysAgo) {
+      await env.R2_BUCKET.delete(obj.key);
+      console.log(`Backup: pruned old backup ${obj.key}`);
+    }
+  }
 }
 
 async function cleanupOrphanedStorage(env) {

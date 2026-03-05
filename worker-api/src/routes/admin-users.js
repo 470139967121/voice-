@@ -249,9 +249,14 @@ function registerAdminUserRoutes(router) {
     const map = {};
     for (let i = 0; i < uids.length; i++) {
       const doc = docs[i];
-      if (doc) map[uids[i]] = doc.uniqueId ?? doc.unique_id ?? null;
+      if (doc) {
+        map[uids[i]] = {
+          uniqueId: doc.uniqueId ?? doc.unique_id ?? null,
+          displayName: doc.displayName ?? doc.display_name ?? null,
+        };
+      }
     }
-    return json(map);
+    return json({ mapping: map });
   });
 
   // ── Unique ID → UID resolver ──

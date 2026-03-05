@@ -6,6 +6,7 @@ import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
@@ -46,7 +47,8 @@ data class ProfileUiState(
     val isSubmittingReport: Boolean = false,
     val reportSubmitted: Boolean = false,
     val reportError: String? = null,
-    val isPurchasingSuperShy: Boolean = false
+    val isPurchasingSuperShy: Boolean = false,
+    val isRefreshing: Boolean = false
 )
 
 class ProfileViewModel(
@@ -215,6 +217,16 @@ class ProfileViewModel(
         }
     }
 
+    fun refreshProfile() {
+        val userId = _uiState.value.user?.uid ?: authRepository.currentUserId ?: return
+        val targetId = if (_uiState.value.isOwnProfile) null else userId
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            loadProfile(targetId)
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
+    }
+
     fun saveProfile(displayName: String, dateOfBirth: Long) {
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
@@ -326,7 +338,8 @@ class ProfileViewModel(
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isUploadingPhoto = true) }
-            when (val result = storageRepository.uploadImage(userId, folder, imageData)) {
+            val compressed = compressImage(imageData)
+            when (val result = storageRepository.uploadImage(userId, folder, compressed)) {
                 is Resource.Success -> {
                     val url = result.data
                     when (val saveResult = userRepository.updateProfile(userId, mapOf(profileField to url))) {

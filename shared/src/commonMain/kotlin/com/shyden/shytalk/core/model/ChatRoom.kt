@@ -36,6 +36,11 @@ data class ChatRoom(
     fun findUserSeat(userId: String): Map.Entry<String, Seat>? =
         seats.entries.find { it.value.isOccupiedBy(userId) }
 
+    /** True if any non-owner user is currently seated (OCCUPIED). */
+    fun hasSeatedNonOwners(): Boolean = seats.any { (_, seat) ->
+        seat.userId != null && seat.userId != ownerId && seat.state == SeatState.OCCUPIED
+    }
+
     fun toMap(): Map<String, Any?> = mapOf(
         "roomId" to roomId,
         "name" to name,

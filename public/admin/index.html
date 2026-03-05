@@ -1621,6 +1621,13 @@
         /* --- Reports Panel --- */
         #reports-panel { display: none; }
         #reports-panel.visible { display: block; }
+        #banners-panel { display: none; }
+        #banners-panel.visible { display: block; }
+        #funfacts-panel { display: none; }
+        #funfacts-panel.visible { display: block; }
+        #backups-panel { display: none; }
+        #backups-panel.visible { display: block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .stats-bar {
           display: flex;
@@ -2255,6 +2262,7 @@
             <button class="tab-btn" id="tab-monitor">Spin Monitor</button>
             <button class="tab-btn" id="tab-banners">Banners</button>
             <button class="tab-btn" id="tab-funfacts">Fun Facts</button>
+            <button class="tab-btn" id="tab-backups">Backups</button>
         </div>
         <button id="signout-btn">Sign Out</button>
     </div>
@@ -2272,7 +2280,10 @@
                 <h3>Identity</h3>
                 <div class="field-group">
                     <label>UID <span class="readonly-badge">READ ONLY</span></label>
-                    <div class="uid-display" id="field-uid"></div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="uid-display" id="field-uid" style="flex:1;"></div>
+                        <button type="button" id="reset-device-binding-btn" style="padding:4px 12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;" title="Remove device bindings for this user">Reset Device Binding</button>
+                    </div>
                 </div>
                 <div class="field-group">
                     <label>Display Name</label>
@@ -2713,8 +2724,6 @@
             <div class="gifts-toolbar">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     <button class="gift-add-btn" id="gift-add-btn">+ Add Gift</button>
-                    <button class="gift-add-btn" id="gift-seed-btn"
-                            style="background:var(--warning);">Seed Defaults</button>
                     <button id="gift-apply-btn">Apply Changes <span class="badge">0</span></button>
                     <button id="gift-discard-btn">Discard</button>
                 </div>
@@ -2942,6 +2951,18 @@
                     <button id="clear-supershy-btn">Remove All Super Shy</button>
                     <div class="maintenance-result" id="clear-supershy-result"></div>
                 </div>
+                <div class="maintenance-card">
+                    <h3>Destroyed Users</h3>
+                    <p>Remove user docs corrupted by the batch update bug (missing createdAt). These users can then re-register fresh.</p>
+                    <button id="clean-destroyed-btn">Clean Destroyed Users</button>
+                    <div class="maintenance-result" id="clean-destroyed-result"></div>
+                </div>
+                <div class="maintenance-card">
+                    <h3>Device Bindings</h3>
+                    <p>Delete all device-to-user bindings. Allows any user to sign in from any device.</p>
+                    <button id="clear-device-bindings-btn">Clear All Device Bindings</button>
+                    <div class="maintenance-result" id="clear-device-bindings-result"></div>
+                </div>
                 <div class="maintenance-card nuclear">
                     <h3>&#9762; RESET ALL</h3>
                     <p>Runs every maintenance action above in sequence. This will wipe system messages,
@@ -3150,7 +3171,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
         <!-- Fun Facts Panel -->
         <div id="funfacts-panel">
@@ -3160,6 +3180,18 @@
                 <button id="funfact-add-btn" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">+ Add Fun Fact</button>
             </div>
             <div id="funfacts-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+
+        <!-- Backups Panel -->
+        <div id="backups-panel">
+            <h2 style="margin-bottom:16px;">User Profile Backups</h2>
+            <p style="color:var(--text2);margin-bottom:12px;">Daily automated backups to R2. Last 7 days retained.</p>
+            <div style="display:flex;gap:10px;margin-bottom:20px;">
+                <button id="backup-trigger-btn" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">Backup Now</button>
+                <button id="backup-refresh-btn" style="padding:8px 18px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:14px;">Refresh</button>
+                <button id="backup-recover-photos-btn" style="padding:8px 18px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">Recover Photos from R2</button>
+            </div>
+            <div id="backups-list" style="display:flex;flex-direction:column;gap:10px;"></div>
         </div>
 
         <!-- Fun Fact Add/Edit Dialog -->
@@ -3201,6 +3233,7 @@
                 </div>
             </div>
         </div>
+    </div>
 </div>
 
 <!-- Toast -->
@@ -3340,6 +3373,11 @@
         const savedTab = localStorage.getItem("admin_tab");
         if (savedTab && ["users", "appeals", "reports", "gifts", "economy", "maintenance", "monitor", "banners", "funfacts"].includes(savedTab)) {
           switchTab(savedTab);
+        }
+        const savedUserSearch = localStorage.getItem("admin_user_search");
+        if (savedUserSearch) {
+          searchUid.value = savedUserSearch;
+          if (!savedTab || savedTab === "users") doSearchFinal();
         }
         const savedReportFilter = localStorage.getItem("admin_report_filter");
         if (savedReportFilter && ["pending", "resolved", "archived"].includes(savedReportFilter)) {
@@ -3877,6 +3915,8 @@
     const monitorPanel = $("#monitor-panel");
     const bannersPanel = $("#banners-panel");
     const funfactsPanel = $("#funfacts-panel");
+    const backupsPanel = $("#backups-panel");
+    const tabBackups = $("#tab-backups");
     let currentTab = "users";
 
     function switchTab(tab) {
@@ -3891,6 +3931,7 @@
       tabMonitor.classList.toggle("active", tab === "monitor");
       tabBanners.classList.toggle("active", tab === "banners");
       tabFunfacts.classList.toggle("active", tab === "funfacts");
+      tabBackups.classList.toggle("active", tab === "backups");
       $(".search-bar").style.display = tab === "users" ? "" : "none";
       userForm.style.display = tab === "users" ? "" : "none";
       appealsPanel.classList.toggle("visible", tab === "appeals");
@@ -3901,12 +3942,22 @@
       monitorPanel.classList.toggle("visible", tab === "monitor");
       bannersPanel.classList.toggle("visible", tab === "banners");
       funfactsPanel.classList.toggle("visible", tab === "funfacts");
+      backupsPanel.classList.toggle("visible", tab === "backups");
 
+      if (tab === "backups") loadBackups();
       if (tab === "appeals") loadAppeals("pending");
       if (tab === "reports") { loadReports(); loadReportStats(); }
       if (tab === "gifts") loadGifts();
       if (tab === "economy") loadEconomyConfig();
-      if (tab === "monitor") $("#monitor-uid-input")?.focus();
+      if (tab === "monitor") {
+        const savedMonitorUid = localStorage.getItem("admin_monitor_uid");
+        if (savedMonitorUid && !monitorUid) {
+          monitorUidInput.value = savedMonitorUid;
+          startMonitoring(savedMonitorUid);
+        } else {
+          $("#monitor-uid-input")?.focus();
+        }
+      }
       if (tab === "banners") loadBanners();
       if (tab === "funfacts") loadFunFacts();
     }
@@ -3920,6 +3971,7 @@
     tabMonitor.addEventListener("click", () => switchTab("monitor"));
     tabBanners.addEventListener("click", () => switchTab("banners"));
     tabFunfacts.addEventListener("click", () => switchTab("funfacts"));
+    tabBackups.addEventListener("click", () => switchTab("backups"));
 
     // --- Suspension section ---
     const suspensionSection = $("#suspension-section");
@@ -4029,6 +4081,21 @@
       unsuspendBtn.disabled = false;
     });
 
+    document.getElementById("reset-device-binding-btn").addEventListener("click", async () => {
+      if (!currentUid) { showToast("No user loaded", "error"); return; }
+      if (!confirm("Remove all device bindings for this user? They will be able to sign in from any device.")) return;
+      const btn = document.getElementById("reset-device-binding-btn");
+      btn.disabled = true; btn.textContent = "Resetting...";
+      try {
+        const result = await apiCall("POST", `/api/cleanup/device-binding/${currentUid}`);
+        showToast("Removed " + (result.deleted || 0) + " device binding(s)", "success");
+      } catch (err) {
+        showToast("Failed: " + err.message, "error");
+      } finally {
+        btn.disabled = false; btn.textContent = "Reset Device Binding";
+      }
+    });
+
     // Hook into populateForm to also populate suspension section
     const _originalPopulateForm = populateForm;
     async function populateFormWithSuspension(data) {
@@ -4077,13 +4144,14 @@
     async function loadAppeals(status) {
       appealsList.innerHTML = '<div style="color:var(--text2);font-size:13px;">Loading...</div>';
       try {
-        const result = await apiCall("GET", `/api/appeals?status=${status}`);
-        if (result.appeals.length === 0) {
+        const raw = await apiCall("GET", `/api/appeals?status=${status}`);
+        const appeals = Array.isArray(raw) ? raw : (raw.appeals || []);
+        if (appeals.length === 0) {
           appealsList.innerHTML = '<div style="color:var(--text2);font-size:13px;font-style:italic;">No appeals found</div>';
           return;
         }
         appealsList.innerHTML = "";
-        for (const appeal of result.appeals) {
+        for (const appeal of appeals) {
           const card = document.createElement("div");
           card.className = "appeal-card";
           const date = appeal.submittedAt ? new Date(appeal.submittedAt).toLocaleString() : "";
@@ -4275,7 +4343,7 @@
       reportHistoryList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
       try {
         const result = await apiCall("GET", `/api/reports?status=resolved&userId=${uid}`);
-        const allReports = result.users.flatMap((u) => u.reports);
+        const allReports = Array.isArray(result) ? result : (result.users ? result.users.flatMap((u) => u.reports) : []);
         if (allReports.length === 0) {
           reportHistoryList.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;">No report history</div>';
           return;
@@ -4363,8 +4431,10 @@
       try {
         const data = await apiCall("GET", `/api/search/uniqueId/${q}`);
         await populateFormFull(data);
+        localStorage.setItem("admin_user_search", q);
       } catch (err) {
         showToast(err.message, "error");
+        localStorage.removeItem("admin_user_search");
       }
       searchBtn.disabled = false;
       searchBtn.textContent = "Search";
@@ -5362,8 +5432,8 @@
     async function populateGiftSelect() {
       const select = $("#backpack-gift-select");
       try {
-        const data = await apiCall("GET", "/api/gifts");
-        _giftCatalog = data.gifts || [];
+        const raw = await apiCall("GET", "/api/gifts");
+        _giftCatalog = Array.isArray(raw) ? raw : (raw.gifts || []);
         select.innerHTML = '<option value="">Add gift...</option>' +
           _giftCatalog.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join("");
       } catch (err) {
@@ -5441,8 +5511,8 @@
 
     async function loadGifts() {
       try {
-        const data = await apiCall("GET", "/api/gifts");
-        giftsCache = data.gifts || [];
+        const raw = await apiCall("GET", "/api/gifts");
+        giftsCache = Array.isArray(raw) ? raw : (raw.gifts || []);
         clearPendingState();
         renderGiftsTable();
       } catch (err) {
@@ -5761,25 +5831,6 @@
       submitBtn.disabled = false;
       cancelBtn.disabled = false;
       submitBtn.textContent = "Confirm";
-    });
-
-    // --- Seed defaults (immediate, reloads table) ---
-    $("#gift-seed-btn").addEventListener("click", async () => {
-      if (!confirm("Seed the default 27-gift catalog? Existing gifts with the same names will be merged.")) return;
-      const btn = $("#gift-seed-btn");
-      btn.disabled = true;
-      btn.textContent = "Seeding...";
-
-      try {
-        await apiCall("POST", "/api/gifts/seed");
-        showToast("Default gifts seeded", "success");
-        loadGifts(); // loadGifts clears pending state
-      } catch (err) {
-        showToast("Seed failed: " + err.message, "error");
-      }
-
-      btn.disabled = false;
-      btn.textContent = "Seed Defaults";
     });
 
     // --- Economy Config (global config/economy document) ---
@@ -6241,6 +6292,66 @@
       btn.textContent = "Delete All Appeals";
     });
 
+    // Clean Destroyed Users
+    $("#clean-destroyed-btn").addEventListener("click", async () => {
+      const btn = $("#clean-destroyed-btn");
+      const result = $("#clean-destroyed-result");
+      if (!confirm("Delete all corrupted user docs (missing createdAt)? These users can then re-register.")) return;
+
+      btn.disabled = true;
+      btn.textContent = "Scanning...";
+      result.style.display = "none";
+
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const resp = await fetch(`${API_BASE}/api/cleanup/destroyed-users`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Request failed");
+        result.className = "maintenance-result success";
+        result.textContent = `Deleted ${data.destroyed} destroyed users, ${data.intact} intact users preserved`;
+        result.style.display = "block";
+      } catch (err) {
+        result.className = "maintenance-result error";
+        result.textContent = err.message;
+        result.style.display = "block";
+      }
+      btn.disabled = false;
+      btn.textContent = "Clean Destroyed Users";
+    });
+
+    // Clear All Device Bindings
+    $("#clear-device-bindings-btn").addEventListener("click", async () => {
+      const btn = $("#clear-device-bindings-btn");
+      const result = $("#clear-device-bindings-result");
+      if (!confirm("Delete ALL device bindings? Every user will need to re-bind on next sign-in.")) return;
+
+      btn.disabled = true;
+      btn.textContent = "Clearing...";
+      result.style.display = "none";
+
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const resp = await fetch(`${API_BASE}/api/cleanup/all-device-bindings`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Request failed");
+        result.className = "maintenance-result success";
+        result.textContent = `Deleted ${data.deleted} device binding(s)`;
+        result.style.display = "block";
+      } catch (err) {
+        result.className = "maintenance-result error";
+        result.textContent = err.message;
+        result.style.display = "block";
+      }
+      btn.disabled = false;
+      btn.textContent = "Clear All Device Bindings";
+    });
+
     // =====================================================
     // --- Reset All (nuclear) ---
     // =====================================================
@@ -6502,6 +6613,19 @@
           setMaintenanceButtonsDisabled(true);
 
           const token = await auth.currentUser.getIdToken();
+
+          // Auto-backup before wipe — safety net
+          stepLabel.textContent = "Creating safety backup...";
+          try {
+            await fetch(`${API_BASE}/api/admin/backups/trigger`, {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${token}` },
+            });
+            console.log("Pre-wipe backup created");
+          } catch (backupErr) {
+            console.error("Pre-wipe backup failed:", backupErr);
+          }
+
           const actions = [
             { id: "np-system-msgs", endpoint: "all-system-conversations", label: "System messages" },
             { id: "np-reports", endpoint: "all-reports", label: "Reports" },
@@ -6918,6 +7042,7 @@
       if (monitorUserUnsub) { monitorUserUnsub(); monitorUserUnsub = null; }
       if (monitorTxUnsub) { monitorTxUnsub(); monitorTxUnsub = null; }
       monitorUid = null;
+      localStorage.removeItem("admin_monitor_uid");
 
       // Update status
       monitorDot.classList.remove("live");
@@ -6933,6 +7058,7 @@
     // Wire up monitor buttons
     monitorStartBtn.addEventListener("click", () => {
       const uid = monitorUidInput.value.trim();
+      if (uid) localStorage.setItem("admin_monitor_uid", uid);
       startMonitoring(uid);
     });
 
@@ -6969,7 +7095,7 @@
       // Now fetch actual gift IDs to map name -> id
       try {
         const giftsData = await apiCall("GET", "/api/gifts");
-        const giftList = giftsData.gifts || [];
+        const giftList = Array.isArray(giftsData) ? giftsData : (giftsData.gifts || []);
         // Rebuild options with proper IDs
         while (guaranteeGiftSelect.options.length > 1) {
           guaranteeGiftSelect.remove(1);
@@ -7079,11 +7205,37 @@
     let bannersData = [];
     let editingBannerId = null;
 
+    function showListLoader(listEl, label) {
+      listEl.textContent = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "text-align:center;padding:32px;color:var(--text2);";
+      const spinner = document.createElement("div");
+      spinner.style.cssText = "display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;";
+      wrapper.appendChild(spinner);
+      const text = document.createElement("div");
+      text.style.marginTop = "8px";
+      text.textContent = label;
+      wrapper.appendChild(text);
+      listEl.appendChild(wrapper);
+    }
+
     async function loadBanners() {
+      showListLoader(document.getElementById("banners-list"), "Loading banners...");
       try {
-        bannersData = await apiCall("GET", "/api/admin/banners");
+        const raw = await apiCall("GET", "/api/admin/banners");
+        bannersData = raw.map(b => ({
+          ...b,
+          image_url: b.imageUrl ?? b.image_url,
+          action_type: b.actionType ?? b.action_type ?? "NONE",
+          action_value: b.actionValue ?? b.action_value,
+          sort_order: b.sortOrder ?? b.sort_order ?? 0,
+          is_active: b.isActive ?? b.is_active ?? true,
+          start_date: b.startDate ?? b.start_date,
+          end_date: b.endDate ?? b.end_date,
+        }));
         renderBannersList();
       } catch (err) {
+        document.getElementById("banners-list").textContent = "";
         showToast("Failed to load banners: " + err.message, "error");
       }
     }
@@ -7343,7 +7495,7 @@
           const formData = new FormData();
           formData.append("file", bannerFileInput.files[0]);
           const uploadResult = await apiCall("POST", "/api/admin/banners/upload", formData);
-          imageUrl = uploadResult.image_url;
+          imageUrl = uploadResult.imageUrl || uploadResult.image_url;
         }
 
         if (!imageUrl) {
@@ -7392,8 +7544,14 @@
     let editingFunFactId = null;
 
     async function loadFunFacts() {
+      showListLoader(document.getElementById("funfacts-list"), "Loading fun facts...");
       try {
-        funFactsData = await apiCall("GET", "/api/admin/fun-facts");
+        const raw = await apiCall("GET", "/api/admin/fun-facts");
+        funFactsData = raw.map(f => ({
+          ...f,
+          source_language: f.sourceLanguage ?? f.source_language,
+          is_active: f.isActive ?? f.is_active ?? true,
+        }));
         renderFunFactsList();
       } catch (err) {
         showToast("Failed to load fun facts: " + err.message, "error");
@@ -7552,6 +7710,149 @@
       } finally {
         saveBtnEl.disabled = false;
         saveBtnEl.textContent = "Save";
+      }
+    });
+
+    // --- Backups ---
+    async function loadBackups() {
+      const list = document.getElementById("backups-list");
+      list.textContent = 'Loading...';
+      list.style.color = 'var(--text2)';
+      try {
+        const token = await currentUser.getIdToken();
+        const res = await fetch(`${API_BASE}/api/admin/backups`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const { backups } = await res.json();
+        list.textContent = '';
+        list.style.color = '';
+        if (backups.length === 0) {
+          list.textContent = 'No backups yet. Click "Backup Now" to create one.';
+          list.style.color = 'var(--text2)';
+          return;
+        }
+        for (const b of backups) {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:8px;';
+
+          const info = document.createElement('div');
+          info.style.flex = '1';
+          const dateEl = document.createElement('div');
+          dateEl.style.cssText = 'font-weight:600;font-size:15px;';
+          dateEl.textContent = b.date;
+          const meta = document.createElement('div');
+          meta.style.cssText = 'font-size:13px;color:var(--text2);';
+          meta.textContent = `${b.userCount ?? '?'} users \u00b7 ${(b.size / 1024).toFixed(1)} KB`;
+          info.appendChild(dateEl);
+          info.appendChild(meta);
+
+          const dlBtn = document.createElement('button');
+          dlBtn.textContent = 'Download';
+          dlBtn.style.cssText = 'padding:6px 14px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;';
+          dlBtn.addEventListener('click', () => downloadBackup(b.date));
+
+          const restoreMissingBtn = document.createElement('button');
+          restoreMissingBtn.textContent = 'Restore Missing';
+          restoreMissingBtn.title = 'Only fill in fields that are currently null/missing';
+          restoreMissingBtn.style.cssText = 'padding:6px 14px;background:#f59e0b;color:#000;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;';
+          restoreMissingBtn.addEventListener('click', () => restoreBackup(b.date, 'missing'));
+
+          const fullRestoreBtn = document.createElement('button');
+          fullRestoreBtn.textContent = 'Full Restore';
+          fullRestoreBtn.title = 'Overwrite all fields from backup';
+          fullRestoreBtn.style.cssText = 'padding:6px 14px;background:var(--danger);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;';
+          fullRestoreBtn.addEventListener('click', () => restoreBackup(b.date, 'full'));
+
+          row.appendChild(info);
+          row.appendChild(dlBtn);
+          row.appendChild(restoreMissingBtn);
+          row.appendChild(fullRestoreBtn);
+          list.appendChild(row);
+        }
+      } catch (err) {
+        list.textContent = 'Error: ' + err.message;
+        list.style.color = 'var(--danger)';
+      }
+    }
+
+    async function downloadBackup(date) {
+      try {
+        const token = await currentUser.getIdToken();
+        const res = await fetch(`${API_BASE}/api/admin/backups/${date}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `shytalk-users-${date}.json`; a.click();
+        URL.revokeObjectURL(url);
+        showToast("Download started", "success");
+      } catch (err) {
+        showToast("Download failed: " + err.message, "error");
+      }
+    }
+
+    async function restoreBackup(date, mode) {
+      const label = mode === 'full' ? 'FULL RESTORE (overwrites all fields)' : 'Restore missing fields only';
+      if (!confirm(label + ' from backup ' + date + '?\n\nThis will update user profiles in Firestore.')) return;
+      if (mode === 'full' && !confirm('Are you SURE? Full restore will overwrite current data with backup data.')) return;
+      try {
+        showToast("Restoring...", "info");
+        const token = await currentUser.getIdToken();
+        const res = await fetch(`${API_BASE}/api/admin/backups/restore/${date}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const result = await res.json();
+        showToast('Restored ' + result.restoredCount + '/' + result.totalInBackup + ' users (' + mode + ')', "success");
+      } catch (err) {
+        showToast("Restore failed: " + err.message, "error");
+      }
+    }
+
+    document.getElementById("backup-trigger-btn").addEventListener("click", async () => {
+      const btn = document.getElementById("backup-trigger-btn");
+      btn.disabled = true; btn.textContent = "Backing up...";
+      try {
+        const token = await currentUser.getIdToken();
+        const res = await fetch(`${API_BASE}/api/admin/backups/trigger`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const result = await res.json();
+        showToast('Backup complete: ' + result.message, "success");
+        await loadBackups();
+      } catch (err) {
+        showToast("Backup failed: " + err.message, "error");
+      } finally {
+        btn.disabled = false; btn.textContent = "Backup Now";
+      }
+    });
+
+    document.getElementById("backup-refresh-btn").addEventListener("click", () => loadBackups());
+
+    document.getElementById("backup-recover-photos-btn").addEventListener("click", async () => {
+      if (!confirm("Scan R2 storage and restore missing profile/cover photo URLs?")) return;
+      const btn = document.getElementById("backup-recover-photos-btn");
+      btn.disabled = true; btn.textContent = "Scanning R2...";
+      try {
+        const token = await currentUser.getIdToken();
+        const res = await fetch(`${API_BASE}/api/admin/backups/recover-photos`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const result = await res.json();
+        showToast(result.message, "success");
+      } catch (err) {
+        showToast("Photo recovery failed: " + err.message, "error");
+      } finally {
+        btn.disabled = false; btn.textContent = "Recover Photos from R2";
       }
     });
 </script>

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,39 +68,13 @@ fun RoomListContent(
         }
     }
 
-    PullToRefreshBox(
-        isRefreshing = uiState.isRefreshing,
-        onRefresh = { viewModel.refreshRooms() },
-        modifier = modifier.fillMaxSize()
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
-            }
-        } else if (uiState.rooms.isEmpty() && uiState.banners.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("roomList_emptyState"),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "No active rooms",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Tap + to create one",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -124,43 +100,50 @@ fun RoomListContent(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                     )
                 }
-                if (uiState.rooms.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .testTag("roomList_emptyState"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                PullToRefreshBox(
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = { viewModel.refreshRooms() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (uiState.rooms.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .testTag("roomList_emptyState"),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "No active rooms",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Tap + to create one",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "No active rooms",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Tap + to create one",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        items(uiState.rooms, key = { it.roomId }) { room ->
-                            RoomListItem(
-                                room = room,
-                                seatUsers = uiState.seatUsers,
-                                onClick = {
-                                    onPrewarmRoom(room)
-                                    onNavigateToRoom(room.roomId)
-                                },
-                                modifier = Modifier.testTag("roomList_roomCard_${room.roomId}")
-                            )
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(uiState.rooms, key = { it.roomId }) { room ->
+                                RoomListItem(
+                                    room = room,
+                                    seatUsers = uiState.seatUsers,
+                                    onClick = {
+                                        onPrewarmRoom(room)
+                                        onNavigateToRoom(room.roomId)
+                                    },
+                                    modifier = Modifier.testTag("roomList_roomCard_${room.roomId}")
+                                )
+                            }
                         }
                     }
                 }

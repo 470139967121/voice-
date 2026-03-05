@@ -16,6 +16,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
@@ -47,6 +49,8 @@ class GroupSetupViewModelTest {
 
     @Before
     fun setup() {
+        mockkStatic("com.shyden.shytalk.core.util.ImageCompressor_androidKt")
+        coEvery { com.shyden.shytalk.core.util.compressImage(any(), any(), any()) } answers { firstArg() }
         every { authRepository.currentUserId } returns "me"
         coEvery { pmRepository.getOwnedGroupCount("me") } returns Resource.Success(0)
     }
@@ -55,6 +59,7 @@ class GroupSetupViewModelTest {
     fun tearDown() = runBlocking {
         activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
         activeViewModels.clear()
+        unmockkStatic("com.shyden.shytalk.core.util.ImageCompressor_androidKt")
     }
 
     private fun createViewModel(selectedIds: String = "u1,u2"): GroupSetupViewModel {
@@ -253,6 +258,7 @@ class GroupSetupViewModelTest {
         vm.setGroupName("Test Group")
         vm.setGroupPhoto(byteArrayOf(1, 2, 3))
         vm.createGroup()
+        kotlinx.coroutines.delay(50) // Allow Dispatchers.Default (compressImage) to complete
         advanceUntilIdle()
 
         assertEquals("new-conv", vm.uiState.value.createdConversationId)
@@ -474,6 +480,7 @@ class GroupSetupViewModelTest {
         vm.setGroupName("Photo Group")
         vm.setGroupPhoto(byteArrayOf(1, 2, 3))
         vm.createGroup()
+
         advanceUntilIdle()
 
         assertEquals("Failed to upload group photo", vm.uiState.value.error)

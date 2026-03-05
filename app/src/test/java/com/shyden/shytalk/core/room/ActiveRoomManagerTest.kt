@@ -792,10 +792,11 @@ class ActiveRoomManagerTest {
 
         testScheduler.advanceTimeBy(Constants.PRESENCE_TIMEOUT_MS + 100)
 
-        // Should not try to remove self; seated users and unseated participants are sent to
-        // removeDisconnectedUser (Firestore transaction handles owner protection server-side)
+        // Should not try to remove self; owner absence triggers setOwnerAway instead of removal;
+        // unseated non-owner participants are removed normally
         coVerify(exactly = 0) { roomRepository.removeDisconnectedUser("room-1", currentUserId) }
-        coVerify { roomRepository.removeDisconnectedUser("room-1", "other-owner") }
+        coVerify { roomRepository.setOwnerAway("room-1") }
+        coVerify(exactly = 0) { roomRepository.removeDisconnectedUser("room-1", "other-owner") }
         coVerify { roomRepository.removeDisconnectedUser("room-1", "unseated-participant") }
     }
 

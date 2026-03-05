@@ -16,6 +16,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
@@ -54,6 +56,8 @@ class ProfileViewModelTest {
 
     @Before
     fun setup() {
+        mockkStatic("com.shyden.shytalk.core.util.ImageCompressor_androidKt")
+        coEvery { com.shyden.shytalk.core.util.compressImage(any(), any(), any()) } answers { firstArg() }
         every { authRepository.currentUserId } returns currentUserId
         every { authRepository.currentUserEmail } returns "test@example.com"
         every { userRepository.userUpdates } returns MutableSharedFlow()
@@ -63,6 +67,7 @@ class ProfileViewModelTest {
     fun tearDown() = runBlocking {
         activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
         activeViewModels.clear()
+        unmockkStatic("com.shyden.shytalk.core.util.ImageCompressor_androidKt")
     }
 
     private fun createViewModel(): ProfileViewModel {
@@ -387,6 +392,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         vm.uploadProfilePhoto(byteArrayOf(1, 2, 3))
+
         advanceUntilIdle()
 
         assertEquals("https://photo.url", vm.uiState.value.user?.profilePhotoUrl)
@@ -399,6 +405,7 @@ class ProfileViewModelTest {
 
         val vm = createViewModel()
         vm.uploadProfilePhoto(byteArrayOf(1))
+
         advanceUntilIdle()
 
         assertEquals("upload failed", vm.uiState.value.error)
@@ -412,6 +419,7 @@ class ProfileViewModelTest {
 
         val vm = createViewModel()
         vm.uploadProfilePhoto(byteArrayOf(1))
+
         advanceUntilIdle()
 
         assertNotNull(vm.uiState.value.error)
@@ -431,6 +439,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         vm.uploadProfilePhoto(byteArrayOf(1, 2))
+
         advanceUntilIdle()
 
         coVerify { storageRepository.deleteImageByUrl(oldUrl) }
@@ -448,6 +457,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         vm.uploadProfilePhoto(byteArrayOf(1, 2))
+
         advanceUntilIdle()
 
         coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
@@ -465,6 +475,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         vm.uploadProfilePhoto(byteArrayOf(1))
+
         advanceUntilIdle()
 
         coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
@@ -483,6 +494,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         vm.uploadProfilePhoto(byteArrayOf(1))
+
         advanceUntilIdle()
 
         coVerify(exactly = 0) { storageRepository.deleteImageByUrl(any()) }
@@ -502,6 +514,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         vm.uploadCoverPhoto(byteArrayOf(1, 2))
+
         advanceUntilIdle()
 
         assertEquals("https://cover.url", vm.uiState.value.user?.coverPhotoUrl)
@@ -521,6 +534,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         vm.uploadCoverPhoto(byteArrayOf(1, 2))
+
         advanceUntilIdle()
 
         coVerify { storageRepository.deleteImageByUrl(oldUrl) }
@@ -532,6 +546,7 @@ class ProfileViewModelTest {
 
         val vm = createViewModel()
         vm.uploadCoverPhoto(byteArrayOf(1))
+
         advanceUntilIdle()
 
         assertEquals("cover upload failed", vm.uiState.value.error)
@@ -1369,6 +1384,7 @@ class ProfileViewModelTest {
 
         val vm = createViewModel()
         vm.uploadProfilePhoto(byteArrayOf(1, 2, 3))
+
         advanceUntilIdle()
 
         coVerify(exactly = 0) { storageRepository.uploadImage(any(), any(), any()) }
