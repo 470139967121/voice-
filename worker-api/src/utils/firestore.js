@@ -574,6 +574,86 @@ function batchIncrementOp(env, path, increments) {
   };
 }
 
+// ─── Atomic array operations ────────────────────────────────────
+
+/**
+ * Atomically add elements to an array field (like Firestore SDK arrayUnion).
+ * @param {object} env
+ * @param {string} path - document path
+ * @param {string} field - field name
+ * @param {Array} elements - values to add (only missing ones are appended)
+ */
+async function arrayUnionField(env, path, field, elements) {
+  if (!env.FIREBASE_PROJECT_ID) return;
+
+  const accessToken = await getAccessToken(env);
+  const projectId = env.FIREBASE_PROJECT_ID;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`;
+
+  const response = await firestoreFetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      writes: [{
+        transform: {
+          document: `projects/${projectId}/databases/(default)/documents/${path}`,
+          fieldTransforms: [{
+            fieldPath: field,
+            appendMissingElements: { values: elements.map(toFirestoreValue) },
+          }],
+        },
+      }],
+    }),
+  }, env);
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error(`Firestore ARRAY_UNION ${path}.${field}: ${response.status} ${text}`);
+  }
+}
+
+/**
+ * Atomically remove elements from an array field (like Firestore SDK arrayRemove).
+ * @param {object} env
+ * @param {string} path - document path
+ * @param {string} field - field name
+ * @param {Array} elements - values to remove
+ */
+async function arrayRemoveField(env, path, field, elements) {
+  if (!env.FIREBASE_PROJECT_ID) return;
+
+  const accessToken = await getAccessToken(env);
+  const projectId = env.FIREBASE_PROJECT_ID;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`;
+
+  const response = await firestoreFetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      writes: [{
+        transform: {
+          document: `projects/${projectId}/databases/(default)/documents/${path}`,
+          fieldTransforms: [{
+            fieldPath: field,
+            removeAllFromArray: { values: elements.map(toFirestoreValue) },
+          }],
+        },
+      }],
+    }),
+  }, env);
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error(`Firestore ARRAY_REMOVE ${path}.${field}: ${response.status} ${text}`);
+  }
+}
+
 module.exports = {
   isCircuitOpen,
   getDoc,
@@ -586,6 +666,8 @@ module.exports = {
   batchDeleteOp,
   batchIncrementOp,
   incrementField,
+  arrayUnionField,
+  arrayRemoveField,
   runTransaction,
   fieldFilter,
   andFilter,

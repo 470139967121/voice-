@@ -5124,9 +5124,10 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Request failed");
 
-        const lines = Object.entries(data)
-          .filter(([k]) => k !== "success")
-          .map(([folder, info]) => `${folder}: ${info.files} files (${formatBytes(info.bytes)})`);
+        const folders = data.folders || {};
+        const lines = Object.entries(folders)
+          .map(([folder, info]) => `${folder}: ${info.count} files (${formatBytes(info.bytes)})`);
+        lines.push(`Total: ${data.totalFiles} files (${formatBytes(data.totalBytes)})`);
         result.className = "maintenance-result success";
         result.textContent = lines.join("\n");
         result.style.display = "block";
@@ -6101,7 +6102,7 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Request failed");
         result.className = "maintenance-result success";
-        result.textContent = `Cleared backpacks for ${data.usersCleared} users (${data.itemsDeleted} items)`;
+        result.textContent = `Cleared ${data.deleted} backpack items`;
         result.style.display = "block";
       } catch (err) {
         result.className = "maintenance-result error";
@@ -6131,7 +6132,7 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Request failed");
         result.className = "maintenance-result success";
-        result.textContent = `Cleared gift walls for ${data.usersCleared} users (${data.itemsDeleted} items)`;
+        result.textContent = `Cleared ${data.deleted} gift wall entries`;
         result.style.display = "block";
       } catch (err) {
         result.className = "maintenance-result error";
@@ -6161,7 +6162,7 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Request failed");
         result.className = "maintenance-result success";
-        result.textContent = `Reset coins for ${data.usersCleared} users`;
+        result.textContent = `Reset coins for ${data.affected} users`;
         result.style.display = "block";
       } catch (err) {
         result.className = "maintenance-result error";
@@ -6191,7 +6192,7 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Request failed");
         result.className = "maintenance-result success";
-        result.textContent = `Reset beans for ${data.usersCleared} users`;
+        result.textContent = `Reset beans for ${data.affected} users`;
         result.style.display = "block";
       } catch (err) {
         result.className = "maintenance-result error";
@@ -6221,7 +6222,7 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Request failed");
         result.className = "maintenance-result success";
-        result.textContent = `Cleared ${data.usersCleared} users (${data.txDeleted} transactions), reset ${data.pityReset} pity counters`;
+        result.textContent = `Cleared ${data.txDeleted} transactions, reset ${data.pityReset} pity counters`;
         result.style.display = "block";
       } catch (err) {
         result.className = "maintenance-result error";
@@ -6251,7 +6252,7 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Request failed");
         result.className = "maintenance-result success";
-        result.textContent = `Removed Super Shy from ${data.usersCleared} users`;
+        result.textContent = `Removed Super Shy from ${data.affected} users`;
         result.style.display = "block";
       } catch (err) {
         result.className = "maintenance-result error";
@@ -6281,7 +6282,7 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Request failed");
         result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.appealsDeleted} appeals`;
+        result.textContent = `Deleted ${data.deleted} appeals`;
         result.style.display = "block";
       } catch (err) {
         result.className = "maintenance-result error";
