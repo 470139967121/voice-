@@ -7,6 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.remote.WorkerApiClient
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -134,62 +135,76 @@ class UserRepositoryImplTest {
 
     // endregion
 
-    // region followUser / unfollowUser / removeFollower
+    // region followUser / unfollowUser / removeFollower (via Worker API)
 
     @Test
-    fun `followUser returns Success`() = runTest {
+    fun `followUser calls Worker API with correct path and body`() = runTest {
         val result = repo.followUser("user-1", "target-1")
 
         assertTrue(result is Resource.Success)
+        coVerify {
+            api.post(
+                "/api/users/user-1/follow",
+                match { it.getString("targetUserId") == "target-1" }
+            )
+        }
     }
 
     @Test
-    fun `unfollowUser returns Success`() = runTest {
+    fun `followUser returns Error on API failure`() = runTest {
+        coEvery { api.post(any<String>(), any<JSONObject>()) } throws RuntimeException("API error")
+
+        val result = repo.followUser("user-1", "target-1")
+
+        assertTrue(result is Resource.Error)
+    }
+
+    @Test
+    fun `unfollowUser calls Worker API with correct path and body`() = runTest {
         val result = repo.unfollowUser("user-1", "target-1")
 
         assertTrue(result is Resource.Success)
+        coVerify {
+            api.post(
+                "/api/users/user-1/unfollow",
+                match { it.getString("targetUserId") == "target-1" }
+            )
+        }
     }
 
     @Test
-    fun `removeFollower returns Success`() = runTest {
+    fun `removeFollower calls Worker API with correct path and body`() = runTest {
         val result = repo.removeFollower("user-1", "follower-1")
 
         assertTrue(result is Resource.Success)
+        coVerify {
+            api.post(
+                "/api/users/user-1/remove-follower",
+                match { it.getString("followerUserId") == "follower-1" }
+            )
+        }
     }
 
     // endregion
 
-    // region recordProfileVisit / markStalkersViewed
+    // region recordProfileVisit / markStalkersViewed (via Worker API)
 
     @Test
-    fun `recordProfileVisit returns Success`() = runTest {
-        val result = repo.recordProfileVisit("user-1", "visitor-1")
+    fun `recordProfileVisit calls Worker API with correct path and body`() = runTest {
+        val result = repo.recordProfileVisit("profile-1", "visitor-1")
 
         assertTrue(result is Resource.Success)
+        coVerify {
+            api.post(
+                "/api/users/profile-1/record-visit",
+                match { it.getString("visitorId") == "visitor-1" }
+            )
+        }
     }
 
     @Test
     fun `recordProfileVisit returns Error on failure`() = runTest {
-        val notFoundSnapshot = mockk<DocumentSnapshot>(relaxed = true) {
-            every { exists() } returns false
-        }
-        val getTask = mockk<Task<DocumentSnapshot>>(relaxed = true) {
-            every { isComplete } returns true
-            every { isCanceled } returns false
-            every { exception } returns null
-            every { result } returns notFoundSnapshot
-        }
-        val failTask = mockk<Task<Void>>(relaxed = true) {
-            every { isComplete } returns true
-            every { isCanceled } returns false
-            every { exception } returns RuntimeException("Firestore error")
-            every { result } throws RuntimeException("Firestore error")
-        }
-        val failDocRef = mockk<DocumentReference>(relaxed = true) {
-            every { get() } returns getTask
-            every { set(any()) } returns failTask
-        }
-        every { firestore.document("users/user-1/stalkers/visitor-1") } returns failDocRef
+        coEvery { api.post(any<String>(), any<JSONObject>()) } throws RuntimeException("API error")
 
         val result = repo.recordProfileVisit("user-1", "visitor-1")
 

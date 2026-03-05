@@ -230,56 +230,33 @@ class UserRepositoryImpl(
 
     override suspend fun followUser(currentUserId: String, targetUserId: String): Resource<Unit> =
         firebaseCall("Failed to follow user") {
-            firestore.document("users/$currentUserId")
-                .update("followingIds", FieldValue.arrayUnion(targetUserId)).await()
-            firestore.document("users/$targetUserId")
-                .update("followerIds", FieldValue.arrayUnion(currentUserId)).await()
+            api.post("/api/users/$currentUserId/follow", JSONObject().put("targetUserId", targetUserId))
         }
 
     override suspend fun unfollowUser(currentUserId: String, targetUserId: String): Resource<Unit> =
         firebaseCall("Failed to unfollow user") {
-            firestore.document("users/$currentUserId")
-                .update("followingIds", FieldValue.arrayRemove(targetUserId)).await()
-            firestore.document("users/$targetUserId")
-                .update("followerIds", FieldValue.arrayRemove(currentUserId)).await()
+            api.post("/api/users/$currentUserId/unfollow", JSONObject().put("targetUserId", targetUserId))
         }
 
     override suspend fun removeFollower(userId: String, followerId: String): Resource<Unit> =
         firebaseCall("Failed to remove follower") {
-            firestore.document("users/$userId")
-                .update("followerIds", FieldValue.arrayRemove(followerId)).await()
-            firestore.document("users/$followerId")
-                .update("followingIds", FieldValue.arrayRemove(userId)).await()
+            api.post("/api/users/$userId/remove-follower", JSONObject().put("followerUserId", followerId))
         }
 
     override suspend fun recordProfileVisit(profileUserId: String, visitorId: String): Resource<Unit> =
         firebaseCall("Failed to record visit") {
-            val now = System.currentTimeMillis()
-            val docRef = firestore.document("users/$profileUserId/stalkers/$visitorId")
-            val existing = docRef.get().await()
-            if (existing.exists()) {
-                docRef.update(
-                    mapOf(
-                        "lastVisitedAt" to now,
-                        "visitCount" to FieldValue.increment(1)
-                    )
-                ).await()
-            } else {
-                docRef.set(
-                    mapOf(
-                        "visitorId" to visitorId,
-                        "lastVisitedAt" to now,
-                        "firstVisitedAt" to now,
-                        "visitCount" to 1L
-                    )
-                ).await()
-            }
+            api.post("/api/users/$profileUserId/record-visit", JSONObject().put("visitorId", visitorId))
         }
 
     override suspend fun markStalkersViewed(userId: String): Resource<Unit> =
         firebaseCall("Failed to mark stalkers viewed") {
             firestore.document("users/$userId")
-                .update("stalkersViewedAt", System.currentTimeMillis()).await()
+                .update(
+                    mapOf(
+                        "stalkersViewedAt" to System.currentTimeMillis(),
+                        "newStalkerCount" to 0L
+                    )
+                ).await()
         }
 
     override suspend fun setAlias(userId: String, targetUserId: String, alias: String): Resource<Unit> =

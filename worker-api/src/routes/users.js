@@ -1,5 +1,5 @@
 /**
- * User routes — profile CRUD, unique ID, suspension appeals.
+ * User routes — profile CRUD, unique ID, suspension appeals, social.
  *
  * GET    /api/users/:uid              → Get user profile
  * PATCH  /api/users/:uid              → Update user profile fields
@@ -7,6 +7,10 @@
  * POST   /api/users/:uid/unique-id    → Generate a unique numeric ID
  * POST   /api/users/:uid/appeal       → Submit suspension appeal
  * POST   /api/users/:uid/lift-suspension → Lift expired suspension
+ * POST   /api/users/:uid/follow       → Follow a user
+ * POST   /api/users/:uid/unfollow     → Unfollow a user
+ * POST   /api/users/:uid/remove-follower → Remove a follower
+ * POST   /api/users/:uid/record-visit → Record profile visit (stalker)
  */
 
 const { json, jsonError, generateId, now, parseBody } = require('../utils');
@@ -15,6 +19,8 @@ const {
   setDoc,
   updateDoc,
   incrementField,
+  arrayUnionField,
+  arrayRemoveField,
 } = require('../utils/firestore');
 
 /**
@@ -189,6 +195,86 @@ function registerUserRoutes(router) {
       suspensionAppealStatus: null,
       suspendedBy:            null,
     });
+
+    return json({ success: true });
+  });
+
+  // ── Follow user ──
+  router.post('/api/users/:uid/follow', async (request, env, params) => {
+    const body = await parseBody(request);
+    const targetUid = body?.targetUserId;
+    if (!targetUid) return jsonError('targetUserId required', 400);
+    if (request.auth.uid !== params.uid) return jsonError('Forbidden', 403);
+    if (params.uid === targetUid) return jsonError('Cannot follow yourself', 400);
+
+    await Promise.all([
+      arrayUnionField(env, `users/${params.uid}`, 'followingIds', [targetUid]),
+      arrayUnionField(env, `users/${targetUid}`, 'followerIds', [params.uid]),
+    ]);
+
+    return json({ success: true });
+  });
+
+  // ── Unfollow user ──
+  router.post('/api/users/:uid/unfollow', async (request, env, params) => {
+    const body = await parseBody(request);
+    const targetUid = body?.targetUserId;
+    if (!targetUid) return jsonError('targetUserId required', 400);
+    if (request.auth.uid !== params.uid) return jsonError('Forbidden', 403);
+
+    await Promise.all([
+      arrayRemoveField(env, `users/${params.uid}`, 'followingIds', [targetUid]),
+      arrayRemoveField(env, `users/${targetUid}`, 'followerIds', [params.uid]),
+    ]);
+
+    return json({ success: true });
+  });
+
+  // ── Remove follower ──
+  router.post('/api/users/:uid/remove-follower', async (request, env, params) => {
+    const body = await parseBody(request);
+    const followerUid = body?.followerUserId;
+    if (!followerUid) return jsonError('followerUserId required', 400);
+    if (request.auth.uid !== params.uid) return jsonError('Forbidden', 403);
+
+    await Promise.all([
+      arrayRemoveField(env, `users/${params.uid}`, 'followerIds', [followerUid]),
+      arrayRemoveField(env, `users/${followerUid}`, 'followingIds', [params.uid]),
+    ]);
+
+    return json({ success: true });
+  });
+
+  // ── Record profile visit (stalker) ──
+  router.post('/api/users/:uid/record-visit', async (request, env, params) => {
+    const body = await parseBody(request);
+    const visitorId = body?.visitorId;
+    if (!visitorId) return jsonError('visitorId required', 400);
+    if (request.auth.uid !== visitorId) return jsonError('Forbidden', 403);
+    if (params.uid === visitorId) return json({ success: true }); // don't stalk yourself
+
+    const stalkerPath = `users/${params.uid}/stalkers/${visitorId}`;
+    const existing = await getDoc(env, stalkerPath);
+    const timestamp = now();
+
+    if (existing) {
+      await updateDoc(env, stalkerPath, {
+        lastVisitedAt: timestamp,
+        visitCount: (existing.visitCount || 1) + 1,
+      });
+    } else {
+      await setDoc(env, stalkerPath, {
+        visitorId,
+        lastVisitedAt: timestamp,
+        firstVisitedAt: timestamp,
+        visitCount: 1,
+      });
+      // Increment stalkerCount only for new visitors
+      await incrementField(env, `users/${params.uid}`, 'stalkerCount', 1);
+    }
+
+    // Always increment newStalkerCount (reset when user views their stalkers list)
+    await incrementField(env, `users/${params.uid}`, 'newStalkerCount', 1);
 
     return json({ success: true });
   });

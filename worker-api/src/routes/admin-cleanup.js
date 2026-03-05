@@ -206,7 +206,7 @@ function registerAdminCleanupRoutes(router) {
       await batchWrite(env, writes.slice(i, i + 500));
     }
 
-    return json({ success: true });
+    return json({ success: true, deleted: giftWall.length + giftWallSenders.length });
   });
 
   // ── Reset all coins ──
@@ -226,7 +226,7 @@ function registerAdminCleanupRoutes(router) {
       await batchWrite(env, writes.slice(i, i + 500));
     }
 
-    return json({ success: true });
+    return json({ success: true, affected: users.length });
   });
 
   // ── Reset all beans ──
@@ -246,7 +246,7 @@ function registerAdminCleanupRoutes(router) {
       await batchWrite(env, writes.slice(i, i + 500));
     }
 
-    return json({ success: true });
+    return json({ success: true, affected: users.length });
   });
 
   // ── Delete gacha spin history + reset pity ──
@@ -272,6 +272,7 @@ function registerAdminCleanupRoutes(router) {
       orderBy: [orderBy('uid', 'ASCENDING')],
     });
 
+    let txDeleted = 0;
     for (const user of users) {
       const uid = user.uid ?? user.id;
       const gachaTxs = await queryCollection(env, `users/${uid}/transactions`, {
@@ -285,9 +286,10 @@ function registerAdminCleanupRoutes(router) {
       for (let i = 0; i < writes.length; i += 500) {
         await batchWrite(env, writes.slice(i, i + 500));
       }
+      txDeleted += gachaTxs.length;
     }
 
-    return json({ success: true });
+    return json({ success: true, pityReset: usersWithPity.length, txDeleted });
   });
 
   // ── Clear Super Shy status ──
@@ -312,7 +314,7 @@ function registerAdminCleanupRoutes(router) {
       await batchWrite(env, writes.slice(i, i + 500));
     }
 
-    return json({ success: true });
+    return json({ success: true, affected: users.length });
   });
 
   // ── Delete all suspension appeals ──
@@ -370,128 +372,133 @@ function registerAdminCleanupRoutes(router) {
   });
 
   // ── Smart R2 orphan cleanup ──
+  // NOTE: This endpoint makes many Firestore queries (one per conversation and room)
+  // and may hit Workers execution time limits with large datasets.
   router.post('/api/cleanup/orphaned-storage', async (request, env) => {
     const adminCheck = requireAdmin(request);
     if (adminCheck) return adminCheck;
 
-    const CDN_PREFIX = 'https://images.shytalk.shyden.co.uk/';
-    const extractKey = (url) => {
-      if (!url || !url.startsWith(CDN_PREFIX)) return null;
-      return url.slice(CDN_PREFIX.length);
-    };
+    try {
+      const CDN_PREFIX = 'https://images.shytalk.shyden.co.uk/';
+      const extractKey = (url) => {
+        if (!url || !url.startsWith(CDN_PREFIX)) return null;
+        return url.slice(CDN_PREFIX.length);
+      };
 
-    const referencedKeys = new Set();
-    referencedKeys.add('system/shytalk_icon.webp');
+      const referencedKeys = new Set();
+      referencedKeys.add('system/shytalk_icon.webp');
 
-    // ── Users ──
-    const users = await queryCollection(env, 'users', {
-      orderBy: [orderBy('uid', 'ASCENDING')],
-    });
-    for (const u of users) {
-      for (const field of [
-        'profilePhotoUrl', 'coverPhotoUrl',
-        'preSuspensionProfilePhotoUrl', 'preSuspensionCoverPhotoUrl',
-        // Legacy snake_case fallbacks
-        'profile_photo_url', 'cover_photo_url',
-        'pre_suspension_profile_photo_url', 'pre_suspension_cover_photo_url',
-      ]) {
-        const k = extractKey(u[field]);
-        if (k) referencedKeys.add(k);
-      }
-    }
-
-    // ── Conversations (group photo) ──
-    const convs = await queryCollection(env, 'conversations', {
-      where: fieldFilter('isGroup', 'EQUAL', true),
-    });
-    for (const c of convs) {
-      const k = extractKey(c.groupPhotoUrl ?? c.group_photo_url);
-      if (k) referencedKeys.add(k);
-    }
-
-    // ── Private messages (IMAGE type) ──
-    // Subcollection — iterate conversations and query messages
-    for (const conv of convs) {
-      const messages = await queryCollection(env, `conversations/${conv.id}/messages`, {
-        where: fieldFilter('type', 'EQUAL', 'IMAGE'),
+      // ── Users ──
+      const users = await queryCollection(env, 'users', {
+        orderBy: [orderBy('uid', 'ASCENDING')],
       });
-      for (const msg of messages) {
-        const urls = msg.imageUrls ?? msg.image_urls;
-        if (Array.isArray(urls)) {
-          for (const url of urls) {
-            const k = extractKey(url);
-            if (k) referencedKeys.add(k);
-          }
-        }
-      }
-    }
-
-    // ── Room messages (IMAGE type) ──
-    const rooms = await queryCollection(env, 'rooms', {});
-    for (const room of rooms) {
-      const messages = await queryCollection(env, `rooms/${room.id}/messages`, {
-        where: fieldFilter('type', 'EQUAL', 'IMAGE'),
-      });
-      for (const msg of messages) {
-        const urls = msg.imageUrls ?? msg.image_urls;
-        if (Array.isArray(urls)) {
-          for (const url of urls) {
-            const k = extractKey(url);
-            if (k) referencedKeys.add(k);
-          }
-        }
-      }
-    }
-
-    // ── Reports + archive ──
-    const [reports, reportsArchive] = await Promise.all([
-      queryCollection(env, 'reports', {}),
-      queryCollection(env, 'reportsArchive', {}),
-    ]);
-    for (const row of [...reports, ...reportsArchive]) {
-      const urls = row.evidenceUrls ?? row.evidence_urls;
-      if (Array.isArray(urls)) {
-        for (const url of urls) {
-          const k = extractKey(url);
+      for (const u of users) {
+        for (const field of [
+          'profilePhotoUrl', 'coverPhotoUrl',
+          'preSuspensionProfilePhotoUrl', 'preSuspensionCoverPhotoUrl',
+          'profile_photo_url', 'cover_photo_url',
+          'pre_suspension_profile_photo_url', 'pre_suspension_cover_photo_url',
+        ]) {
+          const k = extractKey(u[field]);
           if (k) referencedKeys.add(k);
         }
       }
-    }
 
-    // ── Banners ──
-    const banners = await queryCollection(env, 'banners', {});
-    for (const b of banners) {
-      const k = extractKey(b.imageUrl ?? b.image_url);
-      if (k) referencedKeys.add(k);
-    }
-
-    // ── List and delete orphans ──
-    const folders = [
-      'pm_images/', 'stickers/', 'report_evidence/',
-      'profile_photos/', 'cover_photos/', 'group_photos/', 'banners/',
-    ];
-    const summary = {};
-    let totalDeleted = 0;
-
-    for (const folder of folders) {
-      const allKeys = [];
-      let cursor;
-      do {
-        const listed = await env.R2_BUCKET.list({ prefix: folder, cursor, limit: 1000 });
-        for (const obj of listed.objects) allKeys.push(obj.key);
-        cursor = listed.truncated ? listed.cursor : undefined;
-      } while (cursor);
-
-      const toDelete = allKeys.filter(k => !referencedKeys.has(k));
-      for (const key of toDelete) {
-        await env.R2_BUCKET.delete(key);
+      // ── Conversations (group photo) ──
+      const convs = await queryCollection(env, 'conversations', {
+        where: fieldFilter('isGroup', 'EQUAL', true),
+      });
+      for (const c of convs) {
+        const k = extractKey(c.groupPhotoUrl ?? c.group_photo_url);
+        if (k) referencedKeys.add(k);
       }
 
-      summary[folder.replace('/', '')] = { total: allKeys.length, deleted: toDelete.length };
-      totalDeleted += toDelete.length;
-    }
+      // ── Private messages (IMAGE type) — batch to avoid timeout ──
+      for (const conv of convs) {
+        const messages = await queryCollection(env, `conversations/${conv.id}/messages`, {
+          where: fieldFilter('type', 'EQUAL', 'IMAGE'),
+        });
+        for (const msg of messages) {
+          const urls = msg.imageUrls ?? msg.image_urls;
+          if (Array.isArray(urls)) {
+            for (const url of urls) {
+              const k = extractKey(url);
+              if (k) referencedKeys.add(k);
+            }
+          }
+        }
+      }
 
-    return json({ success: true, summary, totalDeleted });
+      // ── Room messages (IMAGE type) ──
+      const rooms = await queryCollection(env, 'rooms', {});
+      for (const room of rooms) {
+        const messages = await queryCollection(env, `rooms/${room.id}/messages`, {
+          where: fieldFilter('type', 'EQUAL', 'IMAGE'),
+        });
+        for (const msg of messages) {
+          const urls = msg.imageUrls ?? msg.image_urls;
+          if (Array.isArray(urls)) {
+            for (const url of urls) {
+              const k = extractKey(url);
+              if (k) referencedKeys.add(k);
+            }
+          }
+        }
+      }
+
+      // ── Reports + archive ──
+      const [reports, reportsArchive] = await Promise.all([
+        queryCollection(env, 'reports', {}),
+        queryCollection(env, 'reportsArchive', {}),
+      ]);
+      for (const row of [...reports, ...reportsArchive]) {
+        const urls = row.evidenceUrls ?? row.evidence_urls;
+        if (Array.isArray(urls)) {
+          for (const url of urls) {
+            const k = extractKey(url);
+            if (k) referencedKeys.add(k);
+          }
+        }
+      }
+
+      // ── Banners ──
+      const banners = await queryCollection(env, 'banners', {});
+      for (const b of banners) {
+        const k = extractKey(b.imageUrl ?? b.image_url);
+        if (k) referencedKeys.add(k);
+      }
+
+      // ── List and delete orphans ──
+      const folders = [
+        'pm_images/', 'stickers/', 'report_evidence/',
+        'profile_photos/', 'cover_photos/', 'group_photos/', 'banners/',
+      ];
+      const summary = {};
+      let totalDeleted = 0;
+
+      for (const folder of folders) {
+        const allKeys = [];
+        let cursor;
+        do {
+          const listed = await env.R2_BUCKET.list({ prefix: folder, cursor, limit: 1000 });
+          for (const obj of listed.objects) allKeys.push(obj.key);
+          cursor = listed.truncated ? listed.cursor : undefined;
+        } while (cursor);
+
+        const toDelete = allKeys.filter(k => !referencedKeys.has(k));
+        for (const key of toDelete) {
+          await env.R2_BUCKET.delete(key);
+        }
+
+        summary[folder.replace('/', '')] = { total: allKeys.length, deleted: toDelete.length };
+        totalDeleted += toDelete.length;
+      }
+
+      return json({ success: true, summary, totalDeleted });
+    } catch (err) {
+      console.error('orphaned-storage cleanup error:', err.message);
+      return jsonError(`Cleanup failed: ${err.message}`, 500);
+    }
   });
 
   // ── Clean up destroyed user profiles ──

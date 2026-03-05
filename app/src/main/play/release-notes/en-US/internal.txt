@@ -1,6 +1,8 @@
-v0.49 — Better Stability
+v0.50 — Social & Safety
 
-- You'll now see a notice inside rooms when our servers are having trouble
-- Get notified when things are back to normal while you're in a room
-- Fixed a bug where rooms could close right after being created
-- Banner carousel now loads more reliably
+- Follow/unfollow now works reliably from profile pages
+- Profile visitors (stalkers) are now tracked properly
+- Daily user backups to protect against data loss
+- Admin panel shows accurate counts for all maintenance actions
+- Unique IDs always start at 8 digits (10000000+)
+- Storage audit and cleanup display fixed
