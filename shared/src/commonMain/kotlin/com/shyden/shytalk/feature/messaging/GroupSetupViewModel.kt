@@ -8,6 +8,7 @@ import com.shyden.shytalk.core.model.SystemMessageConfig
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.StorageRepository
@@ -160,8 +161,9 @@ class GroupSetupViewModel(
             var photoUrl: String? = null
             val photoBytes = state.groupPhotoBytes
             if (photoBytes != null) {
+                val compressed = compressImage(photoBytes)
                 when (val uploadResult = storageRepository.uploadImage(
-                    currentUserId, "group_photos", photoBytes
+                    currentUserId, "group_photos", compressed
                 )) {
                     is Resource.Success -> photoUrl = uploadResult.data
                     is Resource.Error -> {

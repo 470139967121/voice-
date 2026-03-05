@@ -12,15 +12,14 @@ class BannerRepositoryImpl(
         val now = System.currentTimeMillis()
         val snapshot = firestore.collection("banners")
             .whereEqualTo("isActive", true)
-            .whereLessThanOrEqualTo("startDate", now)
             .get()
             .await()
         return snapshot.documents
             .mapNotNull { doc ->
                 val data = doc.data ?: return@mapNotNull null
-                // Filter out expired banners client-side (Firestore can't do AND on two range fields)
+                val startDate = (data["startDate"] as? Long) ?: 0L
                 val endDate = (data["endDate"] as? Long) ?: Long.MAX_VALUE
-                if (endDate < now) return@mapNotNull null
+                if (startDate > now || endDate < now) return@mapNotNull null
                 Banner.fromMap(data, doc.id)
             }
             .sortedBy { it.sortOrder }

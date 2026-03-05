@@ -77,7 +77,10 @@ class RoomRepositoryImpl(
         val roomId = firestore.collection("rooms").document().id
         val timestamp = System.currentTimeMillis()
         val emptySeat = mapOf("userId" to null, "state" to "EMPTY", "isMuted" to false)
-        val seats = (0..7).associate { it.toString() to emptySeat }
+        val ownerSeat = mapOf("userId" to ownerId, "state" to "OCCUPIED", "isMuted" to false)
+        val seats = (0..7).associate { i ->
+            i.toString() to if (i == 0) ownerSeat else emptySeat
+        }
         val roomData = mapOf(
             "id" to roomId,
             "name" to name,
@@ -94,7 +97,7 @@ class RoomRepositoryImpl(
             "requireApproval" to false,
             "firstJoinTimestamps" to emptyMap<String, Any>(),
             "allTimeHostIds" to emptyList<String>(),
-            "allTimeSeatUserIds" to emptyList<String>(),
+            "allTimeSeatUserIds" to listOf(ownerId),
         )
         firestore.document("rooms/$roomId").set(roomData).await()
         firestore.document("users/$ownerId").update("currentRoomId", roomId).await()

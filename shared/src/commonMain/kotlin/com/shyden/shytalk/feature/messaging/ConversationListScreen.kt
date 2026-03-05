@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Close
@@ -24,6 +26,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationListScreen(
     onNavigateToChat: (String) -> Unit,
@@ -97,109 +101,116 @@ fun ConversationListScreen(
         } else {
             val conversations = viewModel.getFilteredConversations()
 
-            if (conversations.isEmpty()) {
-                // Empty state
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("conversationList_emptyState"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = { viewModel.refreshConversations() },
+                modifier = Modifier.weight(1f)
+            ) {
+                if (conversations.isEmpty()) {
+                    // Empty state
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .testTag("conversationList_emptyState"),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Chat,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Text(
-                            text = if (uiState.searchQuery.isNotBlank()) "No matches found" else "No messages yet",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (uiState.searchQuery.isBlank()) {
-                            Text(
-                                text = "Start a conversation from someone's\nprofile or user card in a room",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                textAlign = TextAlign.Center
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
+                            Text(
+                                text = if (uiState.searchQuery.isNotBlank()) "No matches found" else "No messages yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (uiState.searchQuery.isBlank()) {
+                                Text(
+                                    text = "Start a conversation from someone's\nprofile or user card in a room",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
-                }
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(
-                        items = conversations,
-                        key = { it.conversation.conversationId }
-                    ) { conversationWithUser ->
-                        val cId = conversationWithUser.conversation.conversationId
-                        Box {
-                            val navigateAction = {
-                                viewModel.markConversationRead(cId)
-                                if (conversationWithUser.isGroup) {
-                                    onNavigateToGroupChat(cId)
-                                } else {
-                                    val otherUserId = conversationWithUser.conversation.otherUserId(viewModel.currentUserId)
-                                    if (otherUserId != null) onNavigateToChat(otherUserId)
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(
+                            items = conversations,
+                            key = { it.conversation.conversationId }
+                        ) { conversationWithUser ->
+                            val cId = conversationWithUser.conversation.conversationId
+                            Box {
+                                val navigateAction = {
+                                    viewModel.markConversationRead(cId)
+                                    if (conversationWithUser.isGroup) {
+                                        onNavigateToGroupChat(cId)
+                                    } else {
+                                        val otherUserId = conversationWithUser.conversation.otherUserId(viewModel.currentUserId)
+                                        if (otherUserId != null) onNavigateToChat(otherUserId)
+                                    }
                                 }
-                            }
 
-                            ConversationListItem(
-                                otherUser = conversationWithUser.otherUser,
-                                lastMessageText = conversationWithUser.conversation.lastMessage?.text,
-                                lastMessageType = conversationWithUser.conversation.lastMessage?.type,
-                                lastMessageAt = conversationWithUser.conversation.lastMessageAt,
-                                unreadCount = conversationWithUser.settings?.unreadCount ?: 0,
-                                isMuted = conversationWithUser.settings?.isMuted == true,
-                                isPinned = conversationWithUser.settings?.isPinned == true,
-                                onClick = { navigateAction() },
-                                isGroup = conversationWithUser.isGroup,
-                                groupName = conversationWithUser.groupName,
-                                groupPhotoUrl = conversationWithUser.groupPhotoUrl,
-                                currentUserRole = if (conversationWithUser.isGroup) {
-                                    conversationWithUser.conversation.roleOf(viewModel.currentUserId)
-                                } else {
-                                    com.shyden.shytalk.core.model.GroupRole.MEMBER
-                                },
-                                aliases = uiState.aliases,
-                                modifier = Modifier.combinedClickable(
+                                ConversationListItem(
+                                    otherUser = conversationWithUser.otherUser,
+                                    lastMessageText = conversationWithUser.conversation.lastMessage?.text,
+                                    lastMessageType = conversationWithUser.conversation.lastMessage?.type,
+                                    lastMessageAt = conversationWithUser.conversation.lastMessageAt,
+                                    unreadCount = conversationWithUser.settings?.unreadCount ?: 0,
+                                    isMuted = conversationWithUser.settings?.isMuted == true,
+                                    isPinned = conversationWithUser.settings?.isPinned == true,
                                     onClick = { navigateAction() },
-                                    onLongClick = {
-                                        contextMenuConversationId = cId
-                                    }
-                                )
-                            )
-
-                            // Context menu
-                            DropdownMenu(
-                                expanded = contextMenuConversationId == cId,
-                                onDismissRequest = { contextMenuConversationId = null },
-                                offset = DpOffset(x = 200.dp, y = 0.dp)
-                            ) {
-                                val isPinned = conversationWithUser.settings?.isPinned == true
-                                DropdownMenuItem(
-                                    text = { Text(if (isPinned) "Unpin" else "Pin") },
-                                    onClick = {
-                                        contextMenuConversationId = null
-                                        viewModel.pinConversation(cId)
-                                    }
-                                )
-                                if (!conversationWithUser.isGroup) {
-                                    DropdownMenuItem(
-                                        text = { Text("Delete Conversation") },
-                                        onClick = {
-                                            contextMenuConversationId = null
-                                            showDeleteConfirm = cId
+                                    isGroup = conversationWithUser.isGroup,
+                                    groupName = conversationWithUser.groupName,
+                                    groupPhotoUrl = conversationWithUser.groupPhotoUrl,
+                                    currentUserRole = if (conversationWithUser.isGroup) {
+                                        conversationWithUser.conversation.roleOf(viewModel.currentUserId)
+                                    } else {
+                                        com.shyden.shytalk.core.model.GroupRole.MEMBER
+                                    },
+                                    aliases = uiState.aliases,
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { navigateAction() },
+                                        onLongClick = {
+                                            contextMenuConversationId = cId
                                         }
                                     )
+                                )
+
+                                // Context menu
+                                DropdownMenu(
+                                    expanded = contextMenuConversationId == cId,
+                                    onDismissRequest = { contextMenuConversationId = null },
+                                    offset = DpOffset(x = 200.dp, y = 0.dp)
+                                ) {
+                                    val isPinned = conversationWithUser.settings?.isPinned == true
+                                    DropdownMenuItem(
+                                        text = { Text(if (isPinned) "Unpin" else "Pin") },
+                                        onClick = {
+                                            contextMenuConversationId = null
+                                            viewModel.pinConversation(cId)
+                                        }
+                                    )
+                                    if (!conversationWithUser.isGroup) {
+                                        DropdownMenuItem(
+                                            text = { Text("Delete Conversation") },
+                                            onClick = {
+                                                contextMenuConversationId = null
+                                                showDeleteConfirm = cId
+                                            }
+                                        )
+                                    }
                                 }
                             }
+                            HorizontalDivider(modifier = Modifier.padding(start = 80.dp))
                         }
-                        HorizontalDivider(modifier = Modifier.padding(start = 80.dp))
                     }
                 }
             }

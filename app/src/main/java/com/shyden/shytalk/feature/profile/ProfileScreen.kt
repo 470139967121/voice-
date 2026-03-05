@@ -63,6 +63,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -285,6 +286,8 @@ fun ProfileScreen(
                 onNavigateToWallet = onNavigateToWallet,
                 onTestPurchaseSuperShy = onTestPurchaseSuperShy,
                 onClaimTrial = { viewModel.claimSuperShyTrial() },
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = { viewModel.refreshProfile() },
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier.fillMaxSize()
             )
@@ -337,6 +340,8 @@ fun ProfileScreen(
                 onNavigateToWallet = onNavigateToWallet,
                 onTestPurchaseSuperShy = onTestPurchaseSuperShy,
                 onClaimTrial = { viewModel.claimSuperShyTrial() },
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = { viewModel.refreshProfile() },
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxSize()
@@ -483,6 +488,8 @@ private fun ProfileContent(
     onNavigateToWallet: (() -> Unit)? = null,
     onTestPurchaseSuperShy: ((String) -> Unit)? = null,
     onClaimTrial: (() -> Unit)? = null,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -602,8 +609,13 @@ private fun ProfileContent(
     val giftingViewModel: GiftingViewModel? = if (isOwn) koinInject() else null
     val giftingState = giftingViewModel?.uiState?.collectAsStateWithLifecycle()
 
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize()
+    ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
@@ -1239,6 +1251,7 @@ private fun ProfileContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
     }
 
     // Super Shy bottom sheet

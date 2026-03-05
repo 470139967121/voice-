@@ -493,6 +493,78 @@ function registerAdminCleanupRoutes(router) {
 
     return json({ success: true, summary, totalDeleted });
   });
+
+  // ── Clean up destroyed user profiles ──
+  // Identifies user docs that were corrupted by the batchUpdateOp bug
+  // (missing createdAt = never properly created) and deletes them.
+  router.post('/api/cleanup/destroyed-users', async (request, env) => {
+    const adminCheck = requireAdmin(request);
+    if (adminCheck) return adminCheck;
+
+    const users = await queryCollection(env, 'users', { limit: 5000 });
+
+    // A user is "destroyed" if they're missing createdAt (always set on real creation)
+    const destroyed = users.filter(u => !u.createdAt);
+    const intact = users.length - destroyed.length;
+
+    if (destroyed.length === 0) {
+      return json({ success: true, destroyed: 0, intact, message: 'No destroyed users found' });
+    }
+
+    const writes = destroyed.map(u => batchDeleteOp(env, `users/${u.id}`));
+    for (let i = 0; i < writes.length; i += 500) {
+      await batchWrite(env, writes.slice(i, i + 500));
+    }
+
+    return json({
+      success: true,
+      destroyed: destroyed.length,
+      intact,
+      deletedUids: destroyed.map(u => u.id),
+    });
+  });
+
+  // ── Delete all device bindings ──
+  // Allows destroyed users to re-register on the same device.
+  router.post('/api/cleanup/all-device-bindings', async (request, env) => {
+    const adminCheck = requireAdmin(request);
+    if (adminCheck) return adminCheck;
+
+    const bindings = await queryCollection(env, 'deviceBindings', { limit: 5000 });
+
+    if (bindings.length === 0) {
+      return json({ success: true, deleted: 0, message: 'No device bindings found' });
+    }
+
+    const writes = bindings.map(b => batchDeleteOp(env, `deviceBindings/${b.id}`));
+    for (let i = 0; i < writes.length; i += 500) {
+      await batchWrite(env, writes.slice(i, i + 500));
+    }
+
+    return json({ success: true, deleted: bindings.length });
+  });
+
+  // ── Delete device binding for a specific user ──
+  router.post('/api/cleanup/device-binding/:uid', async (request, env, params) => {
+    const adminCheck = requireAdmin(request);
+    if (adminCheck) return adminCheck;
+
+    const uid = params.uid;
+    // Find bindings where userId matches
+    const bindings = await queryCollection(env, 'deviceBindings', {
+      where: fieldFilter('userId', 'EQUAL', uid),
+      limit: 50,
+    });
+
+    if (bindings.length === 0) {
+      return json({ success: true, deleted: 0, message: 'No device bindings for this user' });
+    }
+
+    const writes = bindings.map(b => batchDeleteOp(env, `deviceBindings/${b.id}`));
+    await batchWrite(env, writes);
+
+    return json({ success: true, deleted: bindings.length });
+  });
 }
 
 /**

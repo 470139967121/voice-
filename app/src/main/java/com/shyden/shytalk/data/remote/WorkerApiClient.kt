@@ -50,6 +50,19 @@ class WorkerApiClient(
             Request.Builder().url(url).header("Authorization", "Bearer $token").get().build()
         }
 
+    /** GET without authentication — for public endpoints like /api/health. */
+    suspend fun getPublic(path: String): JSONObject {
+        val url = "$baseUrl$path"
+        val request = Request.Builder().url(url).get().build()
+        val response = httpClient.newCall(request).executeAsync()
+        val bodyStr = response.use { it.body?.string() ?: "{}" }
+        if (!response.isSuccessful) {
+            val error = try { JSONObject(bodyStr).optString("error", "Request failed") } catch (_: Exception) { "HTTP ${response.code}" }
+            throw ApiException(response.code, error)
+        }
+        return JSONObject(bodyStr)
+    }
+
     suspend fun getArray(path: String): JSONArray =
         executeArrayWithRetry(path) { url, token ->
             Request.Builder().url(url).header("Authorization", "Bearer $token").get().build()

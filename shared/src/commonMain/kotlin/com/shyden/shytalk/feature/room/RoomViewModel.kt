@@ -599,6 +599,7 @@ class RoomViewModel(
         loadSeatUsers(room)
         loadParticipantUsers(room)
         observeRemoteUserChanges(collectRoomUserIds(room, _uiState.value.currentUserId))
+        closeOwnerAwayIfSeatsEmpty(room)
         handleOwnerAwayCountdown(room)
         refilterPendingRequests()
         handleGiftEvent(room)
@@ -850,6 +851,18 @@ class RoomViewModel(
                     )
                 }
             }
+        }
+    }
+
+    /** Close OWNER_AWAY room immediately once all non-owner seats are empty. */
+    private fun closeOwnerAwayIfSeatsEmpty(room: ChatRoom) {
+        if (room.state != RoomState.OWNER_AWAY) return
+        if (room.hasSeatedNonOwners()) return
+
+        logD(TAG, "closeOwnerAwayIfSeatsEmpty: no seated non-owners → closeRoom")
+        ownerAwayCountdownJob?.cancel()
+        viewModelScope.launch {
+            roomRepository.closeRoom(roomId)
         }
     }
 
@@ -1256,6 +1269,20 @@ class RoomViewModel(
                     // owner stays in participants during OWNER_AWAY for reconnection
                     if (room.ownerId != userId) {
                         roomRepository.leaveRoom(roomId, userId)
+
+                        // If no non-owner seats remain in an OWNER_AWAY room, close it —
+                        // don't count unseated visitors, only seated users matter.
+                        if (room.state == RoomState.OWNER_AWAY) {
+                            val othersStillSeated = room.seats.any { (_, seat) ->
+                                seat.userId != null && seat.userId != userId
+                                    && seat.userId != room.ownerId
+                                    && seat.state == SeatState.OCCUPIED
+                            }
+                            if (!othersStillSeated) {
+                                logD(TAG, "leaveRoom: no seated non-owners left in OWNER_AWAY room → closeRoom")
+                                roomRepository.closeRoom(roomId)
+                            }
+                        }
                     }
                 } finally {
                     roomLifecycleManager.markLeaveCompleted(roomId)

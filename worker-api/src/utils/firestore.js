@@ -372,6 +372,9 @@ function batchUpdateOp(env, path, data) {
       name: `projects/${projectId}/databases/(default)/documents/${path}`,
       fields: toFirestoreFields(data),
     },
+    updateMask: {
+      fieldPaths: Object.keys(data),
+    },
   };
 }
 

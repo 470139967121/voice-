@@ -31,6 +31,7 @@ data class ConversationWithUser(
 data class ConversationListUiState(
     val conversations: List<ConversationWithUser> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val totalUnreadCount: Long = 0,
     val searchQuery: String = "",
@@ -263,6 +264,17 @@ class ConversationListViewModel(
         // Persist to backend so re-fetches don't revert the local state
         viewModelScope.launch {
             pmRepository.resetUnreadCount(conversationId, currentUserId)
+        }
+    }
+
+    fun refreshConversations() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            userCache.clear()
+            settingsCache.clear()
+            observeConversations()
+            kotlinx.coroutines.delay(500)
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 

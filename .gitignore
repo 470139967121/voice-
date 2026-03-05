@@ -41,3 +41,6 @@ scripts/migrate-*.mjs
 
 # Archived Cloud Functions (deleted from project)
 functions-archive/
+
+# R2 local backups
+backups/

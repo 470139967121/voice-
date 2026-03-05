@@ -112,6 +112,9 @@ function registerUserRoutes(router) {
   });
 
   // ── Generate unique numeric ID ──
+  // IDs are always 8-digit numbers starting at 10000000.
+  const MIN_UNIQUE_ID = 10000000;
+
   router.post('/api/users/:uid/unique-id', async (request, env, params) => {
     if (request.auth.uid !== params.uid) {
       return jsonError('Cannot generate ID for another user', 403);
@@ -120,14 +123,20 @@ function registerUserRoutes(router) {
     // Return existing ID if already assigned
     const user = await getDoc(env, `users/${params.uid}`);
     const existingId = user?.uniqueId ?? user?.unique_id ?? null;
-    if (existingId) {
+    if (existingId && existingId >= MIN_UNIQUE_ID) {
       return json({ uniqueId: existingId });
     }
 
     // Atomic increment of the global counter
-    const newId = await incrementField(env, 'counters/uniqueId', 'value', 1);
+    let newId = await incrementField(env, 'counters/uniqueId', 'value', 1);
     if (newId === null) {
       return jsonError('Failed to generate unique ID', 500);
+    }
+
+    // Guard: if counter was corrupted/reset, fix it to start at MIN_UNIQUE_ID
+    if (newId < MIN_UNIQUE_ID) {
+      await setDoc(env, 'counters/uniqueId', { value: MIN_UNIQUE_ID });
+      newId = MIN_UNIQUE_ID;
     }
 
     await updateDoc(env, `users/${params.uid}`, { uniqueId: newId });

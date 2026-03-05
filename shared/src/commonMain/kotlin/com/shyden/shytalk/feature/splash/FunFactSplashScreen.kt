@@ -1,7 +1,5 @@
 package com.shyden.shytalk.feature.splash
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -62,16 +60,12 @@ fun FunFactSplashScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            AnimatedVisibility(
-                visible = warmUpComplete,
-                enter = fadeIn()
+            Button(
+                onClick = onContinue,
+                enabled = warmUpComplete,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Button(
-                    onClick = onContinue,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Continue")
-                }
+                Text(if (warmUpComplete) "Continue" else "Getting ready...")
             }
         }
     }

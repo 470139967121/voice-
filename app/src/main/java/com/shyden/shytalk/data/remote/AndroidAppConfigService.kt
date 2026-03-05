@@ -27,7 +27,7 @@ class AndroidAppConfigService(
 
     override suspend fun checkBackendHealth(): Resource<BackendHealthStatus> {
         return try {
-            val json = api.get("/api/health")
+            val json = api.getPublic("/api/health")
             val data = json.toMap()
             Resource.Success(BackendHealthStatus(
                 status = data["status"] as? String ?: "ok",

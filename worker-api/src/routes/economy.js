@@ -372,60 +372,85 @@ function registerEconomyRoutes(router) {
     const newBalance = shyCoins - cost;
     const timestamp = now();
 
-    // Update user
-    await updateDoc(env, `users/${uid}`, {
-      shyCoins: newBalance,
-      pityCounter: pity,
-      luckScore: luck,
-      guaranteedNextPullGiftId: null,
-    });
-
-    // Add gifts to backpack
+    // ── Aggregate duplicate gifts so each backpack doc is written once ──
+    const giftCounts = {};
     for (const gift of results) {
-      const bpDoc = await getDoc(env, `users/${uid}/backpack/${gift.id}`);
+      giftCounts[gift.id] = (giftCounts[gift.id] || 0) + 1;
+    }
+    const uniqueGiftIds = Object.keys(giftCounts);
+
+    // Fetch existing backpack docs in parallel
+    const existingDocs = await Promise.all(
+      uniqueGiftIds.map(gid => getDoc(env, `users/${uid}/backpack/${gid}`))
+    );
+
+    // Build batch writes for backpack + user update in one atomic operation
+    const writes = [];
+    for (let i = 0; i < uniqueGiftIds.length; i++) {
+      const gid = uniqueGiftIds[i];
+      const gift = results.find(g => g.id === gid);
+      const bpDoc = existingDocs[i];
       const currentQty = bpDoc?.quantity || 0;
       const expiresAt = gift.expiresAfterDays
         ? timestamp + gift.expiresAfterDays * 86400000
         : bpDoc?.expiresAt || null;
-      await setDoc(env, `users/${uid}/backpack/${gift.id}`, {
-        giftId: gift.id,
-        quantity: currentQty + 1,
+      writes.push(batchUpdateOp(env, `users/${uid}/backpack/${gid}`, {
+        giftId: gid,
+        quantity: currentQty + giftCounts[gid],
         lastAcquired: timestamp,
         expiresAt,
-        // Denormalized gift metadata for display
         giftName: gift.name,
         coinValue: gift.coinValue,
         iconUrl: gift.iconUrl || '',
-      });
+      }));
     }
 
-    // Transaction record
-    const gachaTxId = generateId();
-    await writeTransaction(env, uid, gachaTxId, {
-      type: 'GACHA_PULL',
-      amount: -cost,
-      currency: 'COINS',
-      balanceAfter: newBalance,
-      pullCount,
-      details: results.map(g => g.name).join(', '),
-      guaranteed: !!guaranteedFirstPull,
-    });
+    // Include coin deduction in the same batch
+    writes.push(batchUpdateOp(env, `users/${uid}`, {
+      shyCoins: newBalance,
+      pityCounter: pity,
+      luckScore: luck,
+      guaranteedNextPullGiftId: null,
+    }));
 
-    // Broadcast qualifying wins
-    const winThreshold = config.broadcastWinThreshold;
-    for (const gift of results) {
-      if (gift.coinValue >= winThreshold) {
-        await addBroadcast(env, {
-          type: 'GACHA_WIN',
-          senderName: userField(user, 'displayName', 'display_name') || '',
-          senderPhotoUrl: userField(user, 'profilePhotoUrl', 'profile_photo_url'),
-          recipientName: '',
-          giftName: gift.name,
-          giftIconUrl: gift.iconUrl || '',
-          giftCoinValue: gift.coinValue,
-        });
-        break; // one broadcast per pull session
+    // Execute atomically — all or nothing
+    await batchWrite(env, writes);
+
+    // Transaction record (best-effort — coins already deducted)
+    try {
+      const gachaTxId = generateId();
+      await writeTransaction(env, uid, gachaTxId, {
+        type: 'GACHA_PULL',
+        amount: -cost,
+        currency: 'COINS',
+        balanceAfter: newBalance,
+        pullCount,
+        details: results.map(g => g.name).join(', '),
+        guaranteed: !!guaranteedFirstPull,
+      });
+    } catch (err) {
+      console.error(`[GACHA] Failed to write transaction for ${uid}: ${err.message}`);
+    }
+
+    // Broadcast qualifying wins (best-effort)
+    try {
+      const winThreshold = config.broadcastWinThreshold;
+      for (const gift of results) {
+        if (gift.coinValue >= winThreshold) {
+          await addBroadcast(env, {
+            type: 'GACHA_WIN',
+            senderName: userField(user, 'displayName', 'display_name') || '',
+            senderPhotoUrl: userField(user, 'profilePhotoUrl', 'profile_photo_url'),
+            recipientName: '',
+            giftName: gift.name,
+            giftIconUrl: gift.iconUrl || '',
+            giftCoinValue: gift.coinValue,
+          });
+          break; // one broadcast per pull session
+        }
       }
+    } catch (err) {
+      console.error(`[GACHA] Failed to broadcast win for ${uid}: ${err.message}`);
     }
 
     return json({

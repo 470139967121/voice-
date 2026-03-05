@@ -61,10 +61,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material3.Icon
 import com.shyden.shytalk.core.util.Constants
+import com.shyden.shytalk.ui.theme.DarkColorScheme
 import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.feature.room.components.ChatPanel
+import com.shyden.shytalk.feature.room.components.RoomStarfieldBackground
 import com.shyden.shytalk.feature.room.components.OwnerAwayBanner
 import com.shyden.shytalk.feature.room.components.ParticipantInfo
 import com.shyden.shytalk.feature.room.components.ParticipantListPanel
@@ -568,11 +570,11 @@ fun RoomScreen(
         uiState.allKnownUsers
     }
 
+    MaterialTheme(colorScheme = DarkColorScheme) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+        modifier = Modifier.fillMaxSize()
     ) {
+        RoomStarfieldBackground(modifier = Modifier.fillMaxSize())
         Scaffold(
             containerColor = Color.Transparent,
             snackbarHost = {
@@ -1211,5 +1213,6 @@ fun RoomScreen(
             )
         }
         }
+    }
     }
 }
