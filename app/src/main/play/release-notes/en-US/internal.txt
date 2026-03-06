@@ -1,12 +1,11 @@
-v0.52 — API Migration & Presence Reliability
+v0.52 — API Migration & Presence Fixes
 
-- Migrated API to Express.js on Oracle Cloud (faster, no quota limits)
-- Presence timeout increased 15s→30s to reduce false disconnects
-- Auto-reconnect presence after network blips (RTDB .info/connected)
+- Migrated API to Express.js on Oracle Cloud (no quota limits)
+- Presence timeout 15s→30s, auto-reconnect on network blips
 - Re-check presence before evicting users from rooms
-- Economy config fallback defaults when Firestore doc missing
-- Fixed stalkerCount parsing crash (Int/Double cast)
+- Economy config fallback when Firestore doc missing
+- Fixed stalkerCount parsing crash
 - CLOSED rooms filtered from home screen
-- Seat request panel: approved requests vanish immediately (no flicker)
+- Approved seat requests vanish immediately
 - Follow/unfollow now atomic (batch transforms)
-- Admin: clear all transactions, auth debug endpoint
+- Admin: clear all transactions endpoint
