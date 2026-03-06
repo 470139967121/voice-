@@ -201,6 +201,8 @@ class HomeViewModel(
         }
 
         val filtered = allRooms.filter { room ->
+            // Exclude closed rooms (safety net — query should already filter these)
+            if (room.state == com.shyden.shytalk.core.model.RoomState.CLOSED) return@filter false
             if (room.ownerId in myBlockedUserIds) return@filter false
             val ownerUser = userCache[room.ownerId]
             if (ownerUser != null && userId in ownerUser.blockedUserIds) return@filter false

@@ -222,9 +222,9 @@ class DateUtilsTest {
 
     @Test
     fun `formatSuspensionEnd - future date returns days hours minutes breakdown`() {
-        // 2 days, 3 hours, 15 minutes from now
+        // 2 days, 3 hours, 15 minutes from now (add 30s buffer to avoid rounding down)
         val futureMs = System.currentTimeMillis() +
-            (2 * 24 * 60 * 60_000L) + (3 * 60 * 60_000L) + (15 * 60_000L)
+            (2 * 24 * 60 * 60_000L) + (3 * 60 * 60_000L) + (15 * 60_000L) + 30_000L
         val result = formatSuspensionEnd(futureMs)
         assertTrue(result.contains("2 days"))
         assertTrue(result.contains("3 hours"))

@@ -1,0 +1,3 @@
+api.shytalk.shyden.co.uk {
+    reverse_proxy localhost:3000
+}

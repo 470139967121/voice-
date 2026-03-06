@@ -130,6 +130,36 @@ function registerAdminUserRoutes(router) {
     return json(user);
   });
 
+  // ── Debug: raw Firebase Auth lookup (temporary — remove after debugging) ──
+  router.get('/api/user/:uid/auth-debug', async (request, env, params) => {
+    const adminCheck = requireAdmin(request);
+    if (adminCheck) return adminCheck;
+
+    try {
+      const accessToken = await getAccessToken(env);
+      const projectId = env.FIREBASE_PROJECT_ID;
+      const resp = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:lookup`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ localId: [params.uid] }),
+        }
+      );
+      const text = await resp.text();
+      return json({
+        status: resp.status,
+        projectId,
+        body: JSON.parse(text),
+      });
+    } catch (err) {
+      return json({ error: err.message });
+    }
+  });
+
   // ── Update user fields (admin — whitelisted fields) ──
   router.patch('/api/user/:uid', async (request, env, params) => {
     const adminCheck = requireAdmin(request);

@@ -2024,6 +2024,37 @@ class RoomViewModelTest {
         assertEquals("req-valid", viewModel.uiState.value.pendingRequestsForPanel[0].requestId)
     }
 
+    @Test
+    fun `pendingRequests - locally approved request is immediately hidden`() = roomTest {
+        viewModel = createViewModel()
+        val attendee = "attendee-1"
+        emitRoomAsOwner(TestData.createTestRoom(
+            ownerId = currentUserId,
+            participantIds = setOf(currentUserId, attendee)
+        ))
+        advanceUntilIdle()
+
+        val request = TestData.createTestSeatRequest(
+            requestId = "req-approve",
+            userId = attendee,
+            userName = "Attendee",
+            seatIndex = 3
+        )
+        pendingRequestsFlow.value = listOf(request)
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.pendingRequestsForPanel.size)
+
+        // Approve the request — it should vanish from the panel immediately
+        coEvery {
+            seatRequestRepository.approveRequest("room-1", "req-approve", currentUserId)
+        } returns Resource.Success(request.copy(status = SeatRequestStatus.APPROVED))
+
+        viewModel.approveRequestFromNotification(request)
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.pendingRequestsForPanel.size)
+    }
+
     // ===== addHost / removeHost from RoomViewModel (v0.18 feature) =====
 
     @Test

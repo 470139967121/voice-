@@ -194,6 +194,20 @@ class UserFromMapTest {
     }
 
     @Test
+    fun `fromMap parses stalkerCount from Int`() {
+        val map = mapOf<String, Any?>("stalkerCount" to 7)
+        val user = User.fromMap(map, "uid")
+        assertEquals(7L, user.stalkerCount)
+    }
+
+    @Test
+    fun `fromMap parses stalkerCount from Double`() {
+        val map = mapOf<String, Any?>("stalkerCount" to 5.0)
+        val user = User.fromMap(map, "uid")
+        assertEquals(5L, user.stalkerCount)
+    }
+
+    @Test
     fun `fromMap parses newStalkerCount`() {
         val map = mapOf<String, Any?>("newStalkerCount" to 3L)
         val user = User.fromMap(map, "uid")
@@ -204,6 +218,20 @@ class UserFromMapTest {
     fun `fromMap defaults newStalkerCount to 0 when missing`() {
         val user = User.fromMap(emptyMap(), "uid")
         assertEquals(0L, user.newStalkerCount)
+    }
+
+    @Test
+    fun `fromMap parses newStalkerCount from Int`() {
+        val map = mapOf<String, Any?>("newStalkerCount" to 2)
+        val user = User.fromMap(map, "uid")
+        assertEquals(2L, user.newStalkerCount)
+    }
+
+    @Test
+    fun `fromMap parses newStalkerCount from Double`() {
+        val map = mapOf<String, Any?>("newStalkerCount" to 4.0)
+        val user = User.fromMap(map, "uid")
+        assertEquals(4L, user.newStalkerCount)
     }
 
     @Test

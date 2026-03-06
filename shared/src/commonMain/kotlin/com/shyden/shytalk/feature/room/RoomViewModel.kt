@@ -163,6 +163,7 @@ class RoomViewModel(
     private val processedRequestIds = mutableSetOf<String>()
     private val processedApprovalIds = mutableSetOf<String>()
     private var rawPendingRequests: List<SeatRequest> = emptyList()
+    private val locallyApprovedRequestIds = mutableSetOf<String>()
 
     init {
         val userId = authRepository.currentUserId ?: ""
@@ -849,12 +850,15 @@ class RoomViewModel(
             // Join message (independent)
             if (userName.isNotEmpty()) {
                 launch {
-                    messageRepository.sendJoinMessage(
+                    val result = messageRepository.sendJoinMessage(
                         roomId,
                         userId,
                         userName,
                         "$userName joined the room"
                     )
+                    if (result is Resource.Error) {
+                        logE(TAG, "sendJoinMessage failed: ${result.message}")
+                    }
                 }
             }
         }
@@ -1703,8 +1707,11 @@ class RoomViewModel(
         val validRequests = rawPendingRequests.filter { req ->
             val alreadySeated = room?.findUserSeat(req.userId) != null
             val leftRoom = room != null && req.userId !in room.participantIds
-            !alreadySeated && !leftRoom
+            val locallyApproved = req.requestId in locallyApprovedRequestIds
+            !alreadySeated && !leftRoom && !locallyApproved
         }
+        val current = _uiState.value.pendingRequestsForPanel
+        if (validRequests.map { it.requestId } == current.map { it.requestId }) return
         _uiState.update { it.copy(pendingRequestsForPanel = validRequests) }
 
         val role = _uiState.value.currentRole
@@ -1776,6 +1783,10 @@ class RoomViewModel(
             val createdAtMs = request.createdAt
             val nowMs = currentTimeMillis()
             val delayMs = nowMs - createdAtMs
+
+            // Immediately exclude this request from the pending list to avoid flicker
+            locallyApprovedRequestIds.add(request.requestId)
+            refilterPendingRequests()
 
             when (val result = seatRequestRepository.approveRequest(
                 roomId, request.requestId, _uiState.value.currentUserId

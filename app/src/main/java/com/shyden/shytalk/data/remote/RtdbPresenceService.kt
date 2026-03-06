@@ -42,6 +42,7 @@ class RtdbPresenceService(
 
     private var presenceListener: ValueEventListener? = null
     private var eventsListener: ValueEventListener? = null
+    private var connectedListener: ValueEventListener? = null
 
     private val presenceFlow = MutableStateFlow<Set<String>>(emptySet())
     private val _roomEvents = MutableSharedFlow<RoomEvent>(extraBufferCapacity = 16)
@@ -62,6 +63,22 @@ class RtdbPresenceService(
         val presenceRef = db.getReference("rooms/$roomId/presence/$userId")
         presenceRef.setValue(true)
         presenceRef.onDisconnect().removeValue()
+
+        // Re-establish presence on RTDB reconnect (onDisconnect may have fired during a blip)
+        val connectedRef = db.getReference(".info/connected")
+        connectedListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val connected = snapshot.getValue(Boolean::class.java) ?: false
+                if (connected && currentRoomId == roomId && currentUserId == userId) {
+                    presenceRef.setValue(true)
+                    presenceRef.onDisconnect().removeValue()
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {
+                Log.w(TAG, "Connected listener cancelled: ${error.message}")
+            }
+        }
+        connectedRef.addValueEventListener(connectedListener!!)
 
         // Listen to all presence in this room
         val roomPresenceRef = db.getReference("rooms/$roomId/presence")
@@ -139,9 +156,13 @@ class RtdbPresenceService(
         eventsListener?.let {
             db.getReference("rooms/$roomId/events/lastEvent").removeEventListener(it)
         }
+        connectedListener?.let {
+            db.getReference(".info/connected").removeEventListener(it)
+        }
 
         presenceListener = null
         eventsListener = null
+        connectedListener = null
         currentRoomId = null
         currentUserId = null
         presenceFlow.value = emptySet()
@@ -151,6 +172,16 @@ class RtdbPresenceService(
     }
 
     override fun observeRoomPresence(roomId: String): Flow<Set<String>> = presenceFlow
+
+    override suspend fun isUserPresent(roomId: String, userId: String): Boolean {
+        return try {
+            val snapshot = db.getReference("rooms/$roomId/presence/$userId").get().await()
+            snapshot.exists() && snapshot.getValue(Boolean::class.java) == true
+        } catch (e: Exception) {
+            Log.w(TAG, "isUserPresent check failed: ${e.message}")
+            false
+        }
+    }
 
     /**
      * Detect owner absence from the presence set and call the Worker API.

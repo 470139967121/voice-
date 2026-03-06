@@ -5,6 +5,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.shyden.shytalk.core.model.CoinPackage
 import com.shyden.shytalk.core.model.DailyRewardResult
 import com.shyden.shytalk.core.model.EconomyConfig
+import com.shyden.shytalk.core.model.MilestoneReward
 import com.shyden.shytalk.core.model.GachaResult
 import com.shyden.shytalk.core.model.Transaction
 import com.shyden.shytalk.core.util.Resource
@@ -36,13 +37,36 @@ class EconomyRepositoryImpl(
         awaitClose { listener.remove() }
     }
 
-    // Real-time economy config from Firestore
+    // Real-time economy config from Firestore (falls back to defaults if doc missing)
     override fun observeEconomyConfig(): Flow<EconomyConfig> = callbackFlow {
+        val defaultConfig = EconomyConfig(
+            pullCosts = mapOf(1 to 10, 10 to 100, 100 to 1000),
+            dailyBase = 50,
+            beanConversionRate = 0.6,
+            broadcastSendThreshold = 0,
+            broadcastWinThreshold = 5000,
+            milestoneRewards = mapOf(
+                7 to MilestoneReward(amount = 100),
+                14 to MilestoneReward(amount = 200),
+                30 to MilestoneReward(amount = 500),
+                60 to MilestoneReward(amount = 1000),
+                90 to MilestoneReward(amount = 2000),
+            ),
+        )
         val listener = firestore.document("config/economy")
             .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
-                val data = snapshot.data ?: return@addSnapshotListener
-                trySend(EconomyConfig.fromMap(data))
+                if (error != null || snapshot == null) return@addSnapshotListener
+                if (!snapshot.exists() || snapshot.data == null) {
+                    trySend(defaultConfig)
+                    return@addSnapshotListener
+                }
+                val config = EconomyConfig.fromMap(snapshot.data!!)
+                // Fall back to defaults if pullCosts is empty
+                if (config.pullCosts.isEmpty()) {
+                    trySend(defaultConfig)
+                } else {
+                    trySend(config)
+                }
             }
         awaitClose { listener.remove() }
     }

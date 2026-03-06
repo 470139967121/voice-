@@ -454,6 +454,14 @@ class ActiveRoomManager(
                         graceTimers[userId] = scope.launch {
                             delay(Constants.PRESENCE_TIMEOUT_MS)
 
+                            // Re-check presence before taking action (avoids false positives from network blips)
+                            val stillAbsent = !presenceService.isUserPresent(roomId, userId)
+                            if (!stillAbsent) {
+                                graceTimers.remove(userId)
+                                emitDisconnectedIds()
+                                return@launch
+                            }
+
                             // Owner disconnect → transition to OWNER_AWAY instead of removing
                             val latestRoom = _activeRoom.value
                             if (userId == latestRoom?.ownerId && latestRoom.state == RoomState.ACTIVE) {

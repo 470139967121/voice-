@@ -10,5 +10,6 @@ class FakePresenceService : PresenceService {
     override fun setPresence(roomId: String, userId: String) { /* no-op */ }
     override fun removePresence() { /* no-op */ }
     override fun observeRoomPresence(roomId: String): Flow<Set<String>> = flowOf(emptySet())
+    override suspend fun isUserPresent(roomId: String, userId: String): Boolean = false
     override val roomEvents: Flow<RoomEvent> = MutableSharedFlow()
 }

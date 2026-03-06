@@ -29,15 +29,15 @@ deleted_classes = ["RoomDurableObject", "ConversationDurableObject"]
 # R2_SECRET_KEY             — for R2 S3-compatible API
 
 # ── Cron Triggers (Phase 8) ──────────────────────────────────────
-[triggers]
-crons = [
-  "0 3 * * SUN",  # archiveOldReports — Sunday 03:00 UTC
-  "0 4 * * *",    # cleanupOrphanedStorage — daily 04:00 UTC
-  "0 0 * * *",    # checkSubscriptionStatus + cleanExpiredBackpackItems — daily 00:00 UTC
-  # updateGiftRankings cron REMOVED — rankings now updated incrementally in economy.js
-  "*/5 * * * *",  # closeStaleOwnerAwayRooms — every 5 minutes
-  "0 2 * * *",    # backupUserProfiles + cleanupClosedRooms — daily 02:00 UTC
-]
+# ── Cron Triggers DISABLED — migrated to Express on Oracle Cloud ──
+# [triggers]
+# crons = [
+#   "0 3 * * SUN",  # archiveOldReports — Sunday 03:00 UTC
+#   "0 4 * * *",    # cleanupOrphanedStorage — daily 04:00 UTC
+#   "0 0 * * *",    # checkSubscriptionStatus + cleanExpiredBackpackItems — daily 00:00 UTC
+#   "*/5 * * * *",  # closeStaleOwnerAwayRooms — every 5 minutes
+#   "0 2 * * *",    # backupUserProfiles + cleanupClosedRooms — daily 02:00 UTC
+# ]
 
 # ── Environment ──────────────────────────────────────────────────
 [vars]

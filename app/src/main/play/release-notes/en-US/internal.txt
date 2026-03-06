@@ -1,9 +1,12 @@
-v0.51 — Economy & Admin Fixes
+v0.52 — API Migration & Presence Reliability
 
-- Fixed gacha pity not guaranteeing high-value gifts at max counter
-- Gacha spin results load instantly (removed delay)
-- Fixed admin coin/bean adjustments and guaranteed gift display
-- Admin panel: email, user type, and attributes display correctly
-- New maintenance: clear PMs, groups, rooms, broadcasts, audit logs
-- RESET ALL now requires backup before proceeding
-- Economy tab save errors resolved
+- Migrated API to Express.js on Oracle Cloud (faster, no quota limits)
+- Presence timeout increased 15s→30s to reduce false disconnects
+- Auto-reconnect presence after network blips (RTDB .info/connected)
+- Re-check presence before evicting users from rooms
+- Economy config fallback defaults when Firestore doc missing
+- Fixed stalkerCount parsing crash (Int/Double cast)
+- CLOSED rooms filtered from home screen
+- Seat request panel: approved requests vanish immediately (no flicker)
+- Follow/unfollow now atomic (batch transforms)
+- Admin: clear all transactions, auth debug endpoint
