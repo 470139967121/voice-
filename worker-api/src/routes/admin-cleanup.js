@@ -423,10 +423,12 @@ function registerAdminCleanupRoutes(router) {
         if (k) referencedKeys.add(k);
       }
 
-      // ── Private messages (IMAGE type) — batch to avoid timeout ──
-      for (const conv of convs) {
+      // ── Private messages (IMAGE type) — cap at 30 convs to stay within subrequest limits ──
+      const convsToScan = convs.slice(0, 30);
+      for (const conv of convsToScan) {
         const messages = await queryCollection(env, `conversations/${conv.id}/messages`, {
           where: fieldFilter('type', 'EQUAL', 'IMAGE'),
+          limit: 200,
         });
         for (const msg of messages) {
           const urls = msg.imageUrls ?? msg.image_urls;
@@ -439,11 +441,13 @@ function registerAdminCleanupRoutes(router) {
         }
       }
 
-      // ── Room messages (IMAGE type) ──
-      const rooms = await queryCollection(env, 'rooms', {});
-      for (const room of rooms) {
+      // ── Room messages (IMAGE type) — cap at 30 rooms ──
+      const rooms = await queryCollection(env, 'rooms', { limit: 200 });
+      const roomsToScan = rooms.slice(0, 30);
+      for (const room of roomsToScan) {
         const messages = await queryCollection(env, `rooms/${room.id}/messages`, {
           where: fieldFilter('type', 'EQUAL', 'IMAGE'),
+          limit: 200,
         });
         for (const msg of messages) {
           const urls = msg.imageUrls ?? msg.image_urls;
@@ -496,8 +500,9 @@ function registerAdminCleanupRoutes(router) {
         } while (cursor);
 
         const toDelete = allKeys.filter(k => !referencedKeys.has(k));
-        for (const key of toDelete) {
-          await env.R2_BUCKET.delete(key);
+        // Batch delete up to 1000 keys per call to stay within subrequest limits
+        for (let j = 0; j < toDelete.length; j += 1000) {
+          await env.R2_BUCKET.delete(toDelete.slice(j, j + 1000));
         }
 
         summary[folder.replace('/', '')] = { total: allKeys.length, deleted: toDelete.length };
@@ -684,18 +689,23 @@ function registerAdminCleanupRoutes(router) {
 
     const closedRooms = await queryCollection(env, 'rooms', {
       where: fieldFilter('state', 'EQUAL', 'CLOSED'),
-      limit: 5000,
+      limit: 200,
     });
 
     if (closedRooms.length === 0) {
       return json({ success: true, deleted: 0, message: 'No closed rooms found' });
     }
 
-    for (const room of closedRooms) {
-      await deleteRoom(env, room.id);
+    // Process in batches of 20 to stay within subrequest limits
+    let deleted = 0;
+    for (let i = 0; i < closedRooms.length; i += 20) {
+      const batch = closedRooms.slice(i, i + 20);
+      for (const room of batch) {
+        try { await deleteRoom(env, room.id); deleted++; } catch (_) {}
+      }
     }
 
-    return json({ success: true, deleted: closedRooms.length });
+    return json({ success: true, deleted, total: closedRooms.length });
   });
 
   // ── Delete all broadcasts ──
