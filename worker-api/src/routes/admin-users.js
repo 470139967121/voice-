@@ -36,7 +36,7 @@ const {
  * Look up a Firebase Auth user's email by UID.
  * Uses the Identity Toolkit REST API with service account credentials.
  */
-async function getFirebaseAuthEmail(env, uid) {
+async function getFirebaseAuthInfo(env, uid) {
   try {
     const accessToken = await getAccessToken(env);
     const projectId = env.FIREBASE_PROJECT_ID;
@@ -54,15 +54,25 @@ async function getFirebaseAuthEmail(env, uid) {
     if (!resp.ok) {
       const text = await resp.text();
       console.error(`Firebase Auth lookup failed (${resp.status}): ${text}`);
-      return null;
+      return { email: null, phoneNumber: null };
     }
     const data = await resp.json();
     const authUser = data.users?.[0];
-    // Return email or phone number as fallback
-    return authUser?.email ?? null;
+    if (!authUser) {
+      console.error(`Firebase Auth: no user found for uid ${uid}`);
+      return { email: null, phoneNumber: null };
+    }
+    // Check providerUserInfo for email (Google sign-in stores it there)
+    let email = authUser.email ?? null;
+    if (!email && authUser.providerUserInfo) {
+      for (const provider of authUser.providerUserInfo) {
+        if (provider.email) { email = provider.email; break; }
+      }
+    }
+    return { email, phoneNumber: authUser.phoneNumber ?? null };
   } catch (err) {
-    console.error('Firebase Auth email lookup error:', err.message);
-    return null;
+    console.error('Firebase Auth lookup error:', err.message);
+    return { email: null, phoneNumber: null };
   }
 }
 
@@ -101,12 +111,16 @@ function registerAdminUserRoutes(router) {
     user.warningReason    = user.warningReason    ?? user.warning_reason    ?? null;
     user.userType         = user.userType         ?? user.user_type         ?? 'MEMBER';
 
-    // Fetch email from Firebase Auth if not in Firestore doc
-    if (!user.email) {
-      user.email = await getFirebaseAuthEmail(env, params.uid);
-      // Backfill to Firestore for future lookups
-      if (user.email) {
-        updateDoc(env, `users/${params.uid}`, { email: user.email }).catch(() => {});
+    // Fetch email + phone from Firebase Auth if not already in Firestore
+    if (!user.email || !user.phoneNumber) {
+      const authInfo = await getFirebaseAuthInfo(env, params.uid);
+      if (!user.email && authInfo.email) {
+        user.email = authInfo.email;
+        updateDoc(env, `users/${params.uid}`, { email: authInfo.email }).catch(() => {});
+      }
+      if (!user.phoneNumber && authInfo.phoneNumber) {
+        user.phoneNumber = authInfo.phoneNumber;
+        updateDoc(env, `users/${params.uid}`, { phoneNumber: authInfo.phoneNumber }).catch(() => {});
       }
     }
 
