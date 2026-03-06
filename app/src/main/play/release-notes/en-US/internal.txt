@@ -1,10 +1,9 @@
 v0.51 — Economy & Admin Fixes
 
-- Fixed gacha pity system not guaranteeing high-value gifts at max pity
-- Gacha spin results load instantly (removed unnecessary delay)
-- Fixed coin/bean balance adjustments from admin panel
-- Fixed guaranteed gift prize setting showing undefined
-- Admin panel: email, user type, and all attributes display correctly
-- New maintenance tools: clear PMs, group chats, rooms, broadcasts, audit logs
-- RESET ALL now requires successful backup before proceeding
+- Fixed gacha pity not guaranteeing high-value gifts at max counter
+- Gacha spin results load instantly (removed delay)
+- Fixed admin coin/bean adjustments and guaranteed gift display
+- Admin panel: email, user type, and attributes display correctly
+- New maintenance: clear PMs, groups, rooms, broadcasts, audit logs
+- RESET ALL now requires backup before proceeding
 - Economy tab save errors resolved

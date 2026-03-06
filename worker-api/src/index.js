@@ -374,17 +374,17 @@ async function cleanupClosedRooms(env) {
 
   const closedRooms = await queryCollection(env, 'rooms', {
     where: fieldFilter('state', 'EQUAL', 'CLOSED'),
-    limit: 500,
+    limit: 200,
   });
 
-  // Only delete rooms closed more than 7 days ago
-  const old = closedRooms.filter(r => r.closedAt && r.closedAt < sevenDaysAgo);
+  // Only delete rooms closed more than 7 days ago — cap at 20 per run to stay within subrequest limits
+  const old = closedRooms.filter(r => r.closedAt && r.closedAt < sevenDaysAgo).slice(0, 20);
   if (old.length === 0) return;
 
   for (const room of old) {
     const [messages, seatRequests] = await Promise.all([
-      queryCollection(env, `rooms/${room.id}/messages`, {}),
-      queryCollection(env, `rooms/${room.id}/seatRequests`, {}),
+      queryCollection(env, `rooms/${room.id}/messages`, { limit: 500 }),
+      queryCollection(env, `rooms/${room.id}/seatRequests`, { limit: 100 }),
     ]);
 
     const writes = [
@@ -433,11 +433,12 @@ async function cleanupOrphanedStorage(env) {
   }
 
   // Conversation messages → imageUrls (array), stickerUrl
-  // This is expensive — iterate conversations and query image/sticker messages
-  for (const conv of convs) {
+  // Cap at 30 conversations to stay within subrequest limits (2 queries per conv)
+  const convsToScan = convs.slice(0, 30);
+  for (const conv of convsToScan) {
     const imageMessages = await queryCollection(env, `conversations/${conv.id}/messages`, {
       where: fieldFilter('type', 'EQUAL', 'IMAGE'),
-      limit: 500,
+      limit: 200,
     });
     for (const msg of imageMessages) {
       const urls = msg.imageUrls || msg.image_urls || [];
@@ -450,7 +451,7 @@ async function cleanupOrphanedStorage(env) {
 
     const stickerMessages = await queryCollection(env, `conversations/${conv.id}/messages`, {
       where: fieldFilter('type', 'EQUAL', 'STICKER'),
-      limit: 500,
+      limit: 200,
     });
     for (const msg of stickerMessages) {
       const k = extractKey(msg.stickerUrl || msg.sticker_url);
@@ -496,8 +497,10 @@ async function cleanupOrphanedStorage(env) {
 
     const toDelete = allKeys.filter((k) => !referencedKeys.has(k));
 
-    for (const key of toDelete) {
-      await env.R2_BUCKET.delete(key);
+    // Batch delete up to 1000 keys per call to stay within subrequest limits
+    for (let j = 0; j < toDelete.length; j += 1000) {
+      const batch = toDelete.slice(j, j + 1000);
+      await env.R2_BUCKET.delete(batch);
     }
 
     results[folder.replace('/', '')] = { total: allKeys.length, deleted: toDelete.length };
