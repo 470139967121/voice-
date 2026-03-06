@@ -2950,6 +2950,12 @@
                     <div class="maintenance-result" id="clear-spin-history-result"></div>
                 </div>
                 <div class="maintenance-card">
+                    <h3>All Transactions</h3>
+                    <p>Delete ALL transaction records (gacha, gifts, purchases, etc.) for all users. Processes 30 users per call.</p>
+                    <button id="clear-all-transactions-btn">Clear All Transactions</button>
+                    <div class="maintenance-result" id="clear-all-transactions-result"></div>
+                </div>
+                <div class="maintenance-card">
                     <h3>Super Shy</h3>
                     <p>Remove Super Shy status from all users (sets isSuperShy=false, clears expiry and tier).</p>
                     <button id="clear-supershy-btn">Remove All Super Shy</button>
@@ -3304,7 +3310,7 @@
       projectId: "shytalk-7ba69"
     };
 
-    const API_BASE = "https://shytalk-api.shyden1988uk.workers.dev";
+    const API_BASE = "https://api.shytalk.shyden.co.uk";
 
     const app = initializeApp(FIREBASE_CONFIG);
     const auth = getAuth(app);
@@ -6283,6 +6289,36 @@
       btn.textContent = "Clear All Spin History";
     });
 
+    // Clear All Transactions
+    $("#clear-all-transactions-btn").addEventListener("click", async () => {
+      const btn = $("#clear-all-transactions-btn");
+      const result = $("#clear-all-transactions-result");
+      if (!confirm("Delete ALL transaction records for ALL users? This cannot be undone.")) return;
+
+      btn.disabled = true;
+      btn.textContent = "Clearing...";
+      result.style.display = "none";
+
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const resp = await fetch(`${API_BASE}/api/cleanup/all-transactions`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Request failed");
+        result.className = "maintenance-result success";
+        result.textContent = `Deleted ${data.deleted} transactions across ${data.usersProcessed} users`;
+        result.style.display = "block";
+      } catch (err) {
+        result.className = "maintenance-result error";
+        result.textContent = err.message;
+        result.style.display = "block";
+      }
+      btn.disabled = false;
+      btn.textContent = "Clear All Transactions";
+    });
+
     // Clear All Super Shy
     $("#clear-supershy-btn").addEventListener("click", async () => {
       const btn = $("#clear-supershy-btn");
@@ -6867,6 +6903,7 @@
             { id: "np-coins", endpoint: "all-coins", label: "Coins" },
             { id: "np-beans", endpoint: "all-beans", label: "Beans" },
             { id: "np-spin-history", endpoint: "all-spin-history", label: "Spin history" },
+            { id: "np-transactions", endpoint: "all-transactions", label: "All transactions" },
             { id: "np-supershy", endpoint: "all-supershy", label: "Super Shy" },
             { id: "np-pms", endpoint: "all-private-messages", label: "Private messages" },
             { id: "np-groups", endpoint: "all-group-chats", label: "Group chats" },

@@ -658,6 +658,46 @@ async function arrayRemoveField(env, path, field, elements) {
   }
 }
 
+/**
+ * Execute multiple array transforms atomically in a single commit.
+ * Each transform is { path, field, type: 'union'|'remove', elements: [] }.
+ */
+async function batchArrayTransforms(env, transforms) {
+  if (!env.FIREBASE_PROJECT_ID || transforms.length === 0) return;
+
+  const accessToken = await getAccessToken(env);
+  const projectId = env.FIREBASE_PROJECT_ID;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`;
+
+  const writes = transforms.map(t => ({
+    transform: {
+      document: `projects/${projectId}/databases/(default)/documents/${t.path}`,
+      fieldTransforms: [{
+        fieldPath: t.field,
+        ...(t.type === 'union'
+          ? { appendMissingElements: { values: t.elements.map(toFirestoreValue) } }
+          : { removeAllFromArray: { values: t.elements.map(toFirestoreValue) } }),
+      }],
+    },
+  }));
+
+  const response = await firestoreFetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ writes }),
+  }, env);
+
+  if (!response.ok) {
+    const text = await response.text();
+    const msg = `Firestore BATCH_ARRAY_TRANSFORMS: ${response.status} ${text}`;
+    console.error(msg);
+    throw new Error(msg);
+  }
+}
+
 module.exports = {
   isCircuitOpen,
   getDoc,
@@ -672,6 +712,7 @@ module.exports = {
   incrementField,
   arrayUnionField,
   arrayRemoveField,
+  batchArrayTransforms,
   runTransaction,
   fieldFilter,
   andFilter,

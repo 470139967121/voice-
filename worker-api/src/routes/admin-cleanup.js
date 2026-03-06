@@ -12,6 +12,7 @@
  * POST /api/cleanup/all-coins                  → Reset all coin balances
  * POST /api/cleanup/all-beans                  → Reset all bean balances
  * POST /api/cleanup/all-spin-history           → Delete gacha transactions + reset pity
+ * POST /api/cleanup/all-transactions          → Delete ALL transaction records
  * POST /api/cleanup/all-supershy               → Clear Super Shy status
  * POST /api/cleanup/all-appeals                → Delete all suspension appeals
  * POST /api/cleanup/backfill-user-type          → Set userType=MEMBER for users missing it
@@ -325,6 +326,34 @@ function registerAdminCleanupRoutes(router) {
     }
 
     return json({ success: true, affected: users.length });
+  });
+
+  // ── Clear all transactions (all types) ──
+  router.post('/api/cleanup/all-transactions', async (request, env) => {
+    const adminCheck = requireAdmin(request);
+    if (adminCheck) return adminCheck;
+
+    const users = await queryCollection(env, 'users', {
+      orderBy: [orderBy('uid', 'ASCENDING')],
+      limit: 30,
+    });
+
+    let deleted = 0;
+    for (const user of users) {
+      const uid = user.uid ?? user.id;
+      const txs = await queryCollection(env, `users/${uid}/transactions`, {});
+      if (txs.length === 0) continue;
+
+      const writes = txs.map(tx =>
+        batchDeleteOp(env, `users/${uid}/transactions/${tx.id}`)
+      );
+      for (let i = 0; i < writes.length; i += 500) {
+        await batchWrite(env, writes.slice(i, i + 500));
+      }
+      deleted += txs.length;
+    }
+
+    return json({ success: true, deleted, usersProcessed: users.length });
   });
 
   // ── Delete all suspension appeals ──

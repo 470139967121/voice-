@@ -46,8 +46,8 @@ class ConstantsTest {
     }
 
     @Test
-    fun `PRESENCE_TIMEOUT_MS is 15 seconds`() {
-        assertEquals(15_000L, Constants.PRESENCE_TIMEOUT_MS)
+    fun `PRESENCE_TIMEOUT_MS is 30 seconds`() {
+        assertEquals(30_000L, Constants.PRESENCE_TIMEOUT_MS)
     }
 
     @Test

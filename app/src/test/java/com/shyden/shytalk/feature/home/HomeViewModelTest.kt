@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.home
 
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.ChatRoom
+import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.BannerRepository
@@ -485,6 +486,34 @@ class HomeViewModelTest {
     }
 
     // ===== createRoom sets isLoading during operation =====
+
+    // ===== CLOSED rooms filtered =====
+
+    @Test
+    fun `closed room is excluded from list`() = runTest {
+        coEvery { userRepository.getUsers(any()) } returns Resource.Success(
+            listOf(TestData.createTestUser(uid = "owner-1"))
+        )
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val closedRoom = TestData.createTestRoom(
+            roomId = "room-closed",
+            ownerId = "owner-1",
+            state = RoomState.CLOSED
+        )
+        val activeRoom = TestData.createTestRoom(
+            roomId = "room-active",
+            ownerId = "owner-1",
+            state = RoomState.ACTIVE
+        )
+        roomsFlow.emit(listOf(closedRoom, activeRoom))
+        advanceUntilIdle()
+
+        val rooms = vm.uiState.value.rooms
+        assertEquals(1, rooms.size)
+        assertEquals("room-active", rooms[0].roomId)
+    }
 
     @Test
     fun `createRoom clears previous error before starting`() = runTest {

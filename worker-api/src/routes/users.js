@@ -21,6 +21,7 @@ const {
   incrementField,
   arrayUnionField,
   arrayRemoveField,
+  batchArrayTransforms,
 } = require('../utils/firestore');
 
 /**
@@ -118,6 +119,8 @@ function registerUserRoutes(router) {
       followerIds:     [],
       fcmTokens:       [],
       aliases:         {},
+      stalkerCount:    0,
+      newStalkerCount: 0,
       createdAt:       now(),
       lastSeen:        now(),
     });
@@ -216,9 +219,9 @@ function registerUserRoutes(router) {
     if (params.uid === targetUid) return jsonError('Cannot follow yourself', 400);
 
     try {
-      await Promise.all([
-        arrayUnionField(env, `users/${params.uid}`, 'followingIds', [targetUid]),
-        arrayUnionField(env, `users/${targetUid}`, 'followerIds', [params.uid]),
+      await batchArrayTransforms(env, [
+        { path: `users/${params.uid}`, field: 'followingIds', type: 'union', elements: [targetUid] },
+        { path: `users/${targetUid}`, field: 'followerIds', type: 'union', elements: [params.uid] },
       ]);
     } catch (err) {
       console.error('Follow failed:', err);
@@ -236,9 +239,9 @@ function registerUserRoutes(router) {
     if (request.auth.uid !== params.uid) return jsonError('Forbidden', 403);
 
     try {
-      await Promise.all([
-        arrayRemoveField(env, `users/${params.uid}`, 'followingIds', [targetUid]),
-        arrayRemoveField(env, `users/${targetUid}`, 'followerIds', [params.uid]),
+      await batchArrayTransforms(env, [
+        { path: `users/${params.uid}`, field: 'followingIds', type: 'remove', elements: [targetUid] },
+        { path: `users/${targetUid}`, field: 'followerIds', type: 'remove', elements: [params.uid] },
       ]);
     } catch (err) {
       console.error('Unfollow failed:', err);
@@ -256,9 +259,9 @@ function registerUserRoutes(router) {
     if (request.auth.uid !== params.uid) return jsonError('Forbidden', 403);
 
     try {
-      await Promise.all([
-        arrayRemoveField(env, `users/${params.uid}`, 'followerIds', [followerUid]),
-        arrayRemoveField(env, `users/${followerUid}`, 'followingIds', [params.uid]),
+      await batchArrayTransforms(env, [
+        { path: `users/${params.uid}`, field: 'followerIds', type: 'remove', elements: [followerUid] },
+        { path: `users/${followerUid}`, field: 'followingIds', type: 'remove', elements: [params.uid] },
       ]);
     } catch (err) {
       console.error('Remove follower failed:', err);

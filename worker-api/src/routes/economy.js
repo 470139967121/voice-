@@ -50,6 +50,8 @@ async function loadEconomyConfig(env) {
     const { id: _id, ...config } = doc;
     return { ...DEFAULT_ECONOMY_CONFIG, ...config };
   }
+  // Doc doesn't exist — write defaults so the Android SDK can read it
+  await setDoc(env, 'config/economy', DEFAULT_ECONOMY_CONFIG);
   return { ...DEFAULT_ECONOMY_CONFIG };
 }
 

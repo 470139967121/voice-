@@ -1,0 +1,33 @@
+/**
+ * Firebase Admin SDK initialization.
+ *
+ * Provides shared instances of Firestore, Auth, RTDB, and Messaging.
+ * Expects GOOGLE_APPLICATION_CREDENTIALS env var pointing to service account JSON,
+ * or FIREBASE_SERVICE_ACCOUNT_PATH for explicit path.
+ */
+
+const admin = require('firebase-admin');
+
+const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
+  || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+if (!admin.apps.length) {
+  const initOptions = {
+    databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`,
+  };
+
+  if (serviceAccountPath) {
+    const serviceAccount = require(serviceAccountPath);
+    initOptions.credential = admin.credential.cert(serviceAccount);
+  }
+
+  admin.initializeApp(initOptions);
+}
+
+const db = admin.firestore();
+const auth = admin.auth();
+const rtdb = admin.database();
+const messaging = admin.messaging();
+const { FieldValue } = admin.firestore;
+
+module.exports = { admin, db, auth, rtdb, messaging, FieldValue };

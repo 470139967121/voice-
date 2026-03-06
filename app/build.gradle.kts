@@ -22,8 +22,8 @@ android {
         applicationId = "com.shyden.shytalk"
         minSdk = 28
         targetSdk = 36
-        versionCode = 51
-        versionName = "0.51"
+        versionCode = 52
+        versionName = "0.52"
 
         testInstrumentationRunner = "com.shyden.shytalk.ShyTalkTestRunner"
 
@@ -39,12 +39,12 @@ android {
         buildConfigField(
             "String",
             "WORKER_URL",
-            "\"${System.getenv("WORKER_URL") ?: "https://shytalk-storage.shyden1988uk.workers.dev"}\""
+            "\"${System.getenv("WORKER_URL") ?: "https://api.shytalk.shyden.co.uk"}\""
         )
         buildConfigField(
             "String",
             "API_BASE_URL",
-            "\"${System.getenv("API_BASE_URL") ?: "https://shytalk-api.shyden1988uk.workers.dev"}\""
+            "\"${System.getenv("API_BASE_URL") ?: "https://api.shytalk.shyden.co.uk"}\""
         )
     }
 
