@@ -6,6 +6,8 @@ import com.shyden.shytalk.core.model.BackpackItem
 import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.GiftRepository
@@ -42,6 +44,10 @@ class GiftingViewModel(
     private val economyRepository: EconomyRepository,
     private val authRepository: AuthRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "GiftingViewModel"
+    }
 
     private val _uiState = MutableStateFlow(GiftingUiState())
     val uiState: StateFlow<GiftingUiState> = _uiState.asStateFlow()
@@ -140,6 +146,7 @@ class GiftingViewModel(
         _uiState.update { it.copy(showConfirmDialog = false, isSending = true, error = null) }
 
         viewModelScope.launch {
+            logI(TAG, "Sending gift: giftId=$giftId to ${recipients.size} recipient(s)")
             val result = if (recipients.size == 1) {
                 val recipientId = recipients.first()
                 if (isBackpackTab) {
@@ -165,6 +172,7 @@ class GiftingViewModel(
                     }
                 }
                 is Resource.Error -> {
+                    logE(TAG, "Gift send failed: ${result.message}")
                     _uiState.update { it.copy(isSending = false, error = result.message) }
                 }
                 is Resource.Loading -> {}

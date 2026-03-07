@@ -17,6 +17,7 @@ import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.logD
 import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.data.remote.VoiceConnectionState
@@ -775,6 +776,7 @@ class RoomViewModel(
 
     private fun joinRoom() {
         viewModelScope.launch {
+            logI(TAG, "Joining room: roomId=$roomId")
             // Wait for any pending leave cleanup to finish before joining
             roomLifecycleManager.awaitLeaveCompletion(roomId)
 
@@ -1363,6 +1365,7 @@ class RoomViewModel(
             val room = _uiState.value.room ?: return@launch
             if (_uiState.value.currentUserId != room.ownerId) return@launch
 
+            logI(TAG, "Closing room: roomId=$roomId")
             disconnectFromRoom()
             roomRepository.closeRoom(roomId)
             _uiState.update { it.copy(roomClosed = true) }

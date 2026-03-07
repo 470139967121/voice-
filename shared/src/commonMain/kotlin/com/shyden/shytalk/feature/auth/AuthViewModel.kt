@@ -3,6 +3,9 @@ package com.shyden.shytalk.feature.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -40,6 +43,10 @@ class AuthViewModel(
     private val deviceId: String
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "AuthViewModel"
+    }
+
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
@@ -48,6 +55,7 @@ class AuthViewModel(
     }
 
     private fun checkAuthState() {
+        logI(TAG, "Auth state check started")
         if (!authRepository.isAuthenticated) {
             return
         }
@@ -111,10 +119,12 @@ class AuthViewModel(
     }
 
     private suspend fun handleSignInSuccess(userId: String) {
+        logI(TAG, "Sign-in success: userId=$userId")
         when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
             is Resource.Success -> {
                 val boundUserId = binding.data
                 if (boundUserId != null && boundUserId != userId) {
+                    logW(TAG, "Device locked for userId=$userId")
                     authRepository.signOut()
                     _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
                     return
@@ -143,6 +153,7 @@ class AuthViewModel(
             is Resource.Success -> {
                 val ban = result.data
                 if (ban.isBanned) {
+                    logE(TAG, "Ban detected: type=${ban.banType}")
                     val isDevice = ban.banType == "device"
                     _uiState.update {
                         it.copy(
@@ -173,6 +184,7 @@ class AuthViewModel(
                         is Resource.Success -> {
                             val user = userResult.data
                             if (user.isActivelySuspended) {
+                                logI(TAG, "Suspension detected: reason=${user.suspensionReason}")
                                 _uiState.update {
                                     it.copy(
                                         isLoading = false,
@@ -258,6 +270,7 @@ class AuthViewModel(
     }
 
     fun signOut() {
+        logI(TAG, "User signed out")
         authRepository.signOut()
         _uiState.value = AuthUiState()
     }

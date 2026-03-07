@@ -19,6 +19,8 @@ import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.ModerationFilter
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.data.local.StickerStorage
@@ -107,6 +109,10 @@ class PrivateChatViewModel(
     private val conversationWs: ConversationWebSocketService? = null,
     private val roomRepository: RoomRepository? = null
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "PrivateChatViewModel"
+    }
 
     private val _uiState = MutableStateFlow(PrivateChatUiState())
     val uiState: StateFlow<PrivateChatUiState> = _uiState.asStateFlow()
@@ -335,6 +341,7 @@ class PrivateChatViewModel(
         clearTyping()
 
         viewModelScope.launch {
+            logI(TAG, "Sending message in conversation=$conversationId")
             when (pmRepository.sendTextMessage(
                 conversationId = conversationId,
                 senderId = currentUserId,
@@ -345,6 +352,7 @@ class PrivateChatViewModel(
                 replyToSenderName = replyTo?.senderName
             )) {
                 is Resource.Error -> {
+                    logE(TAG, "Failed to send message")
                     _uiState.update { it.copy(error = "Failed to send message") }
                 }
                 else -> {}

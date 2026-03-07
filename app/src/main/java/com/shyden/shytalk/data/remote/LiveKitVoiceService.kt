@@ -6,6 +6,9 @@ import android.media.AudioManager
 import android.os.Build
 import android.util.Log
 import com.shyden.shytalk.BuildConfig
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.logW
 import io.livekit.android.AudioOptions
 import io.livekit.android.AudioType
 import io.livekit.android.LiveKit
@@ -220,11 +223,11 @@ class LiveKitVoiceService(
                 currentUserId = null
                 return@withLock
             }
-            Log.d(TAG, "Connecting to room=$roomName identity=$userId")
+            logI(TAG, "Connecting to room: roomId=$roomName")
             room.connect(serverUrl, token)
-            Log.d(TAG, "Connected successfully")
+            logI(TAG, "Connected to room: roomId=$roomName")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to connect", e)
+            logE(TAG, "Voice connection failed", e)
             _error.value = "Voice is temporarily unavailable"
             currentRoomName = null
             currentUserId = null
@@ -233,7 +236,7 @@ class LiveKitVoiceService(
     }
 
     override fun leaveChannel() {
-        Log.d(TAG, "leaveChannel called, isJoined=${_isJoined.value}")
+        logW(TAG, "Disconnected from room")
         _isJoined.value = false
         _speakingUsers.value = emptySet()
         currentRoomName = null
