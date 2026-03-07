@@ -436,6 +436,10 @@ router.post('/user/:uid/suspend', async (req, res) => {
       }),
     ]);
 
+    // Auto-apply device and network bans (fire-and-forget)
+    autoApplyBans(req.params.uid, body.endDate ? body.endDate : null)
+      .catch(err => console.error('Failed to auto-apply bans on suspend:', err));
+
     // Evict from any active rooms (fire-and-forget)
     evictSuspendedUser(req.params.uid)
       .catch(err => console.error('Failed to evict suspended user:', err));
@@ -529,6 +533,74 @@ router.delete('/report-locks/:uid', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// ══════════════════════════════════════════════════════════════
+// HELPER: Auto-apply device + network bans on suspension
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * When a user is suspended, automatically ban all their known devices
+ * and their last known IP address. Uses the same duration as the
+ * suspension if an endDate is provided, otherwise permanent.
+ */
+async function autoApplyBans(uid, endDate) {
+  const timestamp = now();
+
+  // Calculate expiry — match suspension duration or permanent
+  let expiresAt = null;
+  let duration = 'permanent';
+  if (endDate) {
+    expiresAt = new Date(endDate).toISOString();
+    duration = 'suspension-match';
+  }
+
+  // Find all devices bound to this user
+  const bindingsSnap = await db.collection('deviceBindings')
+    .where('userId', '==', uid)
+    .get();
+
+  let lastIp = null;
+
+  for (const doc of bindingsSnap.docs) {
+    const binding = doc.data();
+
+    // Create a device ban for each bound device
+    await db.doc(`deviceBans/${doc.id}`).set({
+      deviceId: doc.id,
+      reason: 'Auto-applied: user suspended',
+      duration,
+      expiresAt,
+      linkedUserId: uid,
+      autoApplied: true,
+      createdAt: timestamp,
+      createdBy: 'system',
+    });
+
+    // Track the last known IP from the most recent binding
+    if (binding.lastIp || binding.ip) {
+      lastIp = binding.lastIp || binding.ip;
+    }
+  }
+
+  // Create a network ban for the last known IP
+  if (lastIp) {
+    await db.doc(`networkBans/${generateId()}`).set({
+      type: 'ip',
+      value: lastIp,
+      reason: 'Auto-applied: user suspended',
+      duration,
+      expiresAt,
+      linkedUserId: uid,
+      autoApplied: true,
+      createdAt: timestamp,
+      createdBy: 'system',
+    });
+  }
+
+  const deviceCount = bindingsSnap.docs.length;
+  const networkCount = lastIp ? 1 : 0;
+  console.log(`[AUTO-BAN] User ${uid}: ${deviceCount} device ban(s), ${networkCount} network ban(s)`);
+}
 
 // ══════════════════════════════════════════════════════════════
 // HELPER: Evict suspended user from rooms
