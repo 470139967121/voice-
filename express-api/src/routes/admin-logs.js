@@ -1,0 +1,108 @@
+/**
+ * Admin log query routes — query and trace logs stored in Firestore.
+ *
+ * GET /admin/logs            → Query logs with filters (admin only)
+ * GET /admin/logs/trace/:traceId → Get all logs for a session trace (admin only)
+ */
+
+const router = require('express').Router();
+const { db } = require('../utils/firebase');
+const { requireAdmin } = require('../middleware/auth');
+
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 200;
+const MAX_TRACE_LIMIT = 500;
+
+// GET /admin/logs — Query logs with filters
+router.get('/admin/logs', async (req, res) => {
+  if (requireAdmin(req, res)) return;
+
+  try {
+    const {
+      level,
+      source,
+      userId,
+      sessionTraceId,
+      requestTraceId,
+      route,
+      keyword,
+      startTime,
+      endTime,
+      cursor,
+    } = req.query;
+
+    let limit = parseInt(req.query.limit, 10) || DEFAULT_LIMIT;
+    if (limit < 1) limit = DEFAULT_LIMIT;
+    if (limit > MAX_LIMIT) limit = MAX_LIMIT;
+
+    let query = db.collection('logs').orderBy('timestamp', 'desc');
+
+    // Apply Firestore .where() filters
+    if (level) query = query.where('level', '==', level);
+    if (source) query = query.where('source', '==', source);
+    if (userId) query = query.where('userId', '==', userId);
+    if (sessionTraceId) query = query.where('sessionTraceId', '==', sessionTraceId);
+    if (requestTraceId) query = query.where('requestTraceId', '==', requestTraceId);
+
+    // Time range filters
+    if (startTime) query = query.where('timestamp', '>=', startTime);
+    if (endTime) query = query.where('timestamp', '<=', endTime);
+
+    // Pagination
+    if (cursor) query = query.startAfter(cursor);
+
+    query = query.limit(limit);
+
+    const snapshot = await query.get();
+
+    let logs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    // Client-side filters (can't be compound-queried in Firestore)
+    if (route) {
+      logs = logs.filter((log) => log.context?.route === route || log.route === route);
+    }
+    if (keyword) {
+      const kw = keyword.toLowerCase();
+      logs = logs.filter(
+        (log) =>
+          (log.message && log.message.toLowerCase().includes(kw)) ||
+          (log.context && JSON.stringify(log.context).toLowerCase().includes(kw))
+      );
+    }
+
+    const nextCursor =
+      snapshot.docs.length === limit
+        ? snapshot.docs[snapshot.docs.length - 1].data().timestamp
+        : null;
+
+    res.json({ logs, nextCursor });
+  } catch (err) {
+    console.error('Error querying logs:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /admin/logs/trace/:traceId — Get all logs for a session trace
+router.get('/admin/logs/trace/:traceId', async (req, res) => {
+  if (requireAdmin(req, res)) return;
+
+  try {
+    const { traceId } = req.params;
+
+    const snapshot = await db
+      .collection('logs')
+      .where('sessionTraceId', '==', traceId)
+      .orderBy('timestamp', 'asc')
+      .limit(MAX_TRACE_LIMIT)
+      .get();
+
+    const logs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    res.json({ logs });
+  } catch (err) {
+    console.error('Error querying trace logs:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+module.exports = router;

@@ -44,6 +44,7 @@ app.use('/api', require('./routes/admin-economy'));
 app.use('/api', require('./routes/admin-gifts'));
 app.use('/api', require('./routes/admin-cleanup'));
 app.use('/api', require('./routes/admin-backup'));
+app.use('/api', require('./routes/admin-logs'));
 app.use('/api', require('./routes/storage'));
 
 const { createLogsRouter } = require('./routes/logs');
