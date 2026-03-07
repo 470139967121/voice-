@@ -2234,6 +2234,43 @@
           justify-content: center;
         }
 
+        /* --- Devices Panel --- */
+        #devices-panel { display: none; }
+        #devices-panel.visible { display: block; }
+        .devices-search { display:flex;gap:10px;margin-bottom:16px; }
+        .devices-search input { flex:1;padding:10px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px; }
+        .devices-search button { padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px; }
+        .devices-table { width:100%;border-collapse:collapse;font-size:13px; }
+        .devices-table th { text-align:left;padding:8px 10px;color:var(--text2);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border); }
+        .devices-table td { padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text); }
+        .devices-table tr:hover { background:var(--surface2); }
+        .devices-table .device-id-cell { max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;font-size:11px; }
+        .device-detail { background:var(--surface2);padding:12px 16px;border-radius:8px;margin:4px 0 8px;font-size:13px;display:none; }
+        .device-detail.visible { display:block; }
+        .device-detail-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px 16px; }
+        .device-detail-grid dt { color:var(--text2);font-size:11px;text-transform:uppercase; }
+        .device-detail-grid dd { margin:0 0 8px;color:var(--text);font-weight:500; }
+        .device-actions { display:flex;gap:6px;flex-wrap:wrap; }
+        .device-actions button { padding:4px 10px;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600; }
+        .device-btn-unbind { background:var(--danger);color:#fff; }
+        .device-btn-ban { background:#e67e22;color:#fff; }
+        .device-btn-ban-net { background:#8e44ad;color:#fff; }
+        .device-btn-logs { background:var(--accent);color:#fff; }
+        .devices-pagination { display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:var(--text2); }
+        .devices-pagination button { padding:6px 14px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px; }
+        .devices-pagination button:disabled { opacity:0.4;cursor:default; }
+        .device-status-active { color:#2ecc71;font-weight:600; }
+        .device-status-banned { color:var(--danger);font-weight:600; }
+
+        /* --- Bans Section (Users tab) --- */
+        #bans-section { display:none; }
+        .bans-list { display:flex;flex-direction:column;gap:6px;margin:8px 0; }
+        .ban-item { display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:6px;font-size:13px; }
+        .ban-item-info { display:flex;flex-direction:column;gap:2px; }
+        .ban-item-type { font-size:11px;color:var(--text2);text-transform:uppercase; }
+        .bans-quick-actions { display:flex;gap:8px;flex-wrap:wrap;margin-top:10px; }
+        .bans-quick-actions button { padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600; }
+
         /* --- Logs Panel --- */
         #logs-panel { display: none; }
         #logs-panel.visible { display: block; }
@@ -2685,6 +2722,7 @@
             <button class="tab-btn" id="tab-funfacts">Fun Facts</button>
             <button class="tab-btn" id="tab-backups">Backups</button>
             <button class="tab-btn" id="tab-logs">Logs</button>
+            <button class="tab-btn" id="tab-devices">Devices</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
             <button class="alert-bell" id="alert-bell" title="Alerts">&#128276;<span class="alert-bell-badge" id="alert-bell-badge" style="display:none;">0</span></button>
@@ -2843,6 +2881,35 @@
                     <button type="button" class="btn-unsuspend" id="unsuspend-btn"
                             style="display:none;">Unsuspend User
                     </button>
+                </div>
+            </div>
+
+            <!-- Bans & Restrictions -->
+            <div class="form-section" id="bans-section" style="display:none;">
+                <h3>Bans &amp; Restrictions</h3>
+                <div style="margin-bottom:10px;">
+                    <strong style="font-size:13px;color:var(--text2);">Device Bans</strong>
+                    <div class="bans-list" id="bans-device-list">
+                        <div style="color:var(--text2);font-size:12px;font-style:italic;">No device bans</div>
+                    </div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <strong style="font-size:13px;color:var(--text2);">Network Bans</strong>
+                    <div class="bans-list" id="bans-network-list">
+                        <div style="color:var(--text2);font-size:12px;font-style:italic;">No network bans</div>
+                    </div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <strong style="font-size:13px;color:var(--text2);">Bound Devices</strong>
+                    <div class="bans-list" id="bans-devices-bound-list">
+                        <div style="color:var(--text2);font-size:12px;font-style:italic;">No devices</div>
+                    </div>
+                </div>
+                <div class="bans-quick-actions">
+                    <button type="button" id="bans-ban-all-devices" style="background:#e67e22;color:#fff;">Ban All Devices</button>
+                    <button type="button" id="bans-ban-last-ip" style="background:#8e44ad;color:#fff;">Ban Last IP</button>
+                    <button type="button" id="bans-unban-all" style="background:#2ecc71;color:#fff;">Unban All</button>
+                    <button type="button" id="bans-view-logs" style="background:var(--accent);color:#fff;">View Logs</button>
                 </div>
             </div>
 
@@ -3884,6 +3951,40 @@
             </div>
         </div>
 
+        <!-- Devices Panel -->
+        <div id="devices-panel">
+            <div class="devices-search">
+                <input type="text" id="devices-search-input" placeholder="Search by device ID, user ID, model, IP, ISP...">
+                <button id="devices-search-btn">Search</button>
+            </div>
+            <div id="devices-table-container">
+                <table class="devices-table">
+                    <thead>
+                        <tr>
+                            <th>Device ID</th>
+                            <th>User</th>
+                            <th>Model</th>
+                            <th>OS</th>
+                            <th>Last IP</th>
+                            <th>ISP</th>
+                            <th>Country</th>
+                            <th>Last Seen</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devices-tbody"></tbody>
+                </table>
+                <div id="devices-empty" style="display:none;color:var(--text2);font-size:13px;font-style:italic;padding:20px;text-align:center;">No device bindings found.</div>
+            </div>
+            <div class="devices-pagination">
+                <button id="devices-prev-btn" disabled>&laquo; Previous</button>
+                <span id="devices-page-info">Page 1</span>
+                <button id="devices-next-btn" disabled>Next &raquo;</button>
+                <span id="devices-total-info"></span>
+            </div>
+        </div>
+
         <!-- Fun Fact Add/Edit Dialog -->
         <div id="funfact-dialog-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
             <div style="background:var(--card);border-radius:12px;padding:24px;max-width:520px;width:90%;max-height:90vh;overflow-y:auto;">
@@ -4614,6 +4715,8 @@
     const tabBackups = $("#tab-backups");
     const logsPanel = $("#logs-panel");
     const tabLogs = $("#tab-logs");
+    const devicesPanel = $("#devices-panel");
+    const tabDevices = $("#tab-devices");
     let currentTab = "users";
 
     function switchTab(tab) {
@@ -4630,6 +4733,7 @@
       tabFunfacts.classList.toggle("active", tab === "funfacts");
       tabBackups.classList.toggle("active", tab === "backups");
       tabLogs.classList.toggle("active", tab === "logs");
+      tabDevices.classList.toggle("active", tab === "devices");
       $(".search-bar").style.display = tab === "users" ? "" : "none";
       userForm.style.display = tab === "users" ? "" : "none";
       appealsPanel.classList.toggle("visible", tab === "appeals");
@@ -4642,7 +4746,9 @@
       funfactsPanel.classList.toggle("visible", tab === "funfacts");
       backupsPanel.classList.toggle("visible", tab === "backups");
       logsPanel.classList.toggle("visible", tab === "logs");
+      devicesPanel.classList.toggle("visible", tab === "devices");
 
+      if (tab === "devices") loadDevices();
       if (tab === "backups") loadBackups();
       if (tab === "appeals") loadAppeals("pending");
       if (tab === "reports") { loadReports(); loadReportStats(); }
@@ -4674,6 +4780,7 @@
     tabFunfacts.addEventListener("click", () => switchTab("funfacts"));
     tabBackups.addEventListener("click", () => switchTab("backups"));
     tabLogs.addEventListener("click", () => switchTab("logs"));
+    tabDevices.addEventListener("click", () => switchTab("devices"));
 
     // --- Suspension section ---
     const suspensionSection = $("#suspension-section");
@@ -9376,6 +9483,316 @@
 
     // ══════════════════════════════════════════════════════════════
     // END LOGS TAB
+    // ══════════════════════════════════════════════════════════════
+
+    // ══════════════════════════════════════════════════════════════
+    // DEVICES TAB
+    // ══════════════════════════════════════════════════════════════
+
+    let devicesOffset = 0;
+    const devicesLimit = 50;
+    let devicesTotal = 0;
+    let devicesBannedSet = new Set(); // cache of banned device IDs
+
+    const devicesSearchInput = $("#devices-search-input");
+    const devicesSearchBtn = $("#devices-search-btn");
+    const devicesTbody = $("#devices-tbody");
+    const devicesEmpty = $("#devices-empty");
+    const devicesPrevBtn = $("#devices-prev-btn");
+    const devicesNextBtn = $("#devices-next-btn");
+    const devicesPageInfo = $("#devices-page-info");
+    const devicesTotalInfo = $("#devices-total-info");
+
+    async function loadDevices(query) {
+      const q = query !== undefined ? query : (devicesSearchInput.value || "").trim();
+      try {
+        const params = new URLSearchParams({ limit: devicesLimit, offset: devicesOffset });
+        if (q) params.set("q", q);
+        const data = await apiCall("GET", `/api/admin/devices?${params}`);
+        devicesTotal = data.total || 0;
+
+        // Also load banned devices set
+        try {
+          const bansData = await apiCall("GET", "/api/admin/bans");
+          devicesBannedSet = new Set((bansData.deviceBans || []).map(b => b.deviceId));
+        } catch (_) { /* ignore */ }
+
+        renderDevicesTable(data);
+      } catch (err) {
+        showToast("Failed to load devices: " + err.message, "error");
+      }
+    }
+
+    function renderDevicesTable(data) {
+      const devices = data.devices || [];
+      devicesTbody.innerHTML = "";
+
+      if (devices.length === 0) {
+        devicesEmpty.style.display = "block";
+        devicesTbody.parentElement.querySelector("thead").style.display = "none";
+      } else {
+        devicesEmpty.style.display = "none";
+        devicesTbody.parentElement.querySelector("thead").style.display = "";
+      }
+
+      for (const d of devices) {
+        const isBanned = devicesBannedSet.has(d.id);
+        const lastSeen = d.lastSeen ? new Date(d.lastSeen).toLocaleString() : "N/A";
+        const tr = document.createElement("tr");
+        tr.style.cursor = "pointer";
+        tr.innerHTML = `
+          <td class="device-id-cell" title="${escapeHtml(d.id)}">${escapeHtml(d.id.substring(0, 16))}${d.id.length > 16 ? "..." : ""}</td>
+          <td>${escapeHtml(d.userId || "N/A")}</td>
+          <td>${escapeHtml((d.manufacturer ? d.manufacturer + " " : "") + (d.model || "N/A"))}</td>
+          <td>${escapeHtml(d.osVersion || d.os || "N/A")}</td>
+          <td style="font-family:monospace;font-size:11px;">${escapeHtml(d.lastIp || "N/A")}</td>
+          <td>${escapeHtml(d.isp || "N/A")}</td>
+          <td>${escapeHtml(d.country || "N/A")}</td>
+          <td style="font-size:11px;">${lastSeen}</td>
+          <td><span class="${isBanned ? "device-status-banned" : "device-status-active"}">${isBanned ? "BANNED" : "Active"}</span></td>
+          <td class="device-actions">
+            <button class="device-btn-unbind" onclick="event.stopPropagation();" data-unbind="${escapeHtml(d.id)}">Unbind</button>
+            <button class="device-btn-ban" onclick="event.stopPropagation();" data-ban-device="${escapeHtml(d.id)}" data-ban-user="${escapeHtml(d.userId || "")}">Ban</button>
+            <button class="device-btn-ban-net" onclick="event.stopPropagation();" data-ban-net-ip="${escapeHtml(d.lastIp || "")}" data-ban-net-user="${escapeHtml(d.userId || "")}">Ban Net</button>
+            <button class="device-btn-logs" onclick="event.stopPropagation();" data-view-logs-user="${escapeHtml(d.userId || "")}">Logs</button>
+          </td>`;
+
+        // Detail row (expandable)
+        const detailTr = document.createElement("tr");
+        detailTr.innerHTML = `<td colspan="10"><div class="device-detail" id="detail-${escapeHtml(d.id)}">
+          <dl class="device-detail-grid">
+            <dt>Device ID</dt><dd>${escapeHtml(d.id)}</dd>
+            <dt>User ID</dt><dd>${escapeHtml(d.userId || "N/A")}</dd>
+            <dt>Manufacturer</dt><dd>${escapeHtml(d.manufacturer || "N/A")}</dd>
+            <dt>Model</dt><dd>${escapeHtml(d.model || "N/A")}</dd>
+            <dt>OS Version</dt><dd>${escapeHtml(d.osVersion || d.os || "N/A")}</dd>
+            <dt>App Version</dt><dd>${escapeHtml(d.appVersion || "N/A")}</dd>
+            <dt>Last IP</dt><dd>${escapeHtml(d.lastIp || "N/A")}</dd>
+            <dt>ISP</dt><dd>${escapeHtml(d.isp || "N/A")}</dd>
+            <dt>Country</dt><dd>${escapeHtml(d.country || "N/A")}</dd>
+            <dt>Region</dt><dd>${escapeHtml(d.region || "N/A")}</dd>
+            <dt>City</dt><dd>${escapeHtml(d.city || "N/A")}</dd>
+            <dt>Last Seen</dt><dd>${lastSeen}</dd>
+            <dt>Created At</dt><dd>${d.createdAt ? new Date(d.createdAt).toLocaleString() : "N/A"}</dd>
+            <dt>Status</dt><dd class="${isBanned ? "device-status-banned" : "device-status-active"}">${isBanned ? "BANNED" : "Active"}</dd>
+          </dl>
+        </div></td>`;
+
+        tr.addEventListener("click", () => {
+          const detail = detailTr.querySelector(".device-detail");
+          detail.classList.toggle("visible");
+        });
+
+        devicesTbody.appendChild(tr);
+        devicesTbody.appendChild(detailTr);
+      }
+
+      // Pagination
+      const page = Math.floor(devicesOffset / devicesLimit) + 1;
+      const totalPages = Math.ceil(devicesTotal / devicesLimit) || 1;
+      devicesPageInfo.textContent = `Page ${page} of ${totalPages}`;
+      devicesTotalInfo.textContent = `(${devicesTotal} total)`;
+      devicesPrevBtn.disabled = devicesOffset === 0;
+      devicesNextBtn.disabled = devicesOffset + devicesLimit >= devicesTotal;
+
+      // Wire action buttons
+      for (const btn of devicesTbody.querySelectorAll("[data-unbind]")) {
+        btn.addEventListener("click", () => unbindDevice(btn.dataset.unbind));
+      }
+      for (const btn of devicesTbody.querySelectorAll("[data-ban-device]")) {
+        btn.addEventListener("click", () => banDeviceFromDevices(btn.dataset.banDevice, btn.dataset.banUser));
+      }
+      for (const btn of devicesTbody.querySelectorAll("[data-ban-net-ip]")) {
+        btn.addEventListener("click", () => banNetworkFromDevices(btn.dataset.banNetIp, btn.dataset.banNetUser));
+      }
+      for (const btn of devicesTbody.querySelectorAll("[data-view-logs-user]")) {
+        btn.addEventListener("click", () => {
+          const uid = btn.dataset.viewLogsUser;
+          if (!uid) return;
+          const logsUserFilter = $("#logs-filter-userId");
+          if (logsUserFilter) logsUserFilter.value = uid;
+          switchTab("logs");
+        });
+      }
+    }
+
+    async function unbindDevice(deviceId) {
+      if (!confirm(`Unbind device ${deviceId}?`)) return;
+      try {
+        await apiCall("DELETE", `/api/admin/devices/${deviceId}`);
+        showToast("Device unbound successfully", "success");
+        loadDevices();
+      } catch (err) {
+        showToast("Failed to unbind: " + err.message, "error");
+      }
+    }
+
+    async function banDeviceFromDevices(deviceId, userId) {
+      if (!deviceId) return;
+      const reason = prompt("Reason for banning this device:");
+      if (!reason) return;
+      try {
+        await apiCall("POST", "/api/admin/bans/device", { deviceId, reason, linkedUserId: userId || null });
+        showToast("Device banned", "success");
+        loadDevices();
+      } catch (err) {
+        showToast("Failed to ban device: " + err.message, "error");
+      }
+    }
+
+    async function banNetworkFromDevices(ip, userId) {
+      if (!ip) { showToast("No IP address available", "error"); return; }
+      const reason = prompt(`Reason for banning IP ${ip}:`);
+      if (!reason) return;
+      try {
+        await apiCall("POST", "/api/admin/bans/network", { type: "ip", value: ip, reason, linkedUserId: userId || null });
+        showToast("Network banned", "success");
+        loadDevices();
+      } catch (err) {
+        showToast("Failed to ban network: " + err.message, "error");
+      }
+    }
+
+    devicesSearchBtn.addEventListener("click", () => { devicesOffset = 0; loadDevices(); });
+    devicesSearchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { devicesOffset = 0; loadDevices(); } });
+    devicesPrevBtn.addEventListener("click", () => { devicesOffset = Math.max(0, devicesOffset - devicesLimit); loadDevices(); });
+    devicesNextBtn.addEventListener("click", () => { devicesOffset += devicesLimit; loadDevices(); });
+
+    // ══════════════════════════════════════════════════════════════
+    // END DEVICES TAB
+    // ══════════════════════════════════════════════════════════════
+
+    // ══════════════════════════════════════════════════════════════
+    // BANS & RESTRICTIONS (Users tab)
+    // ══════════════════════════════════════════════════════════════
+
+    const bansSection = $("#bans-section");
+    const bansDeviceList = $("#bans-device-list");
+    const bansNetworkList = $("#bans-network-list");
+    const bansDevicesBoundList = $("#bans-devices-bound-list");
+
+    async function populateBansSection(uid) {
+      bansSection.style.display = "block";
+      bansDeviceList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+      bansNetworkList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+      bansDevicesBoundList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+
+      try {
+        const [bansData, devicesData] = await Promise.all([
+          apiCall("GET", `/api/admin/bans/user/${uid}`),
+          apiCall("GET", `/api/admin/devices/user/${uid}`),
+        ]);
+
+        // Device bans
+        const deviceBans = bansData.deviceBans || [];
+        if (deviceBans.length === 0) {
+          bansDeviceList.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;">No device bans</div>';
+        } else {
+          bansDeviceList.innerHTML = deviceBans.map(b => `
+            <div class="ban-item">
+              <div class="ban-item-info">
+                <span>${escapeHtml(b.deviceId || b.id)}</span>
+                <span class="ban-item-type">${escapeHtml(b.reason || "No reason")} | ${escapeHtml(b.duration || "permanent")}</span>
+              </div>
+            </div>`).join("");
+        }
+
+        // Network bans
+        const networkBans = bansData.networkBans || [];
+        if (networkBans.length === 0) {
+          bansNetworkList.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;">No network bans</div>';
+        } else {
+          bansNetworkList.innerHTML = networkBans.map(b => `
+            <div class="ban-item">
+              <div class="ban-item-info">
+                <span>${escapeHtml(b.value || b.id)} (${escapeHtml(b.type || "ip")})</span>
+                <span class="ban-item-type">${escapeHtml(b.reason || "No reason")} | ${escapeHtml(b.duration || "permanent")}</span>
+              </div>
+            </div>`).join("");
+        }
+
+        // Bound devices
+        const devices = devicesData.devices || [];
+        if (devices.length === 0) {
+          bansDevicesBoundList.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;">No bound devices</div>';
+        } else {
+          bansDevicesBoundList.innerHTML = devices.map(d => `
+            <div class="ban-item">
+              <div class="ban-item-info">
+                <span>${escapeHtml((d.manufacturer ? d.manufacturer + " " : "") + (d.model || d.id))}</span>
+                <span class="ban-item-type">${escapeHtml(d.lastIp || "No IP")} | ${escapeHtml(d.isp || "")} | Last: ${d.lastSeen ? new Date(d.lastSeen).toLocaleString() : "N/A"}</span>
+              </div>
+            </div>`).join("");
+        }
+      } catch (err) {
+        bansDeviceList.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load</div>';
+        bansNetworkList.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load</div>';
+        bansDevicesBoundList.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load</div>';
+      }
+    }
+
+    // Quick action buttons
+    $("#bans-ban-all-devices").addEventListener("click", async () => {
+      if (!currentUid) return;
+      const reason = prompt("Reason for banning all devices:");
+      if (!reason) return;
+      try {
+        const devicesData = await apiCall("GET", `/api/admin/devices/user/${currentUid}`);
+        const devices = devicesData.devices || [];
+        if (devices.length === 0) { showToast("No devices to ban", "error"); return; }
+        await Promise.all(devices.map(d => apiCall("POST", "/api/admin/bans/device", { deviceId: d.id, reason, linkedUserId: currentUid })));
+        showToast(`Banned ${devices.length} device(s)`, "success");
+        populateBansSection(currentUid);
+      } catch (err) {
+        showToast("Failed: " + err.message, "error");
+      }
+    });
+
+    $("#bans-ban-last-ip").addEventListener("click", async () => {
+      if (!currentUid) return;
+      try {
+        const devicesData = await apiCall("GET", `/api/admin/devices/user/${currentUid}`);
+        const devices = devicesData.devices || [];
+        const lastDevice = devices.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0))[0];
+        if (!lastDevice || !lastDevice.lastIp) { showToast("No IP address found", "error"); return; }
+        const reason = prompt(`Reason for banning IP ${lastDevice.lastIp}:`);
+        if (!reason) return;
+        await apiCall("POST", "/api/admin/bans/network", { type: "ip", value: lastDevice.lastIp, reason, linkedUserId: currentUid });
+        showToast("IP banned", "success");
+        populateBansSection(currentUid);
+      } catch (err) {
+        showToast("Failed: " + err.message, "error");
+      }
+    });
+
+    $("#bans-unban-all").addEventListener("click", async () => {
+      if (!currentUid) return;
+      if (!confirm("Remove all bans for this user?")) return;
+      try {
+        const result = await apiCall("POST", `/api/admin/bans/unban-all/${currentUid}`);
+        showToast(`Removed ${result.removed || 0} ban(s)`, "success");
+        populateBansSection(currentUid);
+      } catch (err) {
+        showToast("Failed: " + err.message, "error");
+      }
+    });
+
+    $("#bans-view-logs").addEventListener("click", () => {
+      if (!currentUid) return;
+      const logsUserFilter = $("#logs-filter-userId");
+      if (logsUserFilter) logsUserFilter.value = currentUid;
+      switchTab("logs");
+    });
+
+    // Hook into populateFormFull to also populate bans section
+    const _origPopulateFullForBans = populateFormFull;
+    populateFormFull = async function(data) {
+      await _origPopulateFullForBans(data);
+      if (data.uid) populateBansSection(data.uid);
+    };
+
+    // ══════════════════════════════════════════════════════════════
+    // END BANS & RESTRICTIONS
     // ══════════════════════════════════════════════════════════════
 
     document.getElementById("backup-recover-photos-btn").addEventListener("click", async () => {
