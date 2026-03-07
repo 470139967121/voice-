@@ -12,6 +12,11 @@ const PORT = process.env.PORT || 3000;
 app.use(corsMiddleware);
 app.use(express.json({ limit: '10mb' }));
 
+// Request/response logging (after body parsing, before auth)
+const logger = require('./utils/loggerInstance');
+const { createRequestLogger } = require('./middleware/requestLogger');
+app.use(createRequestLogger(logger));
+
 // Health check (no auth)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
