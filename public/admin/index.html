@@ -2227,6 +2227,7 @@
           .gift-actions button { padding: 3px 6px; font-size: 11px; }
         }
     </style>
+<script src="/js/logger.js"></script>
 </head>
 <body>
 
@@ -2243,7 +2244,7 @@
                aria-label="Email">
         <input type="password" id="login-password" placeholder="Password"
                autocomplete="current-password" aria-label="Password">
-        <button id="login-btn">Sign In</button>
+        <button id="login-btn" data-log="sign-in">Sign In</button>
         <div class="login-error" id="login-error"></div>
     </div>
 </div>
@@ -2264,14 +2265,14 @@
             <button class="tab-btn" id="tab-funfacts">Fun Facts</button>
             <button class="tab-btn" id="tab-backups">Backups</button>
         </div>
-        <button id="signout-btn">Sign Out</button>
+        <button id="signout-btn" data-log="sign-out">Sign Out</button>
     </div>
 
     <div class="main-content">
         <div class="search-bar">
             <input type="number" id="search-uid" placeholder="Enter ShyTalk User ID"
                    aria-label="ShyTalk User ID">
-            <button id="search-btn">Search</button>
+            <button id="search-btn" data-log="search-user">Search</button>
         </div>
 
         <div id="user-form">
@@ -2414,7 +2415,7 @@
                     <label for="suspend-can-appeal">User can appeal</label>
                 </div>
                 <div class="suspension-actions">
-                    <button type="button" class="btn-suspend" id="suspend-btn">Suspend User</button>
+                    <button type="button" class="btn-suspend" id="suspend-btn" data-log="suspend-user">Suspend User</button>
                     <button type="button" class="btn-unsuspend" id="unsuspend-btn"
                             style="display:none;">Unsuspend User
                     </button>
@@ -2650,7 +2651,7 @@
 
             <!-- Save -->
             <div class="save-bar">
-                <button id="save-btn">Save Changes</button>
+                <button id="save-btn" data-log="save-user-changes">Save Changes</button>
                 <span class="save-info" id="save-info"></span>
             </div>
         </div>
@@ -2704,7 +2705,7 @@
                     <input type="date" id="export-from">
                     <span style="color:var(--text2);font-size:12px;">to</span>
                     <input type="date" id="export-to">
-                    <button class="export-btn" id="export-csv-btn">Export CSV</button>
+                    <button class="export-btn" id="export-csv-btn" data-log="export-reports-csv">Export CSV</button>
                 </div>
             </div>
 
@@ -3422,6 +3423,11 @@
           return;
         }
         currentUser = user;
+        ShyTalkLogger.init({
+          source: 'admin-panel',
+          endpoint: `${API_BASE}/api/logs`,
+          getToken: () => currentUser ? currentUser.getIdToken() : Promise.resolve(null)
+        });
         showScreen("dashboard");
         // Eagerly load economy config so cachedPityHardLimit is available everywhere
         loadEconomyConfig();
