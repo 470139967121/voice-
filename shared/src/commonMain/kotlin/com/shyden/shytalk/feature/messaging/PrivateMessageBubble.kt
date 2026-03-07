@@ -60,6 +60,9 @@ import com.shyden.shytalk.feature.home.RoomListItem
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.formatRelativeTime
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -83,6 +86,8 @@ fun PrivateMessageBubble(
     onRecall: () -> Unit = {},
     onSaveSticker: ((String) -> Unit)? = null,
     onHideMessage: (() -> Unit)? = null,
+    onTranslate: (() -> Unit)? = null,
+    translatedText: String? = null,
     isModOrAbove: Boolean = false,
     isGroupChat: Boolean = false,
     modifier: Modifier = Modifier
@@ -120,7 +125,7 @@ fun PrivateMessageBubble(
                 modifier = Modifier.widthIn(max = 280.dp)
             ) {
                 Text(
-                    text = "This message was hidden by a moderator",
+                    text = stringResource(Res.string.message_hidden_by_mod),
                     style = MaterialTheme.typography.bodySmall,
                     fontStyle = FontStyle.Italic,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
@@ -178,7 +183,7 @@ fun PrivateMessageBubble(
             ) {
                 Icon(
                     Icons.Default.ErrorOutline,
-                    contentDescription = "Retry",
+                    contentDescription = stringResource(Res.string.retry),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp)
                 )
@@ -219,7 +224,7 @@ fun PrivateMessageBubble(
                 // Recalled message
                 if (message.isRecalled) {
                     Text(
-                        text = if (isSent) "You recalled this message" else "This message was recalled",
+                        text = if (isSent) stringResource(Res.string.message_recalled_by_you) else stringResource(Res.string.message_recalled),
                         style = MaterialTheme.typography.bodyMedium,
                         fontStyle = FontStyle.Italic,
                         color = if (isMediaOnly) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -271,7 +276,7 @@ fun PrivateMessageBubble(
                                 .data(message.stickerUrl)
                                 .crossfade(false)
                                 .build(),
-                            contentDescription = "Sticker",
+                            contentDescription = stringResource(Res.string.sticker),
                             modifier = Modifier
                                 .size(120.dp)
                                 .clip(RoundedCornerShape(8.dp)),
@@ -299,7 +304,7 @@ fun PrivateMessageBubble(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = "Closed",
+                                            text = stringResource(Res.string.closed),
                                             style = MaterialTheme.typography.titleLarge,
                                             color = Color.White
                                         )
@@ -340,7 +345,7 @@ fun PrivateMessageBubble(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Tap to join",
+                                        text = stringResource(Res.string.tap_to_join),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = Color.White.copy(alpha = 0.8f)
                                     )
@@ -376,6 +381,24 @@ fun PrivateMessageBubble(
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (isSent) MaterialTheme.colorScheme.onPrimary
                             else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Translated text
+                    if (translatedText != null && message.text.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = translatedText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontStyle = FontStyle.Italic,
+                            color = if (isSent) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                        )
+                        Text(
+                            text = stringResource(Res.string.show_original),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { /* toggle handled by VM */ }
                         )
                     }
                 }
@@ -418,7 +441,7 @@ fun PrivateMessageBubble(
                     if (isSent && message.sendStatus == SendStatus.SENT && !message.isRecalled) {
                         Icon(
                             imageVector = if (isRead) Icons.Default.DoneAll else Icons.Default.Done,
-                            contentDescription = if (isRead) "Read" else "Sent",
+                            contentDescription = if (isRead) stringResource(Res.string.read) else stringResource(Res.string.sent),
                             modifier = Modifier.size(14.dp),
                             tint = metaColor
                         )
@@ -458,30 +481,39 @@ fun PrivateMessageBubble(
             ) {
                 if (!message.isRecalled) {
                     DropdownMenuItem(
-                        text = { Text("React") },
+                        text = { Text(stringResource(Res.string.react)) },
                         onClick = {
                             showContextMenu = false
                             showReactionPicker = !showReactionPicker
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Reply") },
+                        text = { Text(stringResource(Res.string.reply)) },
                         onClick = {
                             showContextMenu = false
                             onReply()
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Copy") },
+                        text = { Text(stringResource(Res.string.copy)) },
                         onClick = {
                             showContextMenu = false
                             @Suppress("DEPRECATION")
                             clipboardManager.setText(AnnotatedString(message.text))
                         }
                     )
+                    if (onTranslate != null && message.text.isNotBlank() && translatedText == null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.translate)) },
+                            onClick = {
+                                showContextMenu = false
+                                onTranslate()
+                            }
+                        )
+                    }
                     if (canEdit) {
                         DropdownMenuItem(
-                            text = { Text("Edit") },
+                            text = { Text(stringResource(Res.string.edit)) },
                             onClick = {
                                 showContextMenu = false
                                 onEdit()
@@ -490,7 +522,7 @@ fun PrivateMessageBubble(
                     }
                     if (canRecall) {
                         DropdownMenuItem(
-                            text = { Text("Recall") },
+                            text = { Text(stringResource(Res.string.recall)) },
                             onClick = {
                                 showContextMenu = false
                                 onRecall()
@@ -499,7 +531,7 @@ fun PrivateMessageBubble(
                     }
                     if (message.type == PrivateMessageType.STICKER && !message.stickerUrl.isNullOrEmpty() && onSaveSticker != null) {
                         DropdownMenuItem(
-                            text = { Text("Add to Stickers") },
+                            text = { Text(stringResource(Res.string.add_to_stickers)) },
                             onClick = {
                                 showContextMenu = false
                                 onSaveSticker(message.stickerUrl!!)
@@ -508,7 +540,7 @@ fun PrivateMessageBubble(
                     }
                     if (isGroupChat && isModOrAbove && !isSent && onHideMessage != null) {
                         DropdownMenuItem(
-                            text = { Text("Hide Message") },
+                            text = { Text(stringResource(Res.string.hide_message)) },
                             onClick = {
                                 showContextMenu = false
                                 onHideMessage()
@@ -517,7 +549,7 @@ fun PrivateMessageBubble(
                     }
                     if (!isSent) {
                         DropdownMenuItem(
-                            text = { Text("Report Message") },
+                            text = { Text(stringResource(Res.string.report_message)) },
                             onClick = {
                                 showContextMenu = false
                                 onReportMessage()

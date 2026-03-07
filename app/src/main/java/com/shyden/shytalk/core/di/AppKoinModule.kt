@@ -49,6 +49,8 @@ import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.EconomyRepositoryImpl
 import com.shyden.shytalk.data.repository.FunFactRepository
 import com.shyden.shytalk.data.repository.FunFactRepositoryImpl
+import com.shyden.shytalk.data.repository.TranslationRepository
+import com.shyden.shytalk.data.repository.TranslationRepositoryImpl
 import com.shyden.shytalk.data.remote.BillingService
 import com.shyden.shytalk.feature.auth.AuthViewModel
 import com.shyden.shytalk.feature.daily.DailyRewardViewModel
@@ -126,6 +128,7 @@ val appModule = module {
     singleOf(::EconomyRepositoryImpl) bind EconomyRepository::class
     singleOf(::BannerRepositoryImpl) bind BannerRepository::class
     single<FunFactRepository> { FunFactRepositoryImpl(get(), androidContext()) }
+    singleOf(::TranslationRepositoryImpl) bind TranslationRepository::class
     single { StickerStorage(androidContext()) }
 
     // ActiveRoomManager
@@ -138,7 +141,7 @@ val appModule = module {
     viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }
     viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }
-    viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { AppSettingsViewModel(get(), get(), get()) }
     viewModel { RoomSettingsViewModel(get(), get(), get(), get()) }
     viewModel { ConversationListViewModel(get(), get(), get()) }
@@ -155,7 +158,8 @@ val appModule = module {
             stickerStorage = get(),
             initialConversationId = values.getOrNull(1) as? String,
             conversationWs = get(),
-            roomRepository = get()
+            roomRepository = get(),
+            translationRepository = get()
         )
     }
     viewModel { ReportReviewViewModel(get(), get()) }
