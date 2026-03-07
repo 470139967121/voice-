@@ -207,5 +207,47 @@ service cloud.firestore {
     match /reportLocks/{lockId} {
       allow read, write: if false;
     }
+
+    // ── Logs — server writes, admin reads ────────────────────────
+    match /logs/{logId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
+    // ── Log config — any auth read (mobile needs level config), server write ─
+    match /logConfig/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ── Log stats — any auth read, server write ─────────────────
+    match /logStats/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ── Device bans — admin read, server write ──────────────────
+    match /deviceBans/{deviceId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
+    // ── Network bans — admin read, server write ─────────────────
+    match /networkBans/{banId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
+    // ── Alerts — admin read, server write ────────────────────────
+    match /alerts/{alertId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
+    // ── Alert config — admin read, server write ─────────────────
+    match /alertConfig/{docId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
   }
 }
