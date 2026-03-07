@@ -24,7 +24,7 @@ app.get('/api/health', (req, res) => {
 
 // Auth middleware for all /api routes (except health)
 app.use('/api', (req, res, next) => {
-  if (req.path === '/health') return next();
+  if (req.path === '/health' || req.path === '/log-config') return next();
   authMiddleware(req, res, next);
 });
 
@@ -45,6 +45,7 @@ app.use('/api', require('./routes/admin-gifts'));
 app.use('/api', require('./routes/admin-cleanup'));
 app.use('/api', require('./routes/admin-backup'));
 app.use('/api', require('./routes/admin-logs'));
+app.use('/api', require('./routes/admin-log-config'));
 app.use('/api', require('./routes/storage'));
 
 const { createLogsRouter } = require('./routes/logs');
