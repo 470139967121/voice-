@@ -46,6 +46,9 @@ app.use('/api', require('./routes/admin-cleanup'));
 app.use('/api', require('./routes/admin-backup'));
 app.use('/api', require('./routes/storage'));
 
+const { createLogsRouter } = require('./routes/logs');
+app.use('/api', createLogsRouter(logger));
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
