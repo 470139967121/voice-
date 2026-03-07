@@ -9,6 +9,8 @@ const closedRooms = require('./closedRooms');
 const orphanedStorage = require('./orphanedStorage');
 const rotateLogs = require('./rotateLogs');
 const expireBans = require('./expireBans');
+const serverHealth = require('./serverHealth');
+const alertManager = require('../utils/alertManagerInstance');
 
 function startCronJobs() {
   // Archive old reports — Sunday 03:00 UTC
@@ -52,6 +54,11 @@ function startCronJobs() {
   cron.schedule('*/15 * * * *', () => {
     console.log('[CRON] expireBans');
     expireBans().catch(err => console.error('[CRON] expireBans error:', err));
+  });
+
+  // Server health check — every 5 minutes
+  cron.schedule('*/5 * * * *', () => {
+    serverHealth(alertManager).catch(err => console.error('[CRON] serverHealth error:', err));
   });
 
   console.log('Cron jobs scheduled');
