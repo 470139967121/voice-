@@ -19,6 +19,7 @@ import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
 import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.TypingRepository
+import com.shyden.shytalk.data.repository.TranslationRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.fake.FakeActiveRoomManager
 import com.shyden.shytalk.fake.FakeAppConfigService
@@ -35,6 +36,7 @@ import com.shyden.shytalk.fake.FakeRoomRepository
 import com.shyden.shytalk.fake.FakeSeatRequestRepository
 import com.shyden.shytalk.fake.FakeStorageRepository
 import com.shyden.shytalk.fake.FakeTokenService
+import com.shyden.shytalk.fake.FakeTranslationRepository
 import com.shyden.shytalk.fake.FakeTypingRepository
 import com.shyden.shytalk.fake.FakeUserRepository
 import com.shyden.shytalk.fake.FakeVoiceService
@@ -86,6 +88,7 @@ val testModule = module {
     single { FakeNotificationRepository() } bind NotificationRepository::class
     single { FakeGiftRepository() } bind GiftRepository::class
     single { FakeEconomyRepository() } bind EconomyRepository::class
+    single { FakeTranslationRepository() } bind TranslationRepository::class
 
     // Fake managers
     single { FakeActiveRoomManager() } bind RoomLifecycleManager::class
@@ -99,7 +102,7 @@ val testModule = module {
     viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }
     viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }
-    viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { AppSettingsViewModel(get(), get(), get()) }
     viewModel { RoomSettingsViewModel(get(), get(), get(), get()) }
     viewModel { ConversationListViewModel(get(), get(), get()) }
@@ -113,7 +116,8 @@ val testModule = module {
             typingRepository = get(),
             reportRepository = get(),
             storageRepository = get(),
-            initialConversationId = values.getOrNull(1) as? String
+            initialConversationId = values.getOrNull(1) as? String,
+            translationRepository = get()
         )
     }
     viewModel { ReportReviewViewModel(get(), get()) }

@@ -42,7 +42,10 @@ import com.shyden.shytalk.core.model.RoomRole
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.ui.StyledDisplayName
 import com.shyden.shytalk.core.util.flagEmojiForCode
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.ui.components.FlagBadge
+import org.jetbrains.compose.resources.stringResource
 
 private val BubbleShape = RoundedCornerShape(
     topStart = 4.dp,
@@ -107,6 +110,8 @@ fun MessageBubble(
     onTapUser: () -> Unit,
     onInvite: () -> Unit,
     onEditMessage: (() -> Unit)? = null,
+    onTranslate: (() -> Unit)? = null,
+    translatedText: String? = null,
     aliases: Map<String, String> = emptyMap()
 ) {
     val canInvite = (currentRole == RoomRole.OWNER || currentRole == RoomRole.HOST)
@@ -159,7 +164,7 @@ fun MessageBubble(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 Icons.Default.Mic,
-                                contentDescription = "Invite to mic",
+                                contentDescription = stringResource(Res.string.invite_to_mic),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -232,7 +237,7 @@ fun MessageBubble(
                             )
                             if (message.isEdited) {
                                 Text(
-                                    text = "edited",
+                                    text = stringResource(Res.string.edited),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontStyle = FontStyle.Italic,
                                     color = if (isSelf) {
@@ -240,6 +245,27 @@ fun MessageBubble(
                                     } else {
                                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                     }
+                                )
+                            }
+                            if (translatedText != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = translatedText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontStyle = FontStyle.Italic,
+                                    color = if (isSelf) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                                    }
+                                )
+                            }
+                            if (onTranslate != null && translatedText == null && !isSelf) {
+                                Text(
+                                    text = stringResource(Res.string.translate),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable { onTranslate() }
                                 )
                             }
                         }

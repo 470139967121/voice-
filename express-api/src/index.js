@@ -51,6 +51,7 @@ app.use('/api', require('./routes/device-info'));
 app.use('/api', require('./routes/admin-bans'));
 app.use('/api', require('./routes/admin-devices'));
 app.use('/api', require('./routes/admin-alerts'));
+app.use('/api', require('./routes/translate'));
 
 const { createLogsRouter } = require('./routes/logs');
 app.use('/api', createLogsRouter(logger));
