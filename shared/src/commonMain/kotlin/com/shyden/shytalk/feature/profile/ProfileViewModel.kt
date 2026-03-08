@@ -6,6 +6,8 @@ import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -59,6 +61,10 @@ class ProfileViewModel(
     private val reportRepository: ReportRepository,
     private val economyRepository: EconomyRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "ProfileViewModel"
+    }
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
@@ -229,6 +235,7 @@ class ProfileViewModel(
 
     fun saveProfile(displayName: String, dateOfBirth: Long) {
         val userId = authRepository.currentUserId ?: return
+        logI(TAG, "Saving profile for userId=$userId")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             val user = User(
@@ -283,6 +290,7 @@ class ProfileViewModel(
 
     fun saveProfileEdits(displayName: String, description: String, nationality: String?) {
         val userId = authRepository.currentUserId ?: return
+        logI(TAG, "Updating profile for userId=$userId")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             val fields = mutableMapOf<String, Any?>(
@@ -358,6 +366,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
+                    logE(TAG, "Photo upload failed: ${result.message}")
                     _uiState.update { it.copy(isUploadingPhoto = false, error = result.message) }
                 }
                 is Resource.Loading -> {}

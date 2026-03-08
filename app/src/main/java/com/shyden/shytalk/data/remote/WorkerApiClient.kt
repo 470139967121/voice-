@@ -10,6 +10,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import com.shyden.shytalk.core.util.TraceManager
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
@@ -53,7 +54,9 @@ class WorkerApiClient(
     /** GET without authentication — for public endpoints like /api/health. */
     suspend fun getPublic(path: String): JSONObject {
         val url = "$baseUrl$path"
-        val request = Request.Builder().url(url).get().build()
+        val request = Request.Builder().url(url)
+            .header("x-session-trace-id", TraceManager.sessionTraceId)
+            .get().build()
         val response = httpClient.newCall(request).executeAsync()
         val bodyStr = response.use { it.body?.string() ?: "{}" }
         if (!response.isSuccessful) {
@@ -103,7 +106,7 @@ class WorkerApiClient(
     ): JSONObject {
         val url = "$baseUrl$path"
         val token = getIdToken()
-        val request = buildRequest(url, token)
+        val request = buildRequest(url, token).withTraceHeader()
         val response = httpClient.newCall(request).executeAsync()
         val bodyStr = response.use { it.body?.string() ?: "{}" }
         val code = response.code
@@ -112,7 +115,7 @@ class WorkerApiClient(
             // Token rejected — force refresh and retry once
             clearTokenCache()
             val freshToken = getIdToken(forceRefresh = true)
-            val retryRequest = buildRequest(url, freshToken)
+            val retryRequest = buildRequest(url, freshToken).withTraceHeader()
             val retryResponse = httpClient.newCall(retryRequest).executeAsync()
             val retryBody = retryResponse.use { it.body?.string() ?: "{}" }
             if (!retryResponse.isSuccessful) {
@@ -135,7 +138,7 @@ class WorkerApiClient(
     ): JSONArray {
         val url = "$baseUrl$path"
         val token = getIdToken()
-        val request = buildRequest(url, token)
+        val request = buildRequest(url, token).withTraceHeader()
         val response = httpClient.newCall(request).executeAsync()
         val bodyStr = response.use { it.body?.string() ?: "[]" }
         val code = response.code
@@ -143,7 +146,7 @@ class WorkerApiClient(
         if (code == 401) {
             clearTokenCache()
             val freshToken = getIdToken(forceRefresh = true)
-            val retryRequest = buildRequest(url, freshToken)
+            val retryRequest = buildRequest(url, freshToken).withTraceHeader()
             val retryResponse = httpClient.newCall(retryRequest).executeAsync()
             val retryBody = retryResponse.use { it.body?.string() ?: "[]" }
             if (!retryResponse.isSuccessful) {
@@ -164,6 +167,9 @@ class WorkerApiClient(
         private val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }
+
+private fun Request.withTraceHeader(): Request =
+    newBuilder().header("x-session-trace-id", TraceManager.sessionTraceId).build()
 
 class ApiException(val statusCode: Int, message: String) : Exception(message)
 

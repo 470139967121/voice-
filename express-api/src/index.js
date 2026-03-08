@@ -12,6 +12,11 @@ const PORT = process.env.PORT || 3000;
 app.use(corsMiddleware);
 app.use(express.json({ limit: '10mb' }));
 
+// Request/response logging (after body parsing, before auth)
+const logger = require('./utils/loggerInstance');
+const { createRequestLogger } = require('./middleware/requestLogger');
+app.use(createRequestLogger(logger));
+
 // Health check (no auth)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
@@ -19,7 +24,7 @@ app.get('/api/health', (req, res) => {
 
 // Auth middleware for all /api routes (except health)
 app.use('/api', (req, res, next) => {
-  if (req.path === '/health') return next();
+  if (req.path === '/health' || req.path === '/log-config') return next();
   authMiddleware(req, res, next);
 });
 
@@ -39,8 +44,17 @@ app.use('/api', require('./routes/admin-economy'));
 app.use('/api', require('./routes/admin-gifts'));
 app.use('/api', require('./routes/admin-cleanup'));
 app.use('/api', require('./routes/admin-backup'));
+app.use('/api', require('./routes/admin-logs'));
+app.use('/api', require('./routes/admin-log-config'));
 app.use('/api', require('./routes/storage'));
+app.use('/api', require('./routes/device-info'));
+app.use('/api', require('./routes/admin-bans'));
+app.use('/api', require('./routes/admin-devices'));
+app.use('/api', require('./routes/admin-alerts'));
 app.use('/api', require('./routes/translate'));
+
+const { createLogsRouter } = require('./routes/logs');
+app.use('/api', createLogsRouter(logger));
 
 // 404 handler
 app.use((req, res) => {

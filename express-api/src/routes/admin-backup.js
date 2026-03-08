@@ -1,11 +1,12 @@
 /**
- * Admin backup routes — R2-based user profile backups.
+ * Admin backup routes — R2-based full database backups.
  *
- * GET  /api/admin/backups              → List available backups
- * POST /api/admin/backups/trigger      → Trigger immediate backup
- * GET  /api/admin/backups/:date        → Download a backup by date (YYYY-MM-DD)
- * POST /api/admin/backups/restore/:date → Restore all users from a backup
- * POST /api/admin/backups/recover-photos → Scan R2 and restore missing photo URLs
+ * GET  /api/admin/backups                   → List available backups (with manifest data)
+ * POST /api/admin/backups/trigger           → Trigger immediate full backup
+ * GET  /api/admin/backups/:date/:collection → Download a specific collection's backup
+ * GET  /api/admin/backups/:date             → Download legacy users backup by date
+ * POST /api/admin/backups/restore/:date     → Restore from backup (full/collection/missing-only)
+ * POST /api/admin/backups/recover-photos    → Scan R2 and restore missing photo URLs
  */
 
 const router = require('express').Router();
@@ -13,6 +14,7 @@ const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const r2 = require('../utils/r2');
 const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const backupFn = require('../cron/backups');
 
 // ─── S3 client for listing with metadata (size, lastModified) ────
 
@@ -29,11 +31,6 @@ const s3 = new S3Client({
 });
 
 // ─── Helpers ─────────────────────────────────────────────────────
-
-async function queryDocs(ref) {
-  const snap = await ref.get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
 
 /**
  * List R2 objects under a prefix with full metadata (size, lastModified).
@@ -58,22 +55,68 @@ async function listObjectsWithMeta(prefix) {
   return objects;
 }
 
-// ── List available backups ──
+/**
+ * Read and parse a JSON file from R2.
+ * Returns the parsed object, or throws if not found.
+ */
+async function readR2Json(key) {
+  let obj;
+  try {
+    obj = await r2.getObject(key);
+  } catch (err) {
+    if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    throw err;
+  }
+
+  const chunks = [];
+  for await (const chunk of obj.Body) {
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+}
+
+// All collections that can be restored (matches backups.js)
+const RESTORABLE_COLLECTIONS = backupFn.TOP_LEVEL_COLLECTIONS;
+
+// ── List available backups (full backup dates with manifests) ──
 router.get('/admin/backups', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const objects = await listObjectsWithMeta('backups/users/');
-    const backups = objects.map(obj => ({
-      key: obj.key,
-      date: obj.key.replace('backups/users/', '').replace('.json', ''),
-      size: obj.size,
-      uploaded: obj.lastModified ? obj.lastModified.toISOString() : null,
-      userCount: null, // custom metadata not available via S3 ListObjects
-    }));
+    // List all manifest files under backups/full/
+    const objects = await listObjectsWithMeta('backups/full/');
+    const dateMap = {};
 
-    // Sort newest first
-    backups.sort((a, b) => b.date.localeCompare(a.date));
+    for (const obj of objects) {
+      // Extract date from key: backups/full/YYYY-MM-DD/filename.json
+      const parts = obj.key.replace('backups/full/', '').split('/');
+      const date = parts[0];
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+
+      if (!dateMap[date]) {
+        dateMap[date] = { date, files: [], totalSize: 0, manifest: null };
+      }
+      dateMap[date].files.push(obj.key);
+      dateMap[date].totalSize += obj.size || 0;
+    }
+
+    // Try to load manifest for each date
+    const backups = [];
+    for (const date of Object.keys(dateMap).sort().reverse()) {
+      const entry = dateMap[date];
+      try {
+        const manifest = await readR2Json(`backups/full/${date}/manifest.json`);
+        if (manifest) {
+          entry.manifest = manifest;
+        }
+      } catch {
+        // Manifest might not exist for older backups
+      }
+      backups.push(entry);
+    }
+
     res.json({ backups });
   } catch (err) {
     console.error('GET /api/admin/backups error:', err);
@@ -81,32 +124,50 @@ router.get('/admin/backups', async (req, res) => {
   }
 });
 
-// ── Trigger immediate backup ──
+// ── Trigger immediate full backup ──
 router.post('/admin/backups/trigger', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const snap = await db.collection('users').limit(5000).get();
-    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (users.length === 0) return res.json({ message: 'No users found', userCount: 0 });
-
-    const today = new Date().toISOString().slice(0, 10);
-    const key = `backups/users/${today}.json`;
-    const payload = JSON.stringify(users, null, 2);
-
-    await r2.putObject(key, Buffer.from(payload), 'application/json', {
-      userCount: String(users.length),
-      createdAt: new Date().toISOString(),
+    const result = await backupFn();
+    res.json({
+      message: 'Full backup completed',
+      date: result.date,
+      manifest: result.manifest,
     });
-
-    res.json({ message: `Backed up ${users.length} users`, key, bytes: payload.length });
   } catch (err) {
     console.error('POST /api/admin/backups/trigger error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Download a specific backup ──
+// ── Download a specific collection's backup ──
+router.get('/admin/backups/:date/:collection', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+
+    const { date, collection } = req.params;
+    const key = `backups/full/${date}/${collection}.json`;
+
+    let obj;
+    try {
+      obj = await r2.getObject(key);
+    } catch (err) {
+      if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+        return res.status(404).json({ error: `No backup found for ${collection} on ${date}` });
+      }
+      throw err;
+    }
+
+    res.set('Content-Type', 'application/json');
+    obj.Body.pipe(res);
+  } catch (err) {
+    console.error('GET /api/admin/backups/:date/:collection error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── Download legacy users backup (backwards compat) ──
 router.get('/admin/backups/:date', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
@@ -116,84 +177,101 @@ router.get('/admin/backups/:date', async (req, res) => {
     try {
       obj = await r2.getObject(key);
     } catch (err) {
-      // S3 GetObject throws NoSuchKey if the object does not exist
       if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
         return res.status(404).json({ error: `No backup found for ${req.params.date}` });
       }
       throw err;
     }
 
-    const stream = obj.Body;
     res.set('Content-Type', 'application/json');
-    stream.pipe(res);
+    obj.Body.pipe(res);
   } catch (err) {
     console.error('GET /api/admin/backups/:date error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Restore users from a backup ──
+// ── Restore from a backup ──
 router.post('/admin/backups/restore/:date', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const mode = req.body.mode || 'missing'; // 'missing' = only fill missing fields, 'full' = overwrite
+    const { date } = req.params;
+    const { mode = 'missing-only', collection } = req.body;
 
-    const key = `backups/users/${req.params.date}.json`;
-    let obj;
-    try {
-      obj = await r2.getObject(key);
-    } catch (err) {
-      if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
-        return res.status(404).json({ error: `No backup found for ${req.params.date}` });
+    if (!['full', 'collection', 'missing-only'].includes(mode)) {
+      return res.status(400).json({ error: 'Invalid mode. Use: full, collection, or missing-only' });
+    }
+
+    if (mode === 'collection' && !collection) {
+      return res.status(400).json({ error: 'collection is required when mode is "collection"' });
+    }
+
+    // Auto-create a fresh backup before any restore
+    console.log('Restore: creating pre-restore backup...');
+    await backupFn();
+
+    // Determine which collections to restore
+    const collectionsToRestore = mode === 'collection'
+      ? [collection]
+      : [...RESTORABLE_COLLECTIONS];
+
+    const results = {};
+
+    for (const collName of collectionsToRestore) {
+      const key = `backups/full/${date}/${collName}.json`;
+      const backupDocs = await readR2Json(key);
+
+      if (backupDocs === null) {
+        results[collName] = { status: 'skipped', reason: 'no backup file found' };
+        continue;
       }
-      throw err;
-    }
 
-    // Read the stream into a string
-    const chunks = [];
-    for await (const chunk of obj.Body) {
-      chunks.push(chunk);
-    }
-    const backupUsers = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
-    let restoredCount = 0;
+      let restoredCount = 0;
 
-    for (const backupUser of backupUsers) {
-      const uid = backupUser.id;
-      if (!uid) continue;
-
-      if (mode === 'full') {
-        // Full restore — overwrite all fields from backup
-        const { id, ...data } = backupUser;
-        await db.doc(`users/${uid}`).update(data);
-        restoredCount++;
-      } else {
-        // Missing-only restore — only fill in fields that are currently null/missing
-        const snap = await db.doc(`users/${uid}`).get();
-        if (!snap.exists) continue;
-        const current = snap.data();
-
-        const { id: _id, ...backupData } = backupUser;
-        const fieldsToRestore = {};
-        for (const [field, value] of Object.entries(backupData)) {
-          if (value != null && (current[field] === null || current[field] === undefined)) {
-            fieldsToRestore[field] = value;
-          }
+      if (mode === 'full' || mode === 'collection') {
+        // Full restore: delete existing docs, then write from backup
+        const existingSnap = await db.collection(collName).get();
+        const batch = db.batch();
+        for (const doc of existingSnap.docs) {
+          batch.delete(doc.ref);
+        }
+        if (!existingSnap.empty) {
+          await batch.commit();
         }
 
-        if (Object.keys(fieldsToRestore).length > 0) {
-          await db.doc(`users/${uid}`).update(fieldsToRestore);
+        // Write backup docs
+        for (const backupDoc of backupDocs) {
+          const { id, ...data } = backupDoc;
+          if (!id) continue;
+          await db.collection(collName).doc(id).set(data);
           restoredCount++;
         }
+      } else {
+        // missing-only: only restore docs that don't exist currently
+        for (const backupDoc of backupDocs) {
+          const { id, ...data } = backupDoc;
+          if (!id) continue;
+          const existing = await db.collection(collName).doc(id).get();
+          if (!existing.exists) {
+            await db.collection(collName).doc(id).set(data);
+            restoredCount++;
+          }
+        }
       }
+
+      results[collName] = {
+        status: 'restored',
+        restoredCount,
+        totalInBackup: backupDocs.length,
+      };
     }
 
     res.json({
-      message: `Restored ${restoredCount}/${backupUsers.length} users (mode: ${mode})`,
+      message: `Restore completed (mode: ${mode})`,
       mode,
-      date: req.params.date,
-      restoredCount,
-      totalInBackup: backupUsers.length,
+      date,
+      results,
     });
   } catch (err) {
     console.error('POST /api/admin/backups/restore/:date error:', err);
@@ -212,7 +290,7 @@ router.post('/admin/backups/recover-photos', async (req, res) => {
     // Scan R2 for profile photos and cover photos
     for (const folder of ['profile_photos/', 'cover_photos/']) {
       const field = folder === 'profile_photos/' ? 'profilePhotoUrl' : 'coverPhotoUrl';
-      const userPhotos = {}; // uid → latest key
+      const userPhotos = {}; // uid -> latest key
 
       const objects = await listObjectsWithMeta(folder);
       for (const obj of objects) {

@@ -40,6 +40,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.shyden.shytalk.feature.suspension.BanScreen
 import com.shyden.shytalk.feature.suspension.SuspensionScreen
 import kotlinx.coroutines.launch
 
@@ -57,10 +58,22 @@ fun GoogleSignInScreen(
     val scope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }
 
-    LaunchedEffect(uiState.isAuthenticated, uiState.isSuspended, uiState.isBackendUnreachable) {
-        if (uiState.isAuthenticated && !uiState.isSuspended && !uiState.isBackendUnreachable) {
+    val isBanned = uiState.isDeviceBanned || uiState.isNetworkBanned
+
+    LaunchedEffect(uiState.isAuthenticated, uiState.isSuspended, uiState.isBackendUnreachable, isBanned) {
+        if (uiState.isAuthenticated && !uiState.isSuspended && !uiState.isBackendUnreachable && !isBanned) {
             onAuthSuccess(uiState.hasProfile, uiState.hasDOB, uiState.needsLegalAcceptance)
         }
+    }
+
+    if (isBanned) {
+        BanScreen(
+            banType = if (uiState.isDeviceBanned) "device" else "network",
+            reason = uiState.banReason,
+            expiresAt = uiState.banExpiresAt,
+            onSignOut = { viewModel.signOut() }
+        )
+        return
     }
 
     if (uiState.isSuspended) {

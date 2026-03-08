@@ -2,6 +2,8 @@ package com.shyden.shytalk.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import okhttp3.Call
@@ -25,12 +27,17 @@ class StorageRepositoryImpl(
     private val auth: FirebaseAuth
 ) : StorageRepository {
 
+    companion object {
+        private const val TAG = "StorageRepositoryImpl"
+    }
+
     override suspend fun uploadImage(
         userId: String,
         path: String,
         imageData: ByteArray,
         contentType: String
     ): Resource<String> {
+        logI(TAG, "Uploading file: path=$path")
         return try {
             val idToken = auth.currentUser?.getIdToken(false)?.await()?.token
                 ?: return Resource.Error("Not signed in")
@@ -58,6 +65,7 @@ class StorageRepositoryImpl(
                 Resource.Success(json.getString("url"))
             }
         } catch (e: Exception) {
+            logE(TAG, "Upload failed", e)
             Resource.Error(e.message ?: "Failed to upload image", e)
         }
     }

@@ -10,6 +10,8 @@ import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.model.Transaction
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.GiftRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,6 +88,7 @@ class GachaViewModel(
     }
 
     companion object {
+        private const val TAG = "GachaViewModel"
         const val WHEEL_SIZE = 16
     }
 
@@ -152,6 +155,7 @@ class GachaViewModel(
     fun pullHundred() = pull(100)
 
     private fun pull(count: Int) {
+        logI(TAG, "Gacha spin started: count=$count")
         val cost = _uiState.value.pullCosts[count] ?: return
         if (_uiState.value.coinBalance < cost) {
             _uiState.update { it.copy(error = "Not enough coins") }
@@ -208,6 +212,7 @@ class GachaViewModel(
                     }
                 }
                 is Resource.Error -> {
+                    logE(TAG, "Gacha pull failed: ${result.message}")
                     _uiState.update { it.copy(isPulling = false, error = result.message) }
                 }
                 is Resource.Loading -> {}

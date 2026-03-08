@@ -7,6 +7,10 @@ const backpackCleanup = require('./backpackCleanup');
 const backups = require('./backups');
 const closedRooms = require('./closedRooms');
 const orphanedStorage = require('./orphanedStorage');
+const rotateLogs = require('./rotateLogs');
+const expireBans = require('./expireBans');
+const serverHealth = require('./serverHealth');
+const alertManager = require('../utils/alertManagerInstance');
 
 function startCronJobs() {
   // Archive old reports — Sunday 03:00 UTC
@@ -38,6 +42,23 @@ function startCronJobs() {
   cron.schedule('0 4 * * *', () => {
     console.log('[CRON] orphanedStorage');
     orphanedStorage().catch(err => console.error('[CRON] orphanedStorage error:', err));
+  });
+
+  // Rotate logs from Firestore to R2 — every hour
+  cron.schedule('0 * * * *', () => {
+    console.log('[CRON] rotateLogs');
+    rotateLogs().catch(err => console.error('[CRON] rotateLogs error:', err));
+  });
+
+  // Expire bans — every 15 minutes
+  cron.schedule('*/15 * * * *', () => {
+    console.log('[CRON] expireBans');
+    expireBans().catch(err => console.error('[CRON] expireBans error:', err));
+  });
+
+  // Server health check — every 5 minutes
+  cron.schedule('*/5 * * * *', () => {
+    serverHealth(alertManager).catch(err => console.error('[CRON] serverHealth error:', err));
   });
 
   console.log('Cron jobs scheduled');
