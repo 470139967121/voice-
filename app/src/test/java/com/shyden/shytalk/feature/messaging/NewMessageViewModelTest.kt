@@ -3,6 +3,7 @@ package com.shyden.shytalk.feature.messaging
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -106,7 +107,7 @@ class NewMessageViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        assertEquals("Failed to load user data", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
         assertFalse(vm.uiState.value.isLoading)
     }
 
@@ -162,10 +163,7 @@ class NewMessageViewModelTest {
         // One more should trigger error
         vm.toggleSelection("one-too-many")
 
-        assertEquals(
-            "Maximum ${Constants.MAX_GROUP_PARTICIPANTS} participants allowed",
-            vm.uiState.value.error
-        )
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test

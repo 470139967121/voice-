@@ -19,8 +19,11 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
+
+private const val TAG = "PMRepository"
 
 class PrivateMessageRepositoryImpl(
     private val api: WorkerApiClient,
@@ -43,7 +46,9 @@ class PrivateMessageRepositoryImpl(
                 val data = doc.data ?: return@mapNotNull null
                 Conversation.fromMap(data, doc.id)
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to prefetch conversations", e)
+        }
     }
 
     // Real-time conversation list from Firestore
@@ -332,24 +337,26 @@ class PrivateMessageRepositoryImpl(
         userId: String
     ): Resource<Unit> = firebaseCall("Failed to toggle reaction") {
         val messageRef = firestore.document("conversations/$conversationId/messages/$messageId")
-        val doc = messageRef.get().await()
-        val data = doc.data ?: throw Exception("Message not found")
-        @Suppress("UNCHECKED_CAST")
-        val reactions = (data["reactions"] as? Map<String, List<String>>)?.toMutableMap()
-            ?: mutableMapOf()
-        val usersForEmoji = reactions[emoji]?.toMutableList() ?: mutableListOf()
-        if (userId in usersForEmoji) {
-            usersForEmoji.remove(userId)
-            if (usersForEmoji.isEmpty()) {
-                reactions.remove(emoji)
+        firestore.runTransaction { transaction ->
+            val doc = transaction.get(messageRef)
+            val data = doc.data ?: throw Exception("Message not found")
+            @Suppress("UNCHECKED_CAST")
+            val reactions = (data["reactions"] as? Map<String, List<String>>)?.toMutableMap()
+                ?: mutableMapOf()
+            val usersForEmoji = reactions[emoji]?.toMutableList() ?: mutableListOf()
+            if (userId in usersForEmoji) {
+                usersForEmoji.remove(userId)
+                if (usersForEmoji.isEmpty()) {
+                    reactions.remove(emoji)
+                } else {
+                    reactions[emoji] = usersForEmoji
+                }
             } else {
+                usersForEmoji.add(userId)
                 reactions[emoji] = usersForEmoji
             }
-        } else {
-            usersForEmoji.add(userId)
-            reactions[emoji] = usersForEmoji
-        }
-        messageRef.update("reactions", reactions).await()
+            transaction.update(messageRef, "reactions", reactions)
+        }.await()
     }
 
     override suspend fun searchMessages(
@@ -358,6 +365,7 @@ class PrivateMessageRepositoryImpl(
     ): Resource<List<PrivateMessage>> = firebaseCall("Failed to search messages") {
         val snapshot = firestore.collection("conversations/$conversationId/messages")
             .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(500)
             .get()
             .await()
         val lowerQuery = query.lowercase()

@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.profile
 
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
@@ -73,7 +74,7 @@ class RequiredDOBViewModelTest {
         vm.saveDateOfBirth(testDob)
         advanceUntilIdle()
 
-        assertEquals("Failed to save date of birth", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
         assertFalse(vm.uiState.value.saved)
         assertFalse(vm.uiState.value.isLoading)
     }
@@ -97,7 +98,7 @@ class RequiredDOBViewModelTest {
         val vm = createViewModel()
         vm.saveDateOfBirth(testDob)
         advanceUntilIdle()
-        assertEquals("Failed to save date of birth", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
 
         vm.clearError()
         assertNull(vm.uiState.value.error)
@@ -121,7 +122,7 @@ class RequiredDOBViewModelTest {
         val vm = createViewModel()
         vm.saveDateOfBirth(testDob)
         advanceUntilIdle()
-        assertEquals("Failed to save date of birth", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
 
         // Now succeed on retry
         coEvery { userRepository.updateProfile(userId, any()) } returns Resource.Success(Unit)
@@ -183,7 +184,7 @@ class RequiredDOBViewModelTest {
 
         assertFalse(vm.uiState.value.saved)
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("Failed to save date of birth", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test

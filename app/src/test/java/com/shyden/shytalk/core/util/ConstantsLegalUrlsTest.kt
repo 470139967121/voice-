@@ -7,9 +7,9 @@ import org.junit.Test
 class ConstantsLegalUrlsTest {
 
     @Test
-    fun `LEGAL_BASE_URL points to GitHub Pages`() {
+    fun `LEGAL_BASE_URL points to Cloudflare Pages`() {
         assertEquals(
-            "https://shydenmcm.github.io/ShyTalk",
+            "https://shytalk.shyden.co.uk",
             Constants.LEGAL_BASE_URL
         )
     }
@@ -18,7 +18,7 @@ class ConstantsLegalUrlsTest {
     fun `PRIVACY_POLICY_URL is built from base URL`() {
         assertTrue(Constants.PRIVACY_POLICY_URL.startsWith(Constants.LEGAL_BASE_URL))
         assertEquals(
-            "${Constants.LEGAL_BASE_URL}/privacy-policy.html",
+            "${Constants.LEGAL_BASE_URL}/privacy.html",
             Constants.PRIVACY_POLICY_URL
         )
     }
@@ -27,7 +27,7 @@ class ConstantsLegalUrlsTest {
     fun `TERMS_URL is built from base URL`() {
         assertTrue(Constants.TERMS_URL.startsWith(Constants.LEGAL_BASE_URL))
         assertEquals(
-            "${Constants.LEGAL_BASE_URL}/terms-and-conditions.html",
+            "${Constants.LEGAL_BASE_URL}/terms.html",
             Constants.TERMS_URL
         )
     }
@@ -42,10 +42,10 @@ class ConstantsLegalUrlsTest {
     }
 
     @Test
-    fun `CYBER_BULLYING_URL uses HTTPS`() {
-        assertTrue(Constants.CYBER_BULLYING_URL.startsWith("https://"))
+    fun `CYBER_BULLYING_URL is built from base URL`() {
+        assertTrue(Constants.CYBER_BULLYING_URL.startsWith(Constants.LEGAL_BASE_URL))
         assertEquals(
-            "https://shytalk.shyden.co.uk/cyber-bullying",
+            "${Constants.LEGAL_BASE_URL}/cyber-bullying.html",
             Constants.CYBER_BULLYING_URL
         )
     }
@@ -59,10 +59,11 @@ class ConstantsLegalUrlsTest {
     }
 
     @Test
-    fun `legal URLs from GitHub Pages end with html extension`() {
+    fun `all legal URLs end with html extension`() {
         assertTrue(Constants.PRIVACY_POLICY_URL.endsWith(".html"))
         assertTrue(Constants.TERMS_URL.endsWith(".html"))
         assertTrue(Constants.COMMUNITY_GUIDELINES_URL.endsWith(".html"))
+        assertTrue(Constants.CYBER_BULLYING_URL.endsWith(".html"))
     }
 
     @Test

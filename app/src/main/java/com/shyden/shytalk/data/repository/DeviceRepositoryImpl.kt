@@ -3,6 +3,7 @@ package com.shyden.shytalk.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.firebaseCall
+import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.data.remote.WorkerApiClient
 import kotlinx.coroutines.tasks.await
 import org.json.JSONObject
@@ -50,7 +51,8 @@ class DeviceRepositoryImpl(
                 Resource.Success(BanStatus())
             }
         } catch (e: Exception) {
-            // Lenient: if ban check fails, allow through
+            // Lenient: if ban check fails, allow through (but log it for debugging)
+            logW("DeviceRepository", "Ban check failed, allowing through: ${e.message}")
             Resource.Success(BanStatus())
         }
     }

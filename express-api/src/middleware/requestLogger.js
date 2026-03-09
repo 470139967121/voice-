@@ -73,7 +73,7 @@ function createRequestLogger(logger) {
             path,
             statusCode,
             durationMs,
-            requestBody: sanitizeBody(req.body),
+            requestBody: req.body != null ? sanitizeBody(req.body) : null,
             userAgent: req.headers['user-agent'] || null,
           },
         });

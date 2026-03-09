@@ -151,7 +151,7 @@ fun ReportUserDialog(
                     }
 
                     OutlinedButton(
-                        onClick = { onAddEvidence?.invoke() },
+                        onClick = { onAddEvidence() },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isSubmitting && !isCompressing
                     ) {

@@ -3,11 +3,16 @@ package com.shyden.shytalk.core.util
 /**
  * Client-side moderation filter for PM messages.
  * Prohibited words are loaded from Firestore config/moderation document.
+ *
+ * Thread-safety: all public methods are synchronized to prevent concurrent
+ * modification of recentMessages from multiple coroutines.
  */
 object ModerationFilter {
 
+    @kotlin.concurrent.Volatile
     private var prohibitedWords: Set<String> = emptySet()
-    private var recentMessages: MutableList<Pair<Long, String>> = mutableListOf()
+    private val recentMessages: MutableList<Pair<Long, String>> = mutableListOf()
+    private val lock = Any()
 
     fun updateProhibitedWords(words: List<String>) {
         prohibitedWords = words.map { it.lowercase() }.toSet()
@@ -19,7 +24,6 @@ object ModerationFilter {
     fun checkMessage(text: String): String? {
         val lower = text.lowercase()
 
-        // Check prohibited words
         for (word in prohibitedWords) {
             if (lower.contains(word)) {
                 return "Your message may contain inappropriate content. Please review before sending."
@@ -32,23 +36,20 @@ object ModerationFilter {
     /**
      * Checks for repeated message spam. Returns true if the message is considered spam.
      */
-    fun isSpam(text: String): Boolean {
+    fun isSpam(text: String): Boolean = synchronized(lock) {
         val now = currentTimeMillis()
-        val windowMs = 60_000L // 1 minute
+        val windowMs = 60_000L
 
-        // Clean old entries
         recentMessages.removeAll { now - it.first > windowMs }
 
-        // Check for 3+ identical messages in the window
         val sameCount = recentMessages.count { it.second == text }
-        if (sameCount >= 2) return true // Would be the 3rd
+        if (sameCount >= 2) return@synchronized true
 
-        // Track this message
         recentMessages.add(now to text)
-        return false
+        false
     }
 
-    fun reset() {
+    fun reset(): Unit = synchronized(lock) {
         recentMessages.clear()
     }
 }

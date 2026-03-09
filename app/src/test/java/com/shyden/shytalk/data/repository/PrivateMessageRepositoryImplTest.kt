@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Transaction
 import com.google.firebase.firestore.WriteBatch
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.remote.WorkerApiClient
@@ -62,6 +63,16 @@ class PrivateMessageRepositoryImplTest {
         // Batch operations
         every { firestore.batch() } returns mockBatch
         every { mockBatch.commit() } returns Tasks.forResult(null)
+
+        // Transaction support (toggleReaction uses runTransaction)
+        val mockTransaction = mockk<Transaction>(relaxed = true)
+        every { mockTransaction.get(any()) } returns mockDocSnapshot
+        every { mockTransaction.update(any(), any<String>(), any()) } returns mockTransaction
+        every { firestore.runTransaction<Unit>(any()) } answers {
+            val fn = firstArg<Transaction.Function<Unit>>()
+            fn.apply(mockTransaction)
+            Tasks.forResult(null)
+        }
 
         repo = PrivateMessageRepositoryImpl(api, firestore)
     }

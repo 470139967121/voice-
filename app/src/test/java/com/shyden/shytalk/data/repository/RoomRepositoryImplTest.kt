@@ -7,6 +7,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Transaction
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.remote.WorkerApiClient
 import io.mockk.coEvery
@@ -59,6 +60,16 @@ class RoomRepositoryImplTest {
             "seats" to emptyMap<String, Any>(),
             "participantIds" to emptyList<String>()
         )
+
+        // Transaction support (moveSeat uses runTransaction)
+        val mockTransaction = mockk<Transaction>(relaxed = true)
+        every { mockTransaction.get(any()) } returns mockDocSnapshot
+        every { mockTransaction.update(any(), any<Map<String, Any>>()) } returns mockTransaction
+        every { firestore.runTransaction<Unit>(any()) } answers {
+            val fn = firstArg<Transaction.Function<Unit>>()
+            fn.apply(mockTransaction)
+            Tasks.forResult(null)
+        }
 
         // Query chain for collection queries (leaveAllRooms, closeAllRoomsByOwner)
         every { mockCollRef.whereArrayContains(any<String>(), any()) } returns mockQuery
@@ -175,7 +186,7 @@ class RoomRepositoryImplTest {
 
     @Test
     fun `moveSeat returns Error on exception`() = runTest {
-        every { mockDocRef.get() } returns Tasks.forException(RuntimeException("Fail"))
+        every { firestore.runTransaction<Unit>(any()) } returns Tasks.forException(RuntimeException("Fail"))
 
         val result = repo.moveSeat("room-1", 2, 5, "user-a")
         assertTrue(result is Resource.Error)

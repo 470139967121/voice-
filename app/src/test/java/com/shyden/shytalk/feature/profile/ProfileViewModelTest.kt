@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.ReportRepository
@@ -242,7 +243,7 @@ class ProfileViewModelTest {
         vm.loadProfile(null)
         advanceUntilIdle()
 
-        assertEquals("not found", vm.uiState.value.error)
+        assertEquals(UiText.Plain("not found"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isLoading)
     }
 
@@ -280,7 +281,7 @@ class ProfileViewModelTest {
         vm.saveProfile("My Name", 946684800000L)
         advanceUntilIdle()
 
-        assertEquals("save failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("save failed"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.profileSaved)
     }
 
@@ -345,7 +346,7 @@ class ProfileViewModelTest {
         vm.saveProfileEdits("Name", "Desc", null)
         advanceUntilIdle()
 
-        assertEquals("edit failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("edit failed"), vm.uiState.value.error)
     }
 
     // ===== updateDisplayName =====
@@ -375,7 +376,7 @@ class ProfileViewModelTest {
         vm.updateDisplayName("New Name")
         advanceUntilIdle()
 
-        assertEquals("name failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("name failed"), vm.uiState.value.error)
     }
 
     // ===== uploadProfilePhoto =====
@@ -408,7 +409,7 @@ class ProfileViewModelTest {
 
         advanceUntilIdle()
 
-        assertEquals("upload failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("upload failed"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isUploadingPhoto)
     }
 
@@ -549,7 +550,7 @@ class ProfileViewModelTest {
 
         advanceUntilIdle()
 
-        assertEquals("cover upload failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("cover upload failed"), vm.uiState.value.error)
     }
 
     // ===== blockUser / unblockUser =====
@@ -573,7 +574,7 @@ class ProfileViewModelTest {
         vm.blockUser(otherUserId)
         advanceUntilIdle()
 
-        assertEquals("Failed to block user", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test
@@ -600,7 +601,7 @@ class ProfileViewModelTest {
         vm.unblockUser(otherUserId)
         advanceUntilIdle()
 
-        assertEquals("Failed to unblock user", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== toggleEditing =====
@@ -849,7 +850,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isFollowingTarget)
-        assertEquals("Failed to follow user", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test
@@ -869,7 +870,7 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.isFollowingTarget)
-        assertEquals("Failed to unfollow user", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== follower / following counts =====
@@ -1085,7 +1086,7 @@ class ProfileViewModelTest {
         vm.reportUser("Spam", "Bad")
         advanceUntilIdle()
 
-        assertEquals("Failed to submit report", vm.uiState.value.reportError)
+        assertTrue(vm.uiState.value.reportError is UiText.Res)
         assertFalse(vm.uiState.value.isSubmittingReport)
     }
 
@@ -1139,7 +1140,7 @@ class ProfileViewModelTest {
         vm.validateSuperShyPurchase("sub_gold", "bad")
         advanceUntilIdle()
 
-        assertEquals("Invalid token", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Invalid token"), vm.uiState.value.error)
     }
 
     // ===== blockUser clears follow state =====
@@ -1279,7 +1280,7 @@ class ProfileViewModelTest {
         vm.claimSuperShyTrial()
         advanceUntilIdle()
 
-        assertEquals("Trial expired", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Trial expired"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isLoading)
     }
 
@@ -1323,7 +1324,7 @@ class ProfileViewModelTest {
         vm.reportUser("Spam", "Bad")
         advanceUntilIdle()
 
-        assertEquals("Could not submit report", vm.uiState.value.reportError)
+        assertTrue(vm.uiState.value.reportError is UiText.Res)
         assertFalse(vm.uiState.value.isSubmittingReport)
     }
 
@@ -1345,7 +1346,7 @@ class ProfileViewModelTest {
         vm.reportUser("Spam", "Bad", listOf(Pair(byteArrayOf(1), "image/png")))
         advanceUntilIdle()
 
-        assertEquals("Failed to upload evidence", vm.uiState.value.reportError)
+        assertTrue(vm.uiState.value.reportError is UiText.Res)
         assertFalse(vm.uiState.value.isSubmittingReport)
         assertFalse(vm.uiState.value.reportSubmitted)
     }
@@ -1418,7 +1419,7 @@ class ProfileViewModelTest {
         vm.testPurchaseSuperShy("sub_test")
         advanceUntilIdle()
 
-        assertEquals("Test failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Test failed"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isPurchasingSuperShy)
     }
 

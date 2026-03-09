@@ -2,10 +2,14 @@ package com.shyden.shytalk.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.core.util.logW
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -18,7 +22,7 @@ import kotlinx.coroutines.launch
 
 data class AuthUiState(
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val isAuthenticated: Boolean = false,
     val hasProfile: Boolean = false,
     val hasDOB: Boolean = false,
@@ -98,7 +102,7 @@ class AuthViewModel(
             when (val result = authRepository.signInWithGoogleIdToken(idToken)) {
                 is Resource.Success -> handleSignInSuccess(result.data)
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message) }
+                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -111,7 +115,7 @@ class AuthViewModel(
             when (val result = authRepository.signInWithAppleIdToken(idToken, rawNonce)) {
                 is Resource.Success -> handleSignInSuccess(result.data)
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message) }
+                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -201,13 +205,26 @@ class AuthViewModel(
                             if (user.isSuspended) {
                                 userRepository.liftExpiredSuspension(userId)
                             }
+                            var needsLegal = user.acceptedLegalVersion < CURRENT_LEGAL_VERSION
+                            // If user already accepted locally (pre-sign-in screen),
+                            // sync to Firestore and skip showing the legal screen again
+                            if (needsLegal && LanguagePreference.getAcceptedLegalVersion() >= CURRENT_LEGAL_VERSION) {
+                                userRepository.updateProfile(
+                                    userId,
+                                    mapOf("acceptedLegalVersion" to CURRENT_LEGAL_VERSION)
+                                )
+                                needsLegal = false
+                            }
+                            if (!needsLegal) {
+                                LanguagePreference.setAcceptedLegalVersion(CURRENT_LEGAL_VERSION)
+                            }
                             _uiState.update {
                                 it.copy(
                                     isLoading = false,
                                     isAuthenticated = true,
                                     hasProfile = true,
                                     hasDOB = user.dateOfBirth != null,
-                                    needsLegalAcceptance = user.acceptedLegalVersion < CURRENT_LEGAL_VERSION
+                                    needsLegalAcceptance = needsLegal
                                 )
                             }
                         }
@@ -254,7 +271,7 @@ class AuthViewModel(
                     _uiState.update { it.copy(isLoading = false, suspensionCanAppeal = false, suspensionAppealStatus = "pending") }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to submit appeal") }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_submit_appeal)) }
                 }
                 is Resource.Loading -> {}
             }

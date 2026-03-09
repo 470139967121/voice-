@@ -70,19 +70,19 @@ class ReportRepositoryImpl(
                 val obj = arr.getJSONObject(i)
                 Report(
                     reportId = obj.optString("id"),
-                    reporterId = obj.optString("reporter_id"),
-                    reporterName = obj.optString("reporter_name"),
-                    reporterUniqueId = obj.optLong("reporter_unique_id", 0L),
-                    reportedUserId = obj.optString("reported_user_id"),
-                    reportedUserName = obj.optString("reported_user_name"),
-                    reportedUserUniqueId = obj.optLong("reported_user_unique_id", 0L),
-                    conversationId = obj.optString("conversation_id"),
-                    messageId = obj.optString("message_id"),
-                    messageText = obj.optString("message_text"),
+                    reporterId = obj.optString("reporterId"),
+                    reporterName = obj.optString("reporterName"),
+                    reporterUniqueId = obj.optLong("reporterUniqueId", 0L),
+                    reportedUserId = obj.optString("reportedUserId"),
+                    reportedUserName = obj.optString("reportedUserName"),
+                    reportedUserUniqueId = obj.optLong("reportedUserUniqueId", 0L),
+                    conversationId = obj.optString("conversationId"),
+                    messageId = obj.optString("messageId"),
+                    messageText = obj.optString("messageText"),
                     reason = obj.optString("reason"),
                     description = obj.optString("description"),
                     type = obj.optString("type", "").lowercase(),
-                    timestamp = obj.optLong("created_at", 0L),
+                    timestamp = obj.optLong("createdAt", 0L),
                     status = obj.optString("status", "pending")
                 )
             }

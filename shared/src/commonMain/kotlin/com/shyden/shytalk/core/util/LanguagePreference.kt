@@ -5,4 +5,6 @@ expect object LanguagePreference {
     fun set(languageCode: String)
     fun getAutoTranslate(): Boolean
     fun setAutoTranslate(enabled: Boolean)
+    fun getAcceptedLegalVersion(): Int
+    fun setAcceptedLegalVersion(version: Int)
 }

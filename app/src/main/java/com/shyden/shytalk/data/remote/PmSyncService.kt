@@ -101,7 +101,7 @@ class PmSyncService : Service() {
             enableVibration(false)
         }
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        manager?.createNotificationChannel(channel)
     }
 
     private fun createNotification(): Notification {

@@ -1,5 +1,6 @@
 package com.shyden.shytalk.data.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.logE
@@ -16,6 +17,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
+import java.net.URLEncoder
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -52,7 +54,7 @@ class StorageRepositoryImpl(
                 .build()
             val response = httpClient.newCall(
                 Request.Builder()
-                    .url("$workerUrl/upload")
+                    .url("$workerUrl/api/storage/upload")
                     .header("Authorization", "Bearer $idToken")
                     .post(requestBody)
                     .build()
@@ -61,8 +63,10 @@ class StorageRepositoryImpl(
                 if (!it.isSuccessful) {
                     return Resource.Error("Upload failed: HTTP ${it.code}")
                 }
-                val json = JSONObject(it.body!!.string())
-                Resource.Success(json.getString("url"))
+                val json = JSONObject(it.body?.string() ?: "{}")
+                val url = json.optString("url", "")
+                if (url.isEmpty()) return Resource.Error("Upload response missing URL")
+                Resource.Success(url)
             }
         } catch (e: Exception) {
             logE(TAG, "Upload failed", e)
@@ -74,15 +78,16 @@ class StorageRepositoryImpl(
         try {
             val key = url.removePrefix("$R2_PUBLIC_BASE/")
             val idToken = auth.currentUser?.getIdToken(false)?.await()?.token ?: return
+            val encodedKey = URLEncoder.encode(key, "UTF-8")
             httpClient.newCall(
                 Request.Builder()
-                    .url("$workerUrl/delete?key=$key")
+                    .url("$workerUrl/api/storage/delete?key=$encodedKey")
                     .header("Authorization", "Bearer $idToken")
                     .delete()
                     .build()
             ).executeAsync().close()
-        } catch (_: Exception) {
-            // Best-effort: ignore failures
+        } catch (e: Exception) {
+            Log.d("StorageRepository", "Best-effort image delete failed", e)
         }
     }
 }

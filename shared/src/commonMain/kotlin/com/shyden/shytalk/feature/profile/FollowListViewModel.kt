@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.ProfileVisitor
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.Job
@@ -61,6 +63,7 @@ class FollowListViewModel(
             isOwnList = profileUserId == currentUid,
             selectedTab = tab
         )
+        logI(TAG, "Initializing for profile=$profileUserId, tab=$tab, isOwn=${profileUserId == currentUid}")
         loadData()
         observeUserUpdates()
         loadAliases(currentUid)
@@ -89,6 +92,7 @@ class FollowListViewModel(
     }
 
     fun selectTab(tab: FollowTab) {
+        logI(TAG, "Selected tab: $tab")
         _uiState.update { it.copy(selectedTab = tab) }
         if (tab == FollowTab.STALKERS && _uiState.value.isOwnList) {
             viewModelScope.launch {
@@ -102,11 +106,13 @@ class FollowListViewModel(
             _uiState.update { it.copy(isLoading = true) }
 
             val profileResult = userRepository.getUser(profileUserId)
-            if (profileResult is Resource.Error) {
-                _uiState.update { it.copy(isLoading = false, error = profileResult.message) }
+            if (profileResult !is Resource.Success) {
+                val msg = (profileResult as? Resource.Error)?.message ?: "Failed to load profile"
+                logE(TAG, "Failed to load profile: $msg")
+                _uiState.update { it.copy(isLoading = false, error = msg) }
                 return@launch
             }
-            val profileUser = (profileResult as Resource.Success).data
+            val profileUser = profileResult.data
             val followerIdsList = profileUser.followerIds.toList()
             val isFollowingHidden = !_uiState.value.isOwnList && profileUser.hideFollowing
             val followingIdsList = if (isFollowingHidden) emptyList() else profileUser.followingIds.toList()
@@ -137,6 +143,8 @@ class FollowListViewModel(
                     else -> emptyMap()
                 }
             } else emptyMap()
+
+            logI(TAG, "Loaded ${followerIdsList.size} followers, ${followingIdsList.size} following")
 
             // Load stalkers if viewing own list
             var stalkerList: List<ProfileVisitor> = emptyList()
@@ -190,6 +198,7 @@ class FollowListViewModel(
         if (targetUserId in _uiState.value.currentUserBlockedIds) return
 
         val isCurrentlyFollowing = targetUserId in _uiState.value.currentUserFollowingIds
+        logI(TAG, "${if (isCurrentlyFollowing) "Unfollowing" else "Following"} user=$targetUserId")
 
         // Optimistic update
         val newFollowingIds = if (isCurrentlyFollowing) {
@@ -206,6 +215,7 @@ class FollowListViewModel(
                 userRepository.followUser(currentUid, targetUserId)
             }
             if (result is Resource.Error) {
+                logE(TAG, "Follow/unfollow failed for user=$targetUserId: ${result.message}")
                 _uiState.update {
                     val revertedIds = if (isCurrentlyFollowing) {
                         it.currentUserFollowingIds + targetUserId
@@ -224,6 +234,7 @@ class FollowListViewModel(
     fun removeFollower(followerId: String) {
         val currentUid = _uiState.value.profileUserId
         if (!_uiState.value.isOwnList) return
+        logI(TAG, "Removing follower=$followerId")
 
         // Mark as pending remove — keep in list so Undo button is visible
         pendingRemoveUser = _uiState.value.followers.find { it.uid == followerId }
@@ -264,6 +275,7 @@ class FollowListViewModel(
     }
 
     companion object {
+        private const val TAG = "FollowListViewModel"
         private const val UNDO_TIMEOUT_MS = 5000L
     }
 }

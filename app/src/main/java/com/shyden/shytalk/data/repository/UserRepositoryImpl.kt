@@ -1,5 +1,6 @@
 package com.shyden.shytalk.data.repository
 
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.shyden.shytalk.core.model.ProfileVisitor
@@ -8,10 +9,7 @@ import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.firebaseCall
 import com.shyden.shytalk.core.util.toMap
 import com.shyden.shytalk.data.remote.WorkerApiClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,7 +18,10 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 import org.json.JSONObject
+
+private const val TAG = "UserRepository"
 
 class UserRepositoryImpl(
     private val api: WorkerApiClient,
@@ -36,7 +37,9 @@ class UserRepositoryImpl(
             val data = doc.data ?: return
             val user = User.fromMap(data, userId)
             _userUpdates.tryEmit(user)
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to emit user update for $userId", e)
+        }
     }
 
     private val profileVisibleFields = setOf(
@@ -95,17 +98,19 @@ class UserRepositoryImpl(
     override suspend fun getUsers(userIds: List<String>): Resource<List<User>> {
         if (userIds.isEmpty()) return Resource.Success(emptyList())
         return firebaseCall("Failed to get users") {
-            coroutineScope {
-                userIds.chunked(10).flatMap { chunk ->
-                    chunk.map { uid ->
-                        async(Dispatchers.IO) {
-                            try {
-                                val doc = firestore.document("users/$uid").get().await()
-                                val data = doc.data ?: return@async null
-                                User.fromMap(data, uid)
-                            } catch (_: Exception) { null }
-                        }
-                    }.mapNotNull { it.await() }
+            userIds.chunked(30).flatMap { chunk ->
+                try {
+                    val snapshot = firestore.collection("users")
+                        .whereIn(FieldPath.documentId(), chunk)
+                        .get()
+                        .await()
+                    snapshot.documents.mapNotNull { doc ->
+                        val data = doc.data ?: return@mapNotNull null
+                        User.fromMap(data, doc.id)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to batch-load ${chunk.size} users", e)
+                    emptyList()
                 }
             }
         }
@@ -114,7 +119,7 @@ class UserRepositoryImpl(
     override suspend fun getStalkers(profileUserId: String): Resource<List<ProfileVisitor>> =
         firebaseCall("Failed to load stalkers") {
             val snapshot = firestore.collection("users/$profileUserId/stalkers")
-                .orderBy("visitedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .orderBy("lastVisitedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(50)
                 .get()
                 .await()
@@ -212,19 +217,23 @@ class UserRepositoryImpl(
     override suspend fun checkBlockedBy(userIds: List<String>, targetUserId: String): Resource<Set<String>> {
         if (userIds.isEmpty()) return Resource.Success(emptySet())
         return firebaseCall("Failed to check blocks") {
-            coroutineScope {
-                userIds.map { uid ->
-                    async(Dispatchers.IO) {
-                        try {
-                            val doc = firestore.document("users/$uid").get().await()
-                            val data = doc.data ?: return@async null
-                            val blockedIds = (data["blockedUserIds"] as? List<*>)
-                                ?.filterIsInstance<String>() ?: emptyList()
-                            if (targetUserId in blockedIds) uid else null
-                        } catch (_: Exception) { null }
+            userIds.chunked(30).flatMap { chunk ->
+                try {
+                    val snapshot = firestore.collection("users")
+                        .whereIn(FieldPath.documentId(), chunk)
+                        .get()
+                        .await()
+                    snapshot.documents.mapNotNull { doc ->
+                        val data = doc.data ?: return@mapNotNull null
+                        val blockedIds = (data["blockedUserIds"] as? List<*>)
+                            ?.filterIsInstance<String>() ?: emptyList()
+                        if (targetUserId in blockedIds) doc.id else null
                     }
-                }.mapNotNull { it.await() }.toSet()
-            }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to batch-check blocks for ${chunk.size} users", e)
+                    emptyList()
+                }
+            }.toSet()
         }
     }
 
@@ -253,7 +262,7 @@ class UserRepositoryImpl(
             firestore.document("users/$userId")
                 .update(
                     mapOf(
-                        "stalkersViewedAt" to System.currentTimeMillis(),
+                        "stalkersLastViewedAt" to System.currentTimeMillis(),
                         "newStalkerCount" to 0L
                     )
                 ).await()

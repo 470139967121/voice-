@@ -298,4 +298,16 @@ class UserRepositoryImplTest {
     }
 
     // endregion
+
+    // region checkBlockedBy
+
+    @Test
+    fun `checkBlockedBy returns empty set for empty input`() = runTest {
+        val result = repo.checkBlockedBy(emptyList(), "target-1")
+
+        assertTrue(result is Resource.Success)
+        assertTrue((result as Resource.Success).data.isEmpty())
+    }
+
+    // endregion
 }

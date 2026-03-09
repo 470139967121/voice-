@@ -1,5 +1,6 @@
 package com.shyden.shytalk.feature.profile
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
@@ -55,6 +56,9 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import android.content.Intent
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import org.koin.compose.koinInject
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -107,6 +111,7 @@ import com.shyden.shytalk.core.model.BackpackItem
 import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.ui.StyledDisplayName
 import com.shyden.shytalk.core.ui.SuperShyGold
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.core.util.calculateAge
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.feature.gifting.GiftingViewModel
@@ -164,7 +169,8 @@ fun ProfileScreen(
         if (uri != null) {
             val imageData = try {
                 imageContext.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("ProfileScreen", "Failed to read cropped image", e)
                 null
             }
             if (imageData != null) {
@@ -204,7 +210,7 @@ fun ProfileScreen(
                     }
                 }
             } else {
-                val bytes = imageContext.contentResolver.openInputStream(uri)?.readBytes()
+                val bytes = imageContext.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                 if (bytes != null) {
                     if (bytes.size <= Constants.EVIDENCE_MAX_SIZE_BYTES) {
                         reportEvidenceList.add(bytes to mimeType)
@@ -226,7 +232,7 @@ fun ProfileScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.resolveAsync())
             viewModel.clearError()
         }
     }
@@ -301,7 +307,7 @@ fun ProfileScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
-                    title = { Text("Profile") },
+                    title = { Text(stringResource(Res.string.profile)) },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -378,7 +384,7 @@ fun ProfileScreen(
             },
             isSubmitting = uiState.isSubmittingReport,
             isCompressing = isCompressingEvidence,
-            errorMessage = uiState.reportError
+            errorMessage = uiState.reportError?.resolve()
         )
     }
 
@@ -399,11 +405,11 @@ fun ProfileScreen(
         val isBlocked = uiState.isBlockedByViewer
         AlertDialog(
             onDismissRequest = { showBlockDialog = false },
-            title = { Text(if (isBlocked) "Unblock ${user.displayName}?" else "Block ${user.displayName}?") },
+            title = { Text(if (isBlocked) stringResource(Res.string.unblock_confirm, user.displayName) else stringResource(Res.string.block_confirm, user.displayName)) },
             text = {
                 Text(
-                    if (isBlocked) "They will be able to view your profile again."
-                    else "They won't be able to view your profile."
+                    if (isBlocked) stringResource(Res.string.unblock_description)
+                    else stringResource(Res.string.block_description)
                 )
             },
             confirmButton = {
@@ -415,12 +421,12 @@ fun ProfileScreen(
                         viewModel.blockUser(user.uid)
                     }
                 }) {
-                    Text(if (isBlocked) "Unblock" else "Block")
+                    Text(if (isBlocked) stringResource(Res.string.unblock) else stringResource(Res.string.block))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBlockDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.cancel))
                 }
             }
         )
@@ -532,14 +538,14 @@ private fun ProfileContent(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
                 Text(
-                    text = "This profile is not available",
+                    text = stringResource(Res.string.profile_not_available),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "You have been blocked by this user",
+                    text = stringResource(Res.string.blocked_by_user),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -557,7 +563,7 @@ private fun ProfileContent(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Report User")
+                    Text(stringResource(Res.string.report_user_generic))
                 }
             }
         }
@@ -576,13 +582,13 @@ private fun ProfileContent(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Account Suspended",
+                    text = stringResource(Res.string.account_suspended_label),
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "This user's account has been suspended.",
+                    text = stringResource(Res.string.account_suspended_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -594,7 +600,7 @@ private fun ProfileContent(
 
     if (user == null) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Profile not found", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(Res.string.profile_not_found), style = MaterialTheme.typography.bodyLarge)
         }
         return
     }
@@ -715,7 +721,7 @@ private fun ProfileContent(
                             color = Color.White
                         )
                         Text(
-                            text = "Followers",
+                            text = stringResource(Res.string.followers),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -761,7 +767,7 @@ private fun ProfileContent(
                                 )
                             }
                             Text(
-                                text = "Stalkers",
+                                text = stringResource(Res.string.stalkers),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.8f)
                             )
@@ -883,7 +889,7 @@ private fun ProfileContent(
                 OutlinedTextField(
                     value = editDisplayName,
                     onValueChange = { if (it.length <= 20) onEditDisplayNameChange(it) },
-                    label = { Text("Display Name") },
+                    label = { Text(stringResource(Res.string.display_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     supportingText = { Text("${editDisplayName.length}/20") }
@@ -918,7 +924,7 @@ private fun ProfileContent(
                             text = if (natCode != null) {
                                 "${flagEmojiForCode(natCode)} ${countryNameForCode(natCode) ?: natCode}"
                             } else {
-                                "Select nationality"
+                                stringResource(Res.string.select_nationality)
                             },
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -930,7 +936,7 @@ private fun ProfileContent(
                 OutlinedTextField(
                     value = editDescription,
                     onValueChange = { if (it.length <= 200) onEditDescriptionChange(it) },
-                    label = { Text("Description") },
+                    label = { Text(stringResource(Res.string.description)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 5,
@@ -947,7 +953,7 @@ private fun ProfileContent(
                         onClick = onToggleEditing,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(Res.string.cancel))
                     }
                     Button(
                         onClick = onSaveEdits,
@@ -960,7 +966,7 @@ private fun ProfileContent(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
-                            Text("Save")
+                            Text(stringResource(Res.string.save))
                         }
                     }
                 }
@@ -984,13 +990,16 @@ private fun ProfileContent(
                                 .clip(CircleShape)
                                 .background(SpeakingGreen)
                         )
-                    } else if (uiState.lastActiveText != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = uiState.lastActiveText!!,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    } else {
+                        val activeText = uiState.lastActiveText
+                        if (activeText != null) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = activeText.resolve(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     if (isOwn) {
@@ -1091,17 +1100,17 @@ private fun ProfileContent(
                             Spacer(modifier = Modifier.width(4.dp))
                             if (superShyActive) {
                                 val label = if (user.superShyTier == "lifetime") {
-                                    "Super Shy \u2726 Lifetime"
+                                    stringResource(Res.string.super_shy_lifetime)
                                 } else {
                                     val daysLeft = user.superShyExpiry?.let {
                                         ((it - currentTimeMillis()) / 86_400_000).toInt()
                                     }
-                                    if (daysLeft != null && daysLeft > 0) "Super Shy \u2726 ${daysLeft}d"
-                                    else "Super Shy"
+                                    if (daysLeft != null && daysLeft > 0) stringResource(Res.string.super_shy_days, daysLeft)
+                                    else stringResource(Res.string.super_shy)
                                 }
                                 Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             } else {
-                                Text("Get Super Shy")
+                                Text(stringResource(Res.string.get_super_shy))
                             }
                         }
 
@@ -1121,7 +1130,7 @@ private fun ProfileContent(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                "Wallet \u00B7 ${formatBalance(user.shyCoins)}",
+                                stringResource(Res.string.wallet_with_balance, formatBalance(user.shyCoins)),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -1144,7 +1153,7 @@ private fun ProfileContent(
                             ) {
                                 Icon(Icons.Default.PersonRemove, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Unfollow")
+                                Text(stringResource(Res.string.unfollow))
                             }
                         } else {
                             Button(
@@ -1153,7 +1162,7 @@ private fun ProfileContent(
                             ) {
                                 Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Follow")
+                                Text(stringResource(Res.string.follow))
                             }
                         }
                         if (onNavigateToChat != null) {
@@ -1163,7 +1172,7 @@ private fun ProfileContent(
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Message")
+                                Text(stringResource(Res.string.message))
                             }
                         }
                     }
@@ -1205,7 +1214,7 @@ private fun ProfileContent(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Report")
+                        Text(stringResource(Res.string.report))
                     }
                 }
 
@@ -1217,13 +1226,13 @@ private fun ProfileContent(
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        text = { Text("Gift Wall") }
+                        text = { Text(stringResource(Res.string.gift_wall)) }
                     )
                     if (isOwn) {
                         Tab(
                             selected = selectedTab == 1,
                             onClick = { selectedTab = 1 },
-                            text = { Text("Backpack") }
+                            text = { Text(stringResource(Res.string.backpack)) }
                         )
                     }
                 }
@@ -1288,7 +1297,7 @@ private fun BackpackContent(
     if (ownedGifts.isEmpty()) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             Text(
-                text = "Your backpack is empty.\nWin gifts from Lucky Spin!",
+                text = stringResource(Res.string.backpack_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

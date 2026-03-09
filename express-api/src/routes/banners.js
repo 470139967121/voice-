@@ -12,23 +12,13 @@
 
 const router = require('express').Router();
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() });
-const { db, FieldValue } = require('../utils/firebase');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const { db } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
 const { requireAdmin } = require('../middleware/auth');
 const { putObject, deleteObject } = require('../utils/r2');
-
-// ─── Helpers ─────────────────────────────────────────────────────
-
-async function getDoc(path) {
-  const snap = await db.doc(path).get();
-  return snap.exists ? { id: snap.id, ...snap.data() } : null;
-}
-
-async function queryDocs(ref) {
-  const snap = await ref.get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
+const { getDoc, queryDocs } = require('../utils/firestore-helpers');
+const log = require('../utils/log');
 
 // ── Active banners (any authenticated user) ──
 router.get('/banners/active', async (req, res) => {
@@ -49,9 +39,10 @@ router.get('/banners/active', async (req, res) => {
       return true;
     });
 
+    res.set('Cache-Control', 'public, max-age=300');
     res.json(active);
   } catch (err) {
-    console.error('GET /api/banners/active error:', err);
+    log.error('banners', 'Failed to fetch active banners', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -68,7 +59,7 @@ router.get('/admin/banners', async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    console.error('GET /api/admin/banners error:', err);
+    log.error('banners', 'Failed to fetch all banners', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -109,7 +100,7 @@ router.post('/admin/banners', async (req, res) => {
 
     res.json({ success: true, id });
   } catch (err) {
-    console.error('POST /api/admin/banners error:', err);
+    log.error('banners', 'Failed to create banner', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -139,7 +130,7 @@ router.put('/admin/banners/reorder', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('PUT /api/admin/banners/reorder error:', err);
+    log.error('banners', 'Failed to reorder banners', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -183,7 +174,7 @@ router.put('/admin/banners/:id', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('PUT /api/admin/banners/:id error:', err);
+    log.error('banners', 'Failed to update banner', { bannerId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -207,7 +198,7 @@ router.delete('/admin/banners/:id', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /api/admin/banners/:id error:', err);
+    log.error('banners', 'Failed to delete banner', { bannerId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -236,7 +227,7 @@ router.post('/admin/banners/upload', upload.single('file'), async (req, res) => 
     const imageUrl = `https://images.shytalk.shyden.co.uk/${key}`;
     res.json({ success: true, image_url: imageUrl, imageUrl, key });
   } catch (err) {
-    console.error('POST /api/admin/banners/upload error:', err);
+    log.error('banners', 'Failed to upload banner image', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -6,6 +6,11 @@ import com.shyden.shytalk.core.model.PmPrivacy
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.UiText
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -18,12 +23,12 @@ import kotlinx.coroutines.launch
 sealed class UpdateCheckResult {
     data object UpToDate : UpdateCheckResult()
     data class UpdateAvailable(val versionName: String) : UpdateCheckResult()
-    data class Error(val message: String) : UpdateCheckResult()
+    data class Error(val message: UiText) : UpdateCheckResult()
 }
 
 data class AppSettingsUiState(
     val isLoading: Boolean = true,
-    val error: String? = null,
+    val error: UiText? = null,
     val user: User? = null,
     val blockedUsers: List<User> = emptyList(),
     val hideFollowing: Boolean = false,
@@ -56,12 +61,17 @@ class AppSettingsViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "AppSettingsViewModel"
+    }
+
     private val _uiState = MutableStateFlow(AppSettingsUiState())
     val uiState: StateFlow<AppSettingsUiState> = _uiState.asStateFlow()
 
     private val currentUserId: String = authRepository.currentUserId ?: ""
 
     init {
+        logI(TAG, "Loading app settings")
         loadSettings()
         loadCacheSize()
     }
@@ -108,7 +118,7 @@ class AppSettingsViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message) }
+                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -129,7 +139,7 @@ class AppSettingsViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = "Failed to unblock user") }
+                    _uiState.update { it.copy(error = UiText.res(Res.string.error_unblock_user)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -155,7 +165,7 @@ class AppSettingsViewModel(
             when (userRepository.updateProfile(currentUserId, mapOf("pmPrivacy" to privacy.name))) {
                 is Resource.Success -> {}
                 is Resource.Error -> {
-                    _uiState.update { it.copy(pmPrivacy = oldValue, error = "Failed to update privacy setting") }
+                    _uiState.update { it.copy(pmPrivacy = oldValue, error = UiText.res(Res.string.error_update_privacy)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -180,7 +190,7 @@ class AppSettingsViewModel(
                 is Resource.Success -> {}
                 is Resource.Error -> {
                     applyOptimistic(currentValue)
-                    _uiState.update { it.copy(error = "Failed to update privacy setting") }
+                    _uiState.update { it.copy(error = UiText.res(Res.string.error_update_privacy)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -302,7 +312,7 @@ class AppSettingsViewModel(
                     _uiState.update {
                         it.copy(
                             isCheckingUpdate = false,
-                            updateCheckResult = UpdateCheckResult.Error("Failed to check for updates")
+                            updateCheckResult = UpdateCheckResult.Error(UiText.res(Res.string.error_check_updates))
                         )
                     }
                 }

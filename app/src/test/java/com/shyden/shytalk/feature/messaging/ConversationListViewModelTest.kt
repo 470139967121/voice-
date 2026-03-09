@@ -622,6 +622,50 @@ class ConversationListViewModelTest {
         assertTrue(ids.indexOf("conv-pinned-2") < ids.indexOf("conv-pinned-1"))
     }
 
+    // ===== Graceful degradation on user fetch failures =====
+
+    @Test
+    fun `conversations still load when current user fetch fails for blocklist`() = runTest {
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Error("Network error")
+
+        val otherUser = TestData.createTestUser(uid = "other-user", displayName = "Other")
+        coEvery { userRepository.getUsers(listOf("other-user")) } returns Resource.Success(listOf(otherUser))
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val conv = TestData.createTestConversation(
+            conversationId = "conv-1",
+            participantIds = listOf(currentUserId, "other-user")
+        )
+        conversationsFlow.emit(listOf(conv))
+        advanceUntilIdle()
+
+        // Should still show conversations (empty blocklist fallback)
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals(1, vm.uiState.value.conversations.size)
+    }
+
+    @Test
+    fun `conversations still load when batch user fetch fails`() = runTest {
+        coEvery { userRepository.getUsers(any()) } returns Resource.Error("Batch fetch failed")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val conv = TestData.createTestConversation(
+            conversationId = "conv-1",
+            participantIds = listOf(currentUserId, "other-user")
+        )
+        conversationsFlow.emit(listOf(conv))
+        advanceUntilIdle()
+
+        // Conversation should still appear (just with null otherUser)
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals(1, vm.uiState.value.conversations.size)
+        assertNull(vm.uiState.value.conversations[0].otherUser)
+    }
+
     // ===== clearError =====
 
     @Test

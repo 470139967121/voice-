@@ -32,6 +32,8 @@ class BillingService(context: Context) {
     private val _purchaseEvents = MutableSharedFlow<PurchaseResult>(extraBufferCapacity = 5)
     val purchaseEvents: SharedFlow<PurchaseResult> = _purchaseEvents.asSharedFlow()
 
+    private lateinit var billingClient: BillingClient
+
     private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
             for (purchase in purchases) {
@@ -46,7 +48,6 @@ class BillingService(context: Context) {
                             success = true
                         )
                     )
-                    // Acknowledge the purchase
                     if (!purchase.isAcknowledged) {
                         val params = AcknowledgePurchaseParams.newBuilder()
                             .setPurchaseToken(purchase.purchaseToken)
@@ -68,10 +69,12 @@ class BillingService(context: Context) {
         }
     }
 
-    private val billingClient: BillingClient = BillingClient.newBuilder(context)
-        .setListener(purchasesUpdatedListener)
-        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
-        .build()
+    init {
+        billingClient = BillingClient.newBuilder(context)
+            .setListener(purchasesUpdatedListener)
+            .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+            .build()
+    }
 
     private var isConnected = false
 
@@ -117,7 +120,7 @@ class BillingService(context: Context) {
         return suspendCancellableCoroutine { cont ->
             billingClient.queryProductDetailsAsync(queryParams) { result, detailsList ->
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    cont.resume(detailsList ?: emptyList())
+                    cont.resume(detailsList)
                 } else {
                     cont.resume(emptyList())
                 }

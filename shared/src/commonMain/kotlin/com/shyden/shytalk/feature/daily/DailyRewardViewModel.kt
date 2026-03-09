@@ -7,6 +7,8 @@ import com.shyden.shytalk.core.model.MilestoneReward
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,10 +41,15 @@ class DailyRewardViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "DailyRewardViewModel"
+    }
+
     private val _uiState = MutableStateFlow(DailyRewardUiState())
     val uiState: StateFlow<DailyRewardUiState> = _uiState.asStateFlow()
 
     init {
+        logI(TAG, "Initializing, observing economy config")
         observeEconomyConfig()
     }
 
@@ -60,9 +67,11 @@ class DailyRewardViewModel(
     }
 
     fun checkAndShowDialog(user: User) {
-        val now = Instant.fromEpochMilliseconds(currentTimeMillis()).toLocalDateTime(TimeZone.currentSystemDefault())
+        // Server stores dates in UTC (toISOString), so client must match
+        val now = Instant.fromEpochMilliseconds(currentTimeMillis()).toLocalDateTime(TimeZone.UTC)
         val today = now.date.toString()
         val alreadyClaimed = user.lastLoginRewardDate == today
+        logI(TAG, "Checking daily reward: alreadyClaimed=$alreadyClaimed, streak=${user.loginStreak}")
 
         // Estimate claimed days this month from the streak.
         // If the user has an N-day streak ending today (or yesterday if not claimed today),
@@ -98,11 +107,13 @@ class DailyRewardViewModel(
     }
 
     fun claimReward() {
+        logI(TAG, "Claiming daily reward")
         viewModelScope.launch {
             _uiState.update { it.copy(isClaiming = true, error = null) }
             when (val result = economyRepository.claimDailyReward()) {
                 is Resource.Success -> {
-                    val now = Instant.fromEpochMilliseconds(currentTimeMillis()).toLocalDateTime(TimeZone.currentSystemDefault())
+                    logI(TAG, "Daily reward claimed: streak=${result.data.newStreak}, coins=${result.data.coinsAwarded}")
+                    val now = Instant.fromEpochMilliseconds(currentTimeMillis()).toLocalDateTime(TimeZone.UTC)
                     val todayDay = now.dayOfMonth
                     _uiState.update {
                         it.copy(
@@ -117,6 +128,7 @@ class DailyRewardViewModel(
                     }
                 }
                 is Resource.Error -> {
+                    logE(TAG, "Daily reward claim failed: ${result.message}")
                     _uiState.update { it.copy(isClaiming = false, error = result.message) }
                 }
                 is Resource.Loading -> {}

@@ -8,6 +8,7 @@
 const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { now } = require('../utils/helpers');
+const log = require('../utils/log');
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -17,9 +18,10 @@ const { now } = require('../utils/helpers');
 function isIpInSubnet(ip, cidr) {
   try {
     const [subnet, bits] = cidr.split('/');
-    const mask = ~(2 ** (32 - parseInt(bits)) - 1);
-    const ipNum = ip.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct), 0);
-    const subNum = subnet.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct), 0);
+    const prefixLen = parseInt(bits);
+    const mask = prefixLen === 0 ? 0 : (~0 << (32 - prefixLen)) >>> 0;
+    const ipNum = ip.split('.').reduce((acc, oct) => ((acc << 8) >>> 0) + parseInt(oct), 0) >>> 0;
+    const subNum = subnet.split('.').reduce((acc, oct) => ((acc << 8) >>> 0) + parseInt(oct), 0) >>> 0;
     return (ipNum & mask) === (subNum & mask);
   } catch { return false; }
 }
@@ -30,6 +32,8 @@ function isIpInSubnet(ip, cidr) {
  */
 async function getIpGeo(ip) {
   try {
+    // Validate IPv4 format to prevent URL injection
+    if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) return {};
     const resp = await fetch(`http://ip-api.com/json/${ip}?fields=isp,as,country,regionName`);
     if (!resp.ok) return {};
     const data = await resp.json();
@@ -84,7 +88,7 @@ router.post('/device-info', async (req, res) => {
       asn: geo.asn || null,
       country: geo.country || null,
       region: geo.region || null,
-      lastSeen: timestamp,
+      lastSeenAt: timestamp,
     };
 
     // Check if doc already exists to set firstSeen/boundAt
@@ -103,7 +107,7 @@ router.post('/device-info', async (req, res) => {
 
     res.json({ success: true, banStatus });
   } catch (err) {
-    console.error('POST /api/device-info error:', err);
+    log.error('device-info', 'Error processing device info submission', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -120,7 +124,7 @@ async function checkBans(deviceId, ip, asn) {
     const deviceBanSnap = await db.doc(`deviceBans/${deviceId}`).get();
     if (deviceBanSnap.exists) {
       const ban = deviceBanSnap.data();
-      if (!ban.expiresAt || ban.expiresAt > Date.now()) {
+      if (!ban.expiresAt || new Date(ban.expiresAt).getTime() > Date.now()) {
         return {
           isBanned: true,
           banType: 'device',
@@ -131,13 +135,13 @@ async function checkBans(deviceId, ip, asn) {
     }
 
     // Check network bans
-    const networkBansSnap = await db.collection('networkBans').get();
+    const networkBansSnap = await db.collection('networkBans').limit(500).get();
     if (!networkBansSnap.empty) {
       for (const doc of networkBansSnap.docs) {
         const ban = doc.data();
 
         // Skip expired bans
-        if (ban.expiresAt && ban.expiresAt <= Date.now()) continue;
+        if (ban.expiresAt && new Date(ban.expiresAt).getTime() <= Date.now()) continue;
 
         let matches = false;
         if (ban.type === 'ip' && ban.value === ip) {
@@ -161,7 +165,7 @@ async function checkBans(deviceId, ip, asn) {
 
     return noBan;
   } catch (err) {
-    console.error('Ban check error:', err);
+    log.error('device-info', 'Error checking bans', { deviceId, error: err.message });
     return noBan;
   }
 }

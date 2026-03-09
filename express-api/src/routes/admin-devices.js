@@ -11,6 +11,7 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const { generateId, now } = require('../utils/helpers');
+const log = require('../utils/log');
 
 // ─── List all device bindings (paginated + searchable) ──────────
 
@@ -48,7 +49,7 @@ router.get('/admin/devices', async (req, res) => {
 
     res.json({ devices: paginated, total });
   } catch (err) {
-    console.error('GET /admin/devices error:', err);
+    log.error('admin-devices', 'Error listing device bindings', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -66,7 +67,7 @@ router.get('/admin/devices/user/:userId', async (req, res) => {
 
     res.json({ devices });
   } catch (err) {
-    console.error('GET /admin/devices/user/:userId error:', err);
+    log.error('admin-devices', 'Error fetching devices for user', { userId: req.params.userId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -86,7 +87,7 @@ router.get('/admin/devices/:deviceId', async (req, res) => {
 
     res.json({ id: snap.id, ...snap.data() });
   } catch (err) {
-    console.error('GET /admin/devices/:deviceId error:', err);
+    log.error('admin-devices', 'Error fetching device binding', { deviceId: req.params.deviceId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -118,7 +119,7 @@ router.delete('/admin/devices/:deviceId', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /admin/devices/:deviceId error:', err);
+    log.error('admin-devices', 'Error unbinding device', { deviceId: req.params.deviceId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

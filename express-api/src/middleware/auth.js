@@ -6,6 +6,7 @@
  */
 
 const { auth, db } = require('../utils/firebase');
+const log = require('../utils/log');
 
 // In-memory suspension cache: uid → { isSuspended, expiresAt }
 const suspensionCache = new Map();
@@ -49,8 +50,9 @@ async function authMiddleware(req, res, next) {
     const isSuspended = await checkSuspension(uid);
 
     if (isSuspended) {
-      const isSuspensionExempt = req.path === '/appeals'
-        || req.path.startsWith('/users/me');
+      const isSuspensionExempt = /^\/users\/[^/]+\/appeal$/.test(req.path)
+        || /^\/users\/[^/]+\/lift-suspension$/.test(req.path)
+        || (req.method === 'POST' && req.path === '/appeals');
       if (!isSuspensionExempt) {
         return res.status(403).json({ error: 'Account suspended' });
       }
@@ -59,21 +61,9 @@ async function authMiddleware(req, res, next) {
     req.auth = { uid, token: decoded };
     next();
   } catch (err) {
-    console.error('Auth error:', err.message);
+    log.error('auth', 'Authentication failed', { error: err.message });
     return res.status(401).json({ error: 'Authentication failed' });
   }
-}
-
-/**
- * Optional auth: same as authMiddleware but doesn't fail on missing token.
- */
-async function optionalAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    req.auth = null;
-    return next();
-  }
-  return authMiddleware(req, res, next);
 }
 
 /**
@@ -88,4 +78,8 @@ function requireAdmin(req, res) {
   return false;
 }
 
-module.exports = { authMiddleware, optionalAuth, requireAdmin };
+function clearSuspensionCache(uid) {
+  suspensionCache.delete(uid);
+}
+
+module.exports = { authMiddleware, requireAdmin, clearSuspensionCache };

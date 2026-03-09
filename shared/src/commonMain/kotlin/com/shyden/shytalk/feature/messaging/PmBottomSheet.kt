@@ -54,11 +54,13 @@ fun PmBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {
+        val groupId = selectedGroupConversationId
+        val chatUserId = selectedChatUserId
         when {
-            selectedGroupConversationId != null -> {
+            groupId != null -> {
                 // Group chat view
                 PmSheetGroupChatView(
-                    conversationId = selectedGroupConversationId!!,
+                    conversationId = groupId,
                     onBack = { selectedGroupConversationId = null },
                     onPickImages = onPickImages,
                     onPickStickerImage = onPickStickerImage,
@@ -67,10 +69,10 @@ fun PmBottomSheet(
                     activeRoomName = activeRoomName
                 )
             }
-            selectedChatUserId != null -> {
+            chatUserId != null -> {
                 // 1-on-1 chat view
                 PmSheetChatView(
-                    otherUserId = selectedChatUserId!!,
+                    otherUserId = chatUserId,
                     onBack = { selectedChatUserId = null },
                     onPickImages = onPickImages,
                     onPickStickerImage = onPickStickerImage,

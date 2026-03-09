@@ -10,6 +10,7 @@
 
 const { db } = require('../utils/firebase');
 const r2 = require('../utils/r2');
+const log = require('../utils/log');
 
 // Top-level collections to back up
 const TOP_LEVEL_COLLECTIONS = [
@@ -72,11 +73,14 @@ async function backups() {
   const prefix = `backups/full/${today}`;
   const manifest = { date: today, timestamp: new Date().toISOString(), collections: {} };
 
-  // Back up top-level collections
+  // Back up top-level collections (retain users JSON for backwards-compat copy)
+  let usersJsonStr = null;
   for (const collName of TOP_LEVEL_COLLECTIONS) {
     const { name, docs, count } = await backupCollection(collName);
     const key = `${prefix}/${name}.json`;
     const jsonStr = JSON.stringify(docs, null, 2);
+
+    if (name === 'users') usersJsonStr = jsonStr;
 
     await r2.putObject(key, Buffer.from(jsonStr), 'application/json', {
       docCount: String(count),
@@ -84,7 +88,7 @@ async function backups() {
     });
 
     manifest.collections[name] = count;
-    console.log(`Backup: ${name} — ${count} docs (${jsonStr.length} bytes)`);
+    log.info('cron', 'backup: collection saved', { collection: name, docs: count, bytes: jsonStr.length });
   }
 
   // Back up subcollections
@@ -99,24 +103,23 @@ async function backups() {
     });
 
     manifest.collections[name] = count;
-    console.log(`Backup: ${name} — ${count} docs (${jsonStr.length} bytes)`);
+    log.info('cron', 'backup: subcollection saved', { collection: name, docs: count, bytes: jsonStr.length });
   }
 
   // Write manifest
   const manifestKey = `${prefix}/manifest.json`;
   const manifestStr = JSON.stringify(manifest, null, 2);
   await r2.putObject(manifestKey, Buffer.from(manifestStr), 'application/json');
-  console.log(`Backup: manifest written to ${manifestKey}`);
+  log.info('cron', 'backup: manifest written', { key: manifestKey });
 
-  // Backwards compatibility: also write backups/users/YYYY-MM-DD.json
-  const usersResult = await backupCollection('users');
+  // Backwards compatibility: reuse the in-memory users JSON (no extra Firestore read)
   const usersKey = `backups/users/${today}.json`;
-  const usersJson = JSON.stringify(usersResult.docs, null, 2);
-  await r2.putObject(usersKey, Buffer.from(usersJson), 'application/json', {
-    userCount: String(usersResult.count),
+  const usersCount = manifest.collections['users'] || 0;
+  await r2.putObject(usersKey, Buffer.from(usersJsonStr || '[]'), 'application/json', {
+    userCount: String(usersCount),
     createdAt: new Date().toISOString(),
   });
-  console.log(`Backup: backwards-compat users backup saved to ${usersKey}`);
+  log.info('cron', 'backup: backwards-compat users backup saved', { key: usersKey, users: usersCount });
 
   // Prune full backups older than 7 days
   await pruneOldBackups('backups/full/');
@@ -135,22 +138,22 @@ async function pruneOldBackups(prefix) {
   const allKeys = await r2.listObjects(prefix);
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
-  for (const objKey of allKeys) {
+  const toDelete = allKeys.filter(objKey => {
     let dateStr;
     if (prefix === 'backups/full/') {
-      // Keys like: backups/full/2026-03-07/users.json
       const parts = objKey.replace(prefix, '').split('/');
       dateStr = parts[0];
     } else {
-      // Keys like: backups/users/2026-03-07.json
       dateStr = objKey.replace(prefix, '').replace('.json', '');
     }
 
     const backupDate = new Date(dateStr + 'T00:00:00Z');
-    if (!isNaN(backupDate.getTime()) && backupDate.getTime() < sevenDaysAgo) {
-      await r2.deleteObject(objKey);
-      console.log(`Backup: pruned old backup ${objKey}`);
-    }
+    return !isNaN(backupDate.getTime()) && backupDate.getTime() < sevenDaysAgo;
+  });
+
+  if (toDelete.length > 0) {
+    await r2.deleteObjects(toDelete);
+    log.info('cron', 'backup: pruned old backups', { prefix, count: toDelete.length });
   }
 }
 

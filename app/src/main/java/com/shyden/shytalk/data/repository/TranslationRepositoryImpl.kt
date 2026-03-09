@@ -17,8 +17,10 @@ class TranslationRepositoryImpl(
             if (messagePath != null) put("messagePath", messagePath)
         }
         val resp = api.post("/api/translate", body)
+        val translated = resp.optString("translatedText", "")
+        if (translated.isEmpty()) throw Exception("Missing translatedText in response")
         Resource.Success(TranslationResult(
-            translatedText = resp.getString("translatedText"),
+            translatedText = translated,
             detectedSourceLang = resp.optString("detectedSourceLang", "unknown"),
             cached = resp.optBoolean("cached", false)
         ))
@@ -29,9 +31,9 @@ class TranslationRepositoryImpl(
     override suspend fun getQuota(): Resource<TranslationQuota> = try {
         val resp = api.get("/api/translate/quota")
         Resource.Success(TranslationQuota(
-            used = resp.getInt("used"),
-            limit = resp.getInt("limit"),
-            unlimited = resp.getBoolean("unlimited")
+            used = resp.optInt("used", 0),
+            limit = resp.optInt("limit", 0),
+            unlimited = resp.optBoolean("unlimited", false)
         ))
     } catch (e: Exception) {
         Resource.Error(e.message ?: "Failed to check quota")

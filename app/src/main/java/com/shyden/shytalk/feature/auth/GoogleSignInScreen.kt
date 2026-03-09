@@ -42,6 +42,9 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.shyden.shytalk.feature.suspension.BanScreen
 import com.shyden.shytalk.feature.suspension.SuspensionScreen
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import kotlinx.coroutines.launch
 
 private const val WEB_CLIENT_ID =
@@ -109,7 +112,7 @@ fun GoogleSignInScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Unable to Connect",
+                    text = stringResource(Res.string.unable_to_connect),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -117,8 +120,7 @@ fun GoogleSignInScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "ShyTalk is having trouble reaching our servers. " +
-                        "Please check your internet connection and try again.",
+                    text = stringResource(Res.string.connection_trouble),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth()
@@ -138,16 +140,16 @@ fun GoogleSignInScreen(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Retrying…")
+                        Text(stringResource(Res.string.retrying))
                     } else {
-                        Text("Retry")
+                        Text(stringResource(Res.string.retry))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "If the problem persists, contact shytalk.help@gmail.com",
+                    text = stringResource(Res.string.contact_support_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -159,17 +161,13 @@ fun GoogleSignInScreen(
     if (uiState.isDeviceLocked) {
         AlertDialog(
             onDismissRequest = { viewModel.clearDeviceLocked() },
-            title = { Text("Account Restricted") },
+            title = { Text(stringResource(Res.string.account_restricted)) },
             text = {
-                Text(
-                    "This device is already linked to another account.\n" +
-                        "Only one account is allowed per device.\n\n" +
-                        "For support, contact shytalk.help@gmail.com"
-                )
+                Text(stringResource(Res.string.device_locked_description))
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearDeviceLocked() }) {
-                    Text("OK")
+                    Text(stringResource(Res.string.ok))
                 }
             }
         )
@@ -177,7 +175,7 @@ fun GoogleSignInScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.resolveAsync())
             viewModel.clearError()
         }
     }
@@ -202,7 +200,7 @@ fun GoogleSignInScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Voice chat rooms, reimagined.",
+                text = stringResource(Res.string.voice_chat_reimagined),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -257,9 +255,9 @@ fun GoogleSignInScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Signing in…")
+                    Text(stringResource(Res.string.signing_in))
                 } else {
-                    Text("Sign in with Google")
+                    Text(stringResource(Res.string.sign_in_with_google))
                 }
             }
         }

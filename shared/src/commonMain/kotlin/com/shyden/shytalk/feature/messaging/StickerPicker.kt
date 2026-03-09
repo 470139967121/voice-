@@ -133,7 +133,7 @@ fun StickerPicker(
         }
     }
 
-    if (longPressedSticker != null) {
+    longPressedSticker?.let { sticker ->
         AlertDialog(
             onDismissRequest = { longPressedSticker = null },
             title = { Text(stringResource(Res.string.sticker)) },
@@ -141,7 +141,7 @@ fun StickerPicker(
                 Column {
                     if (onMoveToFront != null) {
                         TextButton(onClick = {
-                            onMoveToFront(longPressedSticker!!.id)
+                            onMoveToFront(sticker.id)
                             longPressedSticker = null
                         }) {
                             Text(stringResource(Res.string.move_to_front))
@@ -149,7 +149,7 @@ fun StickerPicker(
                     }
                     if (onDeleteSticker != null) {
                         TextButton(onClick = {
-                            onDeleteSticker(longPressedSticker!!.id)
+                            onDeleteSticker(sticker.id)
                             longPressedSticker = null
                         }) {
                             Text(stringResource(Res.string.delete), color = MaterialTheme.colorScheme.error)

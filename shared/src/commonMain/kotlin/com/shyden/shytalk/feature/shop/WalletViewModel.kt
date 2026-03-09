@@ -4,6 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.CoinPackage
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.UiText
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -22,8 +27,8 @@ data class WalletUiState(
     val superShyExpiry: Long? = null,
     val isLoading: Boolean = true,
     val isPurchasing: Boolean = false,
-    val error: String? = null,
-    val successMessage: String? = null
+    val error: UiText? = null,
+    val successMessage: UiText? = null
 )
 
 class WalletViewModel(
@@ -32,10 +37,15 @@ class WalletViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "WalletViewModel"
+    }
+
     private val _uiState = MutableStateFlow(WalletUiState())
     val uiState: StateFlow<WalletUiState> = _uiState.asStateFlow()
 
     init {
+        logI(TAG, "Loading wallet data")
         loadData()
     }
 
@@ -46,29 +56,33 @@ class WalletViewModel(
             // Load coin packages
             when (val result = economyRepository.getCoinPackages()) {
                 is Resource.Success -> _uiState.update { it.copy(coinPackages = result.data) }
-                is Resource.Error -> _uiState.update { it.copy(error = result.message) }
+                is Resource.Error -> _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
                 is Resource.Loading -> {}
             }
 
             // Load user balance
-            val userId = authRepository.currentUserId ?: return@launch
-            when (val result = userRepository.getUser(userId)) {
-                is Resource.Success -> {
-                    val user = result.data
-                    _uiState.update {
-                        it.copy(
-                            coinBalance = user.shyCoins,
-                            beanBalance = user.shyBeans,
-                            isSuperShy = user.isSuperShy,
-                            superShyTier = user.superShyTier,
-                            superShyExpiry = user.superShyExpiry,
-                            isLoading = false
-                        )
-                    }
+            refreshBalance()
+        }
+    }
+
+    private suspend fun refreshBalance() {
+        val userId = authRepository.currentUserId ?: return
+        when (val result = userRepository.getUser(userId)) {
+            is Resource.Success -> {
+                val user = result.data
+                _uiState.update {
+                    it.copy(
+                        coinBalance = user.shyCoins,
+                        beanBalance = user.shyBeans,
+                        isSuperShy = user.isSuperShy,
+                        superShyTier = user.superShyTier,
+                        superShyExpiry = user.superShyExpiry,
+                        isLoading = false
+                    )
                 }
-                is Resource.Error -> _uiState.update { it.copy(isLoading = false, error = result.message) }
-                is Resource.Loading -> {}
             }
+            is Resource.Error -> _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+            is Resource.Loading -> {}
         }
     }
 
@@ -82,11 +96,11 @@ class WalletViewModel(
             }
             when (result) {
                 is Resource.Success -> {
-                    _uiState.update { it.copy(isPurchasing = false, successMessage = "Purchase successful!") }
-                    loadData()
+                    _uiState.update { it.copy(isPurchasing = false, successMessage = UiText.res(Res.string.success_purchase)) }
+                    refreshBalance()
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasing = false, error = result.message) }
+                    _uiState.update { it.copy(isPurchasing = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -96,24 +110,25 @@ class WalletViewModel(
     fun redeemBeans(amount: Long) {
         if (amount < 1) return
         if (amount > _uiState.value.beanBalance) {
-            _uiState.update { it.copy(error = "Not enough beans") }
+            _uiState.update { it.copy(error = UiText.res(Res.string.error_not_enough_beans)) }
             return
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isPurchasing = true) }
             when (val result = economyRepository.redeemBeans(amount)) {
                 is Resource.Success -> {
-                    val bonus = if (amount >= 2000) " (10% bonus!)" else ""
+                    val res = if (amount >= 2000) Res.string.success_redeemed_beans_bonus
+                        else Res.string.success_redeemed_beans
                     _uiState.update {
                         it.copy(
                             isPurchasing = false,
-                            successMessage = "Redeemed ${formatNumber(amount)} beans$bonus"
+                            successMessage = UiText.res(res, formatNumber(amount))
                         )
                     }
-                    loadData()
+                    refreshBalance()
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasing = false, error = result.message) }
+                    _uiState.update { it.copy(isPurchasing = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -126,12 +141,12 @@ class WalletViewModel(
             when (val result = economyRepository.addTestCoins(coins)) {
                 is Resource.Success -> {
                     _uiState.update {
-                        it.copy(isPurchasing = false, successMessage = "+${formatNumber(coins.toLong())} coins added!")
+                        it.copy(isPurchasing = false, successMessage = UiText.res(Res.string.success_coins_added, formatNumber(coins.toLong())))
                     }
-                    loadData()
+                    refreshBalance()
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasing = false, error = result.message) }
+                    _uiState.update { it.copy(isPurchasing = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }

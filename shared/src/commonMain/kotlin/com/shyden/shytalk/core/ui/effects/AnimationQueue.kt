@@ -7,10 +7,11 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class AnimationQueue {
     private val queue = ArrayDeque<GiftEvent>()
+    private val lock = Any()
     private val _currentEvent = MutableStateFlow<GiftEvent?>(null)
     val currentEvent: StateFlow<GiftEvent?> = _currentEvent.asStateFlow()
 
-    fun enqueue(event: GiftEvent) {
+    fun enqueue(event: GiftEvent): Unit = synchronized(lock) {
         if (_currentEvent.value == null) {
             _currentEvent.value = event
         } else {
@@ -18,7 +19,7 @@ class AnimationQueue {
         }
     }
 
-    fun onAnimationFinished() {
+    fun onAnimationFinished(): Unit = synchronized(lock) {
         _currentEvent.value = if (queue.isNotEmpty()) queue.removeFirst() else null
     }
 }

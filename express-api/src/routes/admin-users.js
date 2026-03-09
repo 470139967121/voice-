@@ -17,11 +17,12 @@
  */
 
 const router = require('express').Router();
-const { db, auth, FieldValue } = require('../utils/firebase');
-const { requireAdmin } = require('../middleware/auth');
+const { db, auth } = require('../utils/firebase');
+const { requireAdmin, clearSuspensionCache } = require('../middleware/auth');
 const { generateId, now } = require('../utils/helpers');
 const { computeDisplayScore } = require('../utils/gcs');
 const { sendSystemPm } = require('../utils/system-pm');
+const log = require('../utils/log');
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ async function getFirebaseAuthInfo(uid) {
     }
     return { email, phoneNumber: userRecord.phoneNumber || null };
   } catch (err) {
-    console.error('Firebase Auth lookup error:', err.message);
+    log.error('admin-users', 'Firebase Auth lookup failed', { uid, error: err.message });
     return { email: null, phoneNumber: null };
   }
 }
@@ -84,11 +85,11 @@ router.get('/user/:uid', async (req, res) => {
       const authInfo = await getFirebaseAuthInfo(req.params.uid);
       if (!user.email && authInfo.email) {
         user.email = authInfo.email;
-        db.doc(`users/${req.params.uid}`).update({ email: authInfo.email }).catch(() => {});
+        db.doc(`users/${req.params.uid}`).update({ email: authInfo.email }).catch(err => log.error('admin-users', 'Failed to backfill email', { uid: req.params.uid, error: err.message }));
       }
       if (!user.phoneNumber && authInfo.phoneNumber) {
         user.phoneNumber = authInfo.phoneNumber;
-        db.doc(`users/${req.params.uid}`).update({ phoneNumber: authInfo.phoneNumber }).catch(() => {});
+        db.doc(`users/${req.params.uid}`).update({ phoneNumber: authInfo.phoneNumber }).catch(err => log.error('admin-users', 'Failed to backfill phoneNumber', { uid: req.params.uid, error: err.message }));
       }
     }
 
@@ -97,7 +98,7 @@ router.get('/user/:uid', async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    console.error('GET /user/:uid error:', err);
+    log.error('admin-users', 'GET /user/:uid failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -117,8 +118,8 @@ router.get('/user/:uid/auth-debug', async (req, res) => {
       metadata: userRecord.metadata,
     });
   } catch (err) {
-    console.error('GET /user/:uid/auth-debug error:', err);
-    res.json({ error: err.message });
+    log.error('admin-users', 'Auth debug lookup failed', { uid: req.params.uid, error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -156,6 +157,7 @@ router.patch('/user/:uid', async (req, res) => {
       return res.status(400).json({ error: 'No valid fields to update' });
     }
 
+    log.info('admin-users', 'Updating user fields', { adminId: req.auth.uid, targetUid: req.params.uid, fields: Object.keys(updates) });
     await db.doc(`users/${req.params.uid}`).update(updates);
 
     // Audit log
@@ -169,7 +171,7 @@ router.patch('/user/:uid', async (req, res) => {
 
     res.json({ success: true, updatedFields: Object.keys(updates) });
   } catch (err) {
-    console.error('PATCH /user/:uid error:', err);
+    log.error('admin-users', 'PATCH /user/:uid failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -199,6 +201,8 @@ router.post('/user/:uid/warn', async (req, res) => {
     const newGcs = Math.max(0, gcsScore - deduction);
     const newWarningCount = warningCount + 1;
 
+    log.info('admin-users', 'Issuing warning', { adminId: req.auth.uid, targetUid: req.params.uid, severity, deduction, gcs: `${gcsScore} -> ${newGcs}` });
+
     await Promise.all([
       db.doc(`users/${req.params.uid}`).update({
         gcsScore:           newGcs,
@@ -221,7 +225,7 @@ router.post('/user/:uid/warn', async (req, res) => {
     // Send system PM to warned user (fire-and-forget)
     sendSystemPm(req.params.uid,
       `⚠️ You have received a warning from the moderation team.\n\nReason: ${body.reason}\n\nYour Good Character Score has been reduced by ${deduction} points (now ${newGcs}/100). Repeated violations may result in suspension.`
-    ).catch(err => console.error('Failed to send warning PM:', err));
+    ).catch(err => log.error('admin-users', 'Failed to send warning PM', { targetUid: req.params.uid, error: err.message }));
 
     res.json({
       success: true,
@@ -230,7 +234,7 @@ router.post('/user/:uid/warn', async (req, res) => {
       warningCount: newWarningCount,
     });
   } catch (err) {
-    console.error('POST /user/:uid/warn error:', err);
+    log.error('admin-users', 'Warn user failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -241,6 +245,8 @@ router.post('/user/:uid/reset-gcs', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const timestamp = now();
+
+    log.info('admin-users', 'Resetting GCS', { adminId: req.auth.uid, targetUid: req.params.uid });
 
     await Promise.all([
       db.doc(`users/${req.params.uid}`).update({
@@ -263,7 +269,7 @@ router.post('/user/:uid/reset-gcs', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /user/:uid/reset-gcs error:', err);
+    log.error('admin-users', 'Reset GCS failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -276,7 +282,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const messageLimit = Math.min(parseInt(req.query.limit || '50'), 200);
+    const messageLimit = Math.min(parseInt(req.query.limit) || 50, 200);
 
     const snapshot = await db.collection(`conversations/${req.params.id}/messages`)
       .orderBy('createdAt', 'desc')
@@ -288,7 +294,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
     // Return chronological order
     res.json(messages.reverse());
   } catch (err) {
-    console.error('GET /conversations/:id/messages error:', err);
+    log.error('admin-users', 'Admin get messages failed', { conversationId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -319,7 +325,7 @@ router.get('/search/uniqueId/:id', async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    console.error('GET /search/uniqueId/:id error:', err);
+    log.error('admin-users', 'Search by uniqueId failed', { uniqueId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -347,7 +353,7 @@ router.post('/resolve/uids-to-uniqueIds', async (req, res) => {
     }
     res.json({ mapping: map });
   } catch (err) {
-    console.error('POST /resolve/uids-to-uniqueIds error:', err);
+    log.error('admin-users', 'UID-to-uniqueId resolve failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -381,7 +387,7 @@ router.post('/resolve/uniqueIds-to-uids', async (req, res) => {
     }
     res.json(map);
   } catch (err) {
-    console.error('POST /resolve/uniqueIds-to-uids error:', err);
+    log.error('admin-users', 'UniqueId-to-UID resolve failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -409,12 +415,14 @@ router.post('/user/:uid/suspend', async (req, res) => {
 
     const timestamp = now();
 
+    log.info('admin-users', 'Suspending user', { adminId: req.auth.uid, targetUid: req.params.uid, endDate: body.endDate || 'permanent', canAppeal: body.canAppeal });
+
     await Promise.all([
       db.doc(`users/${req.params.uid}`).update({
         isSuspended:                    true,
         suspensionReason:               body.reason.trim(),
         suspensionStartDate:            timestamp,
-        suspensionExpiry:               endTimestamp,
+        suspensionEndDate:               endTimestamp,
         suspensionCanAppeal:            body.canAppeal,
         suspendedBy:                    req.auth.uid,
         preSuspensionDisplayName:       user.displayName ?? user.display_name ?? null,
@@ -424,7 +432,7 @@ router.post('/user/:uid/suspend', async (req, res) => {
         profilePhotoUrl:                null,
         coverPhotoUrl:                  null,
         avatarUrl:                      null,
-        bio:                            null,
+        description:                    null,
         currentRoomId:                  null,
       }),
       db.doc(`adminAuditLog/${generateId()}`).set({
@@ -438,15 +446,15 @@ router.post('/user/:uid/suspend', async (req, res) => {
 
     // Auto-apply device and network bans (fire-and-forget)
     autoApplyBans(req.params.uid, body.endDate ? body.endDate : null)
-      .catch(err => console.error('Failed to auto-apply bans on suspend:', err));
+      .catch(err => log.error('admin-users', 'Failed to auto-apply bans', { uid: req.params.uid, error: err.message }));
 
     // Evict from any active rooms (fire-and-forget)
     evictSuspendedUser(req.params.uid)
-      .catch(err => console.error('Failed to evict suspended user:', err));
+      .catch(err => log.error('admin-users', 'Failed to evict suspended user', { uid: req.params.uid, error: err.message }));
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /user/:uid/suspend error:', err);
+    log.error('admin-users', 'Suspend user failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -468,12 +476,14 @@ router.post('/user/:uid/unsuspend', async (req, res) => {
     if (prePhoto) restore.profilePhotoUrl  = prePhoto;
     if (preCover) restore.coverPhotoUrl    = preCover;
 
+    log.info('admin-users', 'Unsuspending user', { adminId: req.auth.uid, targetUid: req.params.uid });
+
     await Promise.all([
       db.doc(`users/${req.params.uid}`).update({
         isSuspended:                    false,
         suspensionReason:               null,
         suspensionStartDate:            null,
-        suspensionExpiry:               null,
+        suspensionEndDate:               null,
         suspensionCanAppeal:            null,
         suspendedBy:                    null,
         preSuspensionDisplayName:       null,
@@ -490,9 +500,10 @@ router.post('/user/:uid/unsuspend', async (req, res) => {
       }),
     ]);
 
+    clearSuspensionCache(req.params.uid);
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /user/:uid/unsuspend error:', err);
+    log.error('admin-users', 'Unsuspend user failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -516,7 +527,7 @@ router.post('/report-locks/:uid/lock', async (req, res) => {
 
     res.json({ success: true, displayName });
   } catch (err) {
-    console.error('POST /report-locks/:uid/lock error:', err);
+    log.error('admin-users', 'Lock reports failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -529,7 +540,7 @@ router.delete('/report-locks/:uid', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /report-locks/:uid error:', err);
+    log.error('admin-users', 'Unlock reports failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -599,7 +610,7 @@ async function autoApplyBans(uid, endDate) {
 
   const deviceCount = bindingsSnap.docs.length;
   const networkCount = lastIp ? 1 : 0;
-  console.log(`[AUTO-BAN] User ${uid}: ${deviceCount} device ban(s), ${networkCount} network ban(s)`);
+  log.info('admin-users', 'Auto-bans applied', { uid, deviceBans: deviceCount, networkBans: networkCount });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -616,11 +627,16 @@ async function evictSuspendedUser(uid) {
     .where('participantIds', 'array-contains', uid)
     .get();
 
-  if (snapshot.empty) return;
+  if (snapshot.empty) {
+    // Still clear currentRoomId even if no matching rooms found
+    await db.doc(`users/${uid}`).update({ currentRoomId: null });
+    return;
+  }
 
   const rooms = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-  const batch = db.batch();
-  let opCount = 0;
+
+  // Collect all writes then batch in chunks of 500
+  const writes = [];
 
   for (const room of rooms) {
     const participantIds = (room.participantIds || []).filter(id => id !== uid);
@@ -638,20 +654,21 @@ async function evictSuspendedUser(uid) {
       }
     }
 
-    batch.update(db.doc(`rooms/${room.id}`), { participantIds, seats });
-    opCount++;
-
-    // Firestore batch limit is 500 — flush if needed
-    if (opCount >= 499) {
-      batch.update(db.doc(`users/${uid}`), { currentRoomId: null });
-      await batch.commit();
-      return;
-    }
+    writes.push({ ref: db.doc(`rooms/${room.id}`), data: { participantIds, seats } });
   }
 
-  // Also clear the user's currentRoomId
-  batch.update(db.doc(`users/${uid}`), { currentRoomId: null });
-  await batch.commit();
+  // Add the user's currentRoomId clear
+  writes.push({ ref: db.doc(`users/${uid}`), data: { currentRoomId: null } });
+
+  // Batch write in chunks of 500
+  for (let i = 0; i < writes.length; i += 500) {
+    const batch = db.batch();
+    const chunk = writes.slice(i, i + 500);
+    for (const w of chunk) {
+      batch.update(w.ref, w.data);
+    }
+    await batch.commit();
+  }
 }
 
 module.exports = router;

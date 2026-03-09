@@ -34,7 +34,7 @@ class StorageRepositoryImplTest {
     private lateinit var mockCall: Call
     private lateinit var repo: StorageRepositoryImpl
 
-    private val workerUrl = "https://shytalk-storage.workers.dev"
+    private val workerUrl = "https://api.shytalk.shyden.co.uk"
 
     @Before
     fun setup() {
@@ -122,8 +122,31 @@ class StorageRepositoryImplTest {
 
         val captured = requestSlot.captured
         assertEquals("POST", captured.method)
-        assertTrue(captured.url.toString().endsWith("/upload"))
+        assertTrue(
+            "Expected URL to end with /api/storage/upload but was: ${captured.url}",
+            captured.url.toString().endsWith("/api/storage/upload")
+        )
         assertTrue(captured.body is MultipartBody)
+    }
+
+    @Test
+    fun `uploadImage returns Error when response JSON is missing url field`() = runTest {
+        successEnqueue("""{"status":"ok"}""")
+
+        val result = repo.uploadImage("user-1", "profile_photos", byteArrayOf(1, 2, 3))
+
+        assertTrue(result is Resource.Error)
+        assertTrue((result as Resource.Error).message.contains("missing URL"))
+    }
+
+    @Test
+    fun `uploadImage returns Error when response url is empty`() = runTest {
+        successEnqueue("""{"url":""}""")
+
+        val result = repo.uploadImage("user-1", "profile_photos", byteArrayOf(1, 2, 3))
+
+        assertTrue(result is Resource.Error)
+        assertTrue((result as Resource.Error).message.contains("missing URL"))
     }
 
     @Test
@@ -157,6 +180,10 @@ class StorageRepositoryImplTest {
 
         val captured = requestSlot.captured
         assertEquals("DELETE", captured.method)
+        assertTrue(
+            "Expected URL to contain /api/storage/delete but was: ${captured.url}",
+            captured.url.toString().contains("/api/storage/delete")
+        )
         assertTrue(captured.url.toString().contains("profile_photos"))
         assertTrue(captured.url.toString().contains("123.jpg"))
     }
@@ -170,6 +197,23 @@ class StorageRepositoryImplTest {
         repo.deleteImageByUrl("https://images.shytalk.shyden.co.uk/profile_photos/user-1/123.jpg")
 
         assertEquals("Bearer test-id-token", requestSlot.captured.header("Authorization"))
+    }
+
+    @Test
+    fun `deleteImageByUrl URL-encodes the key parameter`() = runTest {
+        val requestSlot = slot<Request>()
+        every { httpClient.newCall(capture(requestSlot)) } returns mockCall
+        successEnqueue("""{"ok":true}""")
+
+        // Path with spaces and special chars
+        repo.deleteImageByUrl("https://images.shytalk.shyden.co.uk/messages/user 1/hello world.jpg")
+
+        val url = requestSlot.captured.url.toString()
+        // The key should be URL-encoded (spaces become + or %20)
+        assertTrue(
+            "Expected URL-encoded key but was: $url",
+            !url.contains("user 1") && !url.contains("hello world")
+        )
     }
 
     @Test

@@ -3,6 +3,11 @@ package com.shyden.shytalk.feature.messaging
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.UiText
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.data.repository.ReportRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +37,7 @@ data class Report(
 data class ReportReviewUiState(
     val reports: List<Report> = emptyList(),
     val isLoading: Boolean = true,
-    val message: String? = null
+    val message: UiText? = null
 )
 
 class ReportReviewViewModel(
@@ -40,10 +45,15 @@ class ReportReviewViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "ReportReviewViewModel"
+    }
+
     private val _uiState = MutableStateFlow(ReportReviewUiState())
     val uiState: StateFlow<ReportReviewUiState> = _uiState.asStateFlow()
 
     init {
+        logI(TAG, "Loading pending reports")
         loadReports()
     }
 
@@ -58,7 +68,7 @@ class ReportReviewViewModel(
                 }
                 is Resource.Error -> {
                     _uiState.update {
-                        it.copy(isLoading = false, message = result.message)
+                        it.copy(isLoading = false, message = result.message?.let { msg -> UiText.plain(msg) })
                     }
                 }
                 is Resource.Loading -> {}
@@ -73,12 +83,12 @@ class ReportReviewViewModel(
                     _uiState.update {
                         it.copy(
                             reports = it.reports.filter { r -> r.reportId != reportId },
-                            message = "Report resolved"
+                            message = UiText.res(Res.string.success_report_resolved)
                         )
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(message = "Failed to resolve report") }
+                    _uiState.update { it.copy(message = UiText.res(Res.string.error_resolve_report)) }
                 }
                 is Resource.Loading -> {}
             }

@@ -1,16 +1,28 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const express = require('express');
+const helmet = require('helmet');
 const corsMiddleware = require('./middleware/cors');
-const { authMiddleware, optionalAuth } = require('./middleware/auth');
+const { authMiddleware } = require('./middleware/auth');
+const { generalLimiter, writeLimiter, sensitiveLimiter } = require('./middleware/rateLimit');
 const { startCronJobs } = require('./cron');
-const { db } = require('./utils/firebase');
+require('./utils/firebase'); // Initialize Firebase before routes
+const { patchConsole } = require('./utils/consoleLogger');
+
+// Route all console.log/warn/error through structured logger
+patchConsole();
+
+// Catch unhandled promise rejections (e.g., fire-and-forget in cron jobs)
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.use(helmet());
 app.use(corsMiddleware);
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
 
 // Request/response logging (after body parsing, before auth)
 const logger = require('./utils/loggerInstance');
@@ -27,6 +39,23 @@ app.use('/api', (req, res, next) => {
   if (req.path === '/health' || req.path === '/log-config') return next();
   authMiddleware(req, res, next);
 });
+
+// General rate limit on all API routes
+app.use('/api', generalLimiter);
+
+// Stricter limits on write-heavy routes
+app.use('/api/conversations', writeLimiter);
+app.use('/api/economy/gacha', writeLimiter);
+app.use('/api/economy/gift', writeLimiter);
+app.use('/api/economy/gift-direct', writeLimiter);
+app.use('/api/economy/gift-batch', writeLimiter);
+app.use('/api/economy/backpack-send', writeLimiter);
+app.use('/api/translate', writeLimiter);
+
+// Strictest limits on sensitive operations
+app.use('/api/economy/purchase', sensitiveLimiter);
+app.use('/api/economy/trial-claim', sensitiveLimiter);
+app.use('/api/economy/trial-activate', sensitiveLimiter);
 
 // Mount route modules
 app.use('/api', require('./routes/config'));

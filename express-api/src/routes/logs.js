@@ -1,9 +1,19 @@
-const router = require('express').Router();
+/**
+ * Client log ingestion routes — accepts structured log entries from mobile clients.
+ *
+ * POST /api/logs       → Submit one or a batch of log entries
+ * GET  /api/logs/stats → Return daily quota statistics
+ */
+
+const log = require('../utils/log');
 
 const VALID_LEVELS = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'];
 const MAX_BATCH_SIZE = 50;
+const MAX_MESSAGE_LENGTH = 2000;
+const MAX_SOURCE_LENGTH = 100;
 
 function createLogsRouter(logger) {
+  const router = require('express').Router();
   // POST /logs — Accept log entries from clients
   router.post('/logs', async (req, res) => {
     try {
@@ -29,12 +39,15 @@ function createLogsRouter(logger) {
             error: `Invalid level: ${entry.level}. Must be one of: ${VALID_LEVELS.join(', ')}`,
           });
         }
-        if (!entry.source) {
+        if (!entry.source || typeof entry.source !== 'string') {
           return res.status(400).json({ error: 'Missing required field: source' });
         }
-        if (!entry.message) {
+        if (!entry.message || typeof entry.message !== 'string') {
           return res.status(400).json({ error: 'Missing required field: message' });
         }
+        // Truncate oversized fields to prevent log bloat
+        entry.source = entry.source.slice(0, MAX_SOURCE_LENGTH);
+        entry.message = entry.message.slice(0, MAX_MESSAGE_LENGTH);
       }
 
       // Enrich and log each entry
@@ -51,7 +64,7 @@ function createLogsRouter(logger) {
 
       res.status(202).json({ accepted: entries.length });
     } catch (err) {
-      console.error('Error ingesting logs:', err);
+      log.error('logs', 'Error ingesting logs', { error: err.message });
       res.status(500).json({ error: 'Internal server error' });
     }
   });

@@ -8,6 +8,7 @@ import com.shyden.shytalk.core.util.Constants.SEAT_REQUEST_IMMEDIATE_THRESHOLD_M
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.LanguagePreference
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.SeatRequestRepository
@@ -41,6 +42,10 @@ class RoomSettingsViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "RoomSettingsViewModel"
+    }
+
     private val _uiState = MutableStateFlow(RoomSettingsUiState())
     val uiState: StateFlow<RoomSettingsUiState> = _uiState.asStateFlow()
 
@@ -50,6 +55,7 @@ class RoomSettingsViewModel(
         get() = authRepository.currentUserId ?: ""
 
     fun loadRoom(roomId: String) {
+        logI(TAG, "Loading room settings for $roomId")
         currentRoomId = roomId
         viewModelScope.launch {
             // Load the user's preferences and SuperShy status

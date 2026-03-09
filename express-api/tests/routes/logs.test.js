@@ -84,6 +84,48 @@ describe('POST /api/logs', () => {
     expect(mockLogger.log).not.toHaveBeenCalled();
   });
 
+  test('rejects non-string source (400)', async () => {
+    const res = await request(app)
+      .post('/api/logs')
+      .send({ level: 'INFO', source: { obj: true }, message: 'Hello' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/source/);
+    expect(mockLogger.log).not.toHaveBeenCalled();
+  });
+
+  test('rejects non-string message (400)', async () => {
+    const res = await request(app)
+      .post('/api/logs')
+      .send({ level: 'INFO', source: 'app', message: ['arr'] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/message/);
+    expect(mockLogger.log).not.toHaveBeenCalled();
+  });
+
+  test('truncates oversized source to 100 chars', async () => {
+    const longSource = 'x'.repeat(200);
+    await request(app)
+      .post('/api/logs')
+      .send({ level: 'INFO', source: longSource, message: 'Hello' });
+
+    expect(mockLogger.log).toHaveBeenCalledTimes(1);
+    const logged = mockLogger.log.mock.calls[0][0];
+    expect(logged.source.length).toBe(100);
+  });
+
+  test('truncates oversized message to 2000 chars', async () => {
+    const longMessage = 'y'.repeat(5000);
+    await request(app)
+      .post('/api/logs')
+      .send({ level: 'INFO', source: 'app', message: longMessage });
+
+    expect(mockLogger.log).toHaveBeenCalledTimes(1);
+    const logged = mockLogger.log.mock.calls[0][0];
+    expect(logged.message.length).toBe(2000);
+  });
+
   test('rejects oversized batch >50 (400)', async () => {
     const batch = Array.from({ length: 51 }, (_, i) => ({
       level: 'INFO',

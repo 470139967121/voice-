@@ -258,9 +258,6 @@ class ActiveRoomManager(
     private fun findMySeat(room: ChatRoom, userId: String = currentUserId) =
         room.findUserSeat(userId)?.value
 
-    private fun isUserSeated(room: ChatRoom, userId: String = currentUserId) =
-        room.findUserSeat(userId) != null
-
     private fun cleanup(stopService: Boolean = true) {
         roomObserverJob?.cancel()
         messageObserverJob?.cancel()
@@ -406,9 +403,10 @@ class ActiveRoomManager(
                             delay(Constants.VOICE_DISCONNECT_GRACE_PERIOD_MS)
                             val currentRoom = _activeRoom.value ?: return@launch
                             val seatEntry = currentRoom.findUserSeat(currentUserId)
-                            if (seatEntry != null && _activeRoomId.value != null) {
+                            val roomId = _activeRoomId.value
+                            if (seatEntry != null && roomId != null) {
                                 Log.d(TAG, "connectionMonitor: non-owner voice disconnect timeout — removing from seat ${seatEntry.key}")
-                                roomRepository.leaveSeat(_activeRoomId.value!!, seatEntry.key.toInt())
+                                roomRepository.leaveSeat(roomId, seatEntry.key.toInt())
                             }
                         }
                     }

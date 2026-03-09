@@ -6,6 +6,8 @@ import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.model.GiftRankEntry
 import com.shyden.shytalk.core.model.GiftSender
 import com.shyden.shytalk.core.model.GiftWallEntry
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.GiftRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,10 +32,15 @@ class GiftWallViewModel(
     private val giftRepository: GiftRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "GiftWallViewModel"
+    }
+
     private val _uiState = MutableStateFlow(GiftWallUiState())
     val uiState: StateFlow<GiftWallUiState> = _uiState.asStateFlow()
 
     init {
+        logI(TAG, "Initializing gift wall for user=$userId")
         observeData()
     }
 
@@ -45,8 +52,10 @@ class GiftWallViewModel(
             ) { catalog, wall ->
                 catalog to wall
             }.catch { e ->
+                logE(TAG, "Gift wall observation failed: ${e.message}")
                 _uiState.update { it.copy(error = e.message) }
             }.collect { (catalog, wall) ->
+                logI(TAG, "Loaded ${catalog.size} gifts, ${wall.size} wall entries")
                 _uiState.update {
                     it.copy(giftCatalog = catalog, wallEntries = wall)
                 }
@@ -55,6 +64,7 @@ class GiftWallViewModel(
     }
 
     fun selectGift(giftId: String) {
+        logI(TAG, "Selecting gift details: giftId=$giftId")
         _uiState.update { it.copy(selectedGiftId = giftId, isLoadingDetails = true) }
         viewModelScope.launch {
             try {
@@ -64,6 +74,7 @@ class GiftWallViewModel(
                     it.copy(senders = senders, ranking = ranking, isLoadingDetails = false)
                 }
             } catch (e: Exception) {
+                logE(TAG, "Failed to load gift details for giftId=$giftId: ${e.message}")
                 _uiState.update { it.copy(isLoadingDetails = false, error = e.message) }
             }
         }

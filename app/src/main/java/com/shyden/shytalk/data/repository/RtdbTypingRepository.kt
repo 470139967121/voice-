@@ -45,10 +45,9 @@ class RtdbTypingRepository : TypingRepository {
             activeUserId = userId
 
             // Auto-clear after timeout
-            clearRunnable = Runnable {
-                typingRef.removeValue()
-            }
-            handler.postDelayed(clearRunnable!!, TYPING_TIMEOUT_MS)
+            val runnable = Runnable { typingRef.removeValue() }
+            clearRunnable = runnable
+            handler.postDelayed(runnable, TYPING_TIMEOUT_MS)
         } else {
             typingRef.removeValue()
             activeConversationId = null

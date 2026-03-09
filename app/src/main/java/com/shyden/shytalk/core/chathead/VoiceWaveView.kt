@@ -17,7 +17,7 @@ class VoiceWaveView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x66FFFFFF.toInt()
+        color = 0x66FFFFFF
         strokeCap = Paint.Cap.ROUND
     }
 

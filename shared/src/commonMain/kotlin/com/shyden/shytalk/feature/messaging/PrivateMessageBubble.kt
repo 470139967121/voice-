@@ -136,6 +136,8 @@ fun PrivateMessageBubble(
         return
     }
 
+    // LocalClipboardManager is deprecated but the replacement (LocalClipboard + ClipEntry)
+    // requires platform-specific ClipData on Android — not usable from commonMain.
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
     var showContextMenu by remember { mutableStateOf(false) }
@@ -250,7 +252,7 @@ fun PrivateMessageBubble(
                         ) {
                             Column {
                                 Text(
-                                    text = message.replyToSenderName!!,
+                                    text = message.replyToSenderName,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (isSent) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -285,7 +287,8 @@ fun PrivateMessageBubble(
                     }
 
                     // Room invite card — reuses RoomListItem from home screen
-                    if (message.type == PrivateMessageType.ROOM_INVITE && !message.roomInviteId.isNullOrEmpty()) {
+                    val roomInviteId = message.roomInviteId
+                    if (message.type == PrivateMessageType.ROOM_INVITE && !roomInviteId.isNullOrEmpty()) {
                         val preview = roomInvitePreview
                         if (preview != null) {
                             val isClosed = preview.room.state == RoomState.CLOSED
@@ -293,7 +296,7 @@ fun PrivateMessageBubble(
                                 RoomListItem(
                                     room = preview.room,
                                     seatUsers = preview.seatUsers,
-                                    onClick = { onRoomInviteTap?.invoke(message.roomInviteId!!) },
+                                    onClick = { onRoomInviteTap?.invoke(roomInviteId) },
                                     modifier = Modifier.padding(0.dp)
                                 )
                                 if (isClosed) {
@@ -319,7 +322,7 @@ fun PrivateMessageBubble(
                                     .height(100.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(MaterialTheme.colorScheme.primaryContainer)
-                                    .clickable { onRoomInviteTap?.invoke(message.roomInviteId!!) },
+                                    .clickable { onRoomInviteTap?.invoke(roomInviteId) },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Box(
@@ -529,12 +532,13 @@ fun PrivateMessageBubble(
                             }
                         )
                     }
-                    if (message.type == PrivateMessageType.STICKER && !message.stickerUrl.isNullOrEmpty() && onSaveSticker != null) {
+                    val stickerUrl = message.stickerUrl
+                    if (message.type == PrivateMessageType.STICKER && !stickerUrl.isNullOrEmpty() && onSaveSticker != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(Res.string.add_to_stickers)) },
                             onClick = {
                                 showContextMenu = false
-                                onSaveSticker(message.stickerUrl!!)
+                                onSaveSticker(stickerUrl)
                             }
                         )
                     }

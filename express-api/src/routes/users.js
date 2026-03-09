@@ -16,21 +16,9 @@
 const router = require('express').Router();
 const { db, FieldValue } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
-
-// ─── Helpers ─────────────────────────────────────────────────────
-
-async function getDoc(path) {
-  const snap = await db.doc(path).get();
-  return snap.exists ? { id: snap.id, ...snap.data() } : null;
-}
-
-/**
- * Return a full user doc from Firestore.
- * Imported by admin-users.js — keep it exported.
- */
-async function assembleUser(uid) {
-  return getDoc(`users/${uid}`);
-}
+const { getDoc } = require('../utils/firestore-helpers');
+const log = require('../utils/log');
+const { clearSuspensionCache } = require('../middleware/auth');
 
 // ── Get user profile ──
 router.get('/users/:uid', async (req, res) => {
@@ -45,7 +33,7 @@ router.get('/users/:uid', async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    console.error('GET /api/users/:uid error:', err);
+    log.error('users', 'GET /users/:uid failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -62,7 +50,7 @@ router.patch('/users/:uid', async (req, res) => {
 
     // Only allow whitelisted camelCase fields
     const allowedFields = [
-      'displayName', 'bio', 'country', 'gender',
+      'displayName', 'description', 'nationality',
       'profilePhotoUrl', 'coverPhotoUrl',
       'pmPrivacy', 'pmNotificationsEnabled', 'pmSoundEnabled',
       'pmShowTimestamps', 'pmShowDateSeparators', 'pmNotificationPreview',
@@ -82,11 +70,43 @@ router.patch('/users/:uid', async (req, res) => {
       return res.status(400).json({ error: 'No valid fields to update' });
     }
 
+    // Validate field value types and lengths
+    const stringFields = [
+      'displayName', 'description', 'nationality', 'profilePhotoUrl', 'coverPhotoUrl',
+      'pmPrivacy', 'currentRoomId', 'lastRoomName', 'language',
+    ];
+    const maxLengths = { displayName: 30, description: 200, nationality: 3, language: 10, lastRoomName: 50 };
+    for (const key of stringFields) {
+      if (key in updates && updates[key] !== null && typeof updates[key] !== 'string') {
+        return res.status(400).json({ error: `${key} must be a string` });
+      }
+      if (key in updates && typeof updates[key] === 'string' && maxLengths[key] && updates[key].length > maxLengths[key]) {
+        return res.status(400).json({ error: `${key} exceeds max length of ${maxLengths[key]}` });
+      }
+    }
+    const boolFields = [
+      'pmNotificationsEnabled', 'pmSoundEnabled', 'pmShowTimestamps', 'pmShowDateSeparators',
+      'pmNotificationPreview', 'hideFollowing', 'hideOnlineStatus', 'hideAge',
+      'selfDestructAlertEnabled', 'dndEnabled',
+    ];
+    for (const key of boolFields) {
+      if (key in updates && typeof updates[key] !== 'boolean') {
+        return res.status(400).json({ error: `${key} must be a boolean` });
+      }
+    }
+    const intFields = ['dndStartHour', 'dndStartMinute', 'dndEndHour', 'dndEndMinute', 'minGiftAnimationValue', 'acceptedLegalVersion'];
+    for (const key of intFields) {
+      if (key in updates && (typeof updates[key] !== 'number' || !Number.isInteger(updates[key]))) {
+        return res.status(400).json({ error: `${key} must be an integer` });
+      }
+    }
+
+    log.info('users', 'Updating profile', { userId: req.params.uid, fields: Object.keys(updates) });
     await db.doc(`users/${req.params.uid}`).update(updates);
 
     res.json({ success: true });
   } catch (err) {
-    console.error('PATCH /api/users/:uid error:', err);
+    log.error('users', 'PATCH /users/:uid failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -105,8 +125,9 @@ router.post('/users', async (req, res) => {
     const existing = await getDoc(`users/${uid}`);
 
     if (existing) {
-      // Update lastSeen + backfill missing fields
-      const updates = { lastSeen: now() };
+      log.info('users', 'User login (existing)', { userId: uid });
+      // Update lastSeenAt + backfill missing fields
+      const updates = { lastSeenAt: now() };
       const incomingEmail = body.email || null;
       if (incomingEmail && !existing.email) updates.email = incomingEmail;
       if (!existing.userType) updates.userType = 'MEMBER';
@@ -115,6 +136,7 @@ router.post('/users', async (req, res) => {
     }
 
     // Create new user doc with camelCase fields
+    log.info('users', 'Creating new user', { userId: uid });
     const photoUrl = body.profilePhotoUrl || body.profile_photo_url || null;
     const dob = body.dateOfBirth || body.date_of_birth || null;
     await db.doc(`users/${uid}`).set({
@@ -133,12 +155,12 @@ router.post('/users', async (req, res) => {
       stalkerCount:    0,
       newStalkerCount: 0,
       createdAt:       now(),
-      lastSeen:        now(),
+      lastSeenAt:      now(),
     }, { merge: true });
 
     res.json({ success: true, created: true });
   } catch (err) {
-    console.error('POST /api/users error:', err);
+    log.error('users', 'POST /users failed', { uid: req.body?.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -161,26 +183,22 @@ router.post('/users/:uid/unique-id', async (req, res) => {
     }
 
     // Atomic increment of the global counter via Firestore transaction
+    // Floor guard is inside the transaction to avoid race conditions
     const counterRef = db.doc('counters/uniqueId');
     let newId = await db.runTransaction(async (t) => {
       const snap = await t.get(counterRef);
-      const current = snap.exists ? (snap.data().value || 0) : 0;
+      let current = snap.exists ? (snap.data().value || 0) : 0;
+      if (current < MIN_UNIQUE_ID) current = MIN_UNIQUE_ID - 1;
       const next = current + 1;
       t.set(counterRef, { value: next }, { merge: true });
       return next;
     });
 
-    // Guard: if counter was corrupted/reset, fix it to start at MIN_UNIQUE_ID
-    if (newId < MIN_UNIQUE_ID) {
-      await db.doc('counters/uniqueId').set({ value: MIN_UNIQUE_ID });
-      newId = MIN_UNIQUE_ID;
-    }
-
     await db.doc(`users/${req.params.uid}`).update({ uniqueId: newId });
 
     res.json({ uniqueId: newId });
   } catch (err) {
-    console.error('POST /api/users/:uid/unique-id error:', err);
+    log.error('users', 'Generate unique ID failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Failed to generate unique ID' });
   }
 });
@@ -191,6 +209,11 @@ router.post('/users/:uid/appeal', async (req, res) => {
     if (req.auth.uid !== req.params.uid) return res.status(403).json({ error: 'Forbidden' });
     const body = req.body;
     if (!body?.appealText) return res.status(400).json({ error: 'appealText required' });
+    if (typeof body.appealText !== 'string' || body.appealText.length > 500) {
+      return res.status(400).json({ error: 'appealText must be a string of at most 500 characters' });
+    }
+
+    log.info('users', 'Suspension appeal submitted', { userId: req.params.uid });
 
     // Write appeal to a subcollection and update the user doc status
     await Promise.all([
@@ -207,7 +230,7 @@ router.post('/users/:uid/appeal', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/users/:uid/appeal error:', err);
+    log.error('users', 'Suspension appeal failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -223,23 +246,27 @@ router.post('/users/:uid/lift-suspension', async (req, res) => {
       return res.status(400).json({ error: 'User is not suspended' });
     }
 
-    const suspensionExpiry = user.suspensionExpiry ?? user.suspension_end_date ?? null;
-    if (suspensionExpiry && suspensionExpiry > now()) {
+    const suspensionEndDate = user.suspensionEndDate ?? user.suspension_end_date ?? null;
+    if (suspensionEndDate && suspensionEndDate > now()) {
       return res.status(400).json({ error: 'Suspension has not expired yet' });
     }
+
+    log.info('users', 'Lifting expired suspension', { userId: req.params.uid });
 
     await db.doc(`users/${req.params.uid}`).update({
       isSuspended:            false,
       suspensionReason:       null,
-      suspensionExpiry:       null,
+      suspensionEndDate:      null,
       suspensionCanAppeal:    true,
       suspensionAppealStatus: null,
       suspendedBy:            null,
     });
 
+    clearSuspensionCache(req.params.uid);
+
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/users/:uid/lift-suspension error:', err);
+    log.error('users', 'Lift suspension failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -264,7 +291,7 @@ router.post('/users/:uid/follow', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Follow failed:', err);
+    log.error('users', 'Follow failed', { userId: req.params.uid, targetUserId: req.body?.targetUserId, error: err.message });
     res.status(500).json({ error: 'Failed to follow user' });
   }
 });
@@ -288,7 +315,7 @@ router.post('/users/:uid/unfollow', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Unfollow failed:', err);
+    log.error('users', 'Unfollow failed', { userId: req.params.uid, targetUserId: req.body?.targetUserId, error: err.message });
     res.status(500).json({ error: 'Failed to unfollow user' });
   }
 });
@@ -312,7 +339,7 @@ router.post('/users/:uid/remove-follower', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Remove follower failed:', err);
+    log.error('users', 'Remove follower failed', { userId: req.params.uid, followerUserId: req.body?.followerUserId, error: err.message });
     res.status(500).json({ error: 'Failed to remove follower' });
   }
 });
@@ -331,34 +358,36 @@ router.post('/users/:uid/record-visit', async (req, res) => {
     const timestamp = now();
 
     if (existing) {
-      await db.doc(stalkerPath).update({
+      const batch = db.batch();
+      batch.update(db.doc(stalkerPath), {
         lastVisitedAt: timestamp,
         visitCount: (existing.visitCount || 1) + 1,
       });
+      batch.update(db.doc(`users/${req.params.uid}`), {
+        newStalkerCount: FieldValue.increment(1),
+      });
+      await batch.commit();
     } else {
-      await db.doc(stalkerPath).set({
+      const batch = db.batch();
+      batch.set(db.doc(stalkerPath), {
         visitorId,
         lastVisitedAt: timestamp,
         firstVisitedAt: timestamp,
         visitCount: 1,
       }, { merge: true });
-      // Increment stalkerCount only for new visitors
-      await db.doc(`users/${req.params.uid}`).update({
+      // Increment both counters in one write for new visitors
+      batch.update(db.doc(`users/${req.params.uid}`), {
         stalkerCount: FieldValue.increment(1),
+        newStalkerCount: FieldValue.increment(1),
       });
+      await batch.commit();
     }
-
-    // Always increment newStalkerCount (reset when user views their stalkers list)
-    await db.doc(`users/${req.params.uid}`).update({
-      newStalkerCount: FieldValue.increment(1),
-    });
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/users/:uid/record-visit error:', err);
+    log.error('users', 'Record visit failed', { profileUid: req.params.uid, visitorId: req.body?.visitorId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 module.exports = router;
-module.exports.assembleUser = assembleUser;

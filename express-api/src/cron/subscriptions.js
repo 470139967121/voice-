@@ -6,6 +6,7 @@
  */
 
 const { db } = require('../utils/firebase');
+const log = require('../utils/log');
 
 async function subscriptions() {
   const timestamp = Date.now();
@@ -41,7 +42,7 @@ async function subscriptions() {
     await batch.commit();
   }
 
-  console.log(`Expired ${toExpire.length} Super Shy subscriptions`);
+  log.info('cron', 'subscriptions: expired Super Shy subscriptions', { count: toExpire.length });
 }
 
 module.exports = subscriptions;

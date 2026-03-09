@@ -6,6 +6,7 @@ import com.shyden.shytalk.core.model.FunFact
 import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
 import org.json.JSONObject
+import android.util.Log
 import java.io.File
 
 class FunFactRepositoryImpl(
@@ -60,7 +61,8 @@ class FunFactRepositoryImpl(
             }
             memoryCache = facts
             facts
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("FunFactRepository", "Failed to parse cached fun facts", e)
             emptyList()
         }
     }

@@ -139,6 +139,7 @@ class RoomViewModel(
     private var ownerAwayCountdownJob: Job? = null
     private var roomExpiryCountdownJob: Job? = null
     private var isSeated = false
+    // All accesses are on Dispatchers.Main via viewModelScope — safe without synchronization
     private val userCache: MutableMap<String, User> = mutableMapOf()
     private var blockCheckDone = false
     @kotlin.concurrent.Volatile private var firstJoinTimestamp: Long? = null

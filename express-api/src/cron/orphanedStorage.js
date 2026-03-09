@@ -7,6 +7,7 @@
 
 const { db } = require('../utils/firebase');
 const r2 = require('../utils/r2');
+const log = require('../utils/log');
 
 const CDN_PREFIX = 'https://images.shytalk.shyden.co.uk/';
 
@@ -96,9 +97,10 @@ async function orphanedStorage() {
   }
 
   // List and delete orphaned R2 objects
+  // Must match ALLOWED_UPLOAD_PATHS in storage.js
   const folders = [
-    'pm_images/', 'stickers/', 'report_evidence/',
-    'profile_photos/', 'cover_photos/', 'group_photos/', 'banners/',
+    'profiles/', 'covers/', 'messages/', 'groups/',
+    'evidence/', 'stickers/', 'banners/',
   ];
   let totalDeleted = 0;
 
@@ -111,11 +113,11 @@ async function orphanedStorage() {
     }
 
     const folderName = folder.replace('/', '');
-    console.log(`${folder}: ${toDelete.length}/${allKeys.length} files deleted`);
+    log.info('cron', 'orphanedStorage: folder cleanup', { folder: folderName, deleted: toDelete.length, total: allKeys.length });
     totalDeleted += toDelete.length;
   }
 
-  console.log(`Orphaned storage cleanup complete: ${totalDeleted} files deleted`);
+  log.info('cron', 'orphanedStorage: cleanup complete', { totalDeleted });
 }
 
 module.exports = orphanedStorage;

@@ -13,9 +13,10 @@
  */
 
 const router = require('express').Router();
-const { db, FieldValue } = require('../utils/firebase');
+const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const { generateId, now } = require('../utils/helpers');
+const log = require('../utils/log');
 
 // ── Economy snapshot ──
 router.get('/users/:uid/economy', async (req, res) => {
@@ -39,7 +40,7 @@ router.get('/users/:uid/economy', async (req, res) => {
       guaranteedNextPullGiftId: user.guaranteedNextPullGiftId ?? user.guaranteed_next_pull_gift_id ?? null,
     });
   } catch (err) {
-    console.error('GET /users/:uid/economy error:', err);
+    log.error('admin-economy', 'Error fetching economy snapshot', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -100,7 +101,7 @@ router.post('/users/:uid/adjust-balance', async (req, res) => {
 
     res.json({ success: true, newBalance, currency });
   } catch (err) {
-    console.error('POST /users/:uid/adjust-balance error:', err);
+    log.error('admin-economy', 'Error adjusting balance', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -139,7 +140,7 @@ router.post('/users/:uid/backpack', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /users/:uid/backpack error:', err);
+    log.error('admin-economy', 'Error setting backpack item', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -158,7 +159,7 @@ router.get('/users/:uid/luck', async (req, res) => {
       pityCounter: user.pityCounter ?? user.pity_counter ?? 0,
     });
   } catch (err) {
-    console.error('GET /users/:uid/luck error:', err);
+    log.error('admin-economy', 'Error fetching luck', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -173,10 +174,14 @@ router.post('/users/:uid/luck', async (req, res) => {
 
     const updates = {};
     if (body.luckScore != null) {
-      updates.luckScore = Math.max(0, Math.min(100, parseInt(body.luckScore)));
+      const parsed = parseInt(body.luckScore);
+      if (isNaN(parsed)) return res.status(400).json({ error: 'luckScore must be a number' });
+      updates.luckScore = Math.max(0, Math.min(100, parsed));
     }
     if (body.pityCounter != null) {
-      updates.pityCounter = Math.max(0, parseInt(body.pityCounter));
+      const parsed = parseInt(body.pityCounter);
+      if (isNaN(parsed)) return res.status(400).json({ error: 'pityCounter must be a number' });
+      updates.pityCounter = Math.max(0, parsed);
     }
 
     if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No fields to update' });
@@ -195,7 +200,7 @@ router.post('/users/:uid/luck', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /users/:uid/luck error:', err);
+    log.error('admin-economy', 'Error updating luck', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -205,23 +210,23 @@ router.get('/users/:uid/transactions', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const limit = Math.min(parseInt(req.query.limit || '50'), 200);
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const filterType = req.query.type;
 
-    let query = db.collection(`users/${req.params.uid}/transactions`)
-      .orderBy('timestamp', 'desc')
-      .limit(limit);
+    let query = db.collection(`users/${req.params.uid}/transactions`);
 
     if (filterType) {
       query = query.where('type', '==', filterType);
     }
+
+    query = query.orderBy('timestamp', 'desc').limit(limit);
 
     const snapshot = await query.get();
     const results = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
     res.json(results);
   } catch (err) {
-    console.error('GET /users/:uid/transactions error:', err);
+    log.error('admin-economy', 'Error fetching transactions', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -255,7 +260,7 @@ router.get('/users/:uid/guarantee-next-pull', async (req, res) => {
 
     res.json({ guaranteedGiftId, gift });
   } catch (err) {
-    console.error('GET /users/:uid/guarantee-next-pull error:', err);
+    log.error('admin-economy', 'Error checking guarantee status', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -291,7 +296,7 @@ router.post('/users/:uid/guarantee-next-pull', async (req, res) => {
       coinValue: gift.coinValue ?? gift.coin_value ?? 0,
     });
   } catch (err) {
-    console.error('POST /users/:uid/guarantee-next-pull error:', err);
+    log.error('admin-economy', 'Error setting guarantee', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -315,7 +320,7 @@ router.delete('/users/:uid/guarantee-next-pull', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /users/:uid/guarantee-next-pull error:', err);
+    log.error('admin-economy', 'Error revoking guarantee', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

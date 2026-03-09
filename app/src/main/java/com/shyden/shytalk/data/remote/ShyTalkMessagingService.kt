@@ -13,21 +13,31 @@ import com.shyden.shytalk.R
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.data.repository.NotificationRepository
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.util.Log
+
+private const val TAG = "FCMService"
 
 class ShyTalkMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        CoroutineScope(Dispatchers.IO).launch {
+        @Suppress("GlobalCoroutineUsage")
+        kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
             try {
+                val authRepo: com.shyden.shytalk.data.repository.AuthRepository =
+                    org.koin.core.context.GlobalContext.get().get()
+                val userId = authRepo.currentUserId
+                if (userId.isNullOrEmpty()) {
+                    Log.d(TAG, "onNewToken: no authenticated user — token will be saved on next login")
+                    return@launch
+                }
                 val notificationRepo: NotificationRepository =
                     org.koin.core.context.GlobalContext.get().get()
-                notificationRepo.saveFcmToken("", token)
-            } catch (_: Exception) {
-                // Token save failed — will retry on next app launch
+                notificationRepo.saveFcmToken(userId, token)
+            } catch (e: Exception) {
+                Log.w(TAG, "FCM token save failed — will retry on next app launch", e)
             }
         }
     }
@@ -48,8 +58,8 @@ class ShyTalkMessagingService : FirebaseMessagingService() {
         try {
             val roomManager: RoomLifecycleManager = org.koin.core.context.GlobalContext.get().get()
             if (roomManager.isAppInForeground) return
-        } catch (_: Exception) {
-            // Koin not initialized yet — show notification
+        } catch (e: Exception) {
+            Log.w(TAG, "Foreground check failed — showing notification", e)
         }
 
         val senderName = data["senderName"] ?: "Someone"

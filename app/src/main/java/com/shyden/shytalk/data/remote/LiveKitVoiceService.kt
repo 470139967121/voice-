@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -236,7 +237,7 @@ class LiveKitVoiceService(
     }
 
     override fun leaveChannel() {
-        logW(TAG, "Disconnected from room")
+        logI(TAG, "Disconnecting from room")
         _isJoined.value = false
         _speakingUsers.value = emptySet()
         currentRoomName = null
@@ -376,6 +377,7 @@ class LiveKitVoiceService(
             Log.e(TAG, "destroy failed", e)
         }
         eventCollectionJob?.cancel()
+        scope.coroutineContext[Job]?.cancelChildren()
         _isJoined.value = false
         _speakingUsers.value = emptySet()
         _connectionState.value = VoiceConnectionState.DISCONNECTED

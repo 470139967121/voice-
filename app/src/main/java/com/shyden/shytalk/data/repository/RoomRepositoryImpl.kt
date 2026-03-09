@@ -11,7 +11,10 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 import org.json.JSONObject
+
+private const val TAG = "RoomRepository"
 
 class RoomRepositoryImpl(
     private val api: WorkerApiClient,
@@ -30,7 +33,9 @@ class RoomRepositoryImpl(
                 val data = doc.data ?: return@mapNotNull null
                 ChatRoom.fromMap(data, doc.id)
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to prefetch active rooms", e)
+        }
     }
 
     // Real-time active rooms list from Firestore
@@ -162,27 +167,27 @@ class RoomRepositoryImpl(
     }
 
     override suspend fun moveSeat(roomId: String, fromIndex: Int, toIndex: Int, userId: String): Resource<Unit> = firebaseCall("Failed to move seat") {
-        // Read current seat data to swap
-        val doc = firestore.document("rooms/$roomId").get().await()
-        val data = doc.data ?: throw Exception("Room not found")
-        val seatsRaw = data["seats"] as? Map<*, *> ?: throw Exception("No seats data")
-        val fromSeat = (seatsRaw[fromIndex.toString()] as? Map<*, *>)?.let { raw ->
-            raw.entries.associate { (k, v) -> k.toString() to v }
-        } ?: Seat.EMPTY_MAP
-        val toSeat = (seatsRaw[toIndex.toString()] as? Map<*, *>)?.let { raw ->
-            raw.entries.associate { (k, v) -> k.toString() to v }
-        } ?: Seat.EMPTY_MAP
+        val roomRef = firestore.document("rooms/$roomId")
+        firestore.runTransaction { transaction ->
+            val doc = transaction.get(roomRef)
+            val data = doc.data ?: throw Exception("Room not found")
+            val seatsRaw = data["seats"] as? Map<*, *> ?: throw Exception("No seats data")
+            val fromSeat = (seatsRaw[fromIndex.toString()] as? Map<*, *>)?.let { raw ->
+                raw.entries.associate { (k, v) -> k.toString() to v }
+            } ?: Seat.EMPTY_MAP
+            val toSeat = (seatsRaw[toIndex.toString()] as? Map<*, *>)?.let { raw ->
+                raw.entries.associate { (k, v) -> k.toString() to v }
+            } ?: Seat.EMPTY_MAP
 
-        firestore.document("rooms/$roomId").update(
-            mapOf(
+            transaction.update(roomRef, mapOf(
                 "seats.$fromIndex.userId" to toSeat["userId"],
                 "seats.$fromIndex.state" to (toSeat["state"] ?: "EMPTY"),
                 "seats.$fromIndex.isMuted" to (toSeat["isMuted"] ?: false),
                 "seats.$toIndex.userId" to fromSeat["userId"],
                 "seats.$toIndex.state" to (fromSeat["state"] ?: "EMPTY"),
                 "seats.$toIndex.isMuted" to (fromSeat["isMuted"] ?: false)
-            )
-        ).await()
+            ))
+        }.await()
     }
 
     override suspend fun kickUser(roomId: String, userId: String, seatIndex: Int?, kickerName: String, reason: String): Resource<Unit> = firebaseCall("Failed to kick user") {
@@ -316,7 +321,7 @@ class RoomRepositoryImpl(
         for (uid in participantIds) {
             try {
                 firestore.document("users/$uid").update("currentRoomId", null).await()
-            } catch (_: Exception) { }
+            } catch (e: Exception) { Log.w(TAG, "Room operation failed", e) }
         }
     }
 
@@ -328,7 +333,8 @@ class RoomRepositoryImpl(
                 .get()
                 .await()
             snapshot.documents.firstOrNull()?.id
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to find active room by owner", e)
             null
         }
     }
@@ -363,7 +369,7 @@ class RoomRepositoryImpl(
             }
             try {
                 firestore.document("rooms/${doc.id}").update(updates).await()
-            } catch (_: Exception) { }
+            } catch (e: Exception) { Log.w(TAG, "Room operation failed", e) }
         }
         firestore.document("users/$userId").update("currentRoomId", null).await()
     }
@@ -393,9 +399,9 @@ class RoomRepositoryImpl(
                 for (uid in participantIds) {
                     try {
                         firestore.document("users/$uid").update("currentRoomId", null).await()
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) { Log.w(TAG, "Room operation failed", e) }
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) { Log.w(TAG, "Room operation failed", e) }
         }
     }
 

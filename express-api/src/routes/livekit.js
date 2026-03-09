@@ -6,14 +6,19 @@
 
 const router = require('express').Router();
 const { AccessToken } = require('livekit-server-sdk');
+const log = require('../utils/log');
 
 router.post('/livekit/token', async (req, res) => {
   try {
-    const { roomName, identity } = req.body || {};
+    const { roomName } = req.body || {};
+    const identity = req.auth.uid;
 
-    if (!roomName || !identity) {
-      return res.status(400).json({ error: 'roomName and identity are required' });
+    if (!roomName) {
+      log.warn('livekit', 'Token request missing roomName', { userId: identity });
+      return res.status(400).json({ error: 'roomName is required' });
     }
+
+    log.info('livekit', 'Generating token', { userId: identity, roomName });
 
     const at = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
       identity,
@@ -30,7 +35,7 @@ router.post('/livekit/token', async (req, res) => {
     const token = await at.toJwt();
     return res.json({ token });
   } catch (err) {
-    console.error('Error generating LiveKit token:', err);
+    log.error('livekit', 'Failed to generate token', { userId: req.auth?.uid, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

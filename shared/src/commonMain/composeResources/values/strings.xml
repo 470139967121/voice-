@@ -99,7 +99,7 @@
     <string name="followers_count">Followers (%1$d)</string>
     <string name="following">Following</string>
     <string name="following_count">Following (%1$d)</string>
-    <string name="following_list_private">This user\'s following list is private</string>
+    <string name="following_list_private">This user's following list is private</string>
     <string name="get_super_shy">Get Super Shy</string>
     <string name="gift_wall">Gift Wall</string>
     <string name="gift_value_coins">Value: %1$d coins</string>
@@ -119,7 +119,7 @@
     <string name="set_up_your_profile">Set Up Your Profile</string>
     <string name="stalker_visit_info">Stalked you %1$s, %2$d time(s) in the last 3 months</string>
     <string name="stalkers_count">Stalkers (%1$d)</string>
-    <string name="stalkers_super_shy_description">See who\'s been visiting your profile! Profile stalkers is an exclusive Super Shy feature.</string>
+    <string name="stalkers_super_shy_description">See who's been visiting your profile! Profile stalkers is an exclusive Super Shy feature.</string>
     <string name="super_shy_benefit">Super Shy Benefit</string>
     <string name="top_senders">Top Senders</string>
     <string name="block">Block</string>
@@ -192,7 +192,7 @@
     <string name="requesting">Requesting</string>
     <string name="room">Room</string>
     <string name="room_closed">Room Closed</string>
-    <string name="room_closing_no_super_shy">The room owner doesn\'t have Super Shy, so this room will close soon.</string>
+    <string name="room_closing_no_super_shy">The room owner doesn't have Super Shy, so this room will close soon.</string>
     <string name="room_closing_in">Room closing in %1$d:%2$s</string>
     <string name="room_closing_soon">Room Closing Soon</string>
     <string name="room_settings">Room settings</string>
@@ -221,7 +221,7 @@
     <string name="decline">Decline</string>
     <string name="go_back">Go back</string>
     <string name="go_to_seat">Go to Seat</string>
-    <string name="invited_to_sit">You\'ve been invited to sit!</string>
+    <string name="invited_to_sit">You've been invited to sit!</string>
     <string name="request_accepted">Your request was accepted!</string>
     <string name="seat_number">Seat %1$d</string>
     <string name="user_wants_to_sit">%1$s wants to sit</string>
@@ -251,12 +251,12 @@
     <string name="additional_details_optional">Additional details (optional)</string>
     <string name="all_admins_and_mods">All admins &amp; mods</string>
     <string name="attach_evidence">Attach Evidence</string>
-    <string name="cant_message_user">You can\'t message this user</string>
+    <string name="cant_message_user">You can't message this user</string>
     <string name="chat">Chat</string>
     <string name="close_group">Close Group</string>
     <string name="close_group_warning">This will close the group for everyone. Messages are preserved for moderation.</string>
     <string name="compressing">Compressing...</string>
-    <string name="conversation_start_hint">Start a conversation from someone\'s\nprofile or user card in a room</string>
+    <string name="conversation_start_hint">Start a conversation from someone's\nprofile or user card in a room</string>
     <string name="create_group">Create Group</string>
     <string name="current_version">Current</string>
     <string name="delete_conversation">Delete Conversation</string>
@@ -383,7 +383,7 @@
 
     <!-- Daily Reward -->
     <string name="awesome">Awesome!</string>
-    <string name="claim_todays_reward">Claim Today\'s Reward</string>
+    <string name="claim_todays_reward">Claim Today's Reward</string>
     <string name="coins">coins</string>
     <string name="day_fri">Fri</string>
     <string name="day_mon">Mon</string>
@@ -424,6 +424,7 @@
     <string name="transaction_history">Transaction History</string>
     <string name="transactions">Transactions</string>
     <string name="wallet">Wallet</string>
+    <string name="wallet_with_balance">Wallet · %1$s</string>
 
     <!-- Super Shy -->
     <string name="benefit_daily_bonus">+10% daily login coins (rounded up)</string>
@@ -444,7 +445,9 @@
     <string name="per_month">per month</string>
     <string name="per_year">per year</string>
     <string name="super_shy">Super Shy</string>
-    <string name="super_shy_for_life">You\'re Super Shy for life!</string>
+    <string name="super_shy_lifetime">Super Shy ✦ Lifetime</string>
+    <string name="super_shy_days">Super Shy ✦ %1$dd</string>
+    <string name="super_shy_for_life">You're Super Shy for life!</string>
     <string name="tap_to_claim_backpack">Tap to claim — added to your backpack</string>
     <string name="testing_mode_super_shy">Testing mode — no real money is charged. Tap a plan to instantly activate Super Shy.</string>
     <string name="tier_label">Tier: %1$s</string>
@@ -468,4 +471,238 @@
     <string name="phone_number">Phone Number</string>
     <string name="verification_code">Verification Code</string>
     <string name="continue_with_google">Continue with Google</string>
+
+    <!-- Settings dialogs -->
+    <string name="clear">Clear</string>
+    <string name="clear_cache">Clear Cache</string>
+    <string name="clear_cache_confirm">Clear %1$s of cached data?</string>
+    <string name="cache_cleared">Cache Cleared</string>
+    <string name="cache_cleared_description">App cache has been cleared.</string>
+    <string name="check_for_updates">Check for Updates</string>
+    <string name="clear_cache_with_size">Clear Cache (%1$s)</string>
+    <string name="up_to_date">Up to Date</string>
+    <string name="up_to_date_description">You\'re on the latest version.</string>
+    <string name="update_available">Update Available</string>
+    <string name="update_available_description">Version %1$s is available.</string>
+    <string name="update_available_soft">A new version (%1$s) of ShyTalk is available.</string>
+    <string name="download_now">Download Now</string>
+    <string name="update_now">Update Now</string>
+    <string name="error_title">Error</string>
+    <string name="delete_account">Delete Account</string>
+    <string name="delete_account_description">Account deletion is not available yet. Please contact shytalk.help@gmail.com for assistance.</string>
+    <string name="unblock_confirm">Unblock %1$s?</string>
+    <string name="unblock_description">They will be able to view your profile again.</string>
+    <string name="dnd_start_time">DND Start Time</string>
+    <string name="dnd_end_time">DND End Time</string>
+    <string name="not_now">Not now</string>
+    <string name="allow">Allow</string>
+
+    <!-- Room dialogs -->
+    <string name="edit_room_name">Edit Room Name</string>
+    <string name="removed_from_room">Removed from Room</string>
+    <string name="kicked_by_name">You were kicked by %1$s.</string>
+    <string name="kicked_from_room">You have been kicked from this room.</string>
+    <string name="choose_another_room">Choose Another Room</string>
+    <string name="leave">Leave</string>
+
+    <!-- Overlay permission -->
+    <string name="display_over_other_apps">Display over other apps</string>
+    <string name="display_over_other_apps_description">Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.</string>
+
+    <!-- Warning screen -->
+    <string name="view_community_standards">View Community Standards</string>
+    <string name="i_understand_and_accept">I Understand and Accept</string>
+
+    <!-- Settings - Privacy page -->
+    <string name="hide_following_list">Hide Following List</string>
+    <string name="hide_following_description">Others won\'t see who you follow. Followers are always visible.</string>
+    <string name="hide_online_status">Hide Online Status</string>
+    <string name="hide_online_status_description">Others won\'t see when you\'re online.</string>
+    <string name="hide_age">Hide Age</string>
+    <string name="hide_age_description">Others won\'t see your age on your profile.</string>
+    <string name="who_can_message_me">Who can message me</string>
+    <string name="who_can_message_description">Control who can send you private messages.</string>
+    <string name="everyone">Everyone</string>
+    <string name="people_i_follow">People I follow</string>
+    <string name="no_one">No one</string>
+
+    <!-- Settings - Notifications page -->
+    <string name="private_messages">Private Messages</string>
+    <string name="pm_notifications">PM Notifications</string>
+    <string name="pm_notifications_description">Receive notifications for new private messages.</string>
+    <string name="notification_sound">Notification Sound</string>
+    <string name="notification_sound_description">Play a sound when a new message arrives.</string>
+    <string name="message_preview">Message Preview</string>
+    <string name="message_preview_description">Show message text in notifications.</string>
+    <string name="chat_display">Chat Display</string>
+    <string name="show_timestamps">Show Timestamps</string>
+    <string name="show_timestamps_description">Display message timestamps in chat.</string>
+    <string name="show_date_separators">Show Date Separators</string>
+    <string name="show_date_separators_description">Show date labels between messages on different days.</string>
+    <string name="do_not_disturb">Do Not Disturb</string>
+    <string name="enable_dnd">Enable Do Not Disturb</string>
+    <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
+    <string name="start">Start</string>
+    <string name="end">End</string>
+    <string name="room_alerts">Room Alerts</string>
+    <string name="self_destruct_countdown">Self-Destruct Countdown</string>
+    <string name="self_destruct_description">Play a voice announcement when a room\'s 5-minute self-destruct timer starts or stops.</string>
+
+    <!-- Settings - Permissions page -->
+    <string name="notifications_permission_description">Receive alerts when you\'re in a live room in the background.</string>
+    <string name="overlay_permission_description">Show a floating bubble when you leave a voice room, so you can quickly return.</string>
+    <string name="microphone">Microphone</string>
+    <string name="microphone_description">Required for voice chat in rooms.</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="bluetooth_description">Connect to Bluetooth audio devices during voice chat.</string>
+    <string name="allowed">Allowed</string>
+    <string name="denied">Denied</string>
+
+    <!-- Settings - Blocked Users page -->
+    <string name="no_blocked_users">No blocked users</string>
+
+    <!-- Settings - Account page -->
+    <string name="shytalk_id">ShyTalk ID</string>
+    <string name="email">Email</string>
+
+    <!-- Settings - About page -->
+    <string name="contact_us">Contact Us</string>
+
+    <!-- Profile page -->
+    <string name="must_be_13">You must be at least 13 years old</string>
+    <string name="profile_not_found">Profile not found</string>
+    <string name="description">Description</string>
+    <string name="report_user_generic">Report User</string>
+    <string name="block_confirm">Block %1$s?</string>
+    <string name="block_description">They won\'t be able to view your profile.</string>
+
+    <!-- Room block warnings -->
+    <string name="banned_from_room">Banned from Room</string>
+    <string name="you_were_banned">You were banned from this room.</string>
+    <string name="banned_by">Banned by: %1$s</string>
+    <string name="cannot_enter_room">Cannot Enter Room</string>
+    <string name="not_allowed_to_enter">You are not allowed to enter this room.</string>
+    <string name="blocked_user_in_room">Blocked User in Room</string>
+    <string name="blocked_user_in_room_description">A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?</string>
+    <string name="notice">Notice</string>
+    <string name="blocked_by_user_in_room_description">A user in this room has blocked you. You may have a limited experience. Enter anyway?</string>
+    <string name="enter">Enter</string>
+    <string name="report_thank_you">Thank you for your report. We will review it shortly.</string>
+
+    <!-- Room kick dialog -->
+    <string name="kick_reason">Reason: %1$s</string>
+
+    <!-- Auth / Google Sign-In -->
+    <string name="retrying">Retrying…</string>
+    <string name="account_restricted">Account Restricted</string>
+    <string name="device_locked_description">This device is already linked to another account.\nOnly one account is allowed per device.\n\nFor support, contact shytalk.help@gmail.com</string>
+    <string name="contact_support_hint">If the problem persists, contact shytalk.help@gmail.com</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="signing_in">Signing in…</string>
+
+    <!-- Suspension / Ban -->
+    <string name="appeal">Appeal</string>
+    <string name="appeal_placeholder">Explain why your suspension should be lifted…</string>
+    <string name="submit_appeal">Submit Appeal</string>
+    <string name="i_understand">I Understand</string>
+    <string name="tap_to_return">Tap to return</string>
+
+    <!-- Degraded Mode -->
+    <string name="technical_difficulties">Technical Difficulties</string>
+    <string name="technical_difficulties_description">ShyTalk is currently experiencing technical difficulties. Some features may not work correctly. Services will be restored automatically.</string>
+    <string name="contact_support_help">If you need help, contact shytalk.help@gmail.com</string>
+
+    <!-- Force Update -->
+    <string name="update_required">Update Required</string>
+    <string name="update_required_description">A new version of ShyTalk is available. Please update to continue using the app.</string>
+
+    <!-- Leave/Close room dialog -->
+    <string name="close_room_question">Close Room?</string>
+    <string name="leave_room_question">Leave Room?</string>
+    <string name="close_room_description">This will close the room for everyone.</string>
+    <string name="leave_room_description">You will leave the voice room.</string>
+
+    <!-- Misc UI -->
+    <string name="checking_for_updates">Checking for updates…</string>
+    <string name="suspension_reason">Reason: %1$s</string>
+    <string name="suspension_ends_in">Your suspension will end in:</string>
+    <string name="stalkers">Stalkers</string>
+
+    <!-- Connection / Loading states -->
+    <string name="unable_to_connect">Unable to Connect</string>
+    <string name="connection_trouble">ShyTalk is having trouble reaching our servers. Please check your internet connection and try again.</string>
+    <string name="voice_chat_reimagined">Voice chat rooms, reimagined.</string>
+    <string name="profile_not_available">This profile is not available</string>
+    <string name="blocked_by_user">You have been blocked by this user</string>
+    <string name="account_suspended_label">Account Suspended</string>
+    <string name="account_suspended_description">This user\'s account has been suspended.</string>
+    <string name="closing">Closing...</string>
+    <string name="connecting">Connecting...</string>
+    <string name="voice_chat_unavailable">Voice chat is temporarily unavailable</string>
+    <string name="mic_permission_denied">Microphone permission denied. You won\'t be able to use voice chat.</string>
+
+    <!-- Warning screen -->
+    <string name="official_warning">Official Warning</string>
+    <string name="warning_reviewed">Your account has been reviewed and a warning has been issued.</string>
+    <string name="warning_reviewed_for_reason">Your account has been reviewed for %1$s and a warning has been issued.</string>
+    <string name="warning_consequence">Continued violations may result in suspension of your account.</string>
+
+    <!-- Unsafe device -->
+    <string name="device_not_supported">Device Not Supported</string>
+    <string name="device_not_supported_description">ShyTalk cannot run on rooted or emulated devices. Please use an unmodified device.</string>
+
+    <!-- Suspension -->
+    <string name="suspension_ends_at">Ends: %1$s</string>
+    <string name="suspension_login_again">You can log in again now.\nBe good this time!</string>
+    <string name="suspension_permanent">This suspension is permanent.</string>
+    <string name="appeal_submitted">Your appeal has been submitted and will be reviewed. If successful, your suspension will be lifted. You will not receive any further feedback on your appeal and you cannot submit another appeal.</string>
+    <string name="appeal_unsuccessful">Your appeal has been reviewed and was not successful. You cannot submit another appeal.</string>
+    <string name="appeal_not_eligible">You are not eligible to appeal this suspension.</string>
+
+    <!-- Ban screen -->
+    <string name="ban_reason">Reason: %1$s</string>
+    <string name="ban_expires">Expires: %1$s</string>
+    <string name="ban_permanent">This ban is permanent.</string>
+
+    <!-- Support -->
+    <string name="support_contact">For support, contact shytalk.help@gmail.com</string>
+
+    <!-- ViewModel error messages (localized via UiText) -->
+    <string name="error_submit_appeal">Failed to submit appeal</string>
+    <string name="error_block_user">Failed to block user</string>
+    <string name="error_unblock_user">Failed to unblock user</string>
+    <string name="error_follow_user">Failed to follow user</string>
+    <string name="error_unfollow_user">Failed to unfollow user</string>
+    <string name="error_submit_report">Failed to submit report</string>
+    <string name="error_could_not_submit_report">Could not submit report</string>
+    <string name="error_upload_evidence">Failed to upload evidence</string>
+    <string name="error_load_user_data">Failed to load user data</string>
+    <string name="error_load_users">Failed to load users</string>
+    <string name="error_max_participants">Maximum %1$d participants allowed</string>
+    <string name="error_no_users_selected">No users selected</string>
+    <string name="error_max_groups">You can own a maximum of %1$d groups</string>
+    <string name="error_upload_group_photo">Failed to upload group photo</string>
+    <string name="error_update_privacy">Failed to update privacy setting</string>
+    <string name="error_check_updates">Failed to check for updates</string>
+    <string name="error_not_enough_coins">Not enough coins</string>
+    <string name="error_prices_changed">Prices have changed! Please check the new costs and try again.</string>
+    <string name="error_not_enough_beans">Not enough beans</string>
+    <string name="error_save_dob">Failed to save date of birth</string>
+    <string name="error_resolve_report">Failed to resolve report</string>
+
+    <!-- ViewModel success/status messages (localized via UiText) -->
+    <string name="success_purchase">Purchase successful!</string>
+    <string name="success_redeemed_beans">Redeemed %1$s beans</string>
+    <string name="success_redeemed_beans_bonus">Redeemed %1$s beans (10%% bonus!)</string>
+    <string name="success_coins_added">+%1$s coins added!</string>
+    <string name="success_report_resolved">Report resolved</string>
+    <string name="success_super_shy_activated">Super Shy activated! +30 days</string>
+    <string name="success_sent_backpack">entire backpack (%1$d items)</string>
+
+    <!-- Last active time labels -->
+    <string name="active_just_now">Active just now</string>
+    <string name="active_minutes_ago">Active %1$dm ago</string>
+    <string name="active_hours_ago">Active %1$dh ago</string>
+    <string name="active_days_ago">Active %1$dd ago</string>
+    <string name="active_long_ago">Active 30+ days ago</string>
 </resources>
