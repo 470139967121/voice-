@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.messaging
 
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.ReportRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
@@ -71,7 +72,7 @@ class ReportReviewViewModelTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assertEquals("Failed to load", state.message)
+        assertEquals(UiText.Plain("Failed to load"), state.message)
         assertFalse(state.isLoading)
     }
 
@@ -102,7 +103,7 @@ class ReportReviewViewModelTest {
         vm.resolveReport("r1", "warn")
         advanceUntilIdle()
 
-        assertEquals("Report resolved", vm.uiState.value.message)
+        assertTrue(vm.uiState.value.message is UiText.Res)
     }
 
     @Test
@@ -116,7 +117,7 @@ class ReportReviewViewModelTest {
         vm.resolveReport("r1", "warn")
         advanceUntilIdle()
 
-        assertEquals("Failed to resolve report", vm.uiState.value.message)
+        assertTrue(vm.uiState.value.message is UiText.Res)
         // Reports list unchanged
         assertEquals(3, vm.uiState.value.reports.size)
     }
@@ -131,7 +132,7 @@ class ReportReviewViewModelTest {
 
         vm.resolveReport("r1", "warn")
         advanceUntilIdle()
-        assertEquals("Report resolved", vm.uiState.value.message)
+        assertTrue(vm.uiState.value.message is UiText.Res)
 
         vm.clearMessage()
         assertNull(vm.uiState.value.message)
@@ -164,7 +165,7 @@ class ReportReviewViewModelTest {
         val state = vm.uiState.value
         assertEquals(2, state.reports.size)
         assertFalse(state.reports.any { it.reportId == "r1" })
-        assertEquals("Report resolved", state.message)
+        assertTrue(state.message is UiText.Res)
     }
 
     @Test
@@ -182,7 +183,7 @@ class ReportReviewViewModelTest {
         val state = vm.uiState.value
         assertEquals(2, state.reports.size)
         assertFalse(state.reports.any { it.reportId == "r3" })
-        assertEquals("Report resolved", state.message)
+        assertTrue(state.message is UiText.Res)
     }
 
     @Test
@@ -218,7 +219,7 @@ class ReportReviewViewModelTest {
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.reports.isEmpty())
-        assertEquals("Report resolved", vm.uiState.value.message)
+        assertTrue(vm.uiState.value.message is UiText.Res)
     }
 
     @Test
@@ -229,7 +230,7 @@ class ReportReviewViewModelTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assertEquals("Connection timeout", state.message)
+        assertEquals(UiText.Plain("Connection timeout"), state.message)
         assertFalse(state.isLoading)
         assertTrue(state.reports.isEmpty())
     }

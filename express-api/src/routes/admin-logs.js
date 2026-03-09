@@ -8,6 +8,7 @@
 const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
+const log = require('../utils/log');
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -15,9 +16,8 @@ const MAX_TRACE_LIMIT = 500;
 
 // GET /admin/logs — Query logs with filters
 router.get('/admin/logs', async (req, res) => {
-  if (requireAdmin(req, res)) return;
-
   try {
+    if (requireAdmin(req, res)) return;
     const {
       level,
       source,
@@ -77,7 +77,7 @@ router.get('/admin/logs', async (req, res) => {
 
     res.json({ logs, nextCursor });
   } catch (err) {
-    console.error('Error querying logs:', err);
+    log.error('admin-logs', 'Error querying logs', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -100,7 +100,7 @@ router.get('/admin/logs/trace/:traceId', async (req, res) => {
 
     res.json({ logs });
   } catch (err) {
-    console.error('Error querying trace logs:', err);
+    log.error('admin-logs', 'Error querying trace logs', { traceId: req.params.traceId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

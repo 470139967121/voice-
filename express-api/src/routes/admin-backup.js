@@ -15,6 +15,7 @@ const { requireAdmin } = require('../middleware/auth');
 const r2 = require('../utils/r2');
 const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const backupFn = require('../cron/backups');
+const log = require('../utils/log');
 
 // ─── S3 client for listing with metadata (size, lastModified) ────
 
@@ -119,7 +120,7 @@ router.get('/admin/backups', async (req, res) => {
 
     res.json({ backups });
   } catch (err) {
-    console.error('GET /api/admin/backups error:', err);
+    log.error('admin-backup', 'Error listing backups', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -136,7 +137,7 @@ router.post('/admin/backups/trigger', async (req, res) => {
       manifest: result.manifest,
     });
   } catch (err) {
-    console.error('POST /api/admin/backups/trigger error:', err);
+    log.error('admin-backup', 'Error triggering backup', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -162,7 +163,7 @@ router.get('/admin/backups/:date/:collection', async (req, res) => {
     res.set('Content-Type', 'application/json');
     obj.Body.pipe(res);
   } catch (err) {
-    console.error('GET /api/admin/backups/:date/:collection error:', err);
+    log.error('admin-backup', 'Error downloading collection backup', { date: req.params.date, collection: req.params.collection, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -186,7 +187,7 @@ router.get('/admin/backups/:date', async (req, res) => {
     res.set('Content-Type', 'application/json');
     obj.Body.pipe(res);
   } catch (err) {
-    console.error('GET /api/admin/backups/:date error:', err);
+    log.error('admin-backup', 'Error downloading legacy backup', { date: req.params.date, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -197,6 +198,9 @@ router.post('/admin/backups/restore/:date', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
     const { mode = 'missing-only', collection } = req.body;
 
     if (!['full', 'collection', 'missing-only'].includes(mode)) {
@@ -208,7 +212,7 @@ router.post('/admin/backups/restore/:date', async (req, res) => {
     }
 
     // Auto-create a fresh backup before any restore
-    console.log('Restore: creating pre-restore backup...');
+    log.info('admin-backup', 'Creating pre-restore backup', { date: req.params.date, mode: req.body.mode || 'missing-only' });
     await backupFn();
 
     // Determine which collections to restore
@@ -230,13 +234,12 @@ router.post('/admin/backups/restore/:date', async (req, res) => {
       let restoredCount = 0;
 
       if (mode === 'full' || mode === 'collection') {
-        // Full restore: delete existing docs, then write from backup
+        // Full restore: delete existing docs in batches of 500, then write from backup
         const existingSnap = await db.collection(collName).get();
-        const batch = db.batch();
-        for (const doc of existingSnap.docs) {
-          batch.delete(doc.ref);
-        }
-        if (!existingSnap.empty) {
+        const refs = existingSnap.docs.map(d => d.ref);
+        for (let i = 0; i < refs.length; i += 500) {
+          const batch = db.batch();
+          refs.slice(i, i + 500).forEach(ref => batch.delete(ref));
           await batch.commit();
         }
 
@@ -274,7 +277,7 @@ router.post('/admin/backups/restore/:date', async (req, res) => {
       results,
     });
   } catch (err) {
-    console.error('POST /api/admin/backups/restore/:date error:', err);
+    log.error('admin-backup', 'Error restoring from backup', { date: req.params.date, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -288,8 +291,8 @@ router.post('/admin/backups/recover-photos', async (req, res) => {
     let recovered = 0;
 
     // Scan R2 for profile photos and cover photos
-    for (const folder of ['profile_photos/', 'cover_photos/']) {
-      const field = folder === 'profile_photos/' ? 'profilePhotoUrl' : 'coverPhotoUrl';
+    for (const folder of ['profiles/', 'covers/']) {
+      const field = folder === 'profiles/' ? 'profilePhotoUrl' : 'coverPhotoUrl';
       const userPhotos = {}; // uid -> latest key
 
       const objects = await listObjectsWithMeta(folder);
@@ -322,7 +325,7 @@ router.post('/admin/backups/recover-photos', async (req, res) => {
 
     res.json({ message: `Recovered ${recovered} photo URLs from R2`, recovered });
   } catch (err) {
-    console.error('POST /api/admin/backups/recover-photos error:', err);
+    log.error('admin-backup', 'Error recovering photos from R2', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

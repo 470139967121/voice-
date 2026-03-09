@@ -173,7 +173,7 @@ fun SeatItem(
                 if (seat.state == SeatState.OCCUPIED && photoUrl != null) {
                     AsyncImage(
                         model = photoUrl,
-                        contentDescription = user?.displayName ?: stringResource(Res.string.user),
+                        contentDescription = user.displayName,
                         modifier = Modifier
                             .size(seatSize)
                             .clip(CircleShape),

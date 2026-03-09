@@ -637,7 +637,8 @@ fun PrivateChatScreen(
             }
 
             // Mute banner (group only)
-            if (uiState.isGroup && uiState.currentUserMuteInfo != null) {
+            val muteInfo = uiState.currentUserMuteInfo
+            if (uiState.isGroup && muteInfo != null) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.errorContainer
@@ -653,7 +654,6 @@ fun PrivateChatScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        val muteInfo = uiState.currentUserMuteInfo!!
                         val muteText = buildString {
                             if (muteInfo.expiresAt != null) {
                                 val remaining = muteInfo.expiresAt - currentTimeMillis()

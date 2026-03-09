@@ -29,9 +29,10 @@ actual object GachaSoundPlayer {
     private var highTierFanfareTrack: AudioTrack? = null
     private val tickTracks = arrayOfNulls<AudioTrack>(8)
     private val winTracks = mutableMapOf<SoundTier, AudioTrack>()
-    private var initialized = false
+    @Volatile private var initialized = false
+    private val lock = Any()
 
-    actual fun init() {
+    actual fun init(): Unit = synchronized(lock) {
         if (initialized) return
         initialized = true
         spinStartTrack = buildTrack(generateSpinStart())
@@ -46,7 +47,7 @@ actual object GachaSoundPlayer {
         }
     }
 
-    actual fun release() {
+    actual fun release(): Unit = synchronized(lock) {
         if (!initialized) return
         initialized = false
         spinStartTrack?.release(); spinStartTrack = null
@@ -396,7 +397,7 @@ actual object GachaSoundPlayer {
 
             val globalEnv = if (i < SAMPLE_RATE * 30 / 1000) {
                 val at = i.toFloat() / (SAMPLE_RATE * 30 / 1000)
-                (sin(at * PI / 2) * sin(at * PI / 2)).toDouble()
+                sin(at * PI / 2) * sin(at * PI / 2)
             } else if (t > 0.85) {
                 val dt = (t - 0.85) / 0.15
                 (1.0 - dt * dt)

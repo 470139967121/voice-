@@ -3501,10 +3501,16 @@
                     <button id="clear-audit-logs-btn">Delete All Audit Logs</button>
                     <div class="maintenance-result" id="clear-audit-logs-result"></div>
                 </div>
+                <div class="maintenance-card">
+                    <h3>Stalkers</h3>
+                    <p>Delete all profile visitor (stalker) records from all users and reset stalkerCount and newStalkerCount to 0.</p>
+                    <button id="clear-stalkers-btn">Clear All Stalkers</button>
+                    <div class="maintenance-result" id="clear-stalkers-result"></div>
+                </div>
                 <div class="maintenance-card nuclear">
                     <h3>&#9762; RESET ALL</h3>
                     <p>Runs every maintenance action above in sequence. This will wipe system messages,
-                        reports, warnings, orphaned storage, backpacks, gift walls, coins, beans, spin history, Super Shy, appeals, private messages, group chats, closed rooms, broadcasts, and audit logs.</p>
+                        reports, warnings, orphaned storage, backpacks, gift walls, coins, beans, spin history, Super Shy, appeals, private messages, group chats, closed rooms, broadcasts, audit logs, and stalkers.</p>
                     <div class="nuclear-actions">
                         <span>System Messages</span>
                         <span>Reports</span>
@@ -3522,6 +3528,7 @@
                         <span>Closed Rooms</span>
                         <span>Broadcasts</span>
                         <span>Audit Logs</span>
+                        <span>Stalkers</span>
                     </div>
                     <button id="reset-all-btn">RESET EVERYTHING</button>
                     <div class="maintenance-result" id="reset-all-result"></div>
@@ -3572,6 +3579,7 @@
                     <div class="step" id="np-rooms">&#9679; Delete closed rooms</div>
                     <div class="step" id="np-broadcasts">&#9679; Delete broadcasts</div>
                     <div class="step" id="np-audit-logs">&#9679; Delete audit logs</div>
+                    <div class="step" id="np-stalkers">&#9679; Clear stalkers</div>
                 </div>
             </div>
         </div>
@@ -3674,7 +3682,7 @@
                     <div>
                         <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text2);">Image</label>
                         <input type="file" id="banner-file-input" accept="image/*" style="font-size:13px;">
-                        <img id="banner-preview" style="display:none;margin-top:8px;max-width:100%;max-height:200px;border-radius:8px;object-fit:cover;">
+                        <img id="banner-preview" alt="Banner preview" style="display:none;margin-top:8px;max-width:100%;max-height:200px;border-radius:8px;object-fit:cover;">
                     </div>
                     <div>
                         <label style="display:block;margin-bottom:4px;font-size:13px;color:var(--text2);">Title (optional)</label>
@@ -4935,7 +4943,8 @@
     }
 
     searchBtn.addEventListener("click", doSearchUpdated);
-    searchUid.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearchUpdated(); });
+    function _keydownUpdated(e) { if (e.key === "Enter") doSearchUpdated(); }
+    searchUid.addEventListener("keydown", _keydownUpdated);
 
     // --- Appeals ---
     const appealsList = $("#appeals-list");
@@ -5004,7 +5013,7 @@
               const reportDate = r.timestamp ? new Date(r.timestamp).toLocaleString() : "";
               const reporterName = r.reporterName || "Unknown";
               const reporterUid = r.reporterUniqueId || "";
-              const reportStatus = r.status === "resolved" ? `(${r.resolvedAction || "resolved"})` : `(${r.status})`;
+              const reportStatus = r.status === "resolved" ? `(${escapeHtml(r.resolvedAction || "resolved")})` : `(${escapeHtml(r.status)})`;
               return `
                 <div class="appeal-report-item">
                   <div class="report-reason">${escapeHtml(r.reason || "Unknown reason")} ${reportStatus}</div>
@@ -5078,7 +5087,11 @@
           });
         }
       } catch (err) {
-        appealsList.innerHTML = `<div style="color:var(--danger);font-size:13px;">${err.message}</div>`;
+        appealsList.textContent = '';
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'color:var(--danger);font-size:13px;';
+        errDiv.textContent = err.message;
+        appealsList.appendChild(errDiv);
       }
     }
 
@@ -5170,7 +5183,7 @@
           reportHistoryList.appendChild(div);
         }
       } catch (err) {
-        reportHistoryList.innerHTML = `<div style="color:var(--danger);font-size:12px;">${err.message}</div>`;
+        reportHistoryList.innerHTML = `<div style="color:var(--danger);font-size:12px;">${escapeHtml(err.message)}</div>`;
       }
     }
 
@@ -5229,7 +5242,7 @@
 
     // Re-bind search again
     searchBtn.removeEventListener("click", doSearchUpdated);
-    searchUid.removeEventListener("keydown", () => {});
+    if (typeof _keydownUpdated === 'function') searchUid.removeEventListener("keydown", _keydownUpdated);
 
     async function doSearchFinal() {
       const q = searchUid.value.trim();
@@ -5386,7 +5399,7 @@
       reportsList.innerHTML = '<div style="color:var(--text2);font-size:13px;">Loading...</div>';
       try {
         let url = `/api/reports?status=${currentReportFilter}`;
-        if (reportSearchQuery) url += `&search=${reportSearchQuery}`;
+        if (reportSearchQuery) url += `&search=${encodeURIComponent(reportSearchQuery)}`;
         const result = await apiCall("GET", url);
 
         if (result.users.length === 0) {
@@ -5406,7 +5419,7 @@
         renderMoreCards();
 
       } catch (err) {
-        reportsList.innerHTML = `<div style="color:var(--danger);font-size:13px;">${err.message}</div>`;
+        reportsList.innerHTML = `<div style="color:var(--danger);font-size:13px;">${escapeHtml(err.message)}</div>`;
       }
     }
 
@@ -5644,9 +5657,9 @@
               const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : "";
               let contentHtml = "";
               if (m.type === "IMAGE" && m.imageUrls && m.imageUrls.length > 0) {
-                contentHtml = m.imageUrls.map(url => `<img class="conv-msg-image" src="${escapeHtml(url)}" onclick="window.open(this.src,'_blank')">`).join("");
+                contentHtml = m.imageUrls.map(url => `<img class="conv-msg-image" src="${escapeHtml(url)}" alt="Message image" onclick="window.open(this.src,'_blank')">`).join("");
               } else if (m.type === "STICKER" && m.stickerUrl) {
-                contentHtml = `<img class="conv-msg-sticker" src="${escapeHtml(m.stickerUrl)}">`;
+                contentHtml = `<img class="conv-msg-sticker" src="${escapeHtml(m.stickerUrl)}" alt="Sticker">`;
               } else if (m.type === "ROOM_INVITE") {
                 contentHtml = `<span class="conv-msg-type-badge">[Room Invite]</span>`;
               } else if (m.text === "[Message recalled]") {
@@ -6404,7 +6417,7 @@
           <td><input type="number" class="gift-order-input" data-field="order" value="${effective.order || 0}"></td>
           <td style="text-align:center"><input type="checkbox" data-field="showInStore" ${effective.showInStore !== false ? 'checked' : ''}></td>
           <td style="text-align:center"><input type="checkbox" data-field="showOnWheel" ${effective.showOnWheel !== false ? 'checked' : ''}></td>
-          <td>${effective.iconUrl ? `<img src="${escapeHtml(effective.iconUrl)}" class="gift-icon-preview" onerror="this.style.display='none'">` : '<span style="color:var(--text2)">\u2014</span>'}</td>
+          <td>${effective.iconUrl ? `<img src="${escapeHtml(effective.iconUrl)}" class="gift-icon-preview" alt="Gift icon" onerror="this.style.display='none'">` : '<span style="color:var(--text2)">\u2014</span>'}</td>
           <td><input type="text" class="gift-name-input" data-field="name" value="${escapeHtml(effective.name || "")}"></td>
           <td><input type="number" class="gift-value-input" data-field="coinValue" value="${effective.coinValue || 0}"></td>
           <td><input type="text" class="gift-url-input" data-field="animationUrl" value="${escapeHtml(effective.animationUrl || "")}" placeholder="URL"></td>
@@ -7362,6 +7375,33 @@
       btn.textContent = "Delete All Audit Logs";
     });
 
+    $("#clear-stalkers-btn").addEventListener("click", async () => {
+      const btn = $("#clear-stalkers-btn");
+      const result = $("#clear-stalkers-result");
+      if (!confirm("Delete ALL stalker records from ALL users and reset stalker counts to 0? This cannot be undone.")) return;
+      btn.disabled = true;
+      btn.textContent = "Clearing...";
+      result.style.display = "none";
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const resp = await fetch(`${API_BASE}/api/cleanup/all-stalkers`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Request failed");
+        result.className = "maintenance-result success";
+        result.textContent = `Deleted ${data.stalkersDeleted} stalker record(s), reset ${data.usersReset} user(s)`;
+        result.style.display = "block";
+      } catch (err) {
+        result.className = "maintenance-result error";
+        result.textContent = err.message;
+        result.style.display = "block";
+      }
+      btn.disabled = false;
+      btn.textContent = "Clear All Stalkers";
+    });
+
     // =====================================================
     // --- Reset All (nuclear) ---
     // =====================================================
@@ -7663,6 +7703,7 @@
             { id: "np-rooms", endpoint: "all-rooms", label: "Closed rooms" },
             { id: "np-broadcasts", endpoint: "all-broadcasts", label: "Broadcasts" },
             { id: "np-audit-logs", endpoint: "all-audit-logs", label: "Audit logs" },
+            { id: "np-stalkers", endpoint: "all-stalkers", label: "Stalkers" },
           ];
 
           let failed = 0;
@@ -7686,7 +7727,7 @@
               results.push(`${action.label}: OK`);
             } catch (err) {
               stepEl.className = "step failed";
-              stepEl.innerHTML = "&#10007; " + action.label + " — " + err.message;
+              stepEl.innerHTML = "&#10007; " + escapeHtml(action.label) + " — " + escapeHtml(err.message);
               results.push(`${action.label}: FAILED (${err.message})`);
               failed++;
             }
@@ -7707,7 +7748,7 @@
           title.textContent = failed ? "Some actions failed" : "All done";
           desc.textContent = failed
             ? `${actions.length - failed} of ${actions.length} actions succeeded. Check the results below.`
-            : "All 16 maintenance actions completed successfully.";
+            : `All ${actions.length} maintenance actions completed successfully.`;
           btnRow.style.display = "flex";
           proceedBtn.style.display = "none";
           cancelBtn.textContent = "Close";

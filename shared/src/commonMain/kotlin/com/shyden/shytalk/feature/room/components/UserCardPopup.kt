@@ -146,7 +146,7 @@ fun UserCardPopup(
 
                 if (user.nationality != null) {
                     FlagBadge(
-                        countryCode = user.nationality!!,
+                        countryCode = user.nationality,
                         badgeSize = 28.dp,
                         modifier = Modifier.align(Alignment.BottomEnd)
                     )

@@ -3,6 +3,10 @@ package com.shyden.shytalk.feature.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.UiText
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +17,7 @@ import kotlinx.coroutines.launch
 
 data class RequiredDOBUiState(
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val saved: Boolean = false
 )
 
@@ -22,10 +26,15 @@ class RequiredDOBViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "RequiredDOBViewModel"
+    }
+
     private val _uiState = MutableStateFlow(RequiredDOBUiState())
     val uiState: StateFlow<RequiredDOBUiState> = _uiState.asStateFlow()
 
     fun saveDateOfBirth(dateOfBirthMillis: Long) {
+        logI(TAG, "Saving date of birth")
         val userId = authRepository.currentUserId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -34,7 +43,7 @@ class RequiredDOBViewModel(
                     _uiState.update { it.copy(isLoading = false, saved = true) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to save date of birth") }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_save_dob)) }
                 }
                 is Resource.Loading -> {}
             }

@@ -270,7 +270,7 @@ fun ChatPanel(
                 IconButton(
                     onClick = {
                         focusManager.clearFocus()
-                        currentSeatEntry?.key?.toIntOrNull()?.let { onToggleMic(it) }
+                        currentSeatEntry.key.toIntOrNull()?.let { onToggleMic(it) }
                     },
                     enabled = !isVoiceUnavailable
                 ) {

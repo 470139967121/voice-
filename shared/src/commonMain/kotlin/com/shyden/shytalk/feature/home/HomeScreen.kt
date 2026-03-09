@@ -72,7 +72,7 @@ fun RoomListContent(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (uiState.isLoading) {
+        if (uiState.isLoading || uiState.createdRoomId != null) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center

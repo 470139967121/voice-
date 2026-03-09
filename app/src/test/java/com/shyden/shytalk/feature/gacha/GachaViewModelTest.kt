@@ -6,6 +6,7 @@ import com.shyden.shytalk.core.model.GachaGift
 import com.shyden.shytalk.core.model.GachaResult
 import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.GiftRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
@@ -201,7 +202,7 @@ class GachaViewModelTest {
         vm.pullSingle()
         advanceUntilIdle()
 
-        assertEquals("Not enough coins", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
         assertNull(vm.uiState.value.currentWin)
     }
 
@@ -214,7 +215,7 @@ class GachaViewModelTest {
         vm.pullSingle()
         advanceUntilIdle()
 
-        assertEquals("Server error", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Server error"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isPulling)
     }
 
@@ -225,7 +226,7 @@ class GachaViewModelTest {
         vm.pullHundred()
         advanceUntilIdle()
 
-        assertEquals("Not enough coins", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test
@@ -301,7 +302,7 @@ class GachaViewModelTest {
 
         val state = vm.uiState.value
         assertFalse(state.isPulling)
-        assertEquals("Prices have changed! Please check the new costs and try again.", state.error)
+        assertTrue(state.error is UiText.Res)
         assertEquals(newCosts, state.pullCosts)
         // Should not have set any pull results
         assertTrue(state.pullResults.isEmpty())
@@ -333,7 +334,7 @@ class GachaViewModelTest {
 
         val state = vm.uiState.value
         assertFalse(state.isPulling)
-        assertEquals("Prices have changed! Please check the new costs and try again.", state.error)
+        assertTrue(state.error is UiText.Res)
         // pullCosts should be unchanged when currentPullCosts is null
         assertEquals(existingCosts, state.pullCosts)
     }
@@ -347,7 +348,7 @@ class GachaViewModelTest {
         vm.pullSingle()
         advanceUntilIdle()
 
-        assertEquals("Not enough coins", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
         assertNull(vm.uiState.value.currentWin)
         assertFalse(vm.uiState.value.isPulling)
     }
@@ -407,7 +408,7 @@ class GachaViewModelTest {
         vm.pullTen()
         advanceUntilIdle()
 
-        assertEquals("Not enough coins", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
         assertFalse(vm.uiState.value.isPulling)
     }
 

@@ -1,5 +1,6 @@
-const { db, rtdb } = require('./firebase');
+const { db, rtdb, FieldValue } = require('./firebase');
 const { generateId, now } = require('./helpers');
+const log = require('./log');
 
 const SYSTEM_UID = 'SHYTALK_SYSTEM';
 const SYSTEM_DISPLAY_NAME = 'ShyTalk System';
@@ -34,10 +35,13 @@ async function sendSystemPm(recipientUid, text) {
     id: convId,
     isGroup: false,
     participantIds: convSnap.exists ? (convSnap.data().participantIds || [recipientUid, SYSTEM_UID]) : [recipientUid, SYSTEM_UID],
-    lastMessageText: text,
-    lastMessageSenderId: SYSTEM_UID,
-    lastMessageSenderName: SYSTEM_DISPLAY_NAME,
-    lastMessageType: 'TEXT',
+    lastMessage: {
+      text,
+      senderId: SYSTEM_UID,
+      senderName: SYSTEM_DISPLAY_NAME,
+      type: 'SYSTEM',
+      createdAt: timestamp,
+    },
     lastMessageAt: timestamp,
   };
   if (!convSnap.exists) convData.createdAt = timestamp;
@@ -54,27 +58,19 @@ async function sendSystemPm(recipientUid, text) {
   });
 
   const settingsPath = `conversations/${convId}/userSettings/${recipientUid}`;
-  const settingsSnap = await db.doc(settingsPath).get();
-  if (settingsSnap.exists) {
-    await db.doc(settingsPath).update({
-      unreadCount: (settingsSnap.data().unreadCount || 0) + 1,
-      isHidden: false,
-    });
-  } else {
-    await db.doc(settingsPath).set({
-      userId: recipientUid,
-      conversationId: convId,
-      unreadCount: 1,
-      isHidden: false,
-    });
-  }
+  await db.doc(settingsPath).set({
+    userId: recipientUid,
+    conversationId: convId,
+    unreadCount: FieldValue.increment(1),
+    isHidden: false,
+  }, { merge: true });
 
   try {
     await rtdb.ref(`conversations/${convId}/events/lastEvent`).set({
       type: 'new_message',
       ts: Date.now(),
     });
-  } catch (_) { /* best-effort */ }
+  } catch (err) { log.warn('system-pm', 'Failed to write RTDB event', { convId, error: err.message }); }
 }
 
 module.exports = { sendSystemPm, SYSTEM_UID, systemConversationId };

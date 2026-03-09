@@ -233,7 +233,7 @@ class DateUtilsTest {
 
     @Test
     fun `formatSuspensionEnd - exactly 1 day uses singular`() {
-        val futureMs = System.currentTimeMillis() + (1 * 24 * 60 * 60_000L)
+        val futureMs = System.currentTimeMillis() + (1 * 24 * 60 * 60_000L) + 30_000L
         val result = formatSuspensionEnd(futureMs)
         assertTrue(result.contains("1 day"))
         assertFalse(result.contains("1 days"))

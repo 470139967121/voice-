@@ -14,14 +14,11 @@
 const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
-
-async function queryDocs(ref) {
-  const snap = await ref.get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
+const { queryDocs } = require('../utils/firestore-helpers');
+const log = require('../utils/log');
 
 // -- Get config value --
-router.get('/api/config/:key', async (req, res) => {
+router.get('/config/:key', async (req, res) => {
   try {
     const snap = await db.doc(`config/${req.params.key}`).get();
     if (!snap.exists) {
@@ -54,99 +51,14 @@ router.get('/api/config/:key', async (req, res) => {
     const { id, ...config } = { id: snap.id, ...snap.data() };
     return res.json(config);
   } catch (err) {
-    console.error('Error fetching config:', err);
+    log.error('config', 'Error fetching config', { key: req.params.key, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// -- Update config value (admin) --
-router.put('/api/config/:key', async (req, res) => {
-  try {
-    if (requireAdmin(req, res)) return;
-
-    const body = req.body;
-    if (!body) return res.status(400).json({ error: 'Invalid JSON body' });
-
-    await db.doc(`config/${req.params.key}`).set(body, { merge: true });
-
-    return res.json({ success: true });
-  } catch (err) {
-    console.error('Error updating config:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// -- Get gift catalog (store-visible) --
-router.get('/api/gifts', async (req, res) => {
-  try {
-    const results = await queryDocs(
-      db.collection('gifts').where('showInStore', '==', true).orderBy('order')
-    );
-    return res.json(results);
-  } catch (err) {
-    console.error('Error fetching gifts:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// -- Get all gifts (including hidden) --
-router.get('/api/gifts/all', async (req, res) => {
-  try {
-    const results = await queryDocs(
-      db.collection('gifts').orderBy('order')
-    );
-    return res.json(results);
-  } catch (err) {
-    console.error('Error fetching all gifts:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// -- Get active coin packages --
-router.get('/api/coin-packages', async (req, res) => {
-  try {
-    const results = await queryDocs(
-      db.collection('coinPackages').where('isActive', '==', true).orderBy('order')
-    );
-    return res.json(results);
-  } catch (err) {
-    console.error('Error fetching coin packages:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// -- Get recent broadcasts --
-router.get('/api/broadcasts', async (req, res) => {
-  try {
-    const results = await queryDocs(
-      db.collection('broadcasts').orderBy('timestamp', 'desc').limit(50)
-    );
-    return res.json(results);
-  } catch (err) {
-    console.error('Error fetching broadcasts:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// -- Get gift rankings --
-router.get('/api/gift-rankings/:giftId', async (req, res) => {
-  try {
-    const snap = await db.doc(`giftRankings/${req.params.giftId}`).get();
-    const doc = snap.exists ? snap.data() : null;
-
-    return res.json({
-      rankings: doc?.rankings || [],
-      totalSent: doc?.totalSent || 0,
-      lastUpdated: doc?.lastUpdated || null,
-    });
-  } catch (err) {
-    console.error('Error fetching gift rankings:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// -- Economy config (admin) --
-router.put('/api/config/economy', async (req, res) => {
+// -- Economy config (admin, with field whitelist) --
+// Must be defined BEFORE the generic PUT /config/:key route
+router.put('/config/economy', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -178,7 +90,96 @@ router.put('/api/config/economy', async (req, res) => {
 
     return res.json(merged);
   } catch (err) {
-    console.error('Error updating economy config:', err);
+    log.error('config', 'Error updating economy config', { error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// -- Update config value (admin) --
+router.put('/config/:key', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+
+    const body = req.body;
+    if (!body) return res.status(400).json({ error: 'Invalid JSON body' });
+
+    await db.doc(`config/${req.params.key}`).set(body, { merge: true });
+
+    return res.json({ success: true });
+  } catch (err) {
+    log.error('config', 'Error updating config', { key: req.params.key, error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// -- Get gift catalog (store-visible) --
+router.get('/gifts', async (req, res) => {
+  try {
+    const results = await queryDocs(
+      db.collection('gifts').where('showInStore', '==', true).orderBy('order')
+    );
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.json(results);
+  } catch (err) {
+    log.error('config', 'Error fetching gifts', { error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// -- Get all gifts (including hidden) --
+router.get('/gifts/all', async (req, res) => {
+  try {
+    const results = await queryDocs(
+      db.collection('gifts').orderBy('order')
+    );
+    return res.json(results);
+  } catch (err) {
+    log.error('config', 'Error fetching all gifts', { error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// -- Get active coin packages --
+router.get('/coin-packages', async (req, res) => {
+  try {
+    const results = await queryDocs(
+      db.collection('coinPackages').where('isActive', '==', true).orderBy('order')
+    );
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.json(results);
+  } catch (err) {
+    log.error('config', 'Error fetching coin packages', { error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// -- Get recent broadcasts --
+router.get('/broadcasts', async (req, res) => {
+  try {
+    const results = await queryDocs(
+      db.collection('broadcasts').orderBy('timestamp', 'desc').limit(50)
+    );
+    res.set('Cache-Control', 'public, max-age=60');
+    return res.json(results);
+  } catch (err) {
+    log.error('config', 'Error fetching broadcasts', { error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// -- Get gift rankings --
+router.get('/gift-rankings/:giftId', async (req, res) => {
+  try {
+    const snap = await db.doc(`giftRankings/${req.params.giftId}`).get();
+    const doc = snap.exists ? snap.data() : null;
+
+    return res.json({
+      rankings: doc?.rankings || [],
+      totalSent: doc?.totalSent || 0,
+      lastUpdated: doc?.lastUpdated || null,
+    });
+  } catch (err) {
+    log.error('config', 'Error fetching gift rankings', { giftId: req.params.giftId, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

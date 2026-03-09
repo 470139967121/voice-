@@ -28,6 +28,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shyden.shytalk.R
 import com.shyden.shytalk.core.audio.EmergencyTonePlayer
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 
 @Composable
 fun WarningScreen(
@@ -60,7 +63,7 @@ fun WarningScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Official Warning",
+                text = stringResource(Res.string.official_warning),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.testTag("warning_title")
@@ -69,9 +72,9 @@ fun WarningScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Your account has been reviewed" +
-                    (if (!reason.isNullOrBlank() && !reason.equals("other", ignoreCase = true)) " for $reason" else "") +
-                    " and a warning has been issued.",
+                text = if (!reason.isNullOrBlank() && !reason.equals("other", ignoreCase = true))
+                    stringResource(Res.string.warning_reviewed_for_reason, reason)
+                else stringResource(Res.string.warning_reviewed),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -80,7 +83,7 @@ fun WarningScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Continued violations may result in suspension of your account.",
+                text = stringResource(Res.string.warning_consequence),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -92,7 +95,7 @@ fun WarningScreen(
                 onClick = onViewCommunityStandards,
                 modifier = Modifier.testTag("warning_communityStandardsLink")
             ) {
-                Text("View Community Standards")
+                Text(stringResource(Res.string.view_community_standards))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -101,13 +104,13 @@ fun WarningScreen(
                 onClick = onAccept,
                 modifier = Modifier.fillMaxWidth().testTag("warning_acceptButton")
             ) {
-                Text("I Understand and Accept")
+                Text(stringResource(Res.string.i_understand_and_accept))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "For support, contact shytalk.help@gmail.com",
+                text = stringResource(Res.string.support_contact),
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

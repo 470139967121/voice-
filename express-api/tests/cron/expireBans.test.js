@@ -2,8 +2,8 @@
 
 const mockDocGet = jest.fn();
 const mockCollectionGet = jest.fn();
-const mockRefDelete = jest.fn().mockResolvedValue();
-const mockSend = jest.fn().mockResolvedValue();
+const mockBatchDelete = jest.fn();
+const mockBatchCommit = jest.fn().mockResolvedValue();
 
 const mockWhere = jest.fn(() => ({
   get: mockCollectionGet,
@@ -24,10 +24,19 @@ jest.mock('../../src/utils/firebase', () => ({
   db: {
     collection: (...args) => mockCollection(...args),
     doc: (...args) => mockDoc(...args),
+    batch: jest.fn(() => ({
+      delete: mockBatchDelete,
+      commit: mockBatchCommit,
+    })),
   },
-  messaging: {
-    send: (...args) => mockSend(...args),
-  },
+}));
+
+// Mock FCM utility
+const mockSendFcmToTokens = jest.fn().mockResolvedValue([]);
+const mockCleanupInvalidTokens = jest.fn().mockResolvedValue();
+jest.mock('../../src/utils/fcm', () => ({
+  sendFcmToTokens: (...args) => mockSendFcmToTokens(...args),
+  cleanupInvalidTokens: (...args) => mockCleanupInvalidTokens(...args),
 }));
 
 const expireBans = require('../../src/cron/expireBans');
@@ -39,7 +48,7 @@ beforeEach(() => {
 // ─── Tests ───────────────────────────────────────────────────────
 
 describe('expireBans', () => {
-  test('removes expired bans', async () => {
+  test('removes expired bans via batch', async () => {
     const pastExpiry = new Date(Date.now() - 86400000).toISOString();
 
     // deviceBans query
@@ -48,7 +57,7 @@ describe('expireBans', () => {
         {
           id: 'dev1',
           data: () => ({ expiresAt: pastExpiry, reason: 'old' }),
-          ref: { delete: mockRefDelete },
+          ref: { path: 'deviceBans/dev1' },
         },
       ],
     });
@@ -59,7 +68,7 @@ describe('expireBans', () => {
         {
           id: 'net1',
           data: () => ({ expiresAt: pastExpiry, reason: 'old ip' }),
-          ref: { delete: mockRefDelete },
+          ref: { path: 'networkBans/net1' },
         },
       ],
     });
@@ -69,7 +78,8 @@ describe('expireBans', () => {
 
     await expireBans();
 
-    expect(mockRefDelete).toHaveBeenCalledTimes(2);
+    expect(mockBatchDelete).toHaveBeenCalledTimes(2);
+    expect(mockBatchCommit).toHaveBeenCalledTimes(1);
   });
 
   test('skips non-expired bans', async () => {
@@ -81,7 +91,7 @@ describe('expireBans', () => {
         {
           id: 'dev1',
           data: () => ({ expiresAt: futureExpiry, reason: 'active' }),
-          ref: { delete: mockRefDelete },
+          ref: { path: 'deviceBans/dev1' },
         },
       ],
     });
@@ -92,14 +102,14 @@ describe('expireBans', () => {
         {
           id: 'net1',
           data: () => ({ expiresAt: futureExpiry, reason: 'active ip' }),
-          ref: { delete: mockRefDelete },
+          ref: { path: 'networkBans/net1' },
         },
       ],
     });
 
     await expireBans();
 
-    expect(mockRefDelete).not.toHaveBeenCalled();
+    expect(mockBatchDelete).not.toHaveBeenCalled();
   });
 
   test('handles empty collections', async () => {
@@ -108,10 +118,10 @@ describe('expireBans', () => {
 
     await expireBans();
 
-    expect(mockRefDelete).not.toHaveBeenCalled();
+    expect(mockBatchDelete).not.toHaveBeenCalled();
   });
 
-  test('sends FCM notification on expiry', async () => {
+  test('sends FCM notification via shared utility on expiry', async () => {
     const pastExpiry = new Date(Date.now() - 86400000).toISOString();
 
     // deviceBans — one expired
@@ -120,7 +130,7 @@ describe('expireBans', () => {
         {
           id: 'dev1',
           data: () => ({ expiresAt: pastExpiry, reason: 'old' }),
-          ref: { delete: mockRefDelete },
+          ref: { path: 'deviceBans/dev1' },
         },
       ],
     });
@@ -134,21 +144,20 @@ describe('expireBans', () => {
       data: () => ({ fcmRecipientUserIds: ['adminUser1'] }),
     });
 
-    // users/adminUser1 — has FCM token
+    // users/adminUser1 — has FCM tokens
     mockDocGet.mockResolvedValueOnce({
       exists: true,
-      data: () => ({ fcmToken: 'token-abc' }),
+      data: () => ({ fcmTokens: ['token-abc', 'token-def'] }),
     });
 
     await expireBans();
 
-    expect(mockRefDelete).toHaveBeenCalledTimes(1);
-    expect(mockSend).toHaveBeenCalledWith(
+    expect(mockBatchDelete).toHaveBeenCalledTimes(1);
+    expect(mockSendFcmToTokens).toHaveBeenCalledWith(
+      ['token-abc', 'token-def'],
       expect.objectContaining({
-        notification: expect.objectContaining({
-          title: 'Bans Expired',
-        }),
-        token: 'token-abc',
+        type: 'admin_notification',
+        title: 'Bans Expired',
       }),
     );
   });

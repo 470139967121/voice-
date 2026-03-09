@@ -19,7 +19,10 @@ import coil3.request.transformations
 import coil3.target.ImageViewTarget
 import coil3.transform.CircleCropTransformation
 import com.shyden.shytalk.R
+import android.util.Log
 import kotlin.math.abs
+
+private const val TAG = "ChatHeadManager"
 
 class ChatHeadManager(
     private val context: Context,
@@ -209,7 +212,9 @@ class ChatHeadManager(
                         params.y = (initialY + dy).toInt()
                         try {
                             windowManager.updateViewLayout(view, params)
-                        } catch (_: IllegalArgumentException) {}
+                        } catch (e: IllegalArgumentException) {
+                            Log.d(TAG, "View detached during drag", e)
+                        }
                         updateCloseZoneHighlight(event.rawY)
                     }
                     true
@@ -281,7 +286,9 @@ class ChatHeadManager(
                 params.x = anim.animatedValue as Int
                 try {
                     windowManager.updateViewLayout(view, params)
-                } catch (_: IllegalArgumentException) {}
+                } catch (e: IllegalArgumentException) {
+                    Log.d(TAG, "View detached during snap animation", e)
+                }
             }
             start()
         }
@@ -291,7 +298,9 @@ class ChatHeadManager(
         bubbleView?.let {
             try {
                 windowManager.removeView(it)
-            } catch (_: IllegalArgumentException) {}
+            } catch (e: IllegalArgumentException) {
+                Log.d(TAG, "Bubble already removed", e)
+            }
         }
         bubbleView = null
         bubbleParams = null
@@ -301,7 +310,9 @@ class ChatHeadManager(
         closeZoneView?.let {
             try {
                 windowManager.removeView(it)
-            } catch (_: IllegalArgumentException) {}
+            } catch (e: IllegalArgumentException) {
+                Log.d(TAG, "Close zone already removed", e)
+            }
         }
         closeZoneView = null
         closeZoneParams = null

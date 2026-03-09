@@ -18,6 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 
 @Composable
 fun UnsafeDeviceScreen() {
@@ -42,7 +45,7 @@ fun UnsafeDeviceScreen() {
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Device Not Supported",
+                text = stringResource(Res.string.device_not_supported),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center
             )
@@ -50,7 +53,7 @@ fun UnsafeDeviceScreen() {
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "ShyTalk cannot run on rooted or emulated devices. Please use an unmodified device.",
+                text = stringResource(Res.string.device_not_supported_description),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

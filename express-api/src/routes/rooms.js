@@ -6,8 +6,13 @@
  */
 
 const router = require('express').Router();
-const { db, rtdb, messaging, FieldValue } = require('../utils/firebase');
+const { db, rtdb } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
+const { sendFcmToTokens, cleanupInvalidTokens } = require('../utils/fcm');
+const log = require('../utils/log');
+
+const MAX_USER_NAME_LENGTH = 50;
+const MAX_SEAT_INDEX = 20;
 
 // --- Helpers ---
 
@@ -20,68 +25,26 @@ async function broadcastToRoom(roomId, data) {
       ...(data.userId ? { userId: data.userId } : {}),
     });
   } catch (err) {
-    console.error(`Failed to write RTDB event for room ${roomId}:`, err);
-  }
-}
-
-/**
- * Send a data-only FCM message to multiple tokens via Firebase Admin SDK.
- * Returns a list of invalid tokens that should be cleaned up.
- */
-async function sendFcmToTokens(tokens, data) {
-  if (!tokens || tokens.length === 0) return [];
-
-  const stringData = Object.fromEntries(
-    Object.entries(data).map(([k, v]) => [k, String(v)])
-  );
-
-  const result = await messaging.sendEachForMulticast({
-    tokens,
-    data: stringData,
-  });
-
-  const invalidTokens = [];
-  result.responses.forEach((resp, i) => {
-    if (resp.error) {
-      const code = resp.error.code;
-      if (
-        code === 'messaging/invalid-registration-token' ||
-        code === 'messaging/registration-token-not-registered'
-      ) {
-        invalidTokens.push(tokens[i]);
-      }
-    }
-  });
-
-  return invalidTokens;
-}
-
-/**
- * Remove invalid FCM tokens from a user's doc.
- */
-async function cleanupInvalidTokens(invalidTokens, userId) {
-  if (!invalidTokens || invalidTokens.length === 0 || !userId) return;
-  try {
-    await db.doc(`users/${userId}`).update({
-      fcmTokens: FieldValue.arrayRemove(...invalidTokens),
-    });
-    console.log(`Cleaned ${invalidTokens.length} invalid tokens for user ${userId}`);
-  } catch (err) {
-    console.error(`Failed to clean invalid tokens for user ${userId}:`, err);
+    log.error('rooms', 'Failed to write RTDB event', { roomId, error: err.message });
   }
 }
 
 // --- Route registration ---
 
 // -- Send invite --
-router.post('/api/rooms/:roomId/invites/send', async (req, res) => {
+router.post('/rooms/:roomId/invites/send', async (req, res) => {
   try {
     const body = req.body;
     if (!body?.userId || !body?.invitedBy) {
       return res.status(400).json({ error: 'userId and invitedBy required' });
     }
+    if (req.auth.uid !== body.invitedBy) {
+      return res.status(403).json({ error: 'Cannot send invite on behalf of another user' });
+    }
     const roomId = req.params.roomId;
     const inviteeId = body.userId;
+
+    log.info('rooms', 'Sending room invite', { roomId, inviteeId, invitedBy: body.invitedBy });
 
     const roomSnap = await db.doc(`rooms/${roomId}`).get();
     if (!roomSnap.exists) return res.status(404).json({ error: 'Room not found' });
@@ -120,25 +83,30 @@ router.post('/api/rooms/:roomId/invites/send', async (req, res) => {
         }
       }
     } catch (err) {
-      console.error('Failed to send room invite FCM:', err);
+      log.error('rooms', 'Failed to send invite FCM', { roomId, inviteeId, error: err.message });
     }
 
     await broadcastToRoom(roomId, { type: 'room_updated' });
     return res.json({ success: true });
   } catch (err) {
-    console.error('Error sending room invite:', err);
+    log.error('rooms', 'Send invite failed', { roomId: req.params.roomId, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // -- Create seat request --
-router.post('/api/rooms/:roomId/seat-requests', async (req, res) => {
+router.post('/rooms/:roomId/seat-requests', async (req, res) => {
   try {
     const uid = req.auth.uid;
     const body = req.body;
-    const { userName, seatIndex } = body || {};
-    if (seatIndex == null) return res.status(400).json({ error: 'seatIndex required' });
+    const seatIndex = body?.seatIndex;
+    const userName = (body?.userName || '').slice(0, MAX_USER_NAME_LENGTH);
+    if (seatIndex == null || typeof seatIndex !== 'number' || seatIndex < 0 || seatIndex > MAX_SEAT_INDEX) {
+      return res.status(400).json({ error: 'Valid seatIndex required (0-20)' });
+    }
     const roomId = req.params.roomId;
+
+    log.info('rooms', 'Creating seat request', { roomId, userId: uid, seatIndex });
 
     // Check for existing pending request
     const existingSnap = await db.collection(`rooms/${roomId}/seatRequests`)
@@ -196,13 +164,13 @@ router.post('/api/rooms/:roomId/seat-requests', async (req, res) => {
         }
       }
     } catch (err) {
-      console.error('Failed to send seat request FCM:', err);
+      log.error('rooms', 'Failed to send seat request FCM', { roomId, userId: uid, error: err.message });
     }
 
     await broadcastToRoom(roomId, { type: 'seat_request_updated' });
     return res.json({ requestId: reqId });
   } catch (err) {
-    console.error('Error creating seat request:', err);
+    log.error('rooms', 'Create seat request failed', { roomId: req.params.roomId, userId: req.auth?.uid, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

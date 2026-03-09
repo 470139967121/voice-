@@ -6,8 +6,11 @@ import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -27,7 +30,7 @@ import kotlinx.coroutines.launch
 
 data class ProfileUiState(
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val profileSaved: Boolean = false,
     val user: User? = null,
     val isEditing: Boolean = false,
@@ -40,7 +43,7 @@ data class ProfileUiState(
     val followerCount: Int = 0,
     val followingCount: Int = 0,
     val isOnline: Boolean = false,
-    val lastActiveText: String? = null,
+    val lastActiveText: UiText? = null,
     val hideFollowing: Boolean = false,
     val activeRoomId: String? = null,
     val stalkerCount: Int = 0,
@@ -48,7 +51,7 @@ data class ProfileUiState(
     val isTargetSuspended: Boolean = false,
     val isSubmittingReport: Boolean = false,
     val reportSubmitted: Boolean = false,
-    val reportError: String? = null,
+    val reportError: UiText? = null,
     val isPurchasingSuperShy: Boolean = false,
     val isRefreshing: Boolean = false
 )
@@ -76,10 +79,10 @@ class ProfileViewModel(
     }
 
     /**
-     * Returns a human-readable "last active" string, or null if the user is online
+     * Returns a localized "last active" text, or null if the user is online
      * or has hidden their online status.
      */
-    private fun computeLastActiveText(user: com.shyden.shytalk.core.model.User): String? {
+    private fun computeLastActiveText(user: com.shyden.shytalk.core.model.User): UiText? {
         if (user.hideOnlineStatus) return null
         val elapsed = currentTimeMillis() - user.lastSeenAt
         if (elapsed < Constants.ONLINE_THRESHOLD_MS) return null // currently online
@@ -87,11 +90,11 @@ class ProfileViewModel(
         val hours = minutes / 60
         val days = hours / 24
         return when {
-            days > 30 -> "Active 30+ days ago"
-            days >= 1 -> "Active ${days}d ago"
-            hours >= 1 -> "Active ${hours}h ago"
-            minutes >= 1 -> "Active ${minutes}m ago"
-            else -> "Active just now"
+            days > 30 -> UiText.res(Res.string.active_long_ago)
+            days >= 1 -> UiText.res(Res.string.active_days_ago, days.toInt())
+            hours >= 1 -> UiText.res(Res.string.active_hours_ago, hours.toInt())
+            minutes >= 1 -> UiText.res(Res.string.active_minutes_ago, minutes.toInt())
+            else -> UiText.res(Res.string.active_just_now)
         }
     }
 
@@ -216,7 +219,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message) }
+                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -249,7 +252,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, profileSaved = true, user = user) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message) }
+                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -263,7 +266,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(user = it.user?.copy(uniqueId = result.data)) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message ?: "Failed to generate unique ID") }
+                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -281,7 +284,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message) }
+                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -309,13 +312,13 @@ class ProfileViewModel(
                             user = it.user?.copy(
                                 displayName = displayName,
                                 description = description,
-                                nationality = nationality ?: it.user?.nationality
+                                nationality = nationality ?: it.user.nationality
                             )
                         )
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message) }
+                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -359,7 +362,7 @@ class ProfileViewModel(
                         }
                         is Resource.Error -> {
                             _uiState.update {
-                                it.copy(isUploadingPhoto = false, error = saveResult.message ?: "Failed to save photo URL")
+                                it.copy(isUploadingPhoto = false, error = saveResult.message?.let { msg -> UiText.plain(msg) })
                             }
                         }
                         is Resource.Loading -> {}
@@ -367,7 +370,7 @@ class ProfileViewModel(
                 }
                 is Resource.Error -> {
                     logE(TAG, "Photo upload failed: ${result.message}")
-                    _uiState.update { it.copy(isUploadingPhoto = false, error = result.message) }
+                    _uiState.update { it.copy(isUploadingPhoto = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -392,7 +395,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = "Failed to block user") }
+                    _uiState.update { it.copy(error = UiText.res(Res.string.error_block_user)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -407,7 +410,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isBlockedByViewer = false) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = "Failed to unblock user") }
+                    _uiState.update { it.copy(error = UiText.res(Res.string.error_unblock_user)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -426,7 +429,7 @@ class ProfileViewModel(
                         it.copy(
                             isFollowingTarget = false,
                             followerCount = it.followerCount - 1,
-                            error = "Failed to follow user"
+                            error = UiText.res(Res.string.error_follow_user)
                         )
                     }
                 }
@@ -446,7 +449,7 @@ class ProfileViewModel(
                         it.copy(
                             isFollowingTarget = true,
                             followerCount = it.followerCount + 1,
-                            error = "Failed to unfollow user"
+                            error = UiText.res(Res.string.error_unfollow_user)
                         )
                     }
                 }
@@ -472,7 +475,7 @@ class ProfileViewModel(
             val currentUser = when (val r = userRepository.getUser(currentUid)) {
                 is Resource.Success -> r.data
                 else -> {
-                    _uiState.update { it.copy(isSubmittingReport = false, reportError = "Could not submit report") }
+                    _uiState.update { it.copy(isSubmittingReport = false, reportError = UiText.res(Res.string.error_could_not_submit_report)) }
                     return@launch
                 }
             }
@@ -485,7 +488,7 @@ class ProfileViewModel(
                 )) {
                     is Resource.Success -> evidenceUrls.add(r.data)
                     is Resource.Error -> {
-                        _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to upload evidence") }
+                        _uiState.update { it.copy(isSubmittingReport = false, reportError = UiText.res(Res.string.error_upload_evidence)) }
                         return@launch
                     }
                     is Resource.Loading -> {}
@@ -508,7 +511,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isSubmittingReport = false, reportSubmitted = true) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to submit report") }
+                    _uiState.update { it.copy(isSubmittingReport = false, reportError = UiText.res(Res.string.error_submit_report)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -527,7 +530,7 @@ class ProfileViewModel(
                     loadProfile(null)
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message ?: "Purchase validation failed") }
+                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -543,7 +546,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message ?: "Failed to claim trial") }
+                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -559,7 +562,7 @@ class ProfileViewModel(
                     loadProfile(null)
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasingSuperShy = false, error = result.message ?: "Test purchase failed") }
+                    _uiState.update { it.copy(isPurchasingSuperShy = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }

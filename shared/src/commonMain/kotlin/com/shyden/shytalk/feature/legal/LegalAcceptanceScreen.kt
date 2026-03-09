@@ -29,7 +29,7 @@ import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
 import org.jetbrains.compose.resources.stringResource
 
-const val CURRENT_LEGAL_VERSION = 5
+const val CURRENT_LEGAL_VERSION = 6
 
 @Composable
 fun LegalAcceptanceScreen(

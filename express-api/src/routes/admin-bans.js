@@ -14,6 +14,7 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const { generateId, now } = require('../utils/helpers');
+const log = require('../utils/log');
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ router.get('/admin/bans', async (req, res) => {
 
     res.json({ deviceBans, networkBans });
   } catch (err) {
-    console.error('GET /admin/bans error:', err);
+    log.error('admin-bans', 'Error listing bans', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -90,7 +91,7 @@ router.post('/admin/bans/device', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /admin/bans/device error:', err);
+    log.error('admin-bans', 'Error banning device', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -135,7 +136,7 @@ router.post('/admin/bans/network', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /admin/bans/network error:', err);
+    log.error('admin-bans', 'Error banning network', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -157,7 +158,7 @@ router.delete('/admin/bans/device/:deviceId', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /admin/bans/device/:deviceId error:', err);
+    log.error('admin-bans', 'Error unbanning device', { deviceId: req.params.deviceId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -179,7 +180,7 @@ router.delete('/admin/bans/network/:banId', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /admin/bans/network/:banId error:', err);
+    log.error('admin-bans', 'Error unbanning network', { banId: req.params.banId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -211,7 +212,7 @@ router.post('/admin/bans/unban-all/:userId', async (req, res) => {
 
     res.json({ success: true, removed: allDocs.length });
   } catch (err) {
-    console.error('POST /admin/bans/unban-all/:userId error:', err);
+    log.error('admin-bans', 'Error unbanning all for user', { userId: req.params.userId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -234,7 +235,7 @@ router.get('/admin/bans/user/:userId', async (req, res) => {
 
     res.json({ deviceBans, networkBans });
   } catch (err) {
-    console.error('GET /admin/bans/user/:userId error:', err);
+    log.error('admin-bans', 'Error getting bans for user', { userId: req.params.userId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

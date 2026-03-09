@@ -3,6 +3,7 @@ package com.shyden.shytalk.core.audio
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.util.Log
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -64,7 +65,9 @@ object EmergencyTonePlayer {
             try {
                 it.stop()
                 it.release()
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                Log.w("EmergencyTonePlayer", "Failed to stop audio track", e)
+            }
         }
         audioTrack = null
     }

@@ -10,6 +10,7 @@
 
 const { db } = require('../utils/firebase');
 const r2 = require('../utils/r2');
+const log = require('../utils/log');
 
 const DEFAULT_RETENTION_HOURS = 48;
 const PRUNE_DAYS = 90;
@@ -23,7 +24,7 @@ async function rotateLogs() {
       retentionHours = configDoc.data().retentionHours;
     }
   } catch (err) {
-    console.error('[CRON] rotateLogs: failed to read config, using default', err);
+    log.error('cron', 'rotateLogs: failed to read config, using default', { error: err.message });
   }
 
   // 2. Calculate cutoff
@@ -59,7 +60,7 @@ async function rotateLogs() {
     }
     await batch.commit();
 
-    console.log(`[CRON] rotateLogs: archived ${docs.length} logs to ${key}`);
+    log.info('cron', 'rotateLogs: archived logs', { count: docs.length, key });
   }
 
   // 9. Prune R2 logs older than 90 days
@@ -70,15 +71,16 @@ async function pruneOldLogs() {
   const keys = await r2.listObjects('logs/');
   const cutoffDate = new Date(Date.now() - PRUNE_DAYS * 24 * 3600000);
 
-  for (const key of keys) {
-    // Parse date from key path: logs/YYYY/MM/DD/...
+  const toDelete = keys.filter(key => {
     const match = key.match(/^logs\/(\d{4})\/(\d{2})\/(\d{2})\//);
-    if (!match) continue;
-
+    if (!match) return false;
     const keyDate = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00Z`);
-    if (keyDate < cutoffDate) {
-      await r2.deleteObject(key);
-    }
+    return keyDate < cutoffDate;
+  });
+
+  if (toDelete.length > 0) {
+    await r2.deleteObjects(toDelete);
+    log.info('cron', 'rotateLogs: pruned old log files', { count: toDelete.length });
   }
 }
 

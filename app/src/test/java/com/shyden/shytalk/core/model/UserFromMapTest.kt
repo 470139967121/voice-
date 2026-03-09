@@ -396,6 +396,62 @@ class UserFromMapTest {
         assertEquals(false, map["selfDestructAlertEnabled"])
     }
 
+    // ===== shyCoins / shyBeans — Number-safe casting =====
+
+    @Test
+    fun `fromMap parses shyCoins from Long`() {
+        val map = mapOf<String, Any?>("shyCoins" to 500L)
+        val user = User.fromMap(map, "uid")
+        assertEquals(500L, user.shyCoins)
+    }
+
+    @Test
+    fun `fromMap parses shyCoins from Int`() {
+        val map = mapOf<String, Any?>("shyCoins" to 250)
+        val user = User.fromMap(map, "uid")
+        assertEquals(250L, user.shyCoins)
+    }
+
+    @Test
+    fun `fromMap parses shyCoins from Double`() {
+        val map = mapOf<String, Any?>("shyCoins" to 100.0)
+        val user = User.fromMap(map, "uid")
+        assertEquals(100L, user.shyCoins)
+    }
+
+    @Test
+    fun `fromMap defaults shyCoins to 0 when missing`() {
+        val user = User.fromMap(emptyMap(), "uid")
+        assertEquals(0L, user.shyCoins)
+    }
+
+    @Test
+    fun `fromMap parses shyBeans from Long`() {
+        val map = mapOf<String, Any?>("shyBeans" to 1000L)
+        val user = User.fromMap(map, "uid")
+        assertEquals(1000L, user.shyBeans)
+    }
+
+    @Test
+    fun `fromMap parses shyBeans from Int`() {
+        val map = mapOf<String, Any?>("shyBeans" to 75)
+        val user = User.fromMap(map, "uid")
+        assertEquals(75L, user.shyBeans)
+    }
+
+    @Test
+    fun `fromMap parses shyBeans from Double`() {
+        val map = mapOf<String, Any?>("shyBeans" to 50.0)
+        val user = User.fromMap(map, "uid")
+        assertEquals(50L, user.shyBeans)
+    }
+
+    @Test
+    fun `fromMap defaults shyBeans to 0 when missing`() {
+        val user = User.fromMap(emptyMap(), "uid")
+        assertEquals(0L, user.shyBeans)
+    }
+
     // ===== Language preference =====
 
     @Test

@@ -12,8 +12,13 @@ const mockDoc = jest.fn(() => ({
   set: mockSet,
 }));
 
+const mockLimit = jest.fn(() => ({
+  get: mockCollectionGet,
+}));
+
 const mockCollection = jest.fn(() => ({
   get: mockCollectionGet,
+  limit: mockLimit,
 }));
 
 jest.mock('../../src/utils/firebase', () => ({
@@ -90,6 +95,7 @@ describe('POST /api/device-info', () => {
 
     const res = await request(app)
       .post('/api/device-info')
+      .set('x-forwarded-for', '203.0.113.1')
       .send(validBody)
       .expect(200);
 

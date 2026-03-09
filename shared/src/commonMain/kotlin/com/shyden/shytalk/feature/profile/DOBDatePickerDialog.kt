@@ -8,6 +8,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
+import org.jetbrains.compose.resources.stringResource
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.isAtLeast13
 import kotlinx.datetime.Instant
@@ -24,6 +27,7 @@ fun DOBDatePickerDialog(
     val datePickerState = rememberDatePickerState(
         yearRange = 1940..(currentYear - 13),
     )
+    val ageErrorMsg = stringResource(Res.string.must_be_13)
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -32,21 +36,17 @@ fun DOBDatePickerDialog(
                     onDismiss()
                     val millis = datePickerState.selectedDateMillis
                     if (millis != null) {
-                        val error = if (!isAtLeast13(millis)) {
-                            "You must be at least 13 years old"
-                        } else {
-                            null
-                        }
+                        val error = if (!isAtLeast13(millis)) ageErrorMsg else null
                         onDateSelected(millis, error)
                     }
                 }
             ) {
-                Text("OK")
+                Text(stringResource(Res.string.ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.cancel))
             }
         }
     ) {

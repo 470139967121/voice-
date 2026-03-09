@@ -63,7 +63,7 @@ fun ReportReviewScreen(
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.resolveAsync())
             viewModel.clearMessage()
         }
     }

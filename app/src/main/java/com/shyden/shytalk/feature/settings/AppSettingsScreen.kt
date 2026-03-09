@@ -81,6 +81,9 @@ import com.shyden.shytalk.R
 import com.shyden.shytalk.core.model.PmPrivacy
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.LanguagePreference
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 private enum class SettingsPage { Main, BlockedUsers, Account, Privacy, Notifications, Permissions, About }
 
@@ -100,10 +103,11 @@ fun AppSettingsScreen(
     var currentPageName by rememberSaveable { mutableStateOf(SettingsPage.Main.name) }
     val currentPage = SettingsPage.valueOf(currentPageName)
     var showSignOutDialog by remember { mutableStateOf(false) }
+    val activity = LocalContext.current as? android.app.Activity
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.resolveAsync())
             viewModel.clearError()
         }
     }
@@ -114,7 +118,7 @@ fun AppSettingsScreen(
 
     if (uiState.isLoading) {
         SettingsSubPage(
-            title = "Settings",
+            title = stringResource(Res.string.settings),
             onBack = onNavigateBack,
             snackbarHostState = snackbarHostState
         ) { modifier ->
@@ -128,7 +132,10 @@ fun AppSettingsScreen(
                 uiState = uiState,
                 onNavigateBack = onNavigateBack,
                 onNavigateToPage = { currentPageName = it.name },
-                onSetLanguage = { viewModel.setLanguage(it) },
+                onSetLanguage = {
+                    viewModel.setLanguage(it)
+                    activity?.recreate()
+                },
                 onSignOut = { showSignOutDialog = true },
                 snackbarHostState = snackbarHostState
             )
@@ -190,19 +197,19 @@ fun AppSettingsScreen(
     if (showSignOutDialog) {
         AlertDialog(
             onDismissRequest = { showSignOutDialog = false },
-            title = { Text("Sign Out") },
-            text = { Text("Are you sure you want to sign out?") },
+            title = { Text(stringResource(Res.string.sign_out)) },
+            text = { Text(stringResource(Res.string.sign_out_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     showSignOutDialog = false
                     onSignOut()
                 }) {
-                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.sign_out), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.cancel))
                 }
             }
         )
@@ -212,16 +219,16 @@ fun AppSettingsScreen(
     if (uiState.showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissClearCacheDialog() },
-            title = { Text("Clear Cache") },
-            text = { Text("Clear ${formatCacheSize(uiState.cacheSizeBytes)} of cached data?") },
+            title = { Text(stringResource(Res.string.clear_cache)) },
+            text = { Text(stringResource(Res.string.clear_cache_confirm, formatCacheSize(uiState.cacheSizeBytes))) },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearCache() }) {
-                    Text("Clear")
+                    Text(stringResource(Res.string.clear))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissClearCacheDialog() }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.cancel))
                 }
             }
         )
@@ -231,11 +238,11 @@ fun AppSettingsScreen(
     if (uiState.cacheCleared) {
         AlertDialog(
             onDismissRequest = { viewModel.resetCacheCleared() },
-            title = { Text("Cache Cleared") },
-            text = { Text("App cache has been cleared.") },
+            title = { Text(stringResource(Res.string.cache_cleared)) },
+            text = { Text(stringResource(Res.string.cache_cleared_description)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.resetCacheCleared() }) {
-                    Text("OK")
+                    Text(stringResource(Res.string.ok))
                 }
             }
         )
@@ -249,18 +256,18 @@ fun AppSettingsScreen(
             title = {
                 Text(
                     when (result) {
-                        is UpdateCheckResult.UpToDate -> "Up to Date"
-                        is UpdateCheckResult.UpdateAvailable -> "Update Available"
-                        is UpdateCheckResult.Error -> "Error"
+                        is UpdateCheckResult.UpToDate -> stringResource(Res.string.up_to_date)
+                        is UpdateCheckResult.UpdateAvailable -> stringResource(Res.string.update_available)
+                        is UpdateCheckResult.Error -> stringResource(Res.string.error_title)
                     }
                 )
             },
             text = {
                 Text(
                     when (result) {
-                        is UpdateCheckResult.UpToDate -> "You're on the latest version."
-                        is UpdateCheckResult.UpdateAvailable -> "Version ${result.versionName} is available."
-                        is UpdateCheckResult.Error -> result.message
+                        is UpdateCheckResult.UpToDate -> stringResource(Res.string.up_to_date_description)
+                        is UpdateCheckResult.UpdateAvailable -> stringResource(Res.string.update_available_description, result.versionName)
+                        is UpdateCheckResult.Error -> result.message.resolve()
                     }
                 )
             },
@@ -274,18 +281,18 @@ fun AppSettingsScreen(
                         )
                         context.startActivity(intent)
                     }) {
-                        Text("Download Now")
+                        Text(stringResource(Res.string.download_now))
                     }
                 } else {
                     TextButton(onClick = { viewModel.dismissUpdateResult() }) {
-                        Text("OK")
+                        Text(stringResource(Res.string.ok))
                     }
                 }
             },
             dismissButton = {
                 if (result is UpdateCheckResult.UpdateAvailable) {
                     TextButton(onClick = { viewModel.dismissUpdateResult() }) {
-                        Text("Later")
+                        Text(stringResource(Res.string.later))
                     }
                 }
             }
@@ -333,13 +340,13 @@ private fun SettingsMainPage(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(Res.string.settings)) },
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBack,
                         modifier = Modifier.testTag("settings_backButton")
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
                     }
                 }
             )
@@ -352,44 +359,44 @@ private fun SettingsMainPage(
         ) {
             SettingsMenuItem(
                 icon = Icons.Default.Block,
-                title = "Blocked Users",
+                title = stringResource(Res.string.blocked_users),
                 onClick = { onNavigateToPage(SettingsPage.BlockedUsers) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsMenuItem(
                 icon = Icons.Default.Person,
-                title = "Account",
+                title = stringResource(Res.string.account),
                 onClick = { onNavigateToPage(SettingsPage.Account) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsMenuItem(
                 icon = Icons.Default.Lock,
-                title = "Privacy",
+                title = stringResource(Res.string.privacy),
                 onClick = { onNavigateToPage(SettingsPage.Privacy) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsMenuItem(
                 icon = Icons.Default.Notifications,
-                title = "Notifications",
+                title = stringResource(Res.string.notifications),
                 onClick = { onNavigateToPage(SettingsPage.Notifications) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsMenuItem(
                 icon = Icons.Default.Language,
-                title = "Language",
+                title = stringResource(Res.string.language),
                 subtitle = SUPPORTED_LANGUAGES.firstOrNull { it.first == uiState.language }?.second ?: "English",
                 onClick = { showLanguageDialog = true }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsMenuItem(
                 icon = Icons.Default.Security,
-                title = "Permissions",
+                title = stringResource(Res.string.permissions),
                 onClick = { onNavigateToPage(SettingsPage.Permissions) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsMenuItem(
                 icon = Icons.Default.Info,
-                title = "About",
+                title = stringResource(Res.string.about),
                 onClick = { onNavigateToPage(SettingsPage.About) }
             )
 
@@ -411,7 +418,7 @@ private fun SettingsMainPage(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Sign Out")
+                Text(stringResource(Res.string.sign_out))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -421,7 +428,7 @@ private fun SettingsMainPage(
     if (showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
-            title = { Text("Language") },
+            title = { Text(stringResource(Res.string.language)) },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState())
@@ -455,7 +462,7 @@ private fun SettingsMainPage(
             },
             confirmButton = {
                 TextButton(onClick = { showLanguageDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.cancel))
                 }
             }
         )
@@ -520,7 +527,7 @@ private fun SettingsSubPage(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
                     }
                 }
             )
@@ -542,7 +549,7 @@ private fun BlockedUsersPage(
     var showUnblockDialog by remember { mutableStateOf<User?>(null) }
 
     SettingsSubPage(
-        title = "Blocked Users",
+        title = stringResource(Res.string.blocked_users),
         onBack = onBack,
         snackbarHostState = snackbarHostState
     ) { modifier ->
@@ -559,7 +566,7 @@ private fun BlockedUsersPage(
                     contentAlignment = Alignment.TopCenter
                 ) {
                     Text(
-                        text = "No blocked users",
+                        text = stringResource(Res.string.no_blocked_users),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -581,19 +588,19 @@ private fun BlockedUsersPage(
     showUnblockDialog?.let { user ->
         AlertDialog(
             onDismissRequest = { showUnblockDialog = null },
-            title = { Text("Unblock ${user.displayName}?") },
-            text = { Text("They will be able to view your profile again.") },
+            title = { Text(stringResource(Res.string.unblock_confirm, user.displayName)) },
+            text = { Text(stringResource(Res.string.unblock_description)) },
             confirmButton = {
                 TextButton(onClick = {
                     onUnblockUser(user.uid)
                     showUnblockDialog = null
                 }) {
-                    Text("Unblock")
+                    Text(stringResource(Res.string.unblock))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showUnblockDialog = null }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.cancel))
                 }
             }
         )
@@ -611,7 +618,7 @@ private fun AccountPage(
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
     SettingsSubPage(
-        title = "Account",
+        title = stringResource(Res.string.account),
         onBack = onBack,
         snackbarHostState = snackbarHostState
     ) { modifier ->
@@ -622,10 +629,10 @@ private fun AccountPage(
             Spacer(modifier = Modifier.height(8.dp))
             uiState.user?.let { user ->
                 if (user.uniqueId != 0L) {
-                    SettingsRow("ShyTalk ID", "${user.uniqueId}")
+                    SettingsRow(stringResource(Res.string.shytalk_id), "${user.uniqueId}")
                 }
                 user.email?.let { email ->
-                    SettingsRow("Email", censorEmail(email))
+                    SettingsRow(stringResource(Res.string.email), censorEmail(email))
                 }
             }
 
@@ -640,7 +647,7 @@ private fun AccountPage(
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Account")
+                Text(stringResource(Res.string.delete_account))
             }
         }
     }
@@ -648,13 +655,13 @@ private fun AccountPage(
     if (showDeleteAccountDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAccountDialog = false },
-            title = { Text("Delete Account") },
+            title = { Text(stringResource(Res.string.delete_account)) },
             text = {
-                Text("Account deletion is not available yet. Please contact shytalk.help@gmail.com for assistance.")
+                Text(stringResource(Res.string.delete_account_description))
             },
             confirmButton = {
                 TextButton(onClick = { showDeleteAccountDialog = false }) {
-                    Text("OK")
+                    Text(stringResource(Res.string.ok))
                 }
             }
         )
@@ -674,7 +681,7 @@ private fun PrivacyPage(
     snackbarHostState: SnackbarHostState
 ) {
     SettingsSubPage(
-        title = "Privacy",
+        title = stringResource(Res.string.privacy),
         onBack = onBack,
         snackbarHostState = snackbarHostState
     ) { modifier ->
@@ -684,22 +691,22 @@ private fun PrivacyPage(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
             SettingsSwitch(
-                title = "Hide Following List",
-                description = "Others won't see who you follow. Followers are always visible.",
+                title = stringResource(Res.string.hide_following_list),
+                description = stringResource(Res.string.hide_following_description),
                 checked = uiState.hideFollowing,
                 onCheckedChange = { onToggleHideFollowing() }
             )
             Spacer(modifier = Modifier.height(8.dp))
             SettingsSwitch(
-                title = "Hide Online Status",
-                description = "Others won't see when you're online.",
+                title = stringResource(Res.string.hide_online_status),
+                description = stringResource(Res.string.hide_online_status_description),
                 checked = uiState.hideOnlineStatus,
                 onCheckedChange = { onToggleHideOnlineStatus() }
             )
             Spacer(modifier = Modifier.height(8.dp))
             SettingsSwitch(
-                title = "Hide Age",
-                description = "Others won't see your age on your profile.",
+                title = stringResource(Res.string.hide_age),
+                description = stringResource(Res.string.hide_age_description),
                 checked = uiState.hideAge,
                 onCheckedChange = { onToggleHideAge() }
             )
@@ -710,21 +717,21 @@ private fun PrivacyPage(
 
             // PM Privacy
             Text(
-                text = "Who can message me",
+                text = stringResource(Res.string.who_can_message_me),
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Control who can send you private messages.",
+                text = stringResource(Res.string.who_can_message_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
             PmPrivacy.entries.forEach { privacy ->
                 val label = when (privacy) {
-                    PmPrivacy.EVERYONE -> "Everyone"
-                    PmPrivacy.FOLLOWERS_ONLY -> "People I follow"
-                    PmPrivacy.NO_ONE -> "No one"
+                    PmPrivacy.EVERYONE -> stringResource(Res.string.everyone)
+                    PmPrivacy.FOLLOWERS_ONLY -> stringResource(Res.string.people_i_follow)
+                    PmPrivacy.NO_ONE -> stringResource(Res.string.no_one)
                 }
                 Row(
                     modifier = Modifier
@@ -769,7 +776,7 @@ private fun NotificationsPage(
     snackbarHostState: SnackbarHostState
 ) {
     SettingsSubPage(
-        title = "Notifications",
+        title = stringResource(Res.string.notifications),
         onBack = onBack,
         snackbarHostState = snackbarHostState
     ) { modifier ->
@@ -780,28 +787,28 @@ private fun NotificationsPage(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Private Messages",
+                text = stringResource(Res.string.private_messages),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(4.dp))
             SettingsSwitch(
-                title = "PM Notifications",
-                description = "Receive notifications for new private messages.",
+                title = stringResource(Res.string.pm_notifications),
+                description = stringResource(Res.string.pm_notifications_description),
                 checked = uiState.pmNotificationsEnabled,
                 onCheckedChange = { onTogglePmNotifications() }
             )
             Spacer(modifier = Modifier.height(4.dp))
             SettingsSwitch(
-                title = "Notification Sound",
-                description = "Play a sound when a new message arrives.",
+                title = stringResource(Res.string.notification_sound),
+                description = stringResource(Res.string.notification_sound_description),
                 checked = uiState.pmSoundEnabled,
                 onCheckedChange = { onTogglePmSound() }
             )
             Spacer(modifier = Modifier.height(4.dp))
             SettingsSwitch(
-                title = "Message Preview",
-                description = "Show message text in notifications.",
+                title = stringResource(Res.string.message_preview),
+                description = stringResource(Res.string.message_preview_description),
                 checked = uiState.pmNotificationPreview,
                 onCheckedChange = { onTogglePmPreview() }
             )
@@ -811,21 +818,21 @@ private fun NotificationsPage(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Chat Display",
+                text = stringResource(Res.string.chat_display),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(4.dp))
             SettingsSwitch(
-                title = "Show Timestamps",
-                description = "Display message timestamps in chat.",
+                title = stringResource(Res.string.show_timestamps),
+                description = stringResource(Res.string.show_timestamps_description),
                 checked = uiState.pmShowTimestamps,
                 onCheckedChange = { onTogglePmTimestamps() }
             )
             Spacer(modifier = Modifier.height(4.dp))
             SettingsSwitch(
-                title = "Show Date Separators",
-                description = "Show date labels between messages on different days.",
+                title = stringResource(Res.string.show_date_separators),
+                description = stringResource(Res.string.show_date_separators_description),
                 checked = uiState.pmShowDateSeparators,
                 onCheckedChange = { onTogglePmDateSeparators() }
             )
@@ -835,14 +842,14 @@ private fun NotificationsPage(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Do Not Disturb",
+                text = stringResource(Res.string.do_not_disturb),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(4.dp))
             SettingsSwitch(
-                title = "Enable Do Not Disturb",
-                description = "Silence all PM notifications during the scheduled time.",
+                title = stringResource(Res.string.enable_dnd),
+                description = stringResource(Res.string.enable_dnd_description),
                 checked = uiState.dndEnabled,
                 onCheckedChange = { onToggleDnd() }
             )
@@ -859,7 +866,7 @@ private fun NotificationsPage(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Start",
+                        text = stringResource(Res.string.start),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
@@ -877,7 +884,7 @@ private fun NotificationsPage(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "End",
+                        text = stringResource(Res.string.end),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
@@ -894,17 +901,17 @@ private fun NotificationsPage(
                     )
                     AlertDialog(
                         onDismissRequest = { showStartTimePicker = false },
-                        title = { Text("DND Start Time") },
+                        title = { Text(stringResource(Res.string.dnd_start_time)) },
                         text = { TimePicker(state = startState) },
                         confirmButton = {
                             TextButton(onClick = {
                                 onSetDndStartHour(startState.hour)
                                 onSetDndStartMinute(startState.minute)
                                 showStartTimePicker = false
-                            }) { Text("OK") }
+                            }) { Text(stringResource(Res.string.ok)) }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showStartTimePicker = false }) { Text("Cancel") }
+                            TextButton(onClick = { showStartTimePicker = false }) { Text(stringResource(Res.string.cancel)) }
                         }
                     )
                 }
@@ -916,17 +923,17 @@ private fun NotificationsPage(
                     )
                     AlertDialog(
                         onDismissRequest = { showEndTimePicker = false },
-                        title = { Text("DND End Time") },
+                        title = { Text(stringResource(Res.string.dnd_end_time)) },
                         text = { TimePicker(state = endState) },
                         confirmButton = {
                             TextButton(onClick = {
                                 onSetDndEndHour(endState.hour)
                                 onSetDndEndMinute(endState.minute)
                                 showEndTimePicker = false
-                            }) { Text("OK") }
+                            }) { Text(stringResource(Res.string.ok)) }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showEndTimePicker = false }) { Text("Cancel") }
+                            TextButton(onClick = { showEndTimePicker = false }) { Text(stringResource(Res.string.cancel)) }
                         }
                     )
                 }
@@ -937,14 +944,14 @@ private fun NotificationsPage(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Room Alerts",
+                text = stringResource(Res.string.room_alerts),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(4.dp))
             SettingsSwitch(
-                title = "Self-Destruct Countdown",
-                description = "Play a voice announcement when a room's 5-minute self-destruct timer starts or stops.",
+                title = stringResource(Res.string.self_destruct_countdown),
+                description = stringResource(Res.string.self_destruct_description),
                 checked = uiState.selfDestructAlertEnabled,
                 onCheckedChange = { onToggleSelfDestructAlert() }
             )
@@ -997,7 +1004,7 @@ private fun PermissionsPage(
     }
 
     SettingsSubPage(
-        title = "Permissions",
+        title = stringResource(Res.string.permissions),
         onBack = onBack,
         snackbarHostState = snackbarHostState
     ) { modifier ->
@@ -1007,8 +1014,8 @@ private fun PermissionsPage(
             Spacer(modifier = Modifier.height(8.dp))
 
             PermissionRow(
-                title = "Notifications",
-                description = "Receive alerts when you're in a live room in the background.",
+                title = stringResource(Res.string.notifications),
+                description = stringResource(Res.string.notifications_permission_description),
                 enabled = notificationsEnabled,
                 onClick = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1024,8 +1031,8 @@ private fun PermissionsPage(
             Spacer(modifier = Modifier.height(8.dp))
 
             PermissionRow(
-                title = "Display over other apps",
-                description = "Show a floating bubble when you leave a voice room, so you can quickly return.",
+                title = stringResource(Res.string.display_over_other_apps),
+                description = stringResource(Res.string.overlay_permission_description),
                 enabled = overlayEnabled,
                 onClick = {
                     context.startActivity(
@@ -1040,8 +1047,8 @@ private fun PermissionsPage(
             Spacer(modifier = Modifier.height(8.dp))
 
             PermissionRow(
-                title = "Microphone",
-                description = "Required for voice chat in rooms.",
+                title = stringResource(Res.string.microphone),
+                description = stringResource(Res.string.microphone_description),
                 enabled = microphoneEnabled,
                 onClick = {
                     context.startActivity(
@@ -1057,8 +1064,8 @@ private fun PermissionsPage(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 PermissionRow(
-                    title = "Bluetooth",
-                    description = "Connect to Bluetooth audio devices during voice chat.",
+                    title = stringResource(Res.string.bluetooth),
+                    description = stringResource(Res.string.bluetooth_description),
                     enabled = bluetoothEnabled,
                     onClick = {
                         context.startActivity(
@@ -1102,7 +1109,7 @@ private fun PermissionRow(
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = if (enabled) "Allowed" else "Denied",
+            text = if (enabled) stringResource(Res.string.allowed) else stringResource(Res.string.denied),
             style = MaterialTheme.typography.labelMedium,
             color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
         )
@@ -1126,7 +1133,7 @@ private fun AboutPage(
     val context = LocalContext.current
 
     SettingsSubPage(
-        title = "About",
+        title = stringResource(Res.string.about),
         onBack = onBack,
         snackbarHostState = snackbarHostState
     ) { modifier ->
@@ -1186,7 +1193,7 @@ private fun AboutPage(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Contact Us",
+                    text = stringResource(Res.string.contact_us),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -1206,7 +1213,7 @@ private fun AboutPage(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Privacy Policy",
+                    text = stringResource(Res.string.privacy_policy),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -1220,7 +1227,7 @@ private fun AboutPage(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Community Standards",
+                    text = stringResource(Res.string.community_standards),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -1234,7 +1241,7 @@ private fun AboutPage(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Terms & Conditions",
+                    text = stringResource(Res.string.terms_and_conditions),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -1248,7 +1255,7 @@ private fun AboutPage(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Cyber Bullying Policy",
+                    text = stringResource(Res.string.cyber_bullying_policy),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -1264,7 +1271,7 @@ private fun AboutPage(
                     CircularProgressIndicator(modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Check for Updates")
+                Text(stringResource(Res.string.check_for_updates))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1276,7 +1283,7 @@ private fun AboutPage(
                 onClick = onClearCache,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Clear Cache (${formatCacheSize(uiState.cacheSizeBytes)})")
+                Text(stringResource(Res.string.clear_cache_with_size, formatCacheSize(uiState.cacheSizeBytes)))
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -1389,13 +1396,13 @@ private fun BlockedUserRow(
         }
 
         Text(
-            text = user.displayName.ifEmpty { "Unknown" },
+            text = user.displayName.ifEmpty { stringResource(Res.string.unknown) },
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
 
         TextButton(onClick = onUnblock) {
-            Text("Unblock")
+            Text(stringResource(Res.string.unblock))
         }
     }
 }

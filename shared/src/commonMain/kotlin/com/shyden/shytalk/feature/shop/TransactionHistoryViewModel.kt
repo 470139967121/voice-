@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.Transaction
 import com.shyden.shytalk.core.model.TransactionType
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.EconomyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,10 +24,15 @@ class TransactionHistoryViewModel(
     private val economyRepository: EconomyRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "TransactionHistoryVM"
+    }
+
     private val _uiState = MutableStateFlow(TransactionHistoryUiState())
     val uiState: StateFlow<TransactionHistoryUiState> = _uiState.asStateFlow()
 
     init {
+        logI(TAG, "Loading transaction history")
         loadTransactions()
     }
 

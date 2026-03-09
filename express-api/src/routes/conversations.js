@@ -6,11 +6,17 @@
  */
 
 const router = require('express').Router();
-const { db, rtdb, messaging, FieldValue } = require('../utils/firebase');
+const { db, rtdb, FieldValue } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
+const { sendFcmToTokens, cleanupInvalidTokens } = require('../utils/fcm');
+const log = require('../utils/log');
 
 const DEFAULT_MESSAGE_LIMIT = 50;
 const MAX_MESSAGE_LIMIT = 200;
+const MAX_TEXT_LENGTH = 2000;
+const MAX_IMAGES_PER_MESSAGE = 10;
+const MAX_SENDER_NAME_LENGTH = 50;
+const VALID_MESSAGE_TYPES = ['TEXT', 'IMAGE', 'STICKER', 'ROOM_INVITE', 'MOD_ACTION'];
 
 /**
  * Build a plain message object from a Firestore message doc.
@@ -38,53 +44,6 @@ function buildMessage(doc) {
     isHidden: !!doc.isHidden,
     hiddenBy: doc.hiddenBy || null,
   };
-}
-
-/**
- * Send a data-only FCM message to multiple tokens via Firebase Admin SDK.
- * Returns a list of invalid tokens that should be cleaned up.
- */
-async function sendFcmToTokens(tokens, data) {
-  if (!tokens || tokens.length === 0) return [];
-
-  const stringData = Object.fromEntries(
-    Object.entries(data).map(([k, v]) => [k, String(v)])
-  );
-
-  const result = await messaging.sendEachForMulticast({
-    tokens,
-    data: stringData,
-  });
-
-  const invalidTokens = [];
-  result.responses.forEach((resp, i) => {
-    if (resp.error) {
-      const code = resp.error.code;
-      if (
-        code === 'messaging/invalid-registration-token' ||
-        code === 'messaging/registration-token-not-registered'
-      ) {
-        invalidTokens.push(tokens[i]);
-      }
-    }
-  });
-
-  return invalidTokens;
-}
-
-/**
- * Remove invalid FCM tokens from a user's doc.
- */
-async function removeInvalidFcmTokensFromUser(userId, invalidTokens) {
-  if (!invalidTokens || invalidTokens.length === 0) return;
-  try {
-    await db.doc(`users/${userId}`).update({
-      fcmTokens: FieldValue.arrayRemove(...invalidTokens),
-    });
-    console.log(`Cleaned ${invalidTokens.length} invalid tokens for user ${userId}`);
-  } catch (err) {
-    console.error(`Failed to clean invalid tokens for user ${userId}:`, err);
-  }
 }
 
 /**
@@ -140,11 +99,11 @@ async function sendMessageNotifications(
 
       const invalidTokens = await sendFcmToTokens(tokens, data);
       if (invalidTokens.length > 0) {
-        await removeInvalidFcmTokensFromUser(recipientId, invalidTokens);
+        await cleanupInvalidTokens(invalidTokens, recipientId);
       }
     }
   } catch (err) {
-    console.error('Failed to send message notifications:', err);
+    log.error('conversations', 'Failed to send message notifications', { conversationId, error: err.message });
   }
 }
 
@@ -156,15 +115,23 @@ async function broadcastToConversation(conversationId, data) {
       ts: Date.now(),
     });
   } catch (err) {
-    console.error(`Failed to write RTDB event for conversation ${conversationId}:`, err);
+    log.error('conversations', 'Failed to write RTDB event', { conversationId, error: err.message });
   }
 }
 
 // -- Get messages --
 router.get('/conversations/:id/messages', async (req, res) => {
   try {
+    // Verify the requester is a participant
+    const convSnap = await db.doc(`conversations/${req.params.id}`).get();
+    if (!convSnap.exists) return res.status(404).json({ error: 'Conversation not found' });
+    const participantIds = convSnap.data().participantIds || [];
+    if (!participantIds.includes(req.auth.uid)) {
+      return res.status(403).json({ error: 'Not a participant of this conversation' });
+    }
+
     const limit = Math.min(
-      parseInt(req.query.limit || String(DEFAULT_MESSAGE_LIMIT)),
+      parseInt(req.query.limit) || DEFAULT_MESSAGE_LIMIT,
       MAX_MESSAGE_LIMIT
     );
 
@@ -178,7 +145,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
     // Return in chronological order (oldest first)
     return res.json(messages.reverse().map(buildMessage));
   } catch (err) {
-    console.error('Error fetching conversation messages:', err);
+    log.error('conversations', 'Failed to fetch messages', { conversationId: req.params.id, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -194,9 +161,19 @@ router.post('/conversations/:id/messages', async (req, res) => {
     const messageId = generateId();
     const timestamp = now();
     const type = body.type || 'TEXT';
-    const senderId = body.senderId || uid;
-    const senderName = body.senderName || '';
-    const text = body.text || '';
+    const senderId = uid;
+    const senderName = (body.senderName || '').slice(0, MAX_SENDER_NAME_LENGTH);
+    const text = (body.text || '').slice(0, MAX_TEXT_LENGTH);
+
+    // Validate message type
+    if (!VALID_MESSAGE_TYPES.includes(type)) {
+      return res.status(400).json({ error: 'Invalid message type' });
+    }
+
+    // Validate imageUrls count
+    const imageUrls = Array.isArray(body.imageUrls) ? body.imageUrls.slice(0, MAX_IMAGES_PER_MESSAGE) : [];
+
+    log.info('conversations', 'Sending message', { conversationId, senderId, type });
 
     // Build preview text for lastMessage
     let previewText = text;
@@ -210,6 +187,9 @@ router.post('/conversations/:id/messages', async (req, res) => {
     const convDoc = convSnap.data();
 
     const participantIds = convDoc.participantIds || [];
+    if (!participantIds.includes(senderId)) {
+      return res.status(403).json({ error: 'Not a participant of this conversation' });
+    }
     const recipientIds = participantIds.filter(pid => pid !== senderId);
     const isGroup = !!convDoc.isGroup;
     const groupName = convDoc.groupName || null;
@@ -219,7 +199,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
       senderName,
       text,
       type,
-      imageUrls: body.imageUrls || [],
+      imageUrls,
       stickerUrl: body.stickerUrl || null,
       roomInviteId: body.roomInviteId || null,
       roomInviteName: body.roomInviteName || null,
@@ -236,7 +216,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
     };
 
     // Batch: write message + update conversation lastMessage + increment unread counts
-    const lastMessage = { text: previewText, senderId, senderName, type, timestamp };
+    const lastMessage = { text: previewText, senderId, senderName, type, createdAt: timestamp };
     const batch = db.batch();
 
     batch.set(db.doc(`conversations/${conversationId}/messages/${messageId}`), msgData);
@@ -245,11 +225,11 @@ router.post('/conversations/:id/messages', async (req, res) => {
       lastMessageAt: timestamp,
     }, { merge: true });
 
-    // Increment unread counts for all recipients
+    // Increment unread counts for all recipients (set+merge in case doc doesn't exist yet)
     for (const pid of recipientIds) {
-      batch.update(db.doc(`conversations/${conversationId}/userSettings/${pid}`), {
+      batch.set(db.doc(`conversations/${conversationId}/userSettings/${pid}`), {
         unreadCount: FieldValue.increment(1),
-      });
+      }, { merge: true });
     }
 
     await batch.commit();
@@ -257,22 +237,22 @@ router.post('/conversations/:id/messages', async (req, res) => {
     // Un-hide conversation for all recipients (fire-and-forget)
     Promise.all(
       recipientIds.map(pid =>
-        db.doc(`conversations/${conversationId}/userSettings/${pid}`).update({ isHidden: false })
+        db.doc(`conversations/${conversationId}/userSettings/${pid}`).set({ isHidden: false }, { merge: true })
       )
-    ).catch(err => console.error('Failed to un-hide conversations for recipients:', err));
+    ).catch(err => log.error('conversations', 'Failed to un-hide for recipients', { conversationId, error: err.message }));
 
     // FCM notifications + RTDB broadcast (fire-and-forget)
     const recipients = recipientIds.map(id => ({ userId: id }));
     sendMessageNotifications(
       conversationId, senderId, senderName, previewText, type, recipients, isGroup, groupName
-    ).catch(err => console.error('Failed to send message notifications:', err));
+    ).catch(err => log.error('conversations', 'Failed to send notifications', { conversationId, error: err.message }));
 
     broadcastToConversation(conversationId, { type: 'new_message' })
-      .catch(err => console.error('Failed to broadcast conversation event:', err));
+      .catch(err => log.error('conversations', 'Failed to broadcast event', { conversationId, error: err.message }));
 
     return res.json(buildMessage({ id: messageId, ...msgData, replyToMessageId: msgData.replyToId }));
   } catch (err) {
-    console.error('Error sending conversation message:', err);
+    log.error('conversations', 'Failed to send message', { conversationId: req.params.id, senderId: req.auth?.uid, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

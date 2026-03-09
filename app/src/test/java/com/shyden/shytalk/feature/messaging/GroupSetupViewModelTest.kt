@@ -6,6 +6,7 @@ import com.shyden.shytalk.core.model.GroupPermissions
 import com.shyden.shytalk.core.model.GroupRole
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.StorageRepository
@@ -91,7 +92,7 @@ class GroupSetupViewModelTest {
         val vm = createViewModel("")
         advanceUntilIdle()
 
-        assertEquals("No users selected", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
         assertFalse(vm.uiState.value.isLoading)
     }
 
@@ -102,7 +103,7 @@ class GroupSetupViewModelTest {
         val vm = createViewModel("u1,u2")
         advanceUntilIdle()
 
-        assertEquals("Failed to load users", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test
@@ -231,10 +232,7 @@ class GroupSetupViewModelTest {
         vm.createGroup()
         advanceUntilIdle()
 
-        assertEquals(
-            "You can own a maximum of ${Constants.MAX_OWNED_GROUPS} groups",
-            vm.uiState.value.error
-        )
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test
@@ -483,7 +481,7 @@ class GroupSetupViewModelTest {
 
         advanceUntilIdle()
 
-        assertEquals("Failed to upload group photo", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
         assertFalse(vm.uiState.value.isCreating)
         assertNull(vm.uiState.value.createdConversationId)
         coVerify(exactly = 0) { pmRepository.createGroupConversation(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
@@ -504,7 +502,7 @@ class GroupSetupViewModelTest {
         vm.createGroup()
         advanceUntilIdle()
 
-        assertEquals("Server error", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Server error"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isCreating)
         assertNull(vm.uiState.value.createdConversationId)
     }

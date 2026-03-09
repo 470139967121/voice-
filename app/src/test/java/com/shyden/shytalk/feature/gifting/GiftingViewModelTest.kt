@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.BackpackItem
 import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.GiftRepository
@@ -138,7 +139,7 @@ class GiftingViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isSending)
         assertNull(state.selectedGiftId)
-        assertEquals("Rose", state.sentGiftName)
+        assertEquals(UiText.Plain("Rose"), state.sentGiftName)
         assertEquals("rose", state.sentGiftId)
     }
 
@@ -157,7 +158,7 @@ class GiftingViewModelTest {
 
         coVerify { economyRepository.sendGiftDirect("recipient-1", "dragon", 1) }
         val state = vm.uiState.value
-        assertEquals("Dragon", state.sentGiftName)
+        assertEquals(UiText.Plain("Dragon"), state.sentGiftName)
         assertEquals("dragon", state.sentGiftId)
     }
 
@@ -176,7 +177,7 @@ class GiftingViewModelTest {
 
         val state = vm.uiState.value
         assertFalse(state.isSending)
-        assertEquals("Network error", state.error)
+        assertEquals(UiText.Plain("Network error"), state.error)
     }
 
     @Test
@@ -209,7 +210,7 @@ class GiftingViewModelTest {
         vm.sendGift("recipient-1", "rose")
         advanceUntilIdle()
 
-        assertEquals("Rose", vm.uiState.value.sentGiftName)
+        assertEquals(UiText.Plain("Rose"), vm.uiState.value.sentGiftName)
         assertEquals("rose", vm.uiState.value.sentGiftId)
 
         vm.clearSentGift()
@@ -231,7 +232,7 @@ class GiftingViewModelTest {
         vm.sendGift("recipient-1", "rose")
         advanceUntilIdle()
 
-        assertEquals("Something went wrong", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Something went wrong"), vm.uiState.value.error)
 
         vm.clearError()
 
@@ -282,7 +283,7 @@ class GiftingViewModelTest {
         vm.sendGift("recipient-1", "rose")
         advanceUntilIdle()
 
-        assertEquals("", vm.uiState.value.sentGiftName)
+        assertEquals(UiText.Plain(""), vm.uiState.value.sentGiftName)
     }
 
     // --- New tests for multi-recipient, quantity, expired items ---
@@ -554,7 +555,7 @@ class GiftingViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isSending)
         assertFalse(state.showSendAllConfirm)
-        assertEquals("entire backpack (4 items)", state.sentGiftName)
+        assertTrue(state.sentGiftName is UiText.Res)
     }
 
     // --- toggleQuantityPicker, setActiveTab, requestSend edge cases ---
@@ -628,7 +629,7 @@ class GiftingViewModelTest {
 
         val state = vm.uiState.value
         assertFalse(state.isSending)
-        assertEquals("Backpack is empty", state.error)
+        assertEquals(UiText.Plain("Backpack is empty"), state.error)
     }
 
     // --- activateTrial tests ---
@@ -647,7 +648,7 @@ class GiftingViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isSending)
         assertNull(state.selectedGiftId)
-        assertEquals("Super Shy activated! +30 days", state.sentGiftName)
+        assertTrue(state.sentGiftName is UiText.Res)
         assertNull(state.error)
     }
 
@@ -663,7 +664,7 @@ class GiftingViewModelTest {
 
         val state = vm.uiState.value
         assertFalse(state.isSending)
-        assertEquals("Already active", state.error)
+        assertEquals(UiText.Plain("Already active"), state.error)
     }
 
     @Test

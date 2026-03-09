@@ -26,6 +26,7 @@
  * POST /api/cleanup/device-binding/:uid        → Delete device binding for a user
  * GET  /api/storage/audit                      → R2 folder audit
  * POST /api/cleanup/orphaned-storage           → Smart R2 cleanup
+ * POST /api/cleanup/all-stalkers              → Delete all stalker records + reset counts
  */
 
 const router = require('express').Router();
@@ -33,6 +34,8 @@ const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const r2 = require('../utils/r2');
 const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { queryDocs } = require('../utils/firestore-helpers');
+const log = require('../utils/log');
 
 // ─── S3 client for audit (needs object sizes, not just keys) ─────
 
@@ -47,13 +50,6 @@ const s3 = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
   },
 });
-
-// ─── Helpers ─────────────────────────────────────────────────────
-
-async function queryDocs(ref) {
-  const snap = await ref.get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
 
 /**
  * Delete a conversation and all its associated subcollection data from Firestore.
@@ -103,6 +99,14 @@ async function deleteRoom(roomId) {
     }
     await batch.commit();
   }
+
+  // Clean up RTDB presence and events for this room
+  try {
+    const { rtdb } = require('../utils/firebase');
+    await rtdb.ref(`rooms/${roomId}`).remove();
+  } catch (err) {
+    log.error('admin-cleanup', 'Failed to clear RTDB for room', { roomId, error: err.message });
+  }
 }
 
 /**
@@ -147,6 +151,8 @@ router.post('/cleanup/system-conversations', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
+    log.info('admin-cleanup', 'Deleting duplicate system conversations', { adminId: req.auth.uid });
+
     const snap = await db.collection('conversations')
       .where('participantIds', 'array-contains', 'SHYTALK_SYSTEM')
       .get();
@@ -178,7 +184,7 @@ router.post('/cleanup/system-conversations', async (req, res) => {
 
     res.json({ success: true, deleted });
   } catch (err) {
-    console.error('POST /api/cleanup/system-conversations error:', err);
+    log.error('admin-cleanup', 'Cleanup system conversations failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -187,6 +193,8 @@ router.post('/cleanup/system-conversations', async (req, res) => {
 router.post('/cleanup/all-system-conversations', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all system conversations', { adminId: req.auth.uid });
 
     const snap = await db.collection('conversations')
       .where('participantIds', 'array-contains', 'SHYTALK_SYSTEM')
@@ -199,7 +207,7 @@ router.post('/cleanup/all-system-conversations', async (req, res) => {
 
     res.json({ success: true, deleted: systemConvs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-system-conversations error:', err);
+    log.error('admin-cleanup', 'Cleanup all system conversations failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -209,8 +217,10 @@ router.post('/cleanup/all-reports', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
+    log.info('admin-cleanup', 'Deleting all reports', { adminId: req.auth.uid });
+
     // Delete R2 evidence files first
-    await deleteR2Prefix('report_evidence/');
+    await deleteR2Prefix('evidence/');
 
     // Delete all docs from reports, reportsArchive, reportLocks collections
     const [reports, reportsArchive, reportLocks] = await Promise.all([
@@ -235,7 +245,7 @@ router.post('/cleanup/all-reports', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/cleanup/all-reports error:', err);
+    log.error('admin-cleanup', 'Cleanup all reports failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -244,6 +254,8 @@ router.post('/cleanup/all-reports', async (req, res) => {
 router.post('/cleanup/all-warnings', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Resetting all warnings', { adminId: req.auth.uid });
 
     const [usersSnap, activeSnap] = await Promise.all([
       db.collection('users').where('warningCount', '>', 0).get(),
@@ -274,7 +286,7 @@ router.post('/cleanup/all-warnings', async (req, res) => {
 
     res.json({ success: true, affected: allIds.size });
   } catch (err) {
-    console.error('POST /api/cleanup/all-warnings error:', err);
+    log.error('admin-cleanup', 'Cleanup all warnings failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -283,6 +295,8 @@ router.post('/cleanup/all-warnings', async (req, res) => {
 router.post('/cleanup/all-backpacks', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Clearing all backpacks', { adminId: req.auth.uid });
 
     const usersSnap = await db.collection('users').orderBy('uid').get();
     const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -306,7 +320,7 @@ router.post('/cleanup/all-backpacks', async (req, res) => {
 
     res.json({ success: true, deleted });
   } catch (err) {
-    console.error('POST /api/cleanup/all-backpacks error:', err);
+    log.error('admin-cleanup', 'Cleanup all backpacks failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -315,6 +329,8 @@ router.post('/cleanup/all-backpacks', async (req, res) => {
 router.post('/cleanup/all-giftwalls', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Clearing all gift walls', { adminId: req.auth.uid });
 
     const usersSnap = await db.collection('users').orderBy('uid').get();
     const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -338,7 +354,7 @@ router.post('/cleanup/all-giftwalls', async (req, res) => {
 
     res.json({ success: true, deleted });
   } catch (err) {
-    console.error('POST /api/cleanup/all-giftwalls error:', err);
+    log.error('admin-cleanup', 'Cleanup all gift walls failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -347,6 +363,8 @@ router.post('/cleanup/all-giftwalls', async (req, res) => {
 router.post('/cleanup/all-coins', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Resetting all coin balances', { adminId: req.auth.uid });
 
     const snap = await db.collection('users').where('shyCoins', '>', 0).get();
     const docs = snap.docs;
@@ -361,7 +379,7 @@ router.post('/cleanup/all-coins', async (req, res) => {
 
     res.json({ success: true, affected: docs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-coins error:', err);
+    log.error('admin-cleanup', 'Cleanup all coins failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -370,6 +388,8 @@ router.post('/cleanup/all-coins', async (req, res) => {
 router.post('/cleanup/all-beans', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Resetting all bean balances', { adminId: req.auth.uid });
 
     const snap = await db.collection('users').where('shyBeans', '>', 0).get();
     const docs = snap.docs;
@@ -384,7 +404,7 @@ router.post('/cleanup/all-beans', async (req, res) => {
 
     res.json({ success: true, affected: docs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-beans error:', err);
+    log.error('admin-cleanup', 'Cleanup all beans failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -393,6 +413,8 @@ router.post('/cleanup/all-beans', async (req, res) => {
 router.post('/cleanup/all-spin-history', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all spin history', { adminId: req.auth.uid });
 
     // Clear pity counters on all users who have one
     const pitySnap = await db.collection('users').where('pityCounter', '>', 0).get();
@@ -431,7 +453,7 @@ router.post('/cleanup/all-spin-history', async (req, res) => {
 
     res.json({ success: true, pityReset: pityDocs.length, txDeleted });
   } catch (err) {
-    console.error('POST /api/cleanup/all-spin-history error:', err);
+    log.error('admin-cleanup', 'Cleanup all spin history failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -440,6 +462,8 @@ router.post('/cleanup/all-spin-history', async (req, res) => {
 router.post('/cleanup/all-supershy', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Clearing all Super Shy status', { adminId: req.auth.uid });
 
     const snap = await db.collection('users').where('isSuperShy', '==', true).get();
     const docs = snap.docs;
@@ -459,7 +483,7 @@ router.post('/cleanup/all-supershy', async (req, res) => {
 
     res.json({ success: true, affected: docs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-supershy error:', err);
+    log.error('admin-cleanup', 'Cleanup all Super Shy failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -469,7 +493,9 @@ router.post('/cleanup/all-transactions', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const usersSnap = await db.collection('users').orderBy('uid').limit(30).get();
+    log.info('admin-cleanup', 'Deleting all transactions', { adminId: req.auth.uid });
+
+    const usersSnap = await db.collection('users').orderBy('uid').get();
     const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     let deleted = 0;
@@ -491,7 +517,7 @@ router.post('/cleanup/all-transactions', async (req, res) => {
 
     res.json({ success: true, deleted, usersProcessed: users.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-transactions error:', err);
+    log.error('admin-cleanup', 'Cleanup all transactions failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -500,6 +526,8 @@ router.post('/cleanup/all-transactions', async (req, res) => {
 router.post('/cleanup/all-appeals', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all suspension appeals', { adminId: req.auth.uid });
 
     const snap = await db.collection('suspensionAppeals').get();
     const docs = snap.docs;
@@ -514,7 +542,7 @@ router.post('/cleanup/all-appeals', async (req, res) => {
 
     res.json({ success: true, deleted: docs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-appeals error:', err);
+    log.error('admin-cleanup', 'Cleanup all appeals failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -523,6 +551,8 @@ router.post('/cleanup/all-appeals', async (req, res) => {
 router.post('/cleanup/backfill-user-type', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Backfilling userType', { adminId: req.auth.uid });
 
     const snap = await db.collection('users').limit(5000).get();
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -542,7 +572,7 @@ router.post('/cleanup/backfill-user-type', async (req, res) => {
 
     res.json({ success: true, updated: missing.length });
   } catch (err) {
-    console.error('POST /api/cleanup/backfill-user-type error:', err);
+    log.error('admin-cleanup', 'Backfill userType failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -551,6 +581,8 @@ router.post('/cleanup/backfill-user-type', async (req, res) => {
 router.post('/cleanup/all-private-messages', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all private messages', { adminId: req.auth.uid });
 
     const snap = await db.collection('conversations').limit(5000).get();
     const allConvs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -579,7 +611,7 @@ router.post('/cleanup/all-private-messages', async (req, res) => {
 
     res.json({ success: true, deleted: pms.length, mediaDeleted });
   } catch (err) {
-    console.error('POST /api/cleanup/all-private-messages error:', err);
+    log.error('admin-cleanup', 'Cleanup all private messages failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -588,6 +620,8 @@ router.post('/cleanup/all-private-messages', async (req, res) => {
 router.post('/cleanup/all-group-chats', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all group chats', { adminId: req.auth.uid });
 
     const snap = await db.collection('conversations')
       .where('isGroup', '==', true)
@@ -624,7 +658,7 @@ router.post('/cleanup/all-group-chats', async (req, res) => {
 
     res.json({ success: true, deleted: allConvs.length, mediaDeleted });
   } catch (err) {
-    console.error('POST /api/cleanup/all-group-chats error:', err);
+    log.error('admin-cleanup', 'Cleanup all group chats failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -633,6 +667,8 @@ router.post('/cleanup/all-group-chats', async (req, res) => {
 router.post('/cleanup/all-rooms', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all closed rooms', { adminId: req.auth.uid });
 
     const snap = await db.collection('rooms')
       .where('state', '==', 'CLOSED')
@@ -654,7 +690,7 @@ router.post('/cleanup/all-rooms', async (req, res) => {
 
     res.json({ success: true, deleted, total: closedRooms.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-rooms error:', err);
+    log.error('admin-cleanup', 'Cleanup all rooms failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -663,6 +699,8 @@ router.post('/cleanup/all-rooms', async (req, res) => {
 router.post('/cleanup/all-broadcasts', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all broadcasts', { adminId: req.auth.uid });
 
     const snap = await db.collection('broadcasts').limit(5000).get();
     const docs = snap.docs;
@@ -681,7 +719,7 @@ router.post('/cleanup/all-broadcasts', async (req, res) => {
 
     res.json({ success: true, deleted: docs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-broadcasts error:', err);
+    log.error('admin-cleanup', 'Cleanup all broadcasts failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -690,6 +728,8 @@ router.post('/cleanup/all-broadcasts', async (req, res) => {
 router.post('/cleanup/all-audit-logs', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all audit logs', { adminId: req.auth.uid });
 
     const snap = await db.collection('adminAuditLog').limit(5000).get();
     const docs = snap.docs;
@@ -708,7 +748,7 @@ router.post('/cleanup/all-audit-logs', async (req, res) => {
 
     res.json({ success: true, deleted: docs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-audit-logs error:', err);
+    log.error('admin-cleanup', 'Cleanup all audit logs failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -717,6 +757,8 @@ router.post('/cleanup/all-audit-logs', async (req, res) => {
 router.post('/cleanup/destroyed-users', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Cleaning up destroyed user profiles', { adminId: req.auth.uid });
 
     const snap = await db.collection('users').limit(5000).get();
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -743,7 +785,7 @@ router.post('/cleanup/destroyed-users', async (req, res) => {
       deletedUids: destroyed.map(u => u.id),
     });
   } catch (err) {
-    console.error('POST /api/cleanup/destroyed-users error:', err);
+    log.error('admin-cleanup', 'Cleanup destroyed users failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -752,6 +794,8 @@ router.post('/cleanup/destroyed-users', async (req, res) => {
 router.post('/cleanup/all-device-bindings', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Deleting all device bindings', { adminId: req.auth.uid });
 
     const snap = await db.collection('deviceBindings').limit(5000).get();
     const docs = snap.docs;
@@ -770,7 +814,7 @@ router.post('/cleanup/all-device-bindings', async (req, res) => {
 
     res.json({ success: true, deleted: docs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/all-device-bindings error:', err);
+    log.error('admin-cleanup', 'Cleanup all device bindings failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -781,6 +825,7 @@ router.post('/cleanup/device-binding/:uid', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const uid = req.params.uid;
+    log.info('admin-cleanup', 'Deleting device binding for user', { adminId: req.auth.uid, targetUid: uid });
     const snap = await db.collection('deviceBindings')
       .where('userId', '==', uid)
       .limit(50)
@@ -799,7 +844,7 @@ router.post('/cleanup/device-binding/:uid', async (req, res) => {
 
     res.json({ success: true, deleted: docs.length });
   } catch (err) {
-    console.error('POST /api/cleanup/device-binding/:uid error:', err);
+    log.error('admin-cleanup', 'Cleanup device binding failed', { uid: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -814,8 +859,8 @@ router.get('/storage/audit', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const folders = [
-      'pm_images/', 'stickers/', 'report_evidence/',
-      'profile_photos/', 'cover_photos/', 'group_photos/', 'banners/',
+      'profiles/', 'covers/', 'messages/', 'groups/',
+      'evidence/', 'stickers/', 'banners/',
     ];
     const results = {};
     let totalFiles = 0;
@@ -837,7 +882,7 @@ router.get('/storage/audit', async (req, res) => {
 
     res.json({ folders: results, totalFiles, totalBytes });
   } catch (err) {
-    console.error('GET /api/storage/audit error:', err);
+    log.error('admin-cleanup', 'Storage audit failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -846,6 +891,8 @@ router.get('/storage/audit', async (req, res) => {
 router.post('/cleanup/orphaned-storage', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Running orphaned storage cleanup', { adminId: req.auth.uid });
 
     const CDN_PREFIX = 'https://images.shytalk.shyden.co.uk/';
     const extractKey = (url) => {
@@ -871,17 +918,15 @@ router.post('/cleanup/orphaned-storage', async (req, res) => {
       }
     }
 
-    // ── Conversations (group photo) ──
-    const convsSnap = await db.collection('conversations')
-      .where('isGroup', '==', true)
-      .get();
+    // ── Conversations (group photo + message images) ──
+    const convsSnap = await db.collection('conversations').limit(2000).get();
     const convs = convsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     for (const c of convs) {
       const k = extractKey(c.groupPhotoUrl ?? c.group_photo_url);
       if (k) referencedKeys.add(k);
     }
 
-    // ── Private messages (IMAGE type) — cap at 30 convs ──
+    // ── Conversation messages (IMAGE type) — cap at 30 convs ──
     const convsToScan = convs.slice(0, 30);
     for (const conv of convsToScan) {
       const msgsSnap = await db.collection(`conversations/${conv.id}/messages`)
@@ -947,8 +992,8 @@ router.post('/cleanup/orphaned-storage', async (req, res) => {
 
     // ── List and delete orphans ──
     const folders = [
-      'pm_images/', 'stickers/', 'report_evidence/',
-      'profile_photos/', 'cover_photos/', 'group_photos/', 'banners/',
+      'profiles/', 'covers/', 'messages/', 'groups/',
+      'evidence/', 'stickers/', 'banners/',
     ];
     const summary = {};
     let totalDeleted = 0;
@@ -967,8 +1012,55 @@ router.post('/cleanup/orphaned-storage', async (req, res) => {
 
     res.json({ success: true, summary, totalDeleted });
   } catch (err) {
-    console.error('orphaned-storage cleanup error:', err.message);
+    log.error('admin-cleanup', 'Orphaned storage cleanup failed', { error: err.message });
     res.status(500).json({ error: `Cleanup failed: ${err.message}` });
+  }
+});
+
+// ── Clear all stalkers from all users ──
+router.post('/cleanup/all-stalkers', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+
+    log.info('admin-cleanup', 'Clearing all stalkers', { adminId: req.auth.uid });
+
+    const usersSnap = await db.collection('users').orderBy('uid').get();
+    let totalDeleted = 0;
+    let usersReset = 0;
+
+    for (const userDoc of usersSnap.docs) {
+      const uid = userDoc.data().uid ?? userDoc.id;
+
+      // Delete stalker subcollection
+      const stalkersSnap = await db.collection(`users/${uid}/stalkers`).get();
+      if (!stalkersSnap.empty) {
+        for (let i = 0; i < stalkersSnap.docs.length; i += 500) {
+          const batch = db.batch();
+          for (const doc of stalkersSnap.docs.slice(i, i + 500)) {
+            batch.delete(doc.ref);
+          }
+          await batch.commit();
+        }
+        totalDeleted += stalkersSnap.docs.length;
+      }
+
+      // Reset stalker counts on user doc
+      const data = userDoc.data();
+      if ((data.stalkerCount || 0) > 0 || (data.newStalkerCount || 0) > 0 || data.stalkersLastViewedAt) {
+        await db.doc(`users/${uid}`).update({
+          stalkerCount: 0,
+          newStalkerCount: 0,
+          stalkersLastViewedAt: null,
+        });
+        usersReset++;
+      }
+    }
+
+    log.info('admin-cleanup', 'Stalker cleanup complete', { totalDeleted, usersReset });
+    res.json({ success: true, stalkersDeleted: totalDeleted, usersReset });
+  } catch (err) {
+    log.error('admin-cleanup', 'Stalker cleanup failed', { error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

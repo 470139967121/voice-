@@ -46,6 +46,7 @@ jest.mock('../../src/utils/r2', () => ({
   putObject: jest.fn().mockResolvedValue(undefined),
   listObjects: jest.fn().mockResolvedValue([]),
   deleteObject: jest.fn().mockResolvedValue(undefined),
+  deleteObjects: jest.fn().mockResolvedValue(undefined),
 }));
 
 const rotateLogs = require('../../src/cron/rotateLogs');
@@ -149,8 +150,10 @@ describe('rotateLogs', () => {
     await rotateLogs();
 
     expect(r2.listObjects).toHaveBeenCalledWith('logs/');
-    expect(r2.deleteObject).toHaveBeenCalledWith(oldKey);
-    expect(r2.deleteObject).not.toHaveBeenCalledWith(recentKey);
+    // Bulk delete should include old key but not recent key
+    const deletedKeys = r2.deleteObjects.mock.calls.flatMap(c => c[0]);
+    expect(deletedKeys).toContain(oldKey);
+    expect(deletedKeys).not.toContain(recentKey);
   });
 
   test('handles missing config doc gracefully (uses default 48h)', async () => {

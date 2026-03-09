@@ -8,6 +8,11 @@ import com.shyden.shytalk.core.model.SystemMessageConfig
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.UiText
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
@@ -29,7 +34,7 @@ data class GroupSetupUiState(
     val permissions: GroupPermissions = GroupPermissions(),
     val systemMessageConfig: SystemMessageConfig = SystemMessageConfig(),
     val isCreating: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val createdConversationId: String? = null,
     val ownedGroupCount: Int = 0,
     val isLoading: Boolean = true
@@ -43,12 +48,17 @@ class GroupSetupViewModel(
     private val storageRepository: StorageRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "GroupSetupViewModel"
+    }
+
     private val _uiState = MutableStateFlow(GroupSetupUiState())
     val uiState: StateFlow<GroupSetupUiState> = _uiState.asStateFlow()
 
     private val currentUserId: String = authRepository.currentUserId ?: ""
 
     init {
+        logI(TAG, "Initializing group setup")
         loadSelectedUsers()
         loadOwnedGroupCount()
     }
@@ -57,7 +67,7 @@ class GroupSetupViewModel(
         viewModelScope.launch {
             val ids = selectedIdsString.split(",").filter { it.isNotBlank() }
             if (ids.isEmpty()) {
-                _uiState.update { it.copy(isLoading = false, error = "No users selected") }
+                _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_no_users_selected)) }
                 return@launch
             }
             when (val result = userRepository.getUsers(ids)) {
@@ -72,7 +82,7 @@ class GroupSetupViewModel(
                     }
                 }
                 else -> {
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to load users") }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_load_users)) }
                 }
             }
         }
@@ -149,9 +159,10 @@ class GroupSetupViewModel(
     fun createGroup() {
         val state = _uiState.value
         if (state.groupName.isBlank() || state.isCreating) return
+        logI(TAG, "Creating group: name=${state.groupName}, members=${state.selectedUsers.size}")
 
         if (state.ownedGroupCount >= Constants.MAX_OWNED_GROUPS) {
-            _uiState.update { it.copy(error = "You can own a maximum of ${Constants.MAX_OWNED_GROUPS} groups") }
+            _uiState.update { it.copy(error = UiText.res(Res.string.error_max_groups, Constants.MAX_OWNED_GROUPS)) }
             return
         }
 
@@ -167,7 +178,7 @@ class GroupSetupViewModel(
                 )) {
                     is Resource.Success -> photoUrl = uploadResult.data
                     is Resource.Error -> {
-                        _uiState.update { it.copy(isCreating = false, error = "Failed to upload group photo") }
+                        _uiState.update { it.copy(isCreating = false, error = UiText.res(Res.string.error_upload_group_photo)) }
                         return@launch
                     }
                     is Resource.Loading -> {}
@@ -179,7 +190,7 @@ class GroupSetupViewModel(
 
             when (val result = pmRepository.createGroupConversation(
                 creatorId = currentUserId,
-                participantIds = state.selectedUsers.map { it.uid },
+                participantIds = (listOf(currentUserId) + state.selectedUsers.map { it.uid }).distinct(),
                 groupName = state.groupName.trim(),
                 groupDescription = state.groupDescription.trim().ifBlank { null },
                 groupPhotoUrl = photoUrl,
@@ -194,7 +205,7 @@ class GroupSetupViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isCreating = false, error = result.message) }
+                    _uiState.update { it.copy(isCreating = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }

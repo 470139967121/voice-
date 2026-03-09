@@ -48,6 +48,25 @@ class TranslationRepositoryImplTest {
     }
 
     @Test
+    fun `translate returns Error when translatedText is missing from response`() = runTest {
+        coEvery { api.post("/api/translate", any()) } returns JSONObject().apply {
+            put("detectedSourceLang", "ko")
+        }
+        val result = repo.translate("안녕하세요", "en", null)
+        assertTrue(result is Resource.Error)
+    }
+
+    @Test
+    fun `translate returns Error when translatedText is empty`() = runTest {
+        coEvery { api.post("/api/translate", any()) } returns JSONObject().apply {
+            put("translatedText", "")
+            put("detectedSourceLang", "ko")
+        }
+        val result = repo.translate("안녕하세요", "en", null)
+        assertTrue(result is Resource.Error)
+    }
+
+    @Test
     fun `translate failure returns Error`() = runTest {
         coEvery { api.post("/api/translate", any()) } throws RuntimeException("Network error")
         val result = repo.translate("test", "en", null)
@@ -82,6 +101,17 @@ class TranslationRepositoryImplTest {
         val quota = (result as Resource.Success).data
         assertEquals(true, quota.unlimited)
         assertEquals(-1, quota.limit)
+    }
+
+    @Test
+    fun `getQuota returns safe defaults when fields are missing`() = runTest {
+        coEvery { api.get("/api/translate/quota") } returns JSONObject()
+        val result = repo.getQuota()
+        assertTrue(result is Resource.Success)
+        val quota = (result as Resource.Success).data
+        assertEquals(0, quota.used)
+        assertEquals(0, quota.limit)
+        assertEquals(false, quota.unlimited)
     }
 
     @Test

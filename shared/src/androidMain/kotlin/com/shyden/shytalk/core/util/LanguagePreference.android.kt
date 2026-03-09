@@ -9,6 +9,7 @@ actual object LanguagePreference {
     private const val PREFS_NAME = "shytalk_prefs"
     private const val KEY_LANGUAGE = "preferred_language"
     private const val KEY_AUTO_TRANSLATE = "auto_translate"
+    private const val KEY_LEGAL_VERSION = "accepted_legal_version"
     private var prefs: SharedPreferences? = null
 
     fun init(context: Context) {
@@ -16,11 +17,11 @@ actual object LanguagePreference {
     }
 
     actual fun get(): String =
-        prefs?.getString(KEY_LANGUAGE, null)
-            ?: java.util.Locale.getDefault().language.take(2)
+        (prefs?.getString(KEY_LANGUAGE, null)
+            ?: java.util.Locale.getDefault().language).take(2)
 
     actual fun set(languageCode: String) {
-        prefs?.edit()?.putString(KEY_LANGUAGE, languageCode)?.apply()
+        prefs?.edit()?.putString(KEY_LANGUAGE, languageCode.take(2))?.apply()
     }
 
     actual fun getAutoTranslate(): Boolean =
@@ -28,5 +29,12 @@ actual object LanguagePreference {
 
     actual fun setAutoTranslate(enabled: Boolean) {
         prefs?.edit()?.putBoolean(KEY_AUTO_TRANSLATE, enabled)?.apply()
+    }
+
+    actual fun getAcceptedLegalVersion(): Int =
+        prefs?.getInt(KEY_LEGAL_VERSION, 0) ?: 0
+
+    actual fun setAcceptedLegalVersion(version: Int) {
+        prefs?.edit()?.putInt(KEY_LEGAL_VERSION, version)?.apply()
     }
 }

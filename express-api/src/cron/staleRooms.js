@@ -7,6 +7,7 @@
  */
 
 const { db } = require('../utils/firebase');
+const log = require('../utils/log');
 
 async function staleRooms() {
   const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
@@ -60,12 +61,12 @@ async function staleRooms() {
     const batch = db.batch();
     const chunk = writes.slice(i, i + 500);
     for (const w of chunk) {
-      batch.update(w.ref, w.data);
+      batch.set(w.ref, w.data, { merge: true });
     }
     await batch.commit();
   }
 
-  console.log(`Closed ${toClose.length} stale OWNER_AWAY rooms`);
+  log.info('cron', 'staleRooms: closed stale OWNER_AWAY rooms', { count: toClose.length });
 }
 
 module.exports = staleRooms;

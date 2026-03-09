@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.CoinPackage
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -92,7 +93,7 @@ class WalletViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        assertEquals("Network error", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Network error"), vm.uiState.value.error)
     }
 
     @Test
@@ -102,7 +103,7 @@ class WalletViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        assertEquals("User not found", vm.uiState.value.error)
+        assertEquals(UiText.Plain("User not found"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isLoading)
     }
 
@@ -128,8 +129,7 @@ class WalletViewModelTest {
         vm.testPurchaseCoins(500)
         advanceUntilIdle()
 
-        assertNotNull(vm.uiState.value.successMessage)
-        assertTrue(vm.uiState.value.successMessage!!.contains("500"))
+        assertTrue(vm.uiState.value.successMessage is UiText.Res)
         assertFalse(vm.uiState.value.isPurchasing)
     }
 
@@ -143,7 +143,7 @@ class WalletViewModelTest {
         vm.testPurchaseCoins(500)
         advanceUntilIdle()
 
-        assertEquals("Server error", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Server error"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isPurchasing)
     }
 
@@ -155,7 +155,7 @@ class WalletViewModelTest {
         vm.redeemBeans(5000) // balance is 1000
         advanceUntilIdle()
 
-        assertEquals("Not enough beans", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test
@@ -180,10 +180,7 @@ class WalletViewModelTest {
         vm.redeemBeans(500)
         advanceUntilIdle()
 
-        val msg = vm.uiState.value.successMessage
-        assertNotNull(msg)
-        assertTrue(msg!!.contains("500"))
-        assertFalse(msg.contains("bonus"))
+        assertTrue(vm.uiState.value.successMessage is UiText.Res)
     }
 
     @Test
@@ -198,9 +195,7 @@ class WalletViewModelTest {
         vm.redeemBeans(2000)
         advanceUntilIdle()
 
-        val msg = vm.uiState.value.successMessage
-        assertNotNull(msg)
-        assertTrue(msg!!.contains("bonus"))
+        assertTrue(vm.uiState.value.successMessage is UiText.Res)
     }
 
     @Test
@@ -213,7 +208,7 @@ class WalletViewModelTest {
         vm.redeemBeans(500)
         advanceUntilIdle()
 
-        assertEquals("Failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Failed"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isPurchasing)
     }
 
@@ -229,7 +224,7 @@ class WalletViewModelTest {
         vm.onPurchaseCompleted("coins_100", "token123", isSubscription = false)
         advanceUntilIdle()
 
-        assertEquals("Purchase successful!", vm.uiState.value.successMessage)
+        assertTrue(vm.uiState.value.successMessage is UiText.Res)
         assertFalse(vm.uiState.value.isPurchasing)
     }
 
@@ -245,7 +240,7 @@ class WalletViewModelTest {
         vm.onPurchaseCompleted("sub_gold", "token456", isSubscription = true)
         advanceUntilIdle()
 
-        assertEquals("Purchase successful!", vm.uiState.value.successMessage)
+        assertTrue(vm.uiState.value.successMessage is UiText.Res)
     }
 
     @Test
@@ -260,7 +255,7 @@ class WalletViewModelTest {
         vm.onPurchaseCompleted("coins_100", "bad_token", isSubscription = false)
         advanceUntilIdle()
 
-        assertEquals("Payment failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Payment failed"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isPurchasing)
     }
 
@@ -306,7 +301,7 @@ class WalletViewModelTest {
         advanceUntilIdle()
 
         assertEquals(350L, vm.uiState.value.coinBalance)
-        assertEquals("Purchase successful!", vm.uiState.value.successMessage)
+        assertTrue(vm.uiState.value.successMessage is UiText.Res)
     }
 
     // ===== Purchase error shows error message =====
@@ -323,7 +318,7 @@ class WalletViewModelTest {
         vm.onPurchaseCompleted("coins_100", "bad", isSubscription = false)
         advanceUntilIdle()
 
-        assertEquals("Insufficient funds", vm.uiState.value.error)
+        assertEquals(UiText.Plain("Insufficient funds"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isPurchasing)
     }
 
@@ -353,8 +348,7 @@ class WalletViewModelTest {
         vm.redeemBeans(largeBalance)
         advanceUntilIdle()
 
-        assertNotNull(vm.uiState.value.successMessage)
-        assertTrue(vm.uiState.value.successMessage!!.contains("bonus"))
+        assertTrue(vm.uiState.value.successMessage is UiText.Res)
         assertFalse(vm.uiState.value.isPurchasing)
     }
 

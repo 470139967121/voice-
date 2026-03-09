@@ -5,6 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.UiText
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -20,7 +25,7 @@ data class NewMessageUiState(
     val availableUsers: List<User> = emptyList(),
     val selectedIds: Set<String> = emptySet(),
     val isLoading: Boolean = true,
-    val error: String? = null,
+    val error: UiText? = null,
     val searchQuery: String = "",
     val recentUsers: List<User> = emptyList(),
     val searchAllMode: Boolean = false,
@@ -35,6 +40,10 @@ class NewMessageViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "NewMessageViewModel"
+    }
+
     private val _uiState = MutableStateFlow(NewMessageUiState())
     val uiState: StateFlow<NewMessageUiState> = _uiState.asStateFlow()
 
@@ -42,6 +51,7 @@ class NewMessageViewModel(
     private var searchJob: Job? = null
 
     init {
+        logI(TAG, "Initializing new message screen")
         loadAvailableUsers()
         loadRecentUsers()
         loadOwnedGroupCount()
@@ -54,7 +64,7 @@ class NewMessageViewModel(
             val currentUser = when (val result = userRepository.getUser(currentUserId)) {
                 is Resource.Success -> result.data
                 else -> {
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to load user data") }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_load_user_data)) }
                     return@launch
                 }
             }
@@ -77,7 +87,7 @@ class NewMessageViewModel(
                     }
                 }
                 else -> {
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to load users") }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_load_users)) }
                 }
             }
         }
@@ -127,7 +137,7 @@ class NewMessageViewModel(
                 current - userId
             } else {
                 if (current.size >= Constants.MAX_GROUP_PARTICIPANTS - 1) {
-                    return@update state.copy(error = "Maximum ${Constants.MAX_GROUP_PARTICIPANTS} participants allowed")
+                    return@update state.copy(error = UiText.res(Res.string.error_max_participants, Constants.MAX_GROUP_PARTICIPANTS))
                 }
                 current + userId
             }
@@ -171,7 +181,7 @@ class NewMessageViewModel(
                 }
                 is Resource.Error -> {
                     _uiState.update {
-                        it.copy(isSearchingAll = false, error = result.message)
+                        it.copy(isSearchingAll = false, error = result.message?.let { msg -> UiText.plain(msg) })
                     }
                 }
                 is Resource.Loading -> {}

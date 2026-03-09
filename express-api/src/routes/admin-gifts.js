@@ -8,9 +8,10 @@
  */
 
 const router = require('express').Router();
-const { db, FieldValue } = require('../utils/firebase');
+const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const { generateId, now } = require('../utils/helpers');
+const log = require('../utils/log');
 
 // ── Create gift ──
 router.post('/gifts', async (req, res) => {
@@ -51,7 +52,7 @@ router.post('/gifts', async (req, res) => {
 
     res.json({ success: true, id });
   } catch (err) {
-    console.error('POST /gifts error:', err);
+    log.error('admin-gifts', 'POST /gifts failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -79,11 +80,12 @@ router.put('/gifts/:id', async (req, res) => {
 
     if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
 
+    log.info('admin-gifts', 'Updating gift', { adminId: req.auth.uid, giftId: req.params.id, fields: Object.keys(updates) });
     await db.doc(`gifts/${req.params.id}`).update(updates);
 
     res.json({ success: true });
   } catch (err) {
-    console.error('PUT /gifts/:id error:', err);
+    log.error('admin-gifts', 'PUT /gifts/:id failed', { giftId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -107,7 +109,7 @@ router.delete('/gifts/:id', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /gifts/:id error:', err);
+    log.error('admin-gifts', 'DELETE /gifts/:id failed', { giftId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -177,7 +179,7 @@ router.post('/gifts/seed', async (req, res) => {
 
     res.json({ success: true, count: SEED_GIFTS.length });
   } catch (err) {
-    console.error('POST /gifts/seed error:', err);
+    log.error('admin-gifts', 'POST /gifts/seed failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

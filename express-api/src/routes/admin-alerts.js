@@ -11,6 +11,7 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const { DEFAULT_ALERT_CONFIG } = require('../utils/alertManager');
+const log = require('../utils/log');
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -38,7 +39,7 @@ router.get('/admin/alerts', async (req, res) => {
 
     res.json({ alerts });
   } catch (err) {
-    console.error('Error listing alerts:', err);
+    log.error('admin-alerts', 'Error listing alerts', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -73,7 +74,7 @@ router.patch('/admin/alerts/:alertId', async (req, res) => {
 
     res.json({ ok: true, alertId, ...update });
   } catch (err) {
-    console.error('Error updating alert:', err);
+    log.error('admin-alerts', 'Error updating alert', { alertId: req.params.alertId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -90,7 +91,7 @@ router.get('/admin/alert-config', async (req, res) => {
 
     res.json({ config });
   } catch (err) {
-    console.error('Error getting alert config:', err);
+    log.error('admin-alerts', 'Error getting alert config', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -120,7 +121,7 @@ router.patch('/admin/alert-config', async (req, res) => {
 
     res.json({ ok: true, config });
   } catch (err) {
-    console.error('Error updating alert config:', err);
+    log.error('admin-alerts', 'Error updating alert config', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

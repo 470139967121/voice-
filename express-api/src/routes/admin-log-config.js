@@ -9,6 +9,7 @@
 const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
+const log = require('../utils/log');
 
 const DEFAULT_CONFIG = {
   retentionHours: 48,
@@ -38,7 +39,7 @@ router.get('/log-config', async (req, res) => {
     const doc = await db.doc('logConfig/settings').get();
     res.json(doc.exists ? doc.data() : DEFAULT_CONFIG);
   } catch (err) {
-    console.error('Error reading log config:', err);
+    log.error('admin-log-config', 'Error reading log config', { error: err.message });
     res.json(DEFAULT_CONFIG);
   }
 });
@@ -51,7 +52,7 @@ router.get('/admin/log-config', async (req, res) => {
     const doc = await db.doc('logConfig/settings').get();
     res.json(doc.exists ? doc.data() : DEFAULT_CONFIG);
   } catch (err) {
-    console.error('Error reading log config:', err);
+    log.error('admin-log-config', 'Error reading log config', { error: err.message });
     res.json(DEFAULT_CONFIG);
   }
 });
@@ -75,7 +76,7 @@ router.patch('/admin/log-config', async (req, res) => {
     await db.doc('logConfig/settings').set(updates, { merge: true });
     res.json({ success: true });
   } catch (err) {
-    console.error('Error updating log config:', err);
+    log.error('admin-log-config', 'Error updating log config', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

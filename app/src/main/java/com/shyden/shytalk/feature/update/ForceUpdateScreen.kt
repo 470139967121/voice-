@@ -22,6 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 
 @Composable
 fun ForceUpdateScreen() {
@@ -48,7 +51,7 @@ fun ForceUpdateScreen() {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Update Required",
+            text = stringResource(Res.string.update_required),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
@@ -56,7 +59,7 @@ fun ForceUpdateScreen() {
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "A new version of ShyTalk is available. Please update to continue using the app.",
+            text = stringResource(Res.string.update_required_description),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -71,7 +74,7 @@ fun ForceUpdateScreen() {
             )
             context.startActivity(intent)
         }) {
-            Text("Update Now")
+            Text(stringResource(Res.string.update_now))
         }
     }
     }

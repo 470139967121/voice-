@@ -41,7 +41,7 @@ fun RequiredDOBScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var dateError by rememberSaveable { mutableStateOf<String?>(null) }
+    var dateError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(uiState.saved) {
         if (uiState.saved) {
@@ -51,7 +51,7 @@ fun RequiredDOBScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.resolveAsync())
             viewModel.clearError()
         }
     }
@@ -85,18 +85,15 @@ fun RequiredDOBScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = if (selectedDateMillis != null) {
-                        formatDateForDisplay(selectedDateMillis!!)
-                    } else {
-                        stringResource(Res.string.select_date_of_birth)
-                    }
+                    text = selectedDateMillis?.let { formatDateForDisplay(it) }
+                        ?: stringResource(Res.string.select_date_of_birth)
                 )
             }
 
-            if (dateError != null) {
+            dateError?.let { error ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = dateError!!,
+                    text = error,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )

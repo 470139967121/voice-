@@ -11,9 +11,9 @@ data class FunFact(
         fun fromMap(map: Map<String, Any?>, id: String): FunFact {
             return FunFact(
                 id = id,
-                text = (map["text"] ?: map["text"]) as? String ?: "",
-                category = (map["category"] ?: map["category"]) as? String ?: "trivia",
-                emoji = (map["emoji"] ?: map["emoji"]) as? String ?: "",
+                text = map["text"] as? String ?: "",
+                category = map["category"] as? String ?: "trivia",
+                emoji = map["emoji"] as? String ?: "",
                 sourceLanguage = (map["sourceLanguage"] ?: map["source_language"]) as? String ?: ""
             )
         }

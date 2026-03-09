@@ -18,7 +18,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * HTTP client for calling the Cloudflare Worker API.
+ * HTTP client for calling the Express API.
  * Handles Firebase ID token auth and JSON request/response.
  */
 class WorkerApiClient(

@@ -24,6 +24,8 @@
 const router = require('express').Router();
 const { db, FieldValue } = require('../utils/firebase');
 const { generateId, now, todayStr, yesterdayStr } = require('../utils/helpers');
+const { requireAdmin } = require('../middleware/auth');
+const log = require('../utils/log');
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -45,15 +47,28 @@ const DEFAULT_ECONOMY_CONFIG = {
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
+// In-memory cache for economy config (avoids re-reading Firestore on every request)
+let cachedEconomyConfig = null;
+let economyConfigCachedAt = 0;
+const ECONOMY_CONFIG_TTL = 60_000; // 1 minute
+
 async function loadEconomyConfig() {
+  const now = Date.now();
+  if (cachedEconomyConfig && (now - economyConfigCachedAt) < ECONOMY_CONFIG_TTL) {
+    return cachedEconomyConfig;
+  }
+
   const snap = await db.doc('config/economy').get();
   if (snap.exists) {
     const { id: _id, ...config } = { id: snap.id, ...snap.data() };
-    return { ...DEFAULT_ECONOMY_CONFIG, ...config };
+    cachedEconomyConfig = { ...DEFAULT_ECONOMY_CONFIG, ...config };
+  } else {
+    // Doc doesn't exist — write defaults so the Android SDK can read it
+    await db.doc('config/economy').set(DEFAULT_ECONOMY_CONFIG);
+    cachedEconomyConfig = { ...DEFAULT_ECONOMY_CONFIG };
   }
-  // Doc doesn't exist — write defaults so the Android SDK can read it
-  await db.doc('config/economy').set(DEFAULT_ECONOMY_CONFIG);
-  return { ...DEFAULT_ECONOMY_CONFIG };
+  economyConfigCachedAt = now;
+  return cachedEconomyConfig;
 }
 
 /**
@@ -200,7 +215,7 @@ async function updateGiftRankings(recipientId, giftId, quantity) {
       lastUpdated: now(),
     });
   } catch (err) {
-    console.error('updateGiftRankings error:', err.message);
+    log.error('economy', 'Failed to update gift rankings', { error: err.message });
   }
 }
 
@@ -286,9 +301,10 @@ router.post('/economy/daily-reward', async (req, res) => {
       result.giftId = giftReward.giftId;
       result.giftQuantity = giftReward.quantity;
     }
+    log.info('economy', 'Daily reward claimed', { userId: uid, coinReward, streak: newStreak });
     res.json(result);
   } catch (err) {
-    console.error('POST /economy/daily-reward error:', err);
+    log.error('economy', 'POST /economy/daily-reward failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -479,7 +495,7 @@ router.post('/economy/gacha', async (req, res) => {
         expiresAt,
         giftName: gift.name,
         coinValue: gift.coinValue,
-        iconUrl: gift.iconUrl || '',
+        iconUrl: gift.iconUrl || gift.icon_url || '',
       }, { merge: true });
     }
 
@@ -507,7 +523,7 @@ router.post('/economy/gacha', async (req, res) => {
         guaranteed: !!guaranteedFirstPull,
       });
     } catch (err) {
-      console.error(`[GACHA] Failed to write transaction for ${uid}: ${err.message}`);
+      log.error('economy', 'Failed to write gacha transaction', { uid, error: err.message });
     }
 
     // Broadcast qualifying wins (best-effort)
@@ -521,14 +537,14 @@ router.post('/economy/gacha', async (req, res) => {
             senderPhotoUrl: userField(user, 'profilePhotoUrl', 'profile_photo_url'),
             recipientName: '',
             giftName: gift.name,
-            giftIconUrl: gift.iconUrl || '',
+            giftIconUrl: gift.iconUrl || gift.icon_url || '',
             giftCoinValue: gift.coinValue,
           });
           break; // one broadcast per pull session
         }
       }
     } catch (err) {
-      console.error(`[GACHA] Failed to broadcast win for ${uid}: ${err.message}`);
+      log.error('economy', 'Failed to broadcast gacha win', { uid, error: err.message });
     }
 
     res.json({
@@ -540,8 +556,9 @@ router.post('/economy/gacha', async (req, res) => {
       newPityCounter: pity, newLuckScore: luck,
       currentPullCosts: pullCosts,
     });
+    log.info('economy', `Gacha pull x${pullCount}`, { userId: uid, cost, newBalance });
   } catch (err) {
-    console.error('POST /economy/gacha error:', err);
+    log.error('economy', 'POST /economy/gacha failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -592,8 +609,8 @@ router.post('/economy/gift', async (req, res) => {
     // Update recipient gift wall
     await updateGiftWall(recipientId, giftId, uid, quantity);
 
-    // Credit beans
-    await db.doc(`users/${recipientId}`).update({ shyBeans: recipientBeans + beanReward });
+    // Credit beans (atomic increment to avoid race conditions)
+    await db.doc(`users/${recipientId}`).update({ shyBeans: FieldValue.increment(beanReward) });
 
     // Room message if sender is in a room
     const currentRoomId = userField(sender, 'currentRoomId', 'current_room_id');
@@ -649,7 +666,7 @@ router.post('/economy/gift', async (req, res) => {
 
     res.json({ success: true, beanReward, giftName: gift.name, quantity });
   } catch (err) {
-    console.error('POST /economy/gift error:', err);
+    log.error('economy', 'POST /economy/gift failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -689,14 +706,14 @@ router.post('/economy/gift-direct', async (req, res) => {
     const recipientBeans = userField(recipient, 'shyBeans', 'shy_beans') || 0;
     const timestamp = now();
 
-    // Deduct coins
-    await db.doc(`users/${uid}`).update({ shyCoins: newSenderCoins });
+    // Deduct coins (atomic)
+    await db.doc(`users/${uid}`).update({ shyCoins: FieldValue.increment(-totalCost) });
 
     // Gift wall
     await updateGiftWall(recipientId, giftId, uid, quantity);
 
-    // Beans
-    await db.doc(`users/${recipientId}`).update({ shyBeans: recipientBeans + beanReward });
+    // Beans (atomic)
+    await db.doc(`users/${recipientId}`).update({ shyBeans: FieldValue.increment(beanReward) });
 
     // Room message
     const currentRoomId = userField(sender, 'currentRoomId', 'current_room_id');
@@ -705,7 +722,7 @@ router.post('/economy/gift-direct', async (req, res) => {
       const rName = userField(recipient, 'displayName', 'display_name') || 'Someone';
       const qtyLabel = quantity > 1 ? `${quantity}x ` : '';
       await writeRoomGiftMessage(currentRoomId, uid, sName,
-        `${sName} sent ${qtyLabel}${gift.name} to ${rName}`, giftId, gift.iconUrl || '');
+        `${sName} sent ${qtyLabel}${gift.name} to ${rName}`, giftId, gift.iconUrl || gift.icon_url || '');
     }
 
     // Transactions
@@ -732,7 +749,7 @@ router.post('/economy/gift-direct', async (req, res) => {
         type: 'GIFT_SEND',
         senderName: userField(sender, 'displayName', 'display_name') || '',
         recipientName: userField(recipient, 'displayName', 'display_name') || '',
-        giftName: gift.name, giftIconUrl: gift.iconUrl || '',
+        giftName: gift.name, giftIconUrl: gift.iconUrl || gift.icon_url || '',
         giftCoinValue: coinValue, quantity,
       });
     }
@@ -742,7 +759,7 @@ router.post('/economy/gift-direct', async (req, res) => {
 
     res.json({ success: true, beanReward, giftName: gift.name, coinsSpent: totalCost, quantity });
   } catch (err) {
-    console.error('POST /economy/gift-direct error:', err);
+    log.error('economy', 'POST /economy/gift-direct failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -774,9 +791,10 @@ router.post('/economy/gift-batch', async (req, res) => {
     const totalQty = quantity * recipientIds.length;
     const senderCoins = userField(sender, 'shyCoins', 'shy_coins') || 0;
 
+    let bpItem = null;
     if (fromBackpack) {
       const bpSnap = await db.doc(`users/${uid}/backpack/${giftId}`).get();
-      const bpItem = bpSnap.exists ? bpSnap.data() : null;
+      bpItem = bpSnap.exists ? bpSnap.data() : null;
       if (!bpItem || (bpItem.quantity || 0) < totalQty) return res.status(402).json({ error: 'Insufficient items in backpack' });
     } else {
       const totalCost = coinValue * totalQty;
@@ -787,8 +805,6 @@ router.post('/economy/gift-batch', async (req, res) => {
     const timestamp = now();
 
     if (fromBackpack) {
-      const bpSnap = await db.doc(`users/${uid}/backpack/${giftId}`).get();
-      const bpItem = bpSnap.exists ? bpSnap.data() : null;
       const newQty = (bpItem?.quantity || 0) - totalQty;
       if (newQty <= 0) {
         await db.doc(`users/${uid}/backpack/${giftId}`).delete();
@@ -797,7 +813,7 @@ router.post('/economy/gift-batch', async (req, res) => {
       }
     } else {
       const totalCost = coinValue * totalQty;
-      await db.doc(`users/${uid}`).update({ shyCoins: senderCoins - totalCost });
+      await db.doc(`users/${uid}`).update({ shyCoins: FieldValue.increment(-totalCost) });
     }
 
     // Process each recipient
@@ -807,11 +823,11 @@ router.post('/economy/gift-batch', async (req, res) => {
       const recipient = recipientSnap.data();
 
       const beanReward = Math.floor(coinValue * config.beanConversionRate * quantity);
-      const recipientBeans = userField(recipient, 'shyBeans', 'shy_beans') || 0;
 
-      // Gift wall + beans + transaction
+      // Gift wall + beans (atomic) + transaction
       await updateGiftWall(recipientId, giftId, uid, quantity);
-      await db.doc(`users/${recipientId}`).update({ shyBeans: recipientBeans + beanReward });
+      await updateGiftRankings(recipientId, giftId, quantity);
+      await db.doc(`users/${recipientId}`).update({ shyBeans: FieldValue.increment(beanReward) });
 
       const recipientTxId = generateId();
       await writeTransaction(recipientId, recipientTxId, {
@@ -828,7 +844,8 @@ router.post('/economy/gift-batch', async (req, res) => {
       type: 'GIFT_SENT',
       amount: fromBackpack ? 0 : -(coinValue * totalQty),
       currency: 'COINS',
-      balanceAfter: senderCoins, giftId, giftName: gift.name, quantity,
+      balanceAfter: fromBackpack ? senderCoins : (senderCoins - coinValue * totalQty),
+      giftId, giftName: gift.name, quantity,
       details: `Batch ${source}: ${totalQty}x ${gift.name} to ${recipientIds.length} users`,
       timestamp,
     });
@@ -839,7 +856,7 @@ router.post('/economy/gift-batch', async (req, res) => {
       const sName = userField(sender, 'displayName', 'display_name') || 'Someone';
       await writeRoomGiftMessage(currentRoomId, uid, sName,
         `${sName} sent ${totalQty}x ${gift.name} to ${recipientIds.length} people`,
-        giftId, gift.iconUrl || '');
+        giftId, gift.iconUrl || gift.icon_url || '');
     }
 
     // Broadcast
@@ -848,14 +865,14 @@ router.post('/economy/gift-batch', async (req, res) => {
         type: 'GIFT_SEND',
         senderName: userField(sender, 'displayName', 'display_name') || '',
         recipientName: `${recipientIds.length} people`,
-        giftName: gift.name, giftIconUrl: gift.iconUrl || '',
+        giftName: gift.name, giftIconUrl: gift.iconUrl || gift.icon_url || '',
         giftCoinValue: coinValue, quantity: totalQty,
       });
     }
 
     res.json({ success: true, giftName: gift.name, totalSent: totalQty, recipientCount: recipientIds.length });
   } catch (err) {
-    console.error('POST /economy/gift-batch error:', err);
+    log.error('economy', 'POST /economy/gift-batch failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -909,13 +926,13 @@ router.post('/economy/backpack-send', async (req, res) => {
       const beanReward = Math.floor(coinVal * config.beanConversionRate * qty);
       totalBeanReward += beanReward;
 
-      // Gift wall
+      // Gift wall + rankings
       await updateGiftWall(recipientId, item.giftId, uid, qty);
+      await updateGiftRankings(recipientId, item.giftId, qty);
     }
 
-    // Credit beans
-    const recipientBeans = userField(recipient, 'shyBeans', 'shy_beans') || 0;
-    await db.doc(`users/${recipientId}`).update({ shyBeans: recipientBeans + totalBeanReward });
+    // Credit beans (atomic)
+    await db.doc(`users/${recipientId}`).update({ shyBeans: FieldValue.increment(totalBeanReward) });
 
     // Clear sender's backpack (except trial items) — chunk into batches of 500
     for (let i = 0; i < sendableItems.length; i += 500) {
@@ -957,7 +974,7 @@ router.post('/economy/backpack-send', async (req, res) => {
 
     res.json({ success: true, totalItemsSent, totalBeanReward });
   } catch (err) {
-    console.error('POST /economy/backpack-send error:', err);
+    log.error('economy', 'POST /economy/backpack-send failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -987,7 +1004,10 @@ router.post('/economy/redeem-beans', async (req, res) => {
     const newBeans = shyBeans - amount;
     const newCoins = shyCoins + coins;
 
-    await db.doc(`users/${uid}`).update({ shyBeans: newBeans, shyCoins: newCoins });
+    await db.doc(`users/${uid}`).update({
+      shyBeans: FieldValue.increment(-amount),
+      shyCoins: FieldValue.increment(coins)
+    });
 
     const bonusPct = Math.round((config.beanRedeemBonusMultiplier - 1) * 100);
     const redeemTxId = generateId();
@@ -999,12 +1019,15 @@ router.post('/economy/redeem-beans', async (req, res) => {
 
     res.json({ coinsReceived: coins, newCoinBalance: newCoins, newBeanBalance: newBeans });
   } catch (err) {
-    console.error('POST /economy/redeem-beans error:', err);
+    log.error('economy', 'POST /economy/redeem-beans failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Validate purchase ──
+// TODO: Add server-side Google Play purchase verification via googleapis.
+// Without it, a crafted request with a fake purchaseToken can credit coins.
+// For now, log all purchase attempts for manual audit.
 router.post('/economy/purchase', async (req, res) => {
   try {
     const uid = req.auth.uid;
@@ -1012,6 +1035,32 @@ router.post('/economy/purchase', async (req, res) => {
     const { productId, purchaseToken, isSubscription } = body || {};
 
     if (!productId || !purchaseToken) return res.status(400).json({ error: 'productId and purchaseToken required' });
+
+    log.warn('economy', 'Purchase validation (unverified — no Google Play receipt check)', {
+      userId: uid, productId, isSubscription: !!isSubscription,
+      tokenPrefix: purchaseToken.substring(0, 16),
+    });
+
+    // Check for duplicate purchase token to prevent replay attacks
+    const existingSnap = await db.collection('purchaseReceipts')
+      .where('purchaseToken', '==', purchaseToken)
+      .limit(1)
+      .get();
+    if (!existingSnap.empty) {
+      log.warn('economy', 'Duplicate purchase token rejected', { userId: uid, productId });
+      return res.status(409).json({ error: 'Purchase already processed' });
+    }
+
+    // Store receipt for audit trail
+    const receiptId = generateId();
+    await db.doc(`purchaseReceipts/${receiptId}`).set({
+      userId: uid,
+      productId,
+      purchaseToken,
+      isSubscription: !!isSubscription,
+      createdAt: now(),
+      verified: false,
+    });
 
     const timestamp = now();
 
@@ -1057,10 +1106,10 @@ router.post('/economy/purchase', async (req, res) => {
     const user = userSnap.data();
 
     const shyCoins = userField(user, 'shyCoins', 'shy_coins') || 0;
+
+    await db.doc(`users/${uid}`).update({ shyCoins: FieldValue.increment(totalCoins) });
+
     const newBalance = shyCoins + totalCoins;
-
-    await db.doc(`users/${uid}`).update({ shyCoins: newBalance });
-
     const purchaseTxId = generateId();
     await writeTransaction(uid, purchaseTxId, {
       type: 'PURCHASE', amount: totalCoins, currency: 'COINS',
@@ -1070,7 +1119,7 @@ router.post('/economy/purchase', async (req, res) => {
 
     res.json({ success: true, coinsAdded: totalCoins, newBalance });
   } catch (err) {
-    console.error('POST /economy/purchase error:', err);
+    log.error('economy', 'POST /economy/purchase failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1106,7 +1155,7 @@ router.post('/economy/trial-claim', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /economy/trial-claim error:', err);
+    log.error('economy', 'POST /economy/trial-claim failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1152,14 +1201,16 @@ router.post('/economy/trial-activate', async (req, res) => {
 
     res.json({ success: true, newTier, newExpiry });
   } catch (err) {
-    console.error('POST /economy/trial-activate error:', err);
+    log.error('economy', 'POST /economy/trial-activate failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Test coins (dev) ──
+// ── Test coins (admin only) ──
 router.post('/economy/test-coins', async (req, res) => {
   try {
+    if (requireAdmin(req, res)) return;
+
     const uid = req.auth.uid;
     const body = req.body;
     const amount = body?.amount;
@@ -1173,10 +1224,10 @@ router.post('/economy/test-coins', async (req, res) => {
     const user = userSnap.data();
 
     const shyCoins = userField(user, 'shyCoins', 'shy_coins') || 0;
+
+    await db.doc(`users/${uid}`).update({ shyCoins: FieldValue.increment(amount) });
+
     const newBalance = shyCoins + amount;
-
-    await db.doc(`users/${uid}`).update({ shyCoins: newBalance });
-
     const testTxId = generateId();
     await writeTransaction(uid, testTxId, {
       type: 'PURCHASE', amount, currency: 'COINS',
@@ -1185,7 +1236,7 @@ router.post('/economy/test-coins', async (req, res) => {
 
     res.json({ success: true, coinsAdded: amount, newBalance });
   } catch (err) {
-    console.error('POST /economy/test-coins error:', err);
+    log.error('economy', 'POST /economy/test-coins failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1202,7 +1253,7 @@ router.get('/economy/balance', async (req, res) => {
       beans: userField(user, 'shyBeans', 'shy_beans') || 0,
     });
   } catch (err) {
-    console.error('GET /economy/balance error:', err);
+    log.error('economy', 'GET /economy/balance failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1211,22 +1262,22 @@ router.get('/economy/balance', async (req, res) => {
 router.get('/economy/transactions', async (req, res) => {
   try {
     const uid = req.auth.uid;
-    const limit = Math.min(parseInt(req.query.limit || '50'), 200);
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const filterType = req.query.type;
 
-    let query = db.collection(`users/${uid}/transactions`)
-      .orderBy('timestamp', 'desc')
-      .limit(limit);
+    let query = db.collection(`users/${uid}/transactions`);
 
     if (filterType) {
       query = query.where('type', '==', filterType);
     }
 
+    query = query.orderBy('timestamp', 'desc').limit(limit);
+
     const snap = await query.get();
     const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     res.json(results);
   } catch (err) {
-    console.error('GET /economy/transactions error:', err);
+    log.error('economy', 'GET /economy/transactions failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1234,11 +1285,14 @@ router.get('/economy/transactions', async (req, res) => {
 // ── Backpack ──
 router.get('/users/:uid/backpack', async (req, res) => {
   try {
+    if (req.auth.uid !== req.params.uid) {
+      return res.status(403).json({ error: 'Cannot access another user\'s backpack' });
+    }
     const snap = await db.collection(`users/${req.params.uid}/backpack`).get();
     const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     res.json(results);
   } catch (err) {
-    console.error('GET /users/:uid/backpack error:', err);
+    log.error('economy', 'GET /users/:uid/backpack failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1250,7 +1304,7 @@ router.get('/users/:uid/gift-wall', async (req, res) => {
     const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     res.json(results);
   } catch (err) {
-    console.error('GET /users/:uid/gift-wall error:', err);
+    log.error('economy', 'GET /users/:uid/gift-wall failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1264,9 +1318,12 @@ router.get('/users/:uid/gift-wall/:giftId/senders', async (req, res) => {
     senders.sort((a, b) => (b.sendCount || 0) - (a.sendCount || 0));
     res.json(senders);
   } catch (err) {
-    console.error('GET /users/:uid/gift-wall/:giftId/senders error:', err);
+    log.error('economy', 'GET /users/:uid/gift-wall/:giftId/senders failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Test helper to reset in-memory config cache
+router._resetConfigCache = () => { cachedEconomyConfig = null; economyConfigCachedAt = 0; };
 
 module.exports = router;

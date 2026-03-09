@@ -123,8 +123,8 @@ fun DailyRewardDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Claimed reward display
-                if (state.reward != null) {
-                    val reward = state.reward!!
+                val reward = state.reward
+                if (reward != null) {
                     if (reward.isGiftReward) {
                         Text(
                             text = "${reward.giftQuantity}x ${reward.giftId}",

@@ -9,7 +9,10 @@ import com.shyden.shytalk.core.model.GachaResult
 import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.model.Transaction
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.core.util.currentTimeMillis
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.EconomyRepository
@@ -28,7 +31,7 @@ data class GachaUiState(
     val coinBalance: Long = 0,
     val pityCounter: Int = 0,
     val isPulling: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val showResults: Boolean = false,
     val currentWin: GachaGift? = null,
     val isMultiSpin: Boolean = false,
@@ -63,7 +66,7 @@ class GachaViewModel(
     private fun observeGiftCatalog() {
         viewModelScope.launch {
             giftRepository.observeAllGifts()
-                .catch { e -> _uiState.update { it.copy(error = e.message) } }
+                .catch { e -> _uiState.update { it.copy(error = e.message?.let { msg -> UiText.plain(msg) }) } }
                 .collect { gifts ->
                     val wheelGifts = gifts.filter { g -> g.showOnWheel && g.coinValue > 0 }
                     _uiState.update {
@@ -158,7 +161,7 @@ class GachaViewModel(
         logI(TAG, "Gacha spin started: count=$count")
         val cost = _uiState.value.pullCosts[count] ?: return
         if (_uiState.value.coinBalance < cost) {
-            _uiState.update { it.copy(error = "Not enough coins") }
+            _uiState.update { it.copy(error = UiText.res(Res.string.error_not_enough_coins)) }
             return
         }
         viewModelScope.launch {
@@ -172,7 +175,7 @@ class GachaViewModel(
                             it.copy(
                                 isPulling = false,
                                 pullCosts = newCosts ?: it.pullCosts,
-                                error = "Prices have changed! Please check the new costs and try again."
+                                error = UiText.res(Res.string.error_prices_changed)
                             )
                         }
                         return@launch
@@ -213,7 +216,7 @@ class GachaViewModel(
                 }
                 is Resource.Error -> {
                     logE(TAG, "Gacha pull failed: ${result.message}")
-                    _uiState.update { it.copy(isPulling = false, error = result.message) }
+                    _uiState.update { it.copy(isPulling = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }

@@ -76,6 +76,11 @@ android {
         compose = true
         buildConfig = true
     }
+    // Workaround: KMP android library plugin doesn't auto-package Compose resources as assets
+    sourceSets.getByName("main").assets.srcDir(
+        File(project(":shared").layout.buildDirectory.get().asFile,
+            "generated/compose/resourceGenerator/androidAssetsForApp")
+    )
     testOptions {
         unitTests.isReturnDefaultValues = true
         managedDevices {
@@ -107,6 +112,22 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+    }
+}
+
+// Workaround: Copy compose resources with the correct package-prefixed path for Android assets
+val copyComposeResources = tasks.register<Copy>("copySharedComposeResourcesToAssets") {
+    val sharedBuildDir = project(":shared").layout.buildDirectory.get().asFile
+    from(File(sharedBuildDir, "generated/compose/resourceGenerator/preparedResources/commonMain/composeResources"))
+    into(File(sharedBuildDir, "generated/compose/resourceGenerator/androidAssetsForApp/composeResources/com.shyden.shytalk.resources"))
+    dependsOn(project(":shared").tasks.named("prepareComposeResourcesTaskForCommonMain"))
+    dependsOn(project(":shared").tasks.named("convertXmlValueResourcesForCommonMain"))
+    dependsOn(project(":shared").tasks.named("copyNonXmlValueResourcesForCommonMain"))
+}
+
+afterEvaluate {
+    tasks.matching { it.name.contains("mergeDebugAssets") || it.name.contains("mergeReleaseAssets") }.configureEach {
+        dependsOn(copyComposeResources)
     }
 }
 

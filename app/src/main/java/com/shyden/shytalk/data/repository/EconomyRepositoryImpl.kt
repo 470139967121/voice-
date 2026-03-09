@@ -56,11 +56,12 @@ class EconomyRepositoryImpl(
         val listener = firestore.document("config/economy")
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
-                if (!snapshot.exists() || snapshot.data == null) {
+                val data = snapshot.data
+                if (!snapshot.exists() || data == null) {
                     trySend(defaultConfig)
                     return@addSnapshotListener
                 }
-                val config = EconomyConfig.fromMap(snapshot.data!!)
+                val config = EconomyConfig.fromMap(data)
                 // Fall back to defaults if pullCosts is empty
                 if (config.pullCosts.isEmpty()) {
                     trySend(defaultConfig)

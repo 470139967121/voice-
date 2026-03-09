@@ -281,8 +281,8 @@ class RoomService : Service() {
                     withTimeout(2000L) {
                         activeRoomManager.leaveRoom()
                     }
-                } catch (_: Exception) {
-                    android.util.Log.w("RoomService", "onTaskRemoved: leaveRoom timed out or failed")
+                } catch (e: Exception) {
+                    android.util.Log.w("RoomService", "onTaskRemoved: leaveRoom timed out or failed", e)
                 }
             }
         }.start()

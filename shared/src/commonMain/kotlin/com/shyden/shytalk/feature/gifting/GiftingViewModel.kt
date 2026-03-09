@@ -6,6 +6,9 @@ import com.shyden.shytalk.core.model.BackpackItem
 import com.shyden.shytalk.core.model.Gift
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -24,9 +27,9 @@ data class GiftingUiState(
     val giftCatalog: List<Gift> = emptyList(),
     val selectedGiftId: String? = null,
     val isSending: Boolean = false,
-    val sentGiftName: String? = null,
+    val sentGiftName: UiText? = null,
     val sentGiftId: String? = null,
-    val error: String? = null,
+    val error: UiText? = null,
     val coinBalance: Long = 0,
     val selectedQuantity: Int = 1,
     val selectedRecipientIds: Set<String> = emptySet(),
@@ -66,7 +69,7 @@ class GiftingViewModel(
             ) { catalog, backpack, balance ->
                 Triple(catalog, backpack, balance)
             }.catch { e ->
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(error = e.message?.let { msg -> UiText.plain(msg) }) }
             }.collect { (catalog, backpack, balance) ->
                 val validBackpack = backpack.filter { !it.isExpired }
                 // Inject trial gift into catalog if user has it in backpack
@@ -166,14 +169,14 @@ class GiftingViewModel(
                             isSending = false,
                             selectedGiftId = null,
                             selectedQuantity = 1,
-                            sentGiftName = giftName,
+                            sentGiftName = UiText.plain(giftName),
                             sentGiftId = giftId
                         )
                     }
                 }
                 is Resource.Error -> {
                     logE(TAG, "Gift send failed: ${result.message}")
-                    _uiState.update { it.copy(isSending = false, error = result.message) }
+                    _uiState.update { it.copy(isSending = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -197,13 +200,13 @@ class GiftingViewModel(
                         it.copy(
                             isSending = false,
                             selectedGiftId = null,
-                            sentGiftName = giftName,
+                            sentGiftName = UiText.plain(giftName),
                             sentGiftId = giftId
                         )
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isSending = false, error = result.message) }
+                    _uiState.update { it.copy(isSending = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -231,12 +234,12 @@ class GiftingViewModel(
                         it.copy(
                             isSending = false,
                             sendAllRecipientId = null,
-                            sentGiftName = "entire backpack ($totalSent items)"
+                            sentGiftName = UiText.res(Res.string.success_sent_backpack, totalSent)
                         )
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isSending = false, error = result.message) }
+                    _uiState.update { it.copy(isSending = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }
@@ -252,12 +255,12 @@ class GiftingViewModel(
                         it.copy(
                             isSending = false,
                             selectedGiftId = null,
-                            sentGiftName = "Super Shy activated! +30 days"
+                            sentGiftName = UiText.res(Res.string.success_super_shy_activated)
                         )
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isSending = false, error = result.message) }
+                    _uiState.update { it.copy(isSending = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
                 }
                 is Resource.Loading -> {}
             }

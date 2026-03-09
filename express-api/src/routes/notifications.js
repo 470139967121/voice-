@@ -8,12 +8,13 @@
 
 const router = require('express').Router();
 const { db, FieldValue } = require('../utils/firebase');
+const log = require('../utils/log');
 
 // -- Save FCM token --
 router.post('/notifications/token', async (req, res) => {
   try {
-    if (!req.body?.token) {
-      return res.status(400).json({ error: 'token required' });
+    if (!req.body?.token || typeof req.body.token !== 'string') {
+      return res.status(400).json({ error: 'token must be a non-empty string' });
     }
 
     const uid = req.auth.uid;
@@ -23,7 +24,7 @@ router.post('/notifications/token', async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    console.error('Error saving FCM token:', err);
+    log.error('notifications', 'Error saving FCM token', { error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -31,8 +32,8 @@ router.post('/notifications/token', async (req, res) => {
 // -- Remove FCM token --
 router.delete('/notifications/token', async (req, res) => {
   try {
-    if (!req.body?.token) {
-      return res.status(400).json({ error: 'token required' });
+    if (!req.body?.token || typeof req.body.token !== 'string') {
+      return res.status(400).json({ error: 'token must be a non-empty string' });
     }
 
     const uid = req.auth.uid;
@@ -42,7 +43,7 @@ router.delete('/notifications/token', async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    console.error('Error removing FCM token:', err);
+    log.error('notifications', 'Error removing FCM token', { error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -72,7 +73,7 @@ router.patch('/notifications/settings', async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    console.error('Error updating notification settings:', err);
+    log.error('notifications', 'Error updating notification settings', { error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

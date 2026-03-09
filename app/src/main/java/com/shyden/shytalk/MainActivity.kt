@@ -1,5 +1,6 @@
 package com.shyden.shytalk
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
@@ -19,17 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.core.room.RoomLifecycleManager
@@ -47,12 +45,21 @@ import com.shyden.shytalk.core.util.DeviceSecurityChecker
 import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.remote.AppConfigService
+import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
+import com.shyden.shytalk.feature.legal.LegalAcceptanceScreen
+import com.shyden.shytalk.feature.legal.CommunityStandardsScreen
+import com.shyden.shytalk.feature.legal.CyberBullyingPolicyScreen
+import com.shyden.shytalk.feature.legal.TermsAndConditionsScreen
+import com.shyden.shytalk.feature.privacy.PrivacyPolicyScreen
 import com.shyden.shytalk.feature.security.UnsafeDeviceScreen
 import com.shyden.shytalk.feature.update.DegradedModeScreen
 import com.shyden.shytalk.feature.update.ForceUpdateScreen
 import com.shyden.shytalk.navigation.NavGraph
 import com.shyden.shytalk.navigation.Screen
 import com.shyden.shytalk.ui.theme.ShyTalkTheme
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
@@ -68,20 +75,19 @@ class MainActivity : ComponentActivity() {
     private val _showLeaveConfirmation = mutableStateOf(false)
     private var lastSeenJob: Job? = null
 
+    override fun attachBaseContext(newBase: Context) {
+        val language = LanguagePreference.get()
+        val locale = java.util.Locale.forLanguageTag(language)
+        java.util.Locale.setDefault(locale)
+        val config = Configuration(newBase.resources.configuration).apply { setLocale(locale) }
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
-            val language = remember { LanguagePreference.get() }
-            val locale = remember(language) { java.util.Locale(language) }
-            val config = Configuration(LocalConfiguration.current).apply { setLocale(locale) }
-            val localizedContext = LocalContext.current.createConfigurationContext(config)
-
-            CompositionLocalProvider(
-                LocalContext provides localizedContext,
-                LocalConfiguration provides config
-            ) {
             ShyTalkTheme(darkTheme = true) {
                 var updateRequired by remember { mutableStateOf(false) }
                 var checkComplete by remember { mutableStateOf(false) }
@@ -89,6 +95,10 @@ class MainActivity : ComponentActivity() {
                 var isUnsafe by remember { mutableStateOf(false) }
                 var backendDegraded by remember { mutableStateOf(false) }
                 var degradedAcknowledged by remember { mutableStateOf(false) }
+                var legalAccepted by remember {
+                    mutableStateOf(LanguagePreference.getAcceptedLegalVersion() >= CURRENT_LEGAL_VERSION)
+                }
+                var viewingLegalDoc by remember { mutableStateOf<String?>(null) }
 
                 LaunchedEffect(Unit) {
                     isUnsafe = DeviceSecurityChecker.isUnsafe()
@@ -149,7 +159,7 @@ class MainActivity : ComponentActivity() {
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "Checking for updates…",
+                                    text = stringResource(Res.string.checking_for_updates),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -160,6 +170,35 @@ class MainActivity : ComponentActivity() {
                     updateRequired -> { ForceUpdateScreen() }
                     backendDegraded && !degradedAcknowledged -> {
                         DegradedModeScreen(onAcknowledge = { degradedAcknowledged = true })
+                    }
+                    !legalAccepted -> {
+                        when (viewingLegalDoc) {
+                            "privacy" -> PrivacyPolicyScreen(
+                                onAccept = {},
+                                onDecline = {},
+                                onNavigateBack = { viewingLegalDoc = null },
+                                showActions = false
+                            )
+                            "community" -> CommunityStandardsScreen(
+                                onNavigateBack = { viewingLegalDoc = null }
+                            )
+                            "terms" -> TermsAndConditionsScreen(
+                                onNavigateBack = { viewingLegalDoc = null }
+                            )
+                            "cyberbullying" -> CyberBullyingPolicyScreen(
+                                onNavigateBack = { viewingLegalDoc = null }
+                            )
+                            else -> LegalAcceptanceScreen(
+                                onAccept = {
+                                    LanguagePreference.setAcceptedLegalVersion(CURRENT_LEGAL_VERSION)
+                                    legalAccepted = true
+                                },
+                                onViewPrivacyPolicy = { viewingLegalDoc = "privacy" },
+                                onViewCommunityStandards = { viewingLegalDoc = "community" },
+                                onViewTerms = { viewingLegalDoc = "terms" },
+                                onViewCyberBullyingPolicy = { viewingLegalDoc = "cyberbullying" }
+                            )
+                        }
                     }
                     else -> {
                             val navController = rememberNavController()
@@ -203,11 +242,11 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
 
-                            if (softUpdateAvailable != null) {
+                            softUpdateAvailable?.let { version ->
                                 AlertDialog(
                                     onDismissRequest = { softUpdateAvailable = null },
-                                    title = { Text("Update Available") },
-                                    text = { Text("A new version ($softUpdateAvailable) of ShyTalk is available.") },
+                                    title = { Text(stringResource(Res.string.update_available)) },
+                                    text = { Text(stringResource(Res.string.update_available_soft, version)) },
                                     confirmButton = {
                                         TextButton(onClick = {
                                             softUpdateAvailable = null
@@ -217,11 +256,11 @@ class MainActivity : ComponentActivity() {
                                                     Uri.parse("https://play.google.com/store/apps/details?id=com.shyden.shytalk")
                                                 )
                                             )
-                                        }) { Text("Update Now") }
+                                        }) { Text(stringResource(Res.string.update_now)) }
                                     },
                                     dismissButton = {
                                         TextButton(onClick = { softUpdateAvailable = null }) {
-                                            Text("Later")
+                                            Text(stringResource(Res.string.later))
                                         }
                                     }
                                 )
@@ -235,10 +274,10 @@ class MainActivity : ComponentActivity() {
                     val isOwner = activeRoomManager.activeRoom.value?.ownerId == activeRoomManager.currentUserId
                     AlertDialog(
                         onDismissRequest = { _showLeaveConfirmation.value = false },
-                        title = { Text(if (isOwner) "Close Room?" else "Leave Room?") },
+                        title = { Text(if (isOwner) stringResource(Res.string.close_room_question) else stringResource(Res.string.leave_room_question)) },
                         text = { Text(
-                            if (isOwner) "This will close the room for everyone."
-                            else "You will leave the voice room."
+                            if (isOwner) stringResource(Res.string.close_room_description)
+                            else stringResource(Res.string.leave_room_description)
                         ) },
                         confirmButton = {
                             TextButton(onClick = {
@@ -247,16 +286,15 @@ class MainActivity : ComponentActivity() {
                                     action = "CONFIRM_DISMISS"
                                 }
                                 startService(intent)
-                            }) { Text("Leave") }
+                            }) { Text(stringResource(Res.string.leave)) }
                         },
                         dismissButton = {
                             TextButton(onClick = { _showLeaveConfirmation.value = false }) {
-                                Text("Cancel")
+                                Text(stringResource(Res.string.cancel))
                             }
                         }
                     )
                 }
-            }
             }
         }
 

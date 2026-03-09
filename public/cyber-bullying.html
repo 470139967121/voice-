@@ -146,6 +146,7 @@
       <h1 data-i18n="title">Our Stance on Cyber Bullying</h1>
     </header>
 
+    <main>
     <h2 data-i18n="what_h">What is Cyber Bullying?</h2>
     <p data-i18n="what_p">Cyber bullying is repeated harassment, threats, intimidation, humiliation, or deliberate exclusion carried out through digital platforms. It can take many forms — hurtful messages, spreading rumours, sharing private information, impersonation, or sustained hostility intended to cause distress.</p>
 
@@ -183,8 +184,13 @@
     <h2 data-i18n="appeals_h">Appeals</h2>
     <p data-i18n="appeals_p">If you believe your ban was issued in error, you may submit an appeal through our designated process. Every legitimate appeal is reviewed fairly and thoroughly. However, bans for clear and serious violations of our policy will be upheld.</p>
 
+    </main>
+
     <footer>
-      <p class="copyright">&copy; 2025 ShyTalk. All rights reserved.</p>
+      <a href="/privacy.html">Privacy Policy</a> &nbsp;&middot;&nbsp;
+      <a href="/terms.html">Terms of Service</a> &nbsp;&middot;&nbsp;
+      <a href="/community-guidelines.html">Community Guidelines</a>
+      <p class="copyright">&copy; 2026 ShyTalk. All rights reserved.</p>
     </footer>
   </div>
 <script>
@@ -266,6 +272,13 @@
     });
   }
 })();
+</script>
+<script src="/js/logger.js"></script>
+<script>
+  ShyTalkLogger.init({
+    source: 'cyber-bullying-page',
+    endpoint: 'https://api.shytalk.shyden.co.uk/api/logs'
+  });
 </script>
 </body>
 </html>

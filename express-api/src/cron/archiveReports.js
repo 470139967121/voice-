@@ -6,6 +6,7 @@
  */
 
 const { db } = require('../utils/firebase');
+const log = require('../utils/log');
 
 async function archiveReports() {
   const sixMonthsAgo = Date.now() - (6 * 30 * 24 * 60 * 60 * 1000);
@@ -35,7 +36,7 @@ async function archiveReports() {
     await batch.commit();
   }
 
-  console.log(`Archived ${docs.length} old reports`);
+  log.info('cron', 'archiveReports: archived old reports', { count: docs.length });
 }
 
 module.exports = archiveReports;

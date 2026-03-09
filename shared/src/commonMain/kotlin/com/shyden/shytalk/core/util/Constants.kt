@@ -63,10 +63,10 @@ object Constants {
     // System user
     const val SYSTEM_USER_ID = "SHYTALK_SYSTEM"
 
-    // Legal pages (GitHub Pages)
-    const val LEGAL_BASE_URL = "https://shydenmcm.github.io/ShyTalk"
-    const val PRIVACY_POLICY_URL = "$LEGAL_BASE_URL/privacy-policy.html"
-    const val TERMS_URL = "$LEGAL_BASE_URL/terms-and-conditions.html"
+    // Legal pages (Cloudflare Pages)
+    const val LEGAL_BASE_URL = "https://shytalk.shyden.co.uk"
+    const val PRIVACY_POLICY_URL = "$LEGAL_BASE_URL/privacy.html"
+    const val TERMS_URL = "$LEGAL_BASE_URL/terms.html"
     const val COMMUNITY_GUIDELINES_URL = "$LEGAL_BASE_URL/community-guidelines.html"
-    const val CYBER_BULLYING_URL = "https://shytalk.shyden.co.uk/cyber-bullying"
+    const val CYBER_BULLYING_URL = "$LEGAL_BASE_URL/cyber-bullying.html"
 }

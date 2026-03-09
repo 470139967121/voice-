@@ -1,11 +1,12 @@
 /**
  * Cron: Delete closed rooms older than 7 days.
  *
- * Queries rooms with state=='CLOSED', filters by closedAt < 7 days ago (cap 20),
- * deletes room doc + subcollections (messages, seatRequests).
+ * Queries up to 200 rooms with state=='CLOSED', filters by closedAt > 7 days ago,
+ * then deletes up to 20 per run (room doc + subcollections: messages, seatRequests).
  */
 
 const { db } = require('../utils/firebase');
+const log = require('../utils/log');
 
 async function closedRooms() {
   const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
@@ -26,31 +27,33 @@ async function closedRooms() {
   if (old.length === 0) return;
 
   for (const room of old) {
-    // Fetch subcollections
-    const [messagesSnap, seatRequestsSnap] = await Promise.all([
-      db.collection(`rooms/${room.id}/messages`).limit(500).get(),
-      db.collection(`rooms/${room.id}/seatRequests`).limit(100).get(),
-    ]);
-
-    // Collect all refs to delete
-    const refs = [
-      ...messagesSnap.docs.map(d => db.doc(`rooms/${room.id}/messages/${d.id}`)),
-      ...seatRequestsSnap.docs.map(d => db.doc(`rooms/${room.id}/seatRequests/${d.id}`)),
-      db.doc(`rooms/${room.id}`),
-    ];
-
-    // Batch delete in chunks of 500
-    for (let i = 0; i < refs.length; i += 500) {
+    // Delete all messages (paginated to handle rooms with 500+ messages)
+    const messagesRef = db.collection(`rooms/${room.id}/messages`);
+    let msgSnap;
+    do {
+      msgSnap = await messagesRef.limit(500).get();
+      if (msgSnap.empty) break;
       const batch = db.batch();
-      const chunk = refs.slice(i, i + 500);
-      for (const ref of chunk) {
-        batch.delete(ref);
-      }
+      msgSnap.docs.forEach(d => batch.delete(d.ref));
       await batch.commit();
-    }
+    } while (msgSnap.size === 500);
+
+    // Delete all seat requests (paginated)
+    const seatsRef = db.collection(`rooms/${room.id}/seatRequests`);
+    let seatSnap;
+    do {
+      seatSnap = await seatsRef.limit(500).get();
+      if (seatSnap.empty) break;
+      const batch = db.batch();
+      seatSnap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    } while (seatSnap.size === 500);
+
+    // Delete the room doc itself
+    await db.doc(`rooms/${room.id}`).delete();
   }
 
-  console.log(`Cleaned up ${old.length} closed rooms (older than 7 days)`);
+  log.info('cron', 'closedRooms: cleaned up old closed rooms', { count: old.length });
 }
 
 module.exports = closedRooms;

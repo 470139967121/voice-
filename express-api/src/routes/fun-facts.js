@@ -12,11 +12,8 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
 const { requireAdmin } = require('../middleware/auth');
-
-async function queryDocs(ref) {
-  const snap = await ref.get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
+const { queryDocs } = require('../utils/firestore-helpers');
+const log = require('../utils/log');
 
 // -- All active facts (any authenticated user) --
 router.get('/fun-facts', async (req, res) => {
@@ -33,7 +30,7 @@ router.get('/fun-facts', async (req, res) => {
 
     return res.json(results);
   } catch (err) {
-    console.error('Error fetching fun facts:', err);
+    log.error('fun-facts', 'Failed to fetch active fun facts', { error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -49,7 +46,7 @@ router.get('/admin/fun-facts', async (req, res) => {
 
     return res.json(results);
   } catch (err) {
-    console.error('Error fetching admin fun facts:', err);
+    log.error('fun-facts', 'Failed to fetch all fun facts', { error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -79,7 +76,7 @@ router.post('/admin/fun-facts', async (req, res) => {
 
     return res.json({ success: true, id });
   } catch (err) {
-    console.error('Error creating fun fact:', err);
+    log.error('fun-facts', 'Failed to create fun fact', { error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -116,7 +113,7 @@ router.put('/admin/fun-facts/:id', async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    console.error('Error updating fun fact:', err);
+    log.error('fun-facts', 'Failed to update fun fact', { factId: req.params.id, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -134,7 +131,7 @@ router.delete('/admin/fun-facts/:id', async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    console.error('Error deleting fun fact:', err);
+    log.error('fun-facts', 'Failed to delete fun fact', { factId: req.params.id, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

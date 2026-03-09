@@ -7,6 +7,8 @@ import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.RoomRepository
@@ -45,9 +47,9 @@ class HomeViewModel(
 
     private fun cacheUser(key: String, user: User) {
         userCache[key] = user
-        if (userCache.size > 500) {
+        while (userCache.size > 500) {
             val it = userCache.keys.iterator()
-            if (it.hasNext()) { it.next(); it.remove() }
+            if (it.hasNext()) { it.next(); it.remove() } else break
         }
     }
     private var myBlockedUserIds: Set<String> = emptySet()
@@ -58,6 +60,7 @@ class HomeViewModel(
         get() = authRepository.currentUserId
 
     init {
+        logI(TAG, "Initializing HomeViewModel")
         loadBlockedUsersAndFilter()
         loadLastRoomName()
         observeRooms()
@@ -69,8 +72,11 @@ class HomeViewModel(
         viewModelScope.launch {
             try {
                 val banners = bannerRepository.getActiveBanners()
+                logI(TAG, "Loaded ${banners.size} active banners")
                 _uiState.update { it.copy(banners = banners) }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                logE(TAG, "Failed to load banners: ${e.message}")
+            }
         }
     }
 
@@ -106,9 +112,11 @@ class HomeViewModel(
         viewModelScope.launch {
             roomRepository.getActiveRooms()
                 .catch { e ->
+                    logE(TAG, "Room observation failed: ${e.message}")
                     _uiState.update { it.copy(isLoading = false, error = e.message) }
                 }
                 .collect { rooms ->
+                    logI(TAG, "Received ${rooms.size} active rooms")
                     allRooms = rooms
                     filterAndEmitRooms()
                 }
@@ -231,11 +239,13 @@ class HomeViewModel(
     }
 
     companion object {
+        private const val TAG = "HomeViewModel"
         const val REFRESH_INTERVAL_MS = 120_000L
     }
 
     fun createRoom(name: String) {
         val userId = authRepository.currentUserId ?: return
+        logI(TAG, "Creating room: name=$name")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, lastRoomName = name) }
             launch { userRepository.updateProfile(userId, mapOf("lastRoomName" to name)) }
@@ -244,9 +254,11 @@ class HomeViewModel(
             roomRepository.closeAllRoomsByOwner(userId)
             when (val result = roomRepository.createRoom(name, userId)) {
                 is Resource.Success -> {
+                    logI(TAG, "Room created: id=${result.data}")
                     _uiState.update { it.copy(isLoading = false, createdRoomId = result.data) }
                 }
                 is Resource.Error -> {
+                    logE(TAG, "Room creation failed: ${result.message}")
                     _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
                 is Resource.Loading -> {}
@@ -263,6 +275,7 @@ class HomeViewModel(
     }
 
     fun signOut() {
+        logI(TAG, "User signing out")
         authRepository.signOut()
     }
 }

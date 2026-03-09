@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const log = require('../utils/log');
 
 const archiveReports = require('./archiveReports');
 const subscriptions = require('./subscriptions');
@@ -15,53 +16,53 @@ const alertManager = require('../utils/alertManagerInstance');
 function startCronJobs() {
   // Archive old reports — Sunday 03:00 UTC
   cron.schedule('0 3 * * 0', () => {
-    console.log('[CRON] archiveReports');
-    archiveReports().catch(err => console.error('[CRON] archiveReports error:', err));
+    log.info('cron', 'Running archiveReports');
+    archiveReports().catch(err => log.error('cron', 'archiveReports failed', { error: err.message }));
   });
 
   // Check expired subscriptions + clean expired backpack items — daily midnight UTC
   cron.schedule('0 0 * * *', () => {
-    console.log('[CRON] subscriptions + backpackCleanup');
-    subscriptions().catch(err => console.error('[CRON] subscriptions error:', err));
-    backpackCleanup().catch(err => console.error('[CRON] backpackCleanup error:', err));
+    log.info('cron', 'Running subscriptions + backpackCleanup');
+    subscriptions().catch(err => log.error('cron', 'subscriptions failed', { error: err.message }));
+    backpackCleanup().catch(err => log.error('cron', 'backpackCleanup failed', { error: err.message }));
   });
 
   // Close stale OWNER_AWAY rooms — every 5 minutes
   cron.schedule('*/5 * * * *', () => {
-    staleRooms().catch(err => console.error('[CRON] staleRooms error:', err));
+    staleRooms().catch(err => log.error('cron', 'staleRooms failed', { error: err.message }));
   });
 
   // Backup user profiles + cleanup old closed rooms — daily 02:00 UTC
   cron.schedule('0 2 * * *', () => {
-    console.log('[CRON] backups + closedRooms');
-    backups().catch(err => console.error('[CRON] backups error:', err));
-    closedRooms().catch(err => console.error('[CRON] closedRooms error:', err));
+    log.info('cron', 'Running backups + closedRooms');
+    backups().catch(err => log.error('cron', 'backups failed', { error: err.message }));
+    closedRooms().catch(err => log.error('cron', 'closedRooms failed', { error: err.message }));
   });
 
   // Cleanup orphaned storage — daily 04:00 UTC
   cron.schedule('0 4 * * *', () => {
-    console.log('[CRON] orphanedStorage');
-    orphanedStorage().catch(err => console.error('[CRON] orphanedStorage error:', err));
+    log.info('cron', 'Running orphanedStorage');
+    orphanedStorage().catch(err => log.error('cron', 'orphanedStorage failed', { error: err.message }));
   });
 
   // Rotate logs from Firestore to R2 — every hour
   cron.schedule('0 * * * *', () => {
-    console.log('[CRON] rotateLogs');
-    rotateLogs().catch(err => console.error('[CRON] rotateLogs error:', err));
+    log.info('cron', 'Running rotateLogs');
+    rotateLogs().catch(err => log.error('cron', 'rotateLogs failed', { error: err.message }));
   });
 
   // Expire bans — every 15 minutes
   cron.schedule('*/15 * * * *', () => {
-    console.log('[CRON] expireBans');
-    expireBans().catch(err => console.error('[CRON] expireBans error:', err));
+    log.info('cron', 'Running expireBans');
+    expireBans().catch(err => log.error('cron', 'expireBans failed', { error: err.message }));
   });
 
   // Server health check — every 5 minutes
   cron.schedule('*/5 * * * *', () => {
-    serverHealth(alertManager).catch(err => console.error('[CRON] serverHealth error:', err));
+    serverHealth(alertManager).catch(err => log.error('cron', 'serverHealth failed', { error: err.message }));
   });
 
-  console.log('Cron jobs scheduled');
+  log.info('cron', 'Cron jobs scheduled');
 }
 
 module.exports = { startCronJobs };

@@ -59,6 +59,9 @@ import com.shyden.shytalk.core.util.formatSuspensionEndDateTime
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 
 @Composable
 fun SuspensionScreen(
@@ -112,7 +115,7 @@ fun SuspensionScreen(
 
         if (shouldShowReason(countdownExpired, reason)) {
             Text(
-                text = "Reason: $reason",
+                text = stringResource(Res.string.suspension_reason, reason ?: ""),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -142,7 +145,7 @@ fun SuspensionScreen(
                 val millis = (remainingMs % 1_000).toInt()
 
                 Text(
-                    text = "Your suspension will end in:",
+                    text = stringResource(Res.string.suspension_ends_in),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -152,7 +155,7 @@ fun SuspensionScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Ends: ${formatSuspensionEndDateTime(endDate)}",
+                    text = stringResource(Res.string.suspension_ends_at, formatSuspensionEndDateTime(endDate)),
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -163,7 +166,7 @@ fun SuspensionScreen(
                     enter = fadeIn() + scaleIn(initialScale = 0.5f)
                 ) {
                     Text(
-                        text = "You can log in again now.\nBe good this time!",
+                        text = stringResource(Res.string.suspension_login_again),
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.primary
@@ -172,7 +175,7 @@ fun SuspensionScreen(
             }
         } else {
             Text(
-                text = "This suspension is permanent.",
+                text = stringResource(Res.string.suspension_permanent),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.error
@@ -187,8 +190,8 @@ fun SuspensionScreen(
                 OutlinedTextField(
                     value = appealText,
                     onValueChange = { if (it.length <= 500) appealText = it },
-                    label = { Text("Appeal") },
-                    placeholder = { Text("Explain why your suspension should be lifted...") },
+                    label = { Text(stringResource(Res.string.appeal)) },
+                    placeholder = { Text(stringResource(Res.string.appeal_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 6,
@@ -213,17 +216,14 @@ fun SuspensionScreen(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
-                        Text("Submit Appeal")
+                        Text(stringResource(Res.string.submit_appeal))
                     }
                 }
             }
             // Just submitted or pending review
             appealSubmitted || appealStatus == "pending" -> {
                 Text(
-                    text = "Your appeal has been submitted and will be reviewed. " +
-                        "If successful, your suspension will be lifted. " +
-                        "You will not receive any further feedback on your appeal " +
-                        "and you cannot submit another appeal.",
+                    text = stringResource(Res.string.appeal_submitted),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.primary
@@ -232,8 +232,7 @@ fun SuspensionScreen(
             // Rejected
             appealStatus == "rejected" -> {
                 Text(
-                    text = "Your appeal has been reviewed and was not successful. " +
-                        "You cannot submit another appeal.",
+                    text = stringResource(Res.string.appeal_unsuccessful),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.error
@@ -242,7 +241,7 @@ fun SuspensionScreen(
             // Not eligible (no canAppeal, no appeal status) — hide after countdown expires
             !countdownExpired -> {
                 Text(
-                    text = "You are not eligible to appeal this suspension.",
+                    text = stringResource(Res.string.appeal_not_eligible),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -265,7 +264,7 @@ fun SuspensionScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "For support, contact shytalk.help@gmail.com",
+            text = stringResource(Res.string.support_contact),
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant

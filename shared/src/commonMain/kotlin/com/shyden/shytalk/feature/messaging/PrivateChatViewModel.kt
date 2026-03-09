@@ -21,6 +21,7 @@ import com.shyden.shytalk.core.util.ModerationFilter
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.data.local.StickerStorage
@@ -92,7 +93,8 @@ data class PrivateChatUiState(
     val aliases: Map<String, String> = emptyMap(),
     // Room invite preview data: roomId → (room, seatUsers)
     val roomInvites: Map<String, RoomInvitePreview> = emptyMap(),
-    val translations: Map<String, String> = emptyMap()
+    val translations: Map<String, String> = emptyMap(),
+    val successMessage: String? = null
 )
 
 class PrivateChatViewModel(
@@ -128,6 +130,7 @@ class PrivateChatViewModel(
     private var wsEventsJob: Job? = null
     private val olderMessages = mutableListOf<PrivateMessage>()
     private val pendingMessages = mutableMapOf<String, PrivateMessage>()
+    private val httpClient by lazy { HttpClient() }
 
     init {
         if (currentUserId.isNotEmpty()) {
@@ -608,21 +611,27 @@ class PrivateChatViewModel(
         super.onCleared()
         clearTyping()
         conversationWs?.disconnect()
+        httpClient.close()
     }
 
     fun reportMessage(message: PrivateMessage, reason: String, description: String) {
         val conversationId = _uiState.value.conversationId
         if (conversationId.isEmpty()) return
         val currentUser = _uiState.value.currentUser
-        val otherUser = _uiState.value.otherUser
+        val state = _uiState.value
+        val reportedUser = if (state.isGroup) {
+            state.groupParticipants.find { it.uid == message.senderId }
+        } else {
+            state.otherUser
+        }
         viewModelScope.launch {
             when (reportRepository.reportMessage(
                 reporterId = currentUserId,
                 reporterName = currentUser?.displayName ?: "",
                 reporterUniqueId = currentUser?.uniqueId ?: 0L,
                 reportedUserId = message.senderId,
-                reportedUserName = otherUser?.displayName ?: message.senderName,
-                reportedUserUniqueId = otherUser?.uniqueId ?: 0L,
+                reportedUserName = reportedUser?.displayName ?: message.senderName,
+                reportedUserUniqueId = reportedUser?.uniqueId ?: 0L,
                 conversationId = conversationId,
                 messageId = message.messageId,
                 messageText = message.text,
@@ -630,7 +639,7 @@ class PrivateChatViewModel(
                 description = description
             )) {
                 is Resource.Success -> {
-                    _uiState.update { it.copy(error = "Report submitted") }
+                    _uiState.update { it.copy(successMessage = "Report submitted") }
                 }
                 is Resource.Error -> {
                     _uiState.update { it.copy(error = "Failed to submit report") }
@@ -926,7 +935,9 @@ class PrivateChatViewModel(
                     }
                     else -> { /* Silently ignore — first send will upload as fallback */ }
                 }
-            } catch (_: Exception) { /* Pre-upload is best-effort */ }
+            } catch (e: Exception) {
+                logW(TAG, "Sticker pre-upload failed (best-effort)", e)
+            }
         }
     }
 
@@ -934,12 +945,7 @@ class PrivateChatViewModel(
         if (stickerStorage == null || url.isBlank()) return
         viewModelScope.launch {
             try {
-                val client = HttpClient()
-                val bytes = try {
-                    client.get(url).bodyAsBytes()
-                } finally {
-                    client.close()
-                }
+                val bytes = httpClient.get(url).bodyAsBytes()
                 // Check for duplicates by comparing file content
                 val existing = stickerStorage.getStickers()
                 val isDuplicate = existing.any { sticker ->
@@ -958,7 +964,8 @@ class PrivateChatViewModel(
                         error = "Sticker saved!"
                     )
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                logW(TAG, "Failed to save sticker from URL", e)
                 _uiState.update { it.copy(error = "Failed to save sticker") }
             }
         }

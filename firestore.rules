@@ -10,7 +10,7 @@ service cloud.firestore {
       allow update: if request.auth != null && request.auth.uid == uid
         && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(['shyCoins', 'shyBeans', 'isSuperShy', 'superShyExpiry', 'superShyTier',
-                     'gcsLastDeductionAt', 'isSuspended', 'suspensionReason', 'suspensionExpiry',
+                     'gcsLastDeductionAt', 'isSuspended', 'suspensionReason',
                      'suspensionEndDate', 'userType']);
 
       // Backpack — read own, write only via Worker API (economy safety)
@@ -32,10 +32,11 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Stalkers (profile visitors) — auth read own, any auth user can write visitor entry
+      // Stalkers (profile visitors) — owner reads, visitors can only create their own entry
       match /stalkers/{visitorId} {
         allow read: if request.auth != null && request.auth.uid == uid;
-        allow write: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == visitorId;
+        allow update, delete: if false;
       }
     }
 
@@ -61,11 +62,12 @@ service cloud.firestore {
           && request.auth.uid == resource.data.senderId;
       }
 
-      // Seat requests within a room
+      // Seat requests within a room — any auth can read/create, only owner can approve/reject
       match /seatRequests/{requestId} {
         allow read: if request.auth != null;
         allow create: if request.auth != null;
-        allow update: if request.auth != null;
+        allow update: if request.auth != null
+          && request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.ownerId;
       }
     }
 
@@ -81,43 +83,53 @@ service cloud.firestore {
                     && request.auth.uid in resource.data.participantIds;
 
       match /messages/{messageId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
-        // Edit/recall own messages
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow create: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        // Edit/recall own messages, or conversation admin/mod
         allow update, delete: if request.auth != null
           && (request.auth.uid == resource.data.senderId
               || request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.adminIds
               || request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.modIds);
 
-        // Message edit history
+        // Message edit history — participants only
         match /edits/{editId} {
-          allow read: if request.auth != null;
-          allow create: if request.auth != null;
+          allow read: if request.auth != null
+            && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+          allow create: if request.auth != null
+            && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         }
       }
 
-      // User-specific conversation settings (renamed from settings to userSettings)
+      // User-specific conversation settings — own settings only
       match /userSettings/{userId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == userId;
         allow update: if request.auth != null && request.auth.uid == userId;
       }
 
       // Legacy settings path — keep for backwards compat during migration
       match /settings/{userId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == userId;
         allow update: if request.auth != null && request.auth.uid == userId;
       }
 
+      // Mutes — participants can read, only own mute entry writable
       match /mutes/{userId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null;
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow write: if request.auth != null && request.auth.uid == userId;
       }
 
+      // Mod log — participants can read, admins/mods can create
       match /mod_log/{logId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow create: if request.auth != null
+          && (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.adminIds
+              || request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.modIds);
       }
     }
 
@@ -127,10 +139,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── Device bindings — auth read/write ──────────────────────────
+    // ── Device bindings — own read, create own, no hijacking others ─
     match /deviceBindings/{deviceId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if false;
     }
 
     // ── Counters (unique ID generation) — server only ──────────────
@@ -163,10 +181,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── Reports — auth create, server manage ───────────────────────
+    // ── Reports — server manages all access (Admin SDK bypasses rules)
     match /reports/{reportId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow read: if false;
+      allow create: if false;
       allow update: if false;
     }
 

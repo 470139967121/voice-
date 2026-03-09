@@ -25,6 +25,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shyden.shytalk.R
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 
 @Composable
 fun BanScreen(
@@ -70,7 +73,7 @@ fun BanScreen(
             if (!reason.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Reason: $reason",
+                    text = stringResource(Res.string.ban_reason, reason),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -80,7 +83,7 @@ fun BanScreen(
             if (!expiresAt.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Expires: $expiresAt",
+                    text = stringResource(Res.string.ban_expires, expiresAt),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -88,7 +91,7 @@ fun BanScreen(
             } else {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "This ban is permanent.",
+                    text = stringResource(Res.string.ban_permanent),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.error
@@ -104,13 +107,13 @@ fun BanScreen(
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
-                Text("Sign Out")
+                Text(stringResource(Res.string.sign_out))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "For support, contact shytalk.help@gmail.com",
+                text = stringResource(Res.string.support_contact),
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

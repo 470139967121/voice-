@@ -33,7 +33,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -129,7 +129,8 @@ fun BackpackSheet(
                     (gift?.coinValue?.toLong() ?: 0L) * bp.quantity
                 }
             }
-            TabRow(
+            @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+            PrimaryTabRow(
                 selectedTabIndex = state.activeTab,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1042,5 +1043,11 @@ private fun formatLargeNumber(value: Long): String {
     }
 }
 
-/** Neutral accent color for all gifts (rarity tiers removed). */
-private fun giftAccentColor(@Suppress("UNUSED_PARAMETER") gift: Gift): Color = Color(0xFF9E9E9E)
+/** Accent color based on gift coin value (rarity tier). */
+private fun giftAccentColor(gift: Gift): Color = when {
+    gift.coinValue >= 5000 -> Color(0xFFFF9800) // Legendary — orange
+    gift.coinValue >= 2000 -> Color(0xFF9C27B0) // Epic — purple
+    gift.coinValue >= 500  -> Color(0xFF2196F3) // Rare — blue
+    gift.coinValue >= 100  -> Color(0xFF4CAF50) // Uncommon — green
+    else                   -> Color(0xFF9E9E9E) // Common — grey
+}

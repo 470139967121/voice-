@@ -235,9 +235,10 @@ private fun GeneralTab(
                     Text(stringResource(Res.string.save_description))
                 }
             }
-        } else if (!conversation?.groupDescription.isNullOrBlank()) {
-            Text(
-                text = conversation?.groupDescription ?: "",
+        } else {
+            val desc = conversation?.groupDescription
+            if (!desc.isNullOrBlank()) Text(
+                text = desc,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -18,54 +18,14 @@
  */
 
 const router = require('express').Router();
-const { db, rtdb, messaging, FieldValue } = require('../utils/firebase');
+const { db, rtdb, FieldValue } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
-const { requireAdmin } = require('../middleware/auth');
+const { requireAdmin, clearSuspensionCache } = require('../middleware/auth');
 const { sendSystemPm } = require('../utils/system-pm');
 const { computeDisplayScore } = require('../utils/gcs');
-
-// ─── Helpers ─────────────────────────────────────────────────────
-
-async function getDoc(path) {
-  const snap = await db.doc(path).get();
-  return snap.exists ? { id: snap.id, ...snap.data() } : null;
-}
-
-async function queryDocs(ref) {
-  const snap = await ref.get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
-
-/**
- * Send FCM data messages to an array of tokens.
- * Returns an array of invalid tokens that should be cleaned up.
- */
-async function sendToTokens(tokens, data) {
-  if (!tokens || tokens.length === 0) return [];
-  const stringData = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]));
-  const invalidTokens = [];
-  await Promise.allSettled(tokens.map(async (token) => {
-    try {
-      await messaging.send({ token, data: stringData });
-    } catch (err) {
-      if (err.code === 'messaging/registration-token-not-registered' ||
-          err.code === 'messaging/invalid-registration-token') {
-        invalidTokens.push(token);
-      }
-    }
-  }));
-  return invalidTokens;
-}
-
-/**
- * Remove invalid FCM tokens from a user doc.
- */
-async function cleanInvalidTokens(userId, invalidTokens) {
-  if (invalidTokens.length === 0) return;
-  await db.doc(`users/${userId}`).update({
-    fcmTokens: FieldValue.arrayRemove(...invalidTokens),
-  });
-}
+const { getDoc, queryDocs } = require('../utils/firestore-helpers');
+const { sendFcmToTokens } = require('../utils/fcm');
+const log = require('../utils/log');
 
 /**
  * Remove invalid FCM tokens from admin user docs in Firestore.
@@ -155,17 +115,17 @@ router.post('/reports', async (req, res) => {
             reason,
             reportedUserName: reportedUserName || 'Unknown',
           };
-          const invalid = await sendToTokens(tokens, data);
+          const invalid = await sendFcmToTokens(tokens, data);
           await cleanupInvalidAdminTokens(invalid, adminUsers);
         }
       } catch (err) {
-        console.error('Failed to send report notification:', err);
+        log.error('reports', 'Failed to send report notification', { error: err.message });
       }
-    })().catch(console.error);
+    })().catch(err => log.error('reports', 'Report notification fire-and-forget failed', { error: err.message }));
 
     res.json({ success: true, reportId });
   } catch (err) {
-    console.error('POST /api/reports error:', err);
+    log.error('reports', 'POST /api/reports failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -274,7 +234,7 @@ router.get('/reports', async (req, res) => {
 
     res.json({ users: enriched });
   } catch (err) {
-    console.error('GET /api/reports error:', err);
+    log.error('reports', 'GET /api/reports failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -335,7 +295,7 @@ router.post('/reports/:id/resolve', async (req, res) => {
         // Send warning PM (fire-and-forget)
         sendSystemPm(report.reportedUserId,
           `\u26a0\ufe0f You have received a warning.\n\nReason: ${warningReason}\n\nYour Good Character Score has been reduced by ${deduction} points (now ${newGcs}/100).`
-        ).catch(err => console.error('Failed to send warning PM:', err));
+        ).catch(err => log.error('reports', 'Failed to send warning PM', { userId: report.reportedUserId, error: err.message }));
       }
     }
 
@@ -348,7 +308,7 @@ router.post('/reports/:id/resolve', async (req, res) => {
         : 'reviewed';
       sendSystemPm(report.reporterId,
         `Your report has been ${actionText}. Thank you for helping keep ShyTalk safe.`
-      ).catch(err => console.error('Failed to send reporter PM:', err));
+      ).catch(err => log.error('reports', 'Failed to send reporter PM', { reporterId: report.reporterId, error: err.message }));
     }
 
     // Release lock and write audit log in parallel
@@ -359,7 +319,7 @@ router.post('/reports/:id/resolve', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/reports/:id/resolve error:', err);
+    log.error('reports', 'POST /api/reports/:id/resolve failed', { reportId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -423,7 +383,7 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
         // Send warning PM (fire-and-forget)
         sendSystemPm(req.params.userId,
           `\u26a0\ufe0f You have received a warning based on multiple reports.\n\nReason: ${warningReason}\n\nYour Good Character Score has been reduced by ${deduction} points (now ${newGcs}/100).`
-        ).catch(err => console.error('Failed to send warning PM:', err));
+        ).catch(err => log.error('reports', 'Failed to send warning PM', { userId: req.params.userId, error: err.message }));
       }
     }
 
@@ -460,7 +420,7 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
 
     res.json({ success: true, resolved: reports.length });
   } catch (err) {
-    console.error('POST /api/reports/resolve-all/:userId error:', err);
+    log.error('reports', 'POST /api/reports/resolve-all/:userId failed', { userId: req.params.userId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -527,7 +487,7 @@ router.get('/reports/stats', async (req, res) => {
       activeReviewers,
     });
   } catch (err) {
-    console.error('GET /api/reports/stats error:', err);
+    log.error('reports', 'GET /api/reports/stats failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -582,7 +542,7 @@ router.get('/reports/export', async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(csvRows.join('\n'));
   } catch (err) {
-    console.error('GET /api/reports/export error:', err);
+    log.error('reports', 'GET /api/reports/export failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -604,7 +564,7 @@ router.post('/reports/:id/lock', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/reports/:id/lock error:', err);
+    log.error('reports', 'POST /api/reports/:id/lock failed', { reportId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -618,7 +578,7 @@ router.delete('/reports/:id/lock', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('DELETE /api/reports/:id/lock error:', err);
+    log.error('reports', 'DELETE /api/reports/:id/lock failed', { reportId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -654,7 +614,7 @@ router.post('/admin/users/:uid/suspend', async (req, res) => {
         isSuspended:                  true,
         suspensionReason:             body.reason.trim(),
         suspensionStartDate:          timestamp,
-        suspensionExpiry:             endTimestamp,
+        suspensionEndDate:             endTimestamp,
         suspensionCanAppeal:          body.canAppeal,
         suspendedBy:                  req.auth.uid,
         preSuspensionDisplayName:     user.displayName     ?? user.display_name     ?? null,
@@ -664,7 +624,7 @@ router.post('/admin/users/:uid/suspend', async (req, res) => {
         profilePhotoUrl:              null,
         coverPhotoUrl:                null,
         avatarUrl:                    null,
-        bio:                          null,
+        description:                  null,
         currentRoomId:                null,
       }),
       db.doc(`adminAuditLog/${generateId()}`).set({
@@ -678,11 +638,11 @@ router.post('/admin/users/:uid/suspend', async (req, res) => {
 
     // Evict from rooms (fire-and-forget)
     evictSuspendedUser(req.params.uid)
-      .catch(err => console.error('Failed to evict suspended user:', err));
+      .catch(err => log.error('reports', 'Failed to evict suspended user', { userId: req.params.uid, error: err.message }));
 
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/admin/users/:uid/suspend error:', err);
+    log.error('reports', 'POST /api/admin/users/:uid/suspend failed', { userId: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -709,7 +669,7 @@ router.post('/admin/users/:uid/unsuspend', async (req, res) => {
         isSuspended:                  false,
         suspensionReason:             null,
         suspensionStartDate:          null,
-        suspensionExpiry:             null,
+        suspensionEndDate:             null,
         suspensionCanAppeal:          null,
         suspendedBy:                  null,
         preSuspensionDisplayName:     null,
@@ -726,9 +686,10 @@ router.post('/admin/users/:uid/unsuspend', async (req, res) => {
       }, { merge: true }),
     ]);
 
+    clearSuspensionCache(req.params.uid);
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/admin/users/:uid/unsuspend error:', err);
+    log.error('reports', 'POST /api/admin/users/:uid/unsuspend failed', { userId: req.params.uid, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -742,6 +703,9 @@ router.post('/appeals', async (req, res) => {
   try {
     const body = req.body;
     if (!body?.appealText) return res.status(400).json({ error: 'appealText is required' });
+    if (typeof body.appealText !== 'string' || body.appealText.length > 500) {
+      return res.status(400).json({ error: 'appealText must be a string of at most 500 characters' });
+    }
 
     const uid = req.auth.uid;
 
@@ -774,7 +738,7 @@ router.post('/appeals', async (req, res) => {
 
     res.json({ success: true, appealId });
   } catch (err) {
-    console.error('POST /api/appeals error:', err);
+    log.error('reports', 'POST /api/appeals failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -803,13 +767,13 @@ router.get('/appeals', async (req, res) => {
         displayName:      userData?.displayName     ?? userData?.display_name     ?? null,
         uniqueId:         userData?.uniqueId        ?? userData?.unique_id        ?? null,
         suspensionReason: userData?.suspensionReason ?? userData?.suspension_reason ?? null,
-        suspensionExpiry: userData?.suspensionExpiry ?? userData?.suspension_end_date ?? null,
+        suspensionEndDate: userData?.suspensionEndDate ?? userData?.suspension_end_date ?? null,
       };
     }));
 
     res.json(enriched);
   } catch (err) {
-    console.error('GET /api/appeals error:', err);
+    log.error('reports', 'GET /api/appeals failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -855,7 +819,7 @@ router.patch('/appeals/:id', async (req, res) => {
           isSuspended:                  false,
           suspensionReason:             null,
           suspensionStartDate:          null,
-          suspensionExpiry:             null,
+          suspensionEndDate:             null,
           suspensionCanAppeal:          null,
           suspendedBy:                  null,
           preSuspensionDisplayName:     null,
@@ -863,6 +827,7 @@ router.patch('/appeals/:id', async (req, res) => {
           preSuspensionCoverPhotoUrl:   null,
           ...restore,
         });
+        clearSuspensionCache(userId);
       }
     }
 
@@ -877,7 +842,7 @@ router.patch('/appeals/:id', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error('PATCH /api/appeals/:id error:', err);
+    log.error('reports', 'PATCH /api/appeals/:id failed', { appealId: req.params.id, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -890,7 +855,7 @@ router.get('/admin/audit-log', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const limit = Math.min(parseInt(req.query.limit || '50'), 200);
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
 
     const entries = await queryDocs(
       db.collection('adminAuditLog')
@@ -917,7 +882,7 @@ router.get('/admin/audit-log', async (req, res) => {
 
     res.json(enriched);
   } catch (err) {
-    console.error('GET /api/admin/audit-log error:', err);
+    log.error('reports', 'GET /api/admin/audit-log failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -942,23 +907,16 @@ async function evictSuspendedUser(userId) {
   if (rooms.length === 0) return;
 
   const batchOps = [];
+  const rtdbEvents = []; // Collect RTDB writes to fire AFTER Firestore batch
 
   for (const room of rooms) {
     if (room.ownerId === userId) {
       // Owner suspended — close the room
-      try {
-        await rtdb.ref(`rooms/${room.id}/events/lastEvent`).set({
-          type: 'room_closed',
-          ts:   Date.now(),
-        });
-      } catch (_) { /* best-effort */ }
-      try {
-        await rtdb.ref(`rooms/${room.id}`).remove();
-      } catch (_) { /* best-effort */ }
       batchOps.push({
         path: `rooms/${room.id}`,
         data: { state: 'CLOSED', closedAt: now() },
       });
+      rtdbEvents.push({ roomId: room.id, type: 'room_closed', remove: true });
     } else {
       // Regular participant — remove from participants and clear their seat
       const participantIds = (room.participantIds || []).filter(id => id !== userId);
@@ -974,14 +932,7 @@ async function evictSuspendedUser(userId) {
         path: `rooms/${room.id}`,
         data: { participantIds, seats },
       });
-
-      // Notify room of the update
-      try {
-        await rtdb.ref(`rooms/${room.id}/events/lastEvent`).set({
-          type: 'room_updated',
-          ts:   Date.now(),
-        });
-      } catch (_) { /* best-effort */ }
+      rtdbEvents.push({ roomId: room.id, type: 'room_updated', remove: false });
     }
   }
 
@@ -991,7 +942,7 @@ async function evictSuspendedUser(userId) {
     data: { currentRoomId: null },
   });
 
-  // Batch write in chunks of 500
+  // Commit Firestore batch first
   for (let i = 0; i < batchOps.length; i += 500) {
     const chunk = batchOps.slice(i, i + 500);
     const batch = db.batch();
@@ -999,6 +950,21 @@ async function evictSuspendedUser(userId) {
       batch.set(db.doc(op.path), op.data, { merge: true });
     }
     await batch.commit();
+  }
+
+  // Then fire RTDB events (after Firestore is committed)
+  for (const evt of rtdbEvents) {
+    try {
+      await rtdb.ref(`rooms/${evt.roomId}/events/lastEvent`).set({
+        type: evt.type,
+        ts: Date.now(),
+      });
+    } catch (err) { log.warn('reports', `Failed to write ${evt.type} RTDB event`, { roomId: evt.roomId, error: err.message }); }
+    if (evt.remove) {
+      try {
+        await rtdb.ref(`rooms/${evt.roomId}`).remove();
+      } catch (err) { log.warn('reports', 'Failed to remove RTDB room node', { roomId: evt.roomId, error: err.message }); }
+    }
   }
 }
 

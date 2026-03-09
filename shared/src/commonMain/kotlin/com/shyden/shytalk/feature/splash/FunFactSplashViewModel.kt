@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.BannerActionType
 import com.shyden.shytalk.core.model.FunFact
+import com.shyden.shytalk.core.util.logD
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.FunFactRepository
@@ -27,6 +30,10 @@ class FunFactSplashViewModel(
     private val pmRepository: PrivateMessageRepository,
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "FunFactSplashViewModel"
+    }
+
     private val _warmUpComplete = MutableStateFlow(false)
     val warmUpComplete: StateFlow<Boolean> = _warmUpComplete.asStateFlow()
 
@@ -35,37 +42,49 @@ class FunFactSplashViewModel(
 
     init {
         // Show cached facts immediately while syncing fresh ones
-        _funFacts.value = funFactRepository.getCachedFacts().shuffled()
+        val cached = funFactRepository.getCachedFacts()
+        logI(TAG, "Loaded ${cached.size} cached fun facts")
+        _funFacts.value = cached.shuffled()
 
         viewModelScope.launch {
+            logI(TAG, "Starting warm-up: banners, fun facts, user data")
             val jobs = listOf(
                 launch {
                     try {
                         val banners = bannerRepository.getActiveBanners()
+                        logI(TAG, "Preloading ${banners.size} banners")
                         banners.forEach { banner ->
                             launch {
                                 try {
                                     imagePreloader?.preload(banner.imageUrl)
-                                } catch (_: Exception) { }
+                                } catch (e: Exception) {
+                                    logD(TAG, "Banner image preload failed: ${e.message}")
+                                }
                             }
-                            if (banner.actionType == BannerActionType.URL && !banner.actionValue.isNullOrBlank()) {
+                            val actionValue = banner.actionValue
+                            if (banner.actionType == BannerActionType.URL && !actionValue.isNullOrBlank()) {
                                 launch {
                                     try {
-                                        webContentPreloader?.preload(banner.actionValue!!)
-                                    } catch (_: Exception) { }
+                                        webContentPreloader?.preload(actionValue)
+                                    } catch (e: Exception) {
+                                        logD(TAG, "Web content preload failed: ${e.message}")
+                                    }
                                 }
                             }
                         }
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) {
+                        logE(TAG, "Banner preload failed: ${e.message}")
+                    }
                 },
                 launch {
                     try {
                         val fresh = funFactRepository.syncFacts()
                         if (fresh.isNotEmpty()) {
+                            logI(TAG, "Synced ${fresh.size} fresh fun facts")
                             _funFacts.value = fresh.shuffled()
                         }
-                    } catch (_: Exception) {
-                        // Keep cached facts if sync fails
+                    } catch (e: Exception) {
+                        logE(TAG, "Fun fact sync failed: ${e.message}")
                     }
                 },
                 launch {
@@ -79,6 +98,7 @@ class FunFactSplashViewModel(
                 },
             )
             jobs.joinAll()
+            logI(TAG, "Warm-up complete")
             _warmUpComplete.value = true
         }
     }

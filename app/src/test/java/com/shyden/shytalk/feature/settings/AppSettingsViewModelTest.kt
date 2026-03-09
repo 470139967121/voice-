@@ -3,6 +3,7 @@ package com.shyden.shytalk.feature.settings
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.model.PmPrivacy
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -108,7 +109,7 @@ class AppSettingsViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
 
-        assertEquals("load failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("load failed"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isLoading)
     }
 
@@ -156,7 +157,7 @@ class AppSettingsViewModelTest {
         vm.unblockUser("blocked-1")
         advanceUntilIdle()
 
-        assertEquals("Failed to unblock user", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== toggleHideFollowing =====
@@ -188,7 +189,7 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.hideFollowing)
-        assertEquals("Failed to update privacy setting", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== toggleHideOnlineStatus =====
@@ -250,7 +251,7 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.hideAge)
-        assertEquals("Failed to update privacy setting", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== clearCache =====
@@ -285,7 +286,7 @@ class AppSettingsViewModelTest {
 
         val vm = createViewModel()
         advanceUntilIdle()
-        assertEquals("err", vm.uiState.value.error)
+        assertEquals(UiText.Plain("err"), vm.uiState.value.error)
 
         vm.clearError()
         assertNull(vm.uiState.value.error)
@@ -332,7 +333,7 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         assertEquals(PmPrivacy.EVERYONE, vm.uiState.value.pmPrivacy)
-        assertEquals("Failed to update privacy setting", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== checkForUpdates =====
@@ -397,7 +398,7 @@ class AppSettingsViewModelTest {
         assertFalse(vm.uiState.value.isCheckingUpdate)
         val result = vm.uiState.value.updateCheckResult
         assertTrue(result is UpdateCheckResult.Error)
-        assertEquals("Failed to check for updates", (result as UpdateCheckResult.Error).message)
+        assertTrue((result as UpdateCheckResult.Error).message is UiText.Res)
     }
 
     // ===== toggle methods (via togglePrivacySetting) =====
@@ -429,7 +430,7 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.pmSoundEnabled)
-        assertEquals("Failed to update privacy setting", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     @Test
@@ -595,7 +596,7 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.pmNotificationsEnabled)
-        assertEquals("Failed to update privacy setting", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== toggleDnd error reverts =====
@@ -612,7 +613,7 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.dndEnabled)
-        assertEquals("Failed to update privacy setting", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== init loads pmPrivacy from user =====
@@ -680,7 +681,7 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.selfDestructAlertEnabled)
-        assertEquals("Failed to update privacy setting", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
     }
 
     // ===== Language =====

@@ -7,6 +7,9 @@ import com.shyden.shytalk.core.model.ConversationSettings
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.ModerationFilter
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -44,6 +47,10 @@ class ConversationListViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "ConversationListViewModel"
+    }
+
     private val _uiState = MutableStateFlow(ConversationListUiState())
     val uiState: StateFlow<ConversationListUiState> = _uiState.asStateFlow()
 
@@ -55,9 +62,12 @@ class ConversationListViewModel(
 
     init {
         if (currentUserId.isNotEmpty()) {
+            logI(TAG, "Initializing for user=$currentUserId")
             observeConversations()
             loadModerationConfig()
             loadAliases()
+        } else {
+            logW(TAG, "No current user, skipping initialization")
         }
     }
 
@@ -77,15 +87,20 @@ class ConversationListViewModel(
         }
     }
 
+    private var conversationsJob: kotlinx.coroutines.Job? = null
+
     private fun observeConversations() {
-        viewModelScope.launch {
+        conversationsJob?.cancel()
+        conversationsJob = viewModelScope.launch {
             pmRepository.getConversations(currentUserId)
                 .catch { e ->
+                    logE(TAG, "Conversation observation failed: ${e.message}")
                     _uiState.update {
                         it.copy(isLoading = false, error = e.message ?: "Failed to load conversations")
                     }
                 }
                 .collect { conversations ->
+                    logI(TAG, "Received ${conversations.size} conversations")
                     loadConversationDetails(conversations)
                 }
         }
@@ -95,6 +110,10 @@ class ConversationListViewModel(
         // Get current user's blocked list
         val currentUser = when (val result = userRepository.getUser(currentUserId)) {
             is Resource.Success -> result.data
+            is Resource.Error -> {
+                logW(TAG, "Failed to fetch current user for blocklist: ${result.message}")
+                null
+            }
             else -> null
         }
         val blockedByMe = currentUser?.blockedUserIds ?: emptySet()
@@ -108,6 +127,9 @@ class ConversationListViewModel(
             when (val result = userRepository.getUsers(uncachedIds)) {
                 is Resource.Success -> {
                     result.data.forEach { user -> userCache[user.uid] = user }
+                }
+                is Resource.Error -> {
+                    logW(TAG, "Failed to batch-fetch users: ${result.message}")
                 }
                 else -> {}
             }
@@ -211,6 +233,7 @@ class ConversationListViewModel(
     }
 
     fun hideConversation(conversationId: String) {
+        logI(TAG, "Hiding conversation: $conversationId")
         viewModelScope.launch {
             pmRepository.hideConversation(conversationId, currentUserId)
             // Update cache so it's filtered out immediately
@@ -268,6 +291,7 @@ class ConversationListViewModel(
     }
 
     fun refreshConversations() {
+        logI(TAG, "Refreshing conversations")
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
             userCache.clear()

@@ -20,6 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 
 @Composable
 fun DegradedModeScreen(onAcknowledge: () -> Unit) {
@@ -44,7 +47,7 @@ fun DegradedModeScreen(onAcknowledge: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Technical Difficulties",
+                text = stringResource(Res.string.technical_difficulties),
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center
             )
@@ -52,9 +55,7 @@ fun DegradedModeScreen(onAcknowledge: () -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "ShyTalk is currently experiencing technical difficulties. " +
-                    "Some features may not work correctly. " +
-                    "Services will be restored automatically.",
+                text = stringResource(Res.string.technical_difficulties_description),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -63,7 +64,7 @@ fun DegradedModeScreen(onAcknowledge: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "If you need help, contact shytalk.help@gmail.com",
+                text = stringResource(Res.string.contact_support_help),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -74,7 +75,7 @@ fun DegradedModeScreen(onAcknowledge: () -> Unit) {
                 onClick = onAcknowledge,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("I Understand")
+                Text(stringResource(Res.string.i_understand))
             }
         }
     }

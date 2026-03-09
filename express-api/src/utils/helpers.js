@@ -22,12 +22,6 @@ function yesterdayStr() {
   return new Date(Date.now() - 86400000).toISOString().split('T')[0];
 }
 
-function extractR2Key(url) {
-  const prefix = 'https://images.shytalk.shyden.co.uk/';
-  if (!url || !url.startsWith(prefix)) return null;
-  return url.slice(prefix.length);
-}
-
 function getExtension(contentType) {
   if (contentType.startsWith('video/')) {
     const sub = contentType.slice(6);
@@ -41,4 +35,4 @@ function getExtension(contentType) {
   return map[contentType] ?? 'jpg';
 }
 
-module.exports = { generateId, now, todayStr, yesterdayStr, extractR2Key, getExtension };
+module.exports = { generateId, now, todayStr, yesterdayStr, getExtension };

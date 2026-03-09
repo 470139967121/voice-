@@ -104,6 +104,9 @@ import com.shyden.shytalk.feature.settings.RoomSettingsSheet
 import com.shyden.shytalk.feature.shop.WalletViewModel
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -226,7 +229,7 @@ fun RoomScreen(
                     }
                 }
             } else {
-                val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                 if (bytes != null) {
                     if (bytes.size <= Constants.EVIDENCE_MAX_SIZE_BYTES) {
                         reportEvidenceList.add(bytes to mimeType)
@@ -246,7 +249,7 @@ fun RoomScreen(
     ) { uris ->
         if (uris.isNotEmpty()) {
             val bytesList = uris.mapNotNull { uri ->
-                context.contentResolver.openInputStream(uri)?.readBytes()
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             }
             pmImageResultHandler?.invoke(bytesList)
         }
@@ -256,7 +259,7 @@ fun RoomScreen(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
                 pmStickerResultHandler?.invoke(bytes)
             }
@@ -292,7 +295,7 @@ fun RoomScreen(
     // Handle gacha errors
     LaunchedEffect(gachaState.error) {
         gachaState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.resolveAsync())
             gachaViewModel.clearError()
         }
     }
@@ -300,7 +303,7 @@ fun RoomScreen(
     // Handle gifting errors
     LaunchedEffect(giftingState.error) {
         giftingState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.resolveAsync())
             giftingViewModel.clearError()
         }
     }
@@ -369,13 +372,14 @@ fun RoomScreen(
 
     // Audio permission handling
     val scope = rememberCoroutineScope()
+    val micDeniedMsg = stringResource(Res.string.mic_permission_denied)
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         viewModel.onAudioPermissionResult(granted)
         if (!granted) {
             scope.launch {
-                snackbarHostState.showSnackbar("Microphone permission denied. You won't be able to use voice chat.")
+                snackbarHostState.showSnackbar(micDeniedMsg)
             }
         }
     }
@@ -404,18 +408,20 @@ fun RoomScreen(
     if (uiState.wasKicked) {
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("Removed from Room") },
+            title = { Text(stringResource(Res.string.removed_from_room)) },
             text = {
                 Column {
-                    if (uiState.kickedByName != null) {
-                        Text("You were kicked by ${uiState.kickedByName}.")
+                    val kickedBy = uiState.kickedByName
+                    if (kickedBy != null) {
+                        Text(stringResource(Res.string.kicked_by_name, kickedBy))
                     } else {
-                        Text("You have been kicked from this room.")
+                        Text(stringResource(Res.string.kicked_from_room))
                     }
-                    if (uiState.kickReason != null) {
+                    val reason = uiState.kickReason
+                    if (reason != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Reason: ${uiState.kickReason}",
+                            text = stringResource(Res.string.kick_reason, reason),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -424,7 +430,7 @@ fun RoomScreen(
             },
             confirmButton = {
                 TextButton(onClick = { onNavigateBack() }) {
-                    Text("OK")
+                    Text(stringResource(Res.string.ok))
                 }
             }
         )
@@ -450,12 +456,13 @@ fun RoomScreen(
         }
     }
 
+    val reportThankYouMsg = stringResource(Res.string.report_thank_you)
     LaunchedEffect(uiState.reportSubmitted) {
         if (uiState.reportSubmitted) {
             showUserCardForId = null
             reportEvidenceList.clear()
             reportEvidenceVersion++
-            snackbarHostState.showSnackbar("Thank you for your report. We will review it shortly.")
+            snackbarHostState.showSnackbar(reportThankYouMsg)
             viewModel.clearReportSubmitted()
         }
     }
@@ -469,29 +476,29 @@ fun RoomScreen(
         val (title, message, showEnterOption) = when (warning) {
             is BlockWarning.Banned -> {
                 val reason = buildString {
-                    append("You were banned from this room.")
-                    if (warning.kickerName != null) {
-                        append("\nBanned by: ${warning.kickerName}")
+                    append(stringResource(Res.string.you_were_banned))
+                    warning.kickerName?.let { name ->
+                        append("\n${stringResource(Res.string.banned_by, name)}")
                     }
-                    if (!warning.reason.isNullOrBlank()) {
-                        append("\nReason: ${warning.reason}")
+                    warning.reason?.takeIf { it.isNotBlank() }?.let { r ->
+                        append("\n${stringResource(Res.string.kick_reason, r)}")
                     }
                 }
-                Triple("Banned from Room", reason, false)
+                Triple(stringResource(Res.string.banned_from_room), reason, false)
             }
             is BlockWarning.BlockedByRoomOwner -> Triple(
-                "Cannot Enter Room",
-                "You are not allowed to enter this room.",
+                stringResource(Res.string.cannot_enter_room),
+                stringResource(Res.string.not_allowed_to_enter),
                 false
             )
             is BlockWarning.BlockedUserInRoom -> Triple(
-                "Blocked User in Room",
-                "A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?",
+                stringResource(Res.string.blocked_user_in_room),
+                stringResource(Res.string.blocked_user_in_room_description),
                 true
             )
             is BlockWarning.BlockedByUserInRoom -> Triple(
-                "Notice",
-                "A user in this room has blocked you. You may have a limited experience. Enter anyway?",
+                stringResource(Res.string.notice),
+                stringResource(Res.string.blocked_by_user_in_room_description),
                 true
             )
         }
@@ -503,13 +510,13 @@ fun RoomScreen(
                 TextButton(onClick = {
                     if (showEnterOption) viewModel.confirmJoinDespiteBlock() else onNavigateBack()
                 }) {
-                    Text(if (showEnterOption) "Enter" else "Go Back")
+                    Text(if (showEnterOption) stringResource(Res.string.enter) else stringResource(Res.string.go_back))
                 }
             },
             dismissButton = if (showEnterOption) {
                 {
                     TextButton(onClick = { onNavigateBack() }) {
-                        Text("Choose Another Room")
+                        Text(stringResource(Res.string.choose_another_room))
                     }
                 }
             } else null
@@ -632,7 +639,7 @@ fun RoomScreen(
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Closing...",
+                            text = stringResource(Res.string.closing),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -669,7 +676,7 @@ fun RoomScreen(
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Connecting...",
+                        text = stringResource(Res.string.connecting),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -705,7 +712,7 @@ fun RoomScreen(
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Text(
-                                text = "Voice chat is temporarily unavailable",
+                                text = stringResource(Res.string.voice_chat_unavailable),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFFE65100)
                             )
@@ -895,13 +902,13 @@ fun RoomScreen(
                 var editedName by remember(showRoomNameDialog) { mutableStateOf(uiState.room?.name ?: "") }
                 AlertDialog(
                     onDismissRequest = { showRoomNameDialog = false },
-                    title = { Text("Edit Room Name") },
+                    title = { Text(stringResource(Res.string.edit_room_name)) },
                     text = {
                         OutlinedTextField(
                             value = editedName,
                             onValueChange = { if (it.length <= 50) editedName = it },
                             singleLine = true,
-                            placeholder = { Text("Room name") }
+                            placeholder = { Text(stringResource(Res.string.room_name)) }
                         )
                     },
                     confirmButton = {
@@ -912,19 +919,19 @@ fun RoomScreen(
                             },
                             enabled = editedName.isNotBlank()
                         ) {
-                            Text("Save")
+                            Text(stringResource(Res.string.save))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showRoomNameDialog = false }) {
-                            Text("Cancel")
+                            Text(stringResource(Res.string.cancel))
                         }
                     }
                 )
             } else {
                 AlertDialog(
                     onDismissRequest = { showRoomNameDialog = false },
-                    title = { Text("Room Name") },
+                    title = { Text(stringResource(Res.string.room_name)) },
                     text = {
                         Text(
                             text = uiState.room?.name ?: "",
@@ -933,7 +940,7 @@ fun RoomScreen(
                     },
                     confirmButton = {
                         TextButton(onClick = { showRoomNameDialog = false }) {
-                            Text("Close")
+                            Text(stringResource(Res.string.close))
                         }
                     }
                 )
@@ -1015,7 +1022,7 @@ fun RoomScreen(
                         }
                     } else null,
                     onMuteToggle = if (canModerate && targetSeatIndex != null
-                        && targetSeatEntry?.value?.isMuted != true) {
+                        && targetSeatEntry.value.isMuted != true) {
                         { viewModel.forceMuteUser(targetSeatIndex) }
                     } else null,
                     isTargetMuted = targetSeatEntry?.value?.isMuted ?: false,

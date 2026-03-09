@@ -2,6 +2,7 @@ package com.shyden.shytalk.navigation
 
 import android.Manifest
 import android.content.Intent
+import android.util.Log
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -44,6 +45,7 @@ import androidx.navigation.navArgument
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.google.firebase.messaging.FirebaseMessaging
+import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.NotificationRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -90,6 +92,9 @@ import com.shyden.shytalk.feature.warning.WarningScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import org.jetbrains.compose.resources.stringResource
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
 import org.koin.compose.koinInject
 
 private fun NavController.safePopBackStack(): Boolean {
@@ -243,8 +248,8 @@ fun NavGraph(
                 try {
                     val token = FirebaseMessaging.getInstance().token.await()
                     notificationRepository.saveFcmToken(userId, token)
-                } catch (_: Exception) {
-                    // Token save failed — will retry on next app launch
+                } catch (e: Exception) {
+                    Log.w("NavGraph", "FCM token save failed — will retry on next launch", e)
                 }
             }
 
@@ -253,8 +258,8 @@ fun NavGraph(
                 try {
                     val syncIntent = Intent(context, PmSyncService::class.java)
                     androidx.core.content.ContextCompat.startForegroundService(context, syncIntent)
-                } catch (_: Exception) {
-                    // Service start failed — non-critical
+                } catch (e: Exception) {
+                    Log.w("NavGraph", "PM sync service start failed", e)
                 }
             }
 
@@ -285,8 +290,8 @@ fun NavGraph(
             if (showOverlayDialog) {
                 AlertDialog(
                     onDismissRequest = { showOverlayDialog = false },
-                    title = { Text("Display over other apps") },
-                    text = { Text("Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.") },
+                    title = { Text(stringResource(Res.string.display_over_other_apps)) },
+                    text = { Text(stringResource(Res.string.display_over_other_apps_description)) },
                     confirmButton = {
                         TextButton(onClick = {
                             showOverlayDialog = false
@@ -297,12 +302,12 @@ fun NavGraph(
                                 )
                             )
                         }) {
-                            Text("Allow")
+                            Text(stringResource(Res.string.allow))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showOverlayDialog = false }) {
-                            Text("Not now")
+                            Text(stringResource(Res.string.not_now))
                         }
                     }
                 )
@@ -340,9 +345,7 @@ fun NavGraph(
 
             MainScreen(
                 isBackendDegraded = isBackendDegraded,
-                onNavigateToRoom = { roomId ->
-                    navController.navigate(Screen.Room.createRoute(roomId))
-                },
+                onNavigateToRoom = { roomId -> navigateToRoom(roomId) },
                 onPrewarmRoom = { room ->
                     val userId = authRepository.currentUserId
                     if (userId != null && room.voiceRoomName.isNotEmpty()) {
@@ -463,7 +466,7 @@ fun NavGraph(
             ) { uris ->
                 if (uris.isNotEmpty()) {
                     val bytesList = uris.mapNotNull { uri ->
-                        context.contentResolver.openInputStream(uri)?.readBytes()
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     }
                     chatViewModel.uploadAndSendImages(bytesList)
                 }
@@ -473,7 +476,7 @@ fun NavGraph(
                 ActivityResultContracts.PickVisualMedia()
             ) { uri ->
                 if (uri != null) {
-                    val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     if (bytes != null) {
                         chatViewModel.addStickerFromImage(bytes)
                     }
@@ -552,14 +555,18 @@ fun NavGraph(
                             try {
                                 val token = FirebaseMessaging.getInstance().token.await()
                                 settingsNotificationRepo.removeFcmToken(signOutUserId, token)
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                Log.w("NavGraph", "FCM token removal failed on sign-out", e)
+                            }
                         }
                     }
                     // Stop PM sync service
                     try {
                         val ctx = navController.context
                         ctx.stopService(Intent(ctx, PmSyncService::class.java))
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        Log.d("NavGraph", "PM sync service stop failed", e)
+                    }
                     onSignOut()
                     navController.navigate(Screen.SignIn.route) {
                         popUpTo(Screen.Main.route) { inclusive = true }
@@ -608,6 +615,7 @@ fun NavGraph(
                             mapOf("acceptedLegalVersion" to CURRENT_LEGAL_VERSION)
                         )
                         if (result is Resource.Success) {
+                            LanguagePreference.setAcceptedLegalVersion(CURRENT_LEGAL_VERSION)
                             navController.safePopBackStack()
                         }
                     }
@@ -648,7 +656,7 @@ fun NavGraph(
             ) { uris ->
                 if (uris.isNotEmpty()) {
                     val bytesList = uris.mapNotNull { uri ->
-                        context.contentResolver.openInputStream(uri)?.readBytes()
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     }
                     groupChatViewModel.uploadAndSendImages(bytesList)
                 }
@@ -658,7 +666,7 @@ fun NavGraph(
                 ActivityResultContracts.PickVisualMedia()
             ) { uri ->
                 if (uri != null) {
-                    val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     if (bytes != null) {
                         groupChatViewModel.addStickerFromImage(bytes)
                     }
@@ -719,7 +727,10 @@ fun NavGraph(
                 if (uri != null) {
                     val bytes = try {
                         groupSetupContext.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                    } catch (_: Exception) { null }
+                    } catch (e: Exception) {
+                        Log.w("NavGraph", "Failed to read group photo", e)
+                        null
+                    }
                     if (bytes != null) {
                         groupSetupViewModel.setGroupPhoto(bytes)
                     }
@@ -825,7 +836,7 @@ fun NavGraph(
                         title = { Text("") },
                         navigationIcon = {
                             IconButton(onClick = { navController.safePopBackStack() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
                             }
                         }
                     )

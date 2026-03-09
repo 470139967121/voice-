@@ -71,7 +71,7 @@ fun NewMessageScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showSnackbar(it.resolveAsync())
             viewModel.clearError()
         }
     }

@@ -37,6 +37,7 @@ jest.mock('../../src/utils/r2', () => ({
   putObject: jest.fn().mockResolvedValue(undefined),
   listObjects: jest.fn().mockResolvedValue([]),
   deleteObject: jest.fn().mockResolvedValue(undefined),
+  deleteObjects: jest.fn().mockResolvedValue(undefined),
   getObject: jest.fn(),
 }));
 
@@ -167,10 +168,12 @@ describe('backups cron', () => {
 
     await backups();
 
-    expect(r2.deleteObject).toHaveBeenCalledWith(oldFullKey);
-    expect(r2.deleteObject).toHaveBeenCalledWith(oldUsersKey);
-    expect(r2.deleteObject).not.toHaveBeenCalledWith(recentFullKey);
-    expect(r2.deleteObject).not.toHaveBeenCalledWith(recentUsersKey);
+    // Bulk delete should include old keys but not recent ones
+    const allDeletedKeys = r2.deleteObjects.mock.calls.flatMap(c => c[0]);
+    expect(allDeletedKeys).toContain(oldFullKey);
+    expect(allDeletedKeys).toContain(oldUsersKey);
+    expect(allDeletedKeys).not.toContain(recentFullKey);
+    expect(allDeletedKeys).not.toContain(recentUsersKey);
   });
 
   test('handles empty collections gracefully', async () => {

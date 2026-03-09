@@ -1,45 +1,38 @@
 /**
  * Cron: Delete expired backpack items.
  *
- * Queries all users, for each user checks backpack items with expiresAt <= now,
- * and deletes expired items.
+ * Uses a collection group query on 'backpack' to find all expired items
+ * in a single Firestore read instead of N+1 queries.
  */
 
 const { db } = require('../utils/firebase');
+const log = require('../utils/log');
 
 async function backpackCleanup() {
   const timestamp = Date.now();
-  let totalCleaned = 0;
 
-  // Query all users, then check each user's backpack for expired items
-  const usersSnapshot = await db.collection('users').limit(1000).get();
+  // Single collection group query instead of reading all users + their backpacks
+  const snapshot = await db.collectionGroup('backpack')
+    .where('expiresAt', '<=', timestamp)
+    .limit(500)
+    .get();
 
-  for (const userDoc of usersSnapshot.docs) {
-    const uid = userDoc.id;
-    const backpackSnapshot = await db.collection(`users/${uid}/backpack`).get();
-
-    if (backpackSnapshot.empty) continue;
-
-    const expired = backpackSnapshot.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(item => item.expiresAt && item.expiresAt <= timestamp);
-
-    if (expired.length === 0) continue;
-
-    // Batch delete expired items
-    for (let i = 0; i < expired.length; i += 500) {
-      const batch = db.batch();
-      const chunk = expired.slice(i, i + 500);
-      for (const item of chunk) {
-        batch.delete(db.doc(`users/${uid}/backpack/${item.giftId || item.id}`));
-      }
-      await batch.commit();
-    }
-
-    totalCleaned += expired.length;
+  if (snapshot.empty) {
+    log.info('cron', 'backpackCleanup: no expired items');
+    return;
   }
 
-  console.log(`Cleaned ${totalCleaned} expired backpack items`);
+  // Batch delete expired items
+  for (let i = 0; i < snapshot.docs.length; i += 500) {
+    const batch = db.batch();
+    const chunk = snapshot.docs.slice(i, i + 500);
+    for (const doc of chunk) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+  }
+
+  log.info('cron', 'backpackCleanup: cleaned expired items', { count: snapshot.docs.length });
 }
 
 module.exports = backpackCleanup;

@@ -44,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
@@ -191,7 +190,7 @@ fun ConversationListScreen(
                                 DropdownMenu(
                                     expanded = contextMenuConversationId == cId,
                                     onDismissRequest = { contextMenuConversationId = null },
-                                    offset = DpOffset(x = 200.dp, y = 0.dp)
+
                                 ) {
                                     val isPinned = conversationWithUser.settings?.isPinned == true
                                     DropdownMenuItem(

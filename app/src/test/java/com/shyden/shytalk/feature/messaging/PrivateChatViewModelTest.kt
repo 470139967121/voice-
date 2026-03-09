@@ -698,7 +698,7 @@ class PrivateChatViewModelTest {
                 description = "It's spam"
             )
         }
-        assertEquals("Report submitted", vm.uiState.value.error)
+        assertEquals("Report submitted", vm.uiState.value.successMessage)
     }
 
     @Test
@@ -1286,17 +1286,6 @@ class PrivateChatViewModelTest {
         vm.togglePin()
         advanceUntilIdle()
         coVerify { pmRepository.pinConversation(conversationId, currentUserId, false) }
-    }
-
-    // ===== Hide Conversation =====
-
-    @Test
-    fun `hideConversation calls repository`() = runTest {
-        val vm = createViewModel()
-        advanceUntilIdle()
-        vm.hideConversation()
-        advanceUntilIdle()
-        coVerify { pmRepository.hideConversation(conversationId, currentUserId) }
     }
 
     // ===== Recall Message =====

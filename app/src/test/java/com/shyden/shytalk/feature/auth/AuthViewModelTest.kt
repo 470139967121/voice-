@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.auth
 
 import androidx.lifecycle.viewModelScope
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
 import com.shyden.shytalk.data.repository.UserRepository
@@ -236,7 +237,7 @@ class AuthViewModelTest {
         vm.signInWithGoogle("token")
         advanceUntilIdle()
 
-        assertEquals("auth failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("auth failed"), vm.uiState.value.error)
     }
 
     // ===== signInWithApple =====
@@ -271,7 +272,7 @@ class AuthViewModelTest {
         vm.signInWithApple("token", "nonce")
         advanceUntilIdle()
 
-        assertEquals("apple auth failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("apple auth failed"), vm.uiState.value.error)
     }
 
     @Test
@@ -462,7 +463,7 @@ class AuthViewModelTest {
         vm.submitAppeal("Please unsuspend me")
         advanceUntilIdle()
 
-        assertEquals("Failed to submit appeal", vm.uiState.value.error)
+        assertTrue(vm.uiState.value.error is UiText.Res)
         assertFalse(vm.uiState.value.isLoading)
         // suspensionCanAppeal should still be true since appeal failed
         assertTrue(vm.uiState.value.suspensionCanAppeal)
@@ -483,7 +484,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assertEquals("Network unavailable", state.error)
+        assertEquals(UiText.Plain("Network unavailable"), state.error)
         assertFalse(state.isAuthenticated)
         assertFalse(state.isLoading)
     }
@@ -502,7 +503,7 @@ class AuthViewModelTest {
 
         vm.signInWithGoogle("token1")
         advanceUntilIdle()
-        assertEquals("first error", vm.uiState.value.error)
+        assertEquals(UiText.Plain("first error"), vm.uiState.value.error)
 
         vm.signInWithGoogle("token2")
         advanceUntilIdle()
@@ -540,7 +541,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
         vm.signInWithGoogle("token")
         advanceUntilIdle()
-        assertEquals("auth failed", vm.uiState.value.error)
+        assertEquals(UiText.Plain("auth failed"), vm.uiState.value.error)
 
         vm.signOut()
 

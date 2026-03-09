@@ -2,6 +2,8 @@ package com.shyden.shytalk.core.model
 
 import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
 
@@ -56,5 +58,49 @@ class ConversationPreviewFromMapTest {
         val map = mapOf<String, Any?>("type" to null)
         val preview = ConversationPreview.fromMap(map)
         assertEquals("TEXT", preview.type)
+    }
+
+    @Test
+    fun `fromMap parses Express API format with createdAt (not timestamp)`() {
+        // Express API sends: { text, senderId, senderName, type, createdAt }
+        val expressApiFormat = mapOf<String, Any?>(
+            "text" to "Hello",
+            "senderId" to "user-1",
+            "senderName" to "Alice",
+            "type" to "TEXT",
+            "createdAt" to tsMillis
+        )
+        val preview = ConversationPreview.fromMap(expressApiFormat)
+        assertEquals(tsMillis, preview.createdAt)
+    }
+
+    @Test
+    fun `fromMap ignores old timestamp field (only reads createdAt)`() {
+        // Verify that the old "timestamp" field does NOT populate createdAt
+        // When "createdAt" is missing, timestampToMillis(null) returns currentTimeMillis()
+        val oldFormat = mapOf<String, Any?>(
+            "text" to "Hello",
+            "senderId" to "user-1",
+            "senderName" to "Alice",
+            "type" to "TEXT",
+            "timestamp" to tsMillis
+        )
+        val preview = ConversationPreview.fromMap(oldFormat)
+        // createdAt should NOT be tsMillis (from "timestamp" key)
+        assertTrue(preview.createdAt != tsMillis)
+    }
+
+    @Test
+    fun `toMap uses createdAt key for Express API compatibility`() {
+        val preview = ConversationPreview(
+            text = "Hello",
+            senderId = "user-1",
+            senderName = "Alice",
+            createdAt = tsMillis,
+            type = "TEXT"
+        )
+        val map = preview.toMap()
+        assertEquals(tsMillis, map["createdAt"])
+        assertFalse(map.containsKey("timestamp"))
     }
 }
