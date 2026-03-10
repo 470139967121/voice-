@@ -14,6 +14,7 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const { generateId, now } = require('../utils/helpers');
+const { sendSystemPm } = require('../utils/system-pm');
 const log = require('../utils/log');
 
 // ─── Helpers ─────────────────────────────────────────────────────
@@ -66,7 +67,6 @@ router.post('/admin/bans/device', async (req, res) => {
 
     const { deviceId, reason, duration, linkedUserId } = req.body || {};
     if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
-    if (!reason) return res.status(400).json({ error: 'reason is required' });
 
     const expiresAt = parseExpiry(duration);
 
@@ -89,6 +89,11 @@ router.post('/admin/bans/device', async (req, res) => {
       createdAt: now(),
     });
 
+    // Send system PM if linked to a user (non-blocking)
+    if (linkedUserId) {
+      try { await sendSystemPm(linkedUserId, 'A restriction has been placed on your account.'); } catch (e) { log.warn('system-pm', 'Failed to send', { userId: linkedUserId, error: e.message }); }
+    }
+
     res.json({ success: true });
   } catch (err) {
     log.error('admin-bans', 'Error banning device', { error: err.message });
@@ -108,8 +113,20 @@ router.post('/admin/bans/network', async (req, res) => {
     if (!type || !validTypes.includes(type)) {
       return res.status(400).json({ error: 'type must be one of: ip, subnet, asn' });
     }
-    if (!value) return res.status(400).json({ error: 'value is required' });
-    if (!reason) return res.status(400).json({ error: 'reason is required' });
+    if (!value || typeof value !== 'string') return res.status(400).json({ error: 'value is required' });
+
+    // Validate format based on type
+    const IP_REGEX = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+    const CIDR_REGEX = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/;
+    if (type === 'ip' && !IP_REGEX.test(value)) {
+      return res.status(400).json({ error: 'Invalid IP address format' });
+    }
+    if (type === 'subnet' && !CIDR_REGEX.test(value)) {
+      return res.status(400).json({ error: 'Invalid CIDR subnet format (e.g. 192.168.0.0/24)' });
+    }
+    if (type === 'asn' && !/^\d+$/.test(value)) {
+      return res.status(400).json({ error: 'ASN must be numeric' });
+    }
 
     const banId = generateId();
     const expiresAt = parseExpiry(duration);
@@ -133,6 +150,11 @@ router.post('/admin/bans/network', async (req, res) => {
       details: `Type: ${type}, Reason: ${reason}, Duration: ${duration || 'permanent'}`,
       createdAt: now(),
     });
+
+    // Send system PM if linked to a user (non-blocking)
+    if (linkedUserId) {
+      try { await sendSystemPm(linkedUserId, 'A restriction has been placed on your account.'); } catch (e) { log.warn('system-pm', 'Failed to send', { userId: linkedUserId, error: e.message }); }
+    }
 
     res.json({ success: true });
   } catch (err) {
@@ -209,6 +231,9 @@ router.post('/admin/bans/unban-all/:userId', async (req, res) => {
       details: `Removed ${allDocs.length} ban(s)`,
       createdAt: now(),
     });
+
+    // Send system PM about restriction lifted (non-blocking)
+    try { await sendSystemPm(userId, 'A restriction on your account has been lifted.'); } catch (e) { log.warn('system-pm', 'Failed to send', { userId, error: e.message }); }
 
     res.json({ success: true, removed: allDocs.length });
   } catch (err) {

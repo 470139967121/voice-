@@ -56,6 +56,8 @@ app.use('/api/translate', writeLimiter);
 app.use('/api/economy/purchase', sensitiveLimiter);
 app.use('/api/economy/trial-claim', sensitiveLimiter);
 app.use('/api/economy/trial-activate', sensitiveLimiter);
+app.use('/api/reports', sensitiveLimiter);
+app.use('/api/appeals', sensitiveLimiter);
 
 // Mount route modules
 app.use('/api', require('./routes/config'));
@@ -79,6 +81,7 @@ app.use('/api', require('./routes/storage'));
 app.use('/api', require('./routes/device-info'));
 app.use('/api', require('./routes/admin-bans'));
 app.use('/api', require('./routes/admin-devices'));
+app.use('/api', require('./routes/admin-temp-id'));
 app.use('/api', require('./routes/admin-alerts'));
 app.use('/api', require('./routes/translate'));
 

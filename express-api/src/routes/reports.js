@@ -26,6 +26,7 @@ const { computeDisplayScore } = require('../utils/gcs');
 const { getDoc, queryDocs } = require('../utils/firestore-helpers');
 const { sendFcmToTokens } = require('../utils/fcm');
 const log = require('../utils/log');
+const { createWarning } = require('./admin-users');
 
 /**
  * Remove invalid FCM tokens from admin user docs in Firestore.
@@ -139,28 +140,30 @@ router.get('/reports', async (req, res) => {
     const userIdFilter = req.query.userId;
     const search = req.query.search?.toLowerCase();
 
-    // Build Firestore query
-    let query = db.collection('reports')
-      .where('status', '==', statusFilter);
-
-    if (userIdFilter) {
-      query = query.where('reportedUserId', '==', userIdFilter);
-    }
-
+    // Build Firestore query — only use status + orderBy to avoid needing a
+    // composite index.  The userId filter is applied client-side afterwards.
     const direction = statusFilter === 'pending' ? 'asc' : 'desc';
-    query = query.orderBy('createdAt', direction).limit(500);
+    const query = db.collection('reports')
+      .where('status', '==', statusFilter)
+      .orderBy('createdAt', direction)
+      .limit(500);
 
     const reports = await queryDocs(query);
 
+    // Client-side userId filter (avoids Firestore composite index requirement)
+    const userFiltered = userIdFilter
+      ? reports.filter(r => r.reportedUserId === userIdFilter)
+      : reports;
+
     // Client-side search filter (Firestore doesn't support full-text search)
     const filtered = search
-      ? reports.filter(r =>
+      ? userFiltered.filter(r =>
           (r.reportedUserName  || '').toLowerCase().includes(search) ||
           (r.reporterName      || '').toLowerCase().includes(search) ||
           (r.reason            || '').toLowerCase().includes(search) ||
           (r.description       || '').toLowerCase().includes(search)
         )
-      : reports;
+      : userFiltered;
 
     // Collect all unique user IDs for enrichment
     const reportedUserIds = [...new Set(filtered.map(r => r.reportedUserId).filter(Boolean))];
@@ -176,19 +179,19 @@ router.get('/reports', async (req, res) => {
     // Build lookup maps
     const userMap = {};
     for (let i = 0; i < reportedUserIds.length; i++) {
-      const u = reportedUserDocs[i];
-      if (u) {
-        const gcsScore         = u.gcsScore         ?? u.gcs_score          ?? 100;
-        const gcsLastDeduction = u.gcsLastDeductionAt ?? u.gcs_last_deduction_at ?? null;
-        u.gcsDisplayScore = computeDisplayScore(gcsScore, gcsLastDeduction);
-        userMap[reportedUserIds[i]] = u;
+      const reportedUser = reportedUserDocs[i];
+      if (reportedUser) {
+        const gcsScore         = reportedUser.gcsScore         ?? reportedUser.gcs_score          ?? 100;
+        const gcsLastDeduction = reportedUser.gcsLastDeductionAt ?? reportedUser.gcs_last_deduction_at ?? null;
+        reportedUser.gcsDisplayScore = computeDisplayScore(gcsScore, gcsLastDeduction);
+        userMap[reportedUserIds[i]] = reportedUser;
       }
     }
 
     const reporterMap = {};
     for (let i = 0; i < reporterIds.length; i++) {
-      const u = reporterDocs[i];
-      if (u) reporterMap[reporterIds[i]] = u;
+      const reporter = reporterDocs[i];
+      if (reporter) reporterMap[reporterIds[i]] = reporter;
     }
 
     const lockMap = {};
@@ -269,33 +272,27 @@ router.post('/reports/:id/resolve', async (req, res) => {
       createdAt:    timestamp,
     }, { merge: true });
 
-    // Warning actions: deduct GCS and update user
+    // Warning actions: create warning doc (which deducts GCS)
     if (action === 'warned' || action === 'warned_severe') {
-      const severity  = action === 'warned_severe' ? 'severe' : 'standard';
-      const deduction = severity === 'severe' ? 20 : 10;
+      const severity  = action === 'warned_severe' ? 4 : 2;
+      const warningReason = body?.reason || report.reason;
 
-      const user = await getDoc(`users/${report.reportedUserId}`);
-      if (user) {
-        const gcsScore     = user.gcsScore     ?? user.gcs_score     ?? 100;
-        const warningCount = user.warningCount  ?? user.warning_count ?? 0;
-        const newGcs           = Math.max(0, gcsScore - deduction);
-        const newWarningCount  = warningCount + 1;
-        const warningReason    = body?.reason || report.reason;
-
-        await db.doc(`users/${report.reportedUserId}`).update({
-          gcsScore:           newGcs,
-          gcsLastDeductionAt: timestamp,
-          warningCount:       newWarningCount,
-          warningReason:      warningReason,
-          hasActiveWarning:   true,
-          hasNewWarning:      true,
-          warningIssuedAt:    timestamp,
+      try {
+        await createWarning(report.reportedUserId, {
+          reason:         warningReason,
+          severity,
+          adminNote:      null,
+          source:         'report',
+          linkedReportId: req.params.id,
+          adminUid:       req.auth.uid,
         });
 
         // Send warning PM (fire-and-forget)
         sendSystemPm(report.reportedUserId,
-          `\u26a0\ufe0f You have received a warning.\n\nReason: ${warningReason}\n\nYour Good Character Score has been reduced by ${deduction} points (now ${newGcs}/100).`
+          `\u26a0\ufe0f You have received a warning.\n\nReason: ${warningReason}\n\nRepeated violations may result in suspension.`
         ).catch(err => log.error('reports', 'Failed to send warning PM', { userId: report.reportedUserId, error: err.message }));
+      } catch (warnErr) {
+        log.error('reports', 'Failed to create warning from report', { reportId: req.params.id, error: warnErr.message });
       }
     }
 
@@ -353,42 +350,32 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
       },
     }));
 
-    // Apply warning if applicable
-    let warningWrite = null;
+    // Apply warning if applicable (uses createWarning to write warning doc + update user)
     if (action === 'warned' || action === 'warned_severe') {
-      const severity  = action === 'warned_severe' ? 'severe' : 'standard';
-      const deduction = severity === 'severe' ? 20 : 10;
+      const severity  = action === 'warned_severe' ? 4 : 2;
+      const warningReason = body?.reason || 'Multiple reports';
 
-      const user = await getDoc(`users/${req.params.userId}`);
-      if (user) {
-        const gcsScore     = user.gcsScore     ?? user.gcs_score     ?? 100;
-        const warningCount = user.warningCount  ?? user.warning_count ?? 0;
-        const newGcs          = Math.max(0, gcsScore - deduction);
-        const newWarningCount = warningCount + 1;
-        const warningReason   = body?.reason || 'Multiple reports';
-
-        warningWrite = {
-          path: `users/${req.params.userId}`,
-          data: {
-            gcsScore:           newGcs,
-            gcsLastDeductionAt: timestamp,
-            warningCount:       newWarningCount,
-            warningReason:      warningReason,
-            hasActiveWarning:   true,
-            hasNewWarning:      true,
-            warningIssuedAt:    timestamp,
-          },
-        };
+      try {
+        await createWarning(req.params.userId, {
+          reason:         warningReason,
+          severity,
+          adminNote:      null,
+          source:         'report',
+          linkedReportId: null,
+          adminUid:       req.auth.uid,
+        });
 
         // Send warning PM (fire-and-forget)
         sendSystemPm(req.params.userId,
-          `\u26a0\ufe0f You have received a warning based on multiple reports.\n\nReason: ${warningReason}\n\nYour Good Character Score has been reduced by ${deduction} points (now ${newGcs}/100).`
+          `\u26a0\ufe0f You have received a warning based on multiple reports.\n\nReason: ${warningReason}\n\nRepeated violations may result in suspension.`
         ).catch(err => log.error('reports', 'Failed to send warning PM', { userId: req.params.userId, error: err.message }));
+      } catch (warnErr) {
+        log.error('reports', 'Failed to create warning from bulk resolve', { userId: req.params.userId, error: warnErr.message });
       }
     }
 
     // Execute batch writes in chunks of 500
-    const combinedWrites = warningWrite ? [...allWrites, warningWrite] : allWrites;
+    const combinedWrites = allWrites;
     for (let i = 0; i < combinedWrites.length; i += 500) {
       const chunk = combinedWrites.slice(i, i + 500);
       const batch = db.batch();
@@ -539,7 +526,6 @@ router.get('/reports/export', async (req, res) => {
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="reports-export.csv"');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(csvRows.join('\n'));
   } catch (err) {
     log.error('reports', 'GET /api/reports/export failed', { error: err.message });
@@ -598,10 +584,10 @@ router.post('/admin/users/:uid/suspend', async (req, res) => {
 
     let endTimestamp = null;
     if (body.endDate) {
-      const d = new Date(body.endDate);
-      if (isNaN(d.getTime())) return res.status(400).json({ error: 'endDate must be a valid ISO-8601 date' });
-      if (d.getTime() <= Date.now()) return res.status(400).json({ error: 'endDate must be in the future' });
-      endTimestamp = d.getTime();
+      const endDate = new Date(body.endDate);
+      if (isNaN(endDate.getTime())) return res.status(400).json({ error: 'endDate must be a valid ISO-8601 date' });
+      if (endDate.getTime() <= Date.now()) return res.status(400).json({ error: 'endDate must be in the future' });
+      endTimestamp = endDate.getTime();
     }
 
     const user = await getDoc(`users/${req.params.uid}`);

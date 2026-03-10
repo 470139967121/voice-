@@ -71,7 +71,11 @@ fun SuspensionScreen(
     appealStatus: String?,
     onSubmitAppeal: (String) -> Unit,
     onSignOut: () -> Unit,
-    isLoading: Boolean
+    isLoading: Boolean,
+    isDeviceBanned: Boolean = false,
+    isNetworkBanned: Boolean = false,
+    banReason: String? = null,
+    banExpiresAt: String? = null
 ) {
     var appealText by remember { mutableStateOf("") }
     var appealSubmitted by remember { mutableStateOf(false) }
@@ -97,7 +101,7 @@ fun SuspensionScreen(
     ) {
         Image(
             painter = painterResource(R.drawable.police_duck),
-            contentDescription = "Police duck",
+            contentDescription = stringResource(Res.string.police_duck_description),
             modifier = Modifier
                 .size(160.dp)
                 .clip(CircleShape)
@@ -106,7 +110,8 @@ fun SuspensionScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = suspensionTitle(countdownExpired),
+            text = if (countdownExpired) stringResource(Res.string.account_unlocked)
+                   else stringResource(Res.string.account_suspended),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
@@ -249,6 +254,54 @@ fun SuspensionScreen(
             }
         }
 
+        // Show device/network ban info if also banned
+        if ((isDeviceBanned || isNetworkBanned) && !countdownExpired) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (isDeviceBanned && isNetworkBanned) Res.string.suspension_also_device_and_network_banned
+                            else if (isDeviceBanned) Res.string.suspension_also_device_banned
+                            else Res.string.suspension_also_network_banned
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.error
+                    )
+
+                    if (!banReason.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(Res.string.ban_reason, banReason),
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (!banExpiresAt.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(Res.string.ban_expires, banExpiresAt),
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedButton(
@@ -258,7 +311,7 @@ fun SuspensionScreen(
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         ) {
-            Text(if (countdownExpired) "Sign In" else "Sign Out")
+            Text(if (countdownExpired) stringResource(Res.string.sign_in) else stringResource(Res.string.sign_out))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -292,16 +345,16 @@ private fun CountdownClock(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (days > 0) {
-            ClockSegment(days.toString(), "DAY", segmentBg, digitColor, labelColor)
+            ClockSegment(days.toString(), stringResource(Res.string.time_unit_day), segmentBg, digitColor, labelColor)
             ClockSeparator(separatorColor)
         }
-        ClockSegment(hours.toString().padStart(2, '0'), "HR", segmentBg, digitColor, labelColor)
+        ClockSegment(hours.toString().padStart(2, '0'), stringResource(Res.string.time_unit_hour), segmentBg, digitColor, labelColor)
         ClockSeparator(separatorColor)
-        ClockSegment(minutes.toString().padStart(2, '0'), "MIN", segmentBg, digitColor, labelColor)
+        ClockSegment(minutes.toString().padStart(2, '0'), stringResource(Res.string.time_unit_minute), segmentBg, digitColor, labelColor)
         ClockSeparator(separatorColor)
-        ClockSegment(seconds.toString().padStart(2, '0'), "SEC", segmentBg, digitColor, labelColor)
+        ClockSegment(seconds.toString().padStart(2, '0'), stringResource(Res.string.time_unit_second), segmentBg, digitColor, labelColor)
         ClockSeparator(separatorColor)
-        ClockSegment(millis.toString().padStart(3, '0'), "MS", segmentBg, digitColor, labelColor, animate = false)
+        ClockSegment(millis.toString().padStart(3, '0'), stringResource(Res.string.time_unit_millisecond), segmentBg, digitColor, labelColor, animate = false)
     }
 }
 
@@ -367,9 +420,6 @@ private fun ClockSeparator(color: androidx.compose.ui.graphics.Color) {
         modifier = Modifier.padding(horizontal = 2.dp, vertical = 0.dp)
     )
 }
-
-internal fun suspensionTitle(countdownExpired: Boolean): String =
-    if (countdownExpired) "Account Unlocked" else "Account Suspended"
 
 internal fun shouldShowReason(countdownExpired: Boolean, reason: String?): Boolean =
     !countdownExpired && !reason.isNullOrBlank()

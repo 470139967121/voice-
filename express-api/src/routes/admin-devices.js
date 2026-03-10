@@ -11,6 +11,7 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const { generateId, now } = require('../utils/helpers');
+const { sendSystemPm } = require('../utils/system-pm');
 const log = require('../utils/log');
 
 // ─── List all device bindings (paginated + searchable) ──────────
@@ -19,28 +20,28 @@ router.get('/admin/devices', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const q = (req.query.q || '').toLowerCase().trim();
+    const searchQuery = (req.query.q || '').toLowerCase().trim();
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
     const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
     const snap = await db.collection('deviceBindings').get();
-    let devices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    let devices = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     // In-memory search (Firestore doesn't support full-text search)
-    if (q) {
-      devices = devices.filter(d => {
+    if (searchQuery) {
+      devices = devices.filter(device => {
         const searchable = [
-          d.id,
-          d.userId,
-          d.manufacturer,
-          d.model,
-          d.lastIp,
-          d.isp,
+          device.id,
+          device.userId,
+          device.manufacturer,
+          device.model,
+          device.lastIp,
+          device.isp,
         ]
           .filter(Boolean)
           .map(v => String(v).toLowerCase())
           .join(' ');
-        return searchable.includes(q);
+        return searchable.includes(searchQuery);
       });
     }
 
@@ -105,6 +106,7 @@ router.delete('/admin/devices/:deviceId', async (req, res) => {
     if (!snap.exists) {
       return res.status(404).json({ error: 'Device binding not found' });
     }
+    const deviceData = snap.data();
 
     await db.doc(`deviceBindings/${deviceId}`).delete();
 
@@ -116,6 +118,11 @@ router.delete('/admin/devices/:deviceId', async (req, res) => {
       details: `Unbound device ${deviceId}`,
       createdAt: now(),
     });
+
+    // Send system PM to the bound user (non-blocking)
+    if (deviceData.userId) {
+      try { await sendSystemPm(deviceData.userId, 'Your device binding has been reset by a moderator.'); } catch (e) { log.warn('system-pm', 'Failed to send', { error: e.message }); }
+    }
 
     res.json({ success: true });
   } catch (err) {

@@ -16,6 +16,7 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const { generateId, now } = require('../utils/helpers');
+const { sendSystemPm } = require('../utils/system-pm');
 const log = require('../utils/log');
 
 // ── Economy snapshot ──
@@ -99,6 +100,12 @@ router.post('/users/:uid/adjust-balance', async (req, res) => {
       }),
     ]);
 
+    // Send system PM about balance adjustment (non-blocking)
+    const currencyName = currency === 'coins' ? 'Shy Coins' : 'Shy Beans';
+    const absAmount = Math.abs(amount);
+    const action = amount > 0 ? 'were added to' : 'were deducted from';
+    try { await sendSystemPm(req.params.uid, `${absAmount} ${currencyName} ${action} your account.`); } catch (e) { log.warn('system-pm', 'Failed to send', { uid: req.params.uid, error: e.message }); }
+
     res.json({ success: true, newBalance, currency });
   } catch (err) {
     log.error('admin-economy', 'Error adjusting balance', { uid: req.params.uid, error: err.message });
@@ -137,6 +144,16 @@ router.post('/users/:uid/backpack', async (req, res) => {
       details:      `Set ${body.giftId} quantity to ${body.quantity}`,
       createdAt:    timestamp,
     });
+
+    // Notify user about backpack change (unless silent)
+    if (!body.silent) {
+      const name = body.giftName || body.giftId;
+      const msg = body.quantity === 0
+        ? `🎒 "${name}" has been removed from your backpack by the moderation team.`
+        : `🎒 Your backpack has been updated: "${name}" quantity set to ${body.quantity}.`;
+      sendSystemPm(req.params.uid, msg)
+        .catch(err => log.error('admin-economy', 'Failed to send backpack PM', { uid: req.params.uid, error: err.message }));
+    }
 
     res.json({ success: true });
   } catch (err) {
