@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -92,32 +93,38 @@ fun GiftWallContent(
 ) {
     val items = state.giftCatalog
 
-    Column(
-        modifier = modifier
-            .testTag("giftWall_grid")
-            .padding(4.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.TopCenter
     ) {
-        items.chunked(4).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                row.forEach { gift ->
-                    val wallEntry = state.wallEntries.find { it.giftId == gift.id }
-                    val hasReceived = wallEntry != null && wallEntry.receivedCount > 0
-                    Box(modifier = Modifier.weight(1f)) {
-                        GiftWallItem(
-                            gift = gift,
-                            receivedCount = wallEntry?.receivedCount ?: 0,
-                            isLit = hasReceived,
-                            onClick = { if (hasReceived) onSelectGift(gift.id) }
-                        )
+        Column(
+            modifier = Modifier
+                .widthIn(max = 400.dp)
+                .testTag("giftWall_grid")
+                .padding(4.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items.chunked(4).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    row.forEach { gift ->
+                        val wallEntry = state.wallEntries.find { it.giftId == gift.id }
+                        val hasReceived = wallEntry != null && wallEntry.receivedCount > 0
+                        Box(modifier = Modifier.weight(1f)) {
+                            GiftWallItem(
+                                gift = gift,
+                                receivedCount = wallEntry?.receivedCount ?: 0,
+                                isLit = hasReceived,
+                                onClick = { if (hasReceived) onSelectGift(gift.id) }
+                            )
+                        }
                     }
-                }
-                repeat(4 - row.size) {
-                    Spacer(modifier = Modifier.weight(1f))
+                    repeat(4 - row.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }
