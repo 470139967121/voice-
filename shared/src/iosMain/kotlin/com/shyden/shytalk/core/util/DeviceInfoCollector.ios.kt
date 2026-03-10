@@ -1,5 +1,7 @@
 package com.shyden.shytalk.core.util
 
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.useContents
 import platform.Foundation.NSBundle
 import platform.Foundation.NSLocale
 import platform.Foundation.NSProcessInfo
@@ -9,6 +11,7 @@ import platform.UIKit.UIDevice
 import platform.UIKit.UIScreen
 
 actual class DeviceInfoCollector {
+    @OptIn(ExperimentalForeignApi::class)
     actual fun collect(): DeviceInfo {
         val device = UIDevice.currentDevice
         val screen = UIScreen.mainScreen
@@ -18,10 +21,10 @@ actual class DeviceInfoCollector {
         val totalRamBytes = processInfo.physicalMemory
         val totalRamMb = (totalRamBytes / (1024uL * 1024uL)).toLong()
 
-        val screenBounds = screen.bounds
         val scale = screen.scale
-        val width = (screenBounds.size.width * scale).toInt()
-        val height = (screenBounds.size.height * scale).toInt()
+        val (width, height) = screen.bounds.useContents {
+            Pair((size.width * scale).toInt(), (size.height * scale).toInt())
+        }
 
         return DeviceInfo(
             deviceId = device.identifierForVendor?.UUIDString ?: "unknown",
