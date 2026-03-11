@@ -88,6 +88,11 @@ app.use('/api', require('./routes/translate'));
 const { createLogsRouter } = require('./routes/logs');
 app.use('/api', createLogsRouter(logger));
 
+// Test helper routes — dev environment only
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api', require('./routes/test-helpers'));
+}
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
