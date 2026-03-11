@@ -45,10 +45,8 @@ import com.shyden.shytalk.feature.suspension.SuspensionScreen
 import org.jetbrains.compose.resources.stringResource
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
+import com.shyden.shytalk.BuildConfig
 import kotlinx.coroutines.launch
-
-private const val WEB_CLIENT_ID =
-    "517834977595-cdu78p6q7vg57utpsvtik04c195lbh8b.apps.googleusercontent.com"
 
 @Composable
 fun GoogleSignInScreen(
@@ -225,7 +223,7 @@ fun GoogleSignInScreen(
                         try {
                             val googleIdOption = GetGoogleIdOption.Builder()
                                 .setFilterByAuthorizedAccounts(false)
-                                .setServerClientId(WEB_CLIENT_ID)
+                                .setServerClientId(BuildConfig.WEB_CLIENT_ID)
                                 .build()
 
                             val request = GetCredentialRequest.Builder()
