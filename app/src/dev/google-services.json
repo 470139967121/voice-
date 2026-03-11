@@ -1,39 +1,68 @@
 {
   "project_info": {
-    "project_number": "000000000000",
+    "project_number": "881846974606",
+    "firebase_url": "https://shytalk-dev-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "shytalk-dev",
     "storage_bucket": "shytalk-dev.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:placeholder",
+        "mobilesdk_app_id": "1:881846974606:android:c06eef3c7f82ce538e31df",
         "android_client_info": {
           "package_name": "com.shyden.shytalk"
         }
       },
-      "oauth_client": [],
-      "api_key": [
+      "oauth_client": [
         {
-          "current_key": "PLACEHOLDER_REPLACE_WITH_DEV_KEY"
+          "client_id": "881846974606-kv99pjv92i6me0emb2j3uacbhnqqvfj4.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
-      "services": {}
+      "api_key": [
+        {
+          "current_key": "AIzaSyCV5wJCA6BSWVW53bUfqw39lLXqBQ4Mzs8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "881846974606-kv99pjv92i6me0emb2j3uacbhnqqvfj4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:placeholder_dev",
+        "mobilesdk_app_id": "1:881846974606:android:fdcefe4da94d82718e31df",
         "android_client_info": {
           "package_name": "com.shyden.shytalk.dev"
         }
       },
-      "oauth_client": [],
-      "api_key": [
+      "oauth_client": [
         {
-          "current_key": "PLACEHOLDER_REPLACE_WITH_DEV_KEY"
+          "client_id": "881846974606-kv99pjv92i6me0emb2j3uacbhnqqvfj4.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
-      "services": {}
+      "api_key": [
+        {
+          "current_key": "AIzaSyCV5wJCA6BSWVW53bUfqw39lLXqBQ4Mzs8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "881846974606-kv99pjv92i6me0emb2j3uacbhnqqvfj4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

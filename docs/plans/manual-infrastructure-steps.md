@@ -211,7 +211,7 @@ sudo systemctl status caddy  # Verify it's running
 From your **local machine** (not SSH):
 
 ```bash
-scp -i ~/.ssh/shytalk-oci shytalk-dev-firebase-adminsdk.json ubuntu@145.241.224.13:~/shytalk-api/
+scp -i ~/.ssh/shytalk-oci shytalk-dev-firebase-adminsdk.json ubuntu@145.241.224.13:~/express-api/
 ```
 
 ### Step 3.4: Create dev `.env` on London
@@ -223,7 +223,7 @@ ssh -i ~/.ssh/shytalk-oci ubuntu@145.241.224.13
 
 Create the environment file:
 ```bash
-nano ~/shytalk-api/.env
+nano ~/express-api/.env
 ```
 
 Paste this content, **replacing the placeholders with actual values**:
@@ -233,7 +233,7 @@ NODE_ENV=development
 PORT=3000
 
 # Dev Firebase
-FIREBASE_SERVICE_ACCOUNT_PATH=/home/ubuntu/shytalk-api/shytalk-dev-firebase-adminsdk.json
+FIREBASE_SERVICE_ACCOUNT_PATH=/home/ubuntu/express-api/shytalk-dev-firebase-adminsdk.json
 FIREBASE_PROJECT_ID=shytalk-dev
 FIREBASE_DATABASE_URL=https://shytalk-dev-default-rtdb.europe-west1.firebasedatabase.app
 
@@ -264,7 +264,7 @@ From your **local machine**, in the project root:
 cd express-api
 tar czf /tmp/shytalk-api.tar.gz --exclude='node_modules' --exclude='.env' .
 scp -i ~/.ssh/shytalk-oci /tmp/shytalk-api.tar.gz ubuntu@145.241.224.13:/tmp/
-ssh -i ~/.ssh/shytalk-oci ubuntu@145.241.224.13 "cd ~/shytalk-api && tar xzf /tmp/shytalk-api.tar.gz && npm install --production && pm2 restart shytalk-api"
+ssh -i ~/.ssh/shytalk-oci ubuntu@145.241.224.13 "cd ~/express-api && tar xzf /tmp/shytalk-api.tar.gz && npm install --production && pm2 restart shytalk-api"
 ```
 
 ### Step 3.6: Verify
@@ -282,7 +282,7 @@ Expected response:
 
 - [ ] DNS record `dev-api.shytalk` → `145.241.224.13` added in Cloudflare
 - [ ] Caddy configured for `dev-api.shytalk.shyden.co.uk` and restarted
-- [ ] Service account uploaded to `~/shytalk-api/` on London
+- [ ] Service account uploaded to `~/express-api/` on London
 - [ ] `.env` created with all values filled in (no `<placeholders>` remaining)
 - [ ] Express API deployed and PM2 restarted
 - [ ] `curl` health check returns `{"status":"ok",...}`
@@ -346,7 +346,7 @@ Should show the dev API base URL and Firebase config.
 |-------|----------------|-----------|
 | Dev Firebase API Key | Task 1 → Project Settings | `config.dev.js`, dev `google-services.json` |
 | Dev `google-services.json` | Task 1 → Add Android app | `app/src/dev/google-services.json` |
-| Service account JSON | Task 1 → Service accounts | London server `~/shytalk-api/` |
+| Service account JSON | Task 1 → Service accounts | London server `~/express-api/` |
 | R2 Access Key ID | Task 2 → Create API Token | London server `.env` |
 | R2 Secret Access Key | Task 2 → Create API Token | London server `.env` |
 | LiveKit API Key | From Singapore server | London server `.env` |
