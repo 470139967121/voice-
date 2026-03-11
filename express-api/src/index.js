@@ -88,9 +88,10 @@ app.use('/api', require('./routes/translate'));
 const { createLogsRouter } = require('./routes/logs');
 app.use('/api', createLogsRouter(logger));
 
-// Test helper routes — dev environment only
+// Dev-only routes
 if (process.env.NODE_ENV !== 'production') {
   app.use('/api', require('./routes/test-helpers'));
+  app.use('/api', require('./routes/admin-migrate'));
 }
 
 // 404 handler

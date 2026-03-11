@@ -3742,6 +3742,14 @@
                     <button id="clear-stalkers-btn">Clear All Stalkers</button>
                     <div class="maintenance-result" id="clear-stalkers-result"></div>
                 </div>
+                <div class="maintenance-card nuclear" id="migrate-prod-card" style="display:none;">
+                    <h3>&#9889; Sync from Production</h3>
+                    <p>Wipe ALL dev Firestore data and replace it with a copy of production data.
+                        This copies users, rooms, conversations, gifts, economy config, banners,
+                        and all subcollections. Cannot be undone.</p>
+                    <button id="migrate-prod-btn">Copy Production Data</button>
+                    <div class="maintenance-result" id="migrate-prod-result"></div>
+                </div>
                 <div class="maintenance-card nuclear">
                     <h3>&#9762; RESET ALL</h3>
                     <p>Runs every maintenance action above in sequence. This will wipe system messages,
@@ -8180,6 +8188,59 @@
       btn.disabled = false;
       btn.textContent = "Clear All Stalkers";
     });
+
+    // --- Sync from Production (dev only) ---
+    {
+      const migrateCard = $("#migrate-prod-card");
+      // Show the card only on the dev admin panel
+      if (API_BASE.includes("dev-api")) {
+        migrateCard.style.display = "";
+      }
+
+      const migrateBtn = $("#migrate-prod-btn");
+      const migrateResult = $("#migrate-prod-result");
+
+      migrateBtn.addEventListener("click", async () => {
+        const msg = "This will WIPE ALL dev Firestore data and replace it with production data.\n\n" +
+          "Type SYNC to confirm:";
+        const answer = prompt(msg);
+        if (answer !== "SYNC") return;
+
+        migrateBtn.disabled = true;
+        migrateBtn.textContent = "Migrating... (this may take a while)";
+        migrateResult.style.display = "none";
+
+        try {
+          const token = await auth.currentUser.getIdToken();
+          const resp = await fetch(`${API_BASE}/api/admin/migrate-prod-data`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || "Migration failed");
+
+          const lines = [
+            `Deleted ${data.totalDeleted} dev documents`,
+            `Copied ${data.totalCopied} prod documents`,
+          ];
+          if (data.errors && data.errors.length > 0) {
+            lines.push(`${data.errors.length} error(s):`);
+            for (const e of data.errors) {
+              lines.push(`  ${e.collection} (${e.phase}): ${e.error}`);
+            }
+          }
+          migrateResult.className = "maintenance-result success";
+          migrateResult.textContent = lines.join("\n");
+          migrateResult.style.display = "block";
+        } catch (err) {
+          migrateResult.className = "maintenance-result error";
+          migrateResult.textContent = err.message;
+          migrateResult.style.display = "block";
+        }
+        migrateBtn.disabled = false;
+        migrateBtn.textContent = "Copy Production Data";
+      });
+    }
 
     // =====================================================
     // --- Reset All (nuclear) ---
