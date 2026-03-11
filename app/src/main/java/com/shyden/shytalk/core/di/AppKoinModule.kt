@@ -104,6 +104,9 @@ val appModule = module {
         Settings.Secure.getString(androidContext().contentResolver, Settings.Secure.ANDROID_ID)
     }
 
+    // Device check bypass (true in debug builds for emulator/E2E testing)
+    single(named("bypassDeviceChecks")) { BuildConfig.BYPASS_DEVICE_CHECKS }
+
     // Services
     single<TokenService> { LiveKitTokenService(get()) }
     single<VoiceService> { LiveKitVoiceService(androidContext(), get()) }
@@ -136,7 +139,7 @@ val appModule = module {
     single<RoomLifecycleManager> { get<ActiveRoomManager>() }
 
     // ViewModels
-    viewModel { AuthViewModel(get(), get(), get(), get(named("deviceId"))) }
+    viewModel { AuthViewModel(get(), get(), get(), get(named("deviceId")), get(named("bypassDeviceChecks"))) }
     viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }

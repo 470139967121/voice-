@@ -44,7 +44,8 @@ class AuthViewModel(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val deviceRepository: DeviceRepository,
-    private val deviceId: String
+    private val deviceId: String,
+    private val bypassDeviceChecks: Boolean = false
 ) : ViewModel() {
 
     companion object {
@@ -72,25 +73,29 @@ class AuthViewModel(
                 return@launch
             }
 
-            when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
-                is Resource.Success -> {
-                    val boundUserId = binding.data
-                    if (boundUserId != null && boundUserId != userId) {
-                        authRepository.signOut()
-                        _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
-                        return@launch
+            if (!bypassDeviceChecks) {
+                when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
+                    is Resource.Success -> {
+                        val boundUserId = binding.data
+                        if (boundUserId != null && boundUserId != userId) {
+                            authRepository.signOut()
+                            _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
+                            return@launch
+                        }
+                        if (boundUserId == null) {
+                            deviceRepository.bindDevice(deviceId, userId)
+                        }
                     }
-                    if (boundUserId == null) {
-                        deviceRepository.bindDevice(deviceId, userId)
+                    is Resource.Error -> {
+                        // Lenient: let user through on network failure
                     }
+                    is Resource.Loading -> {}
                 }
-                is Resource.Error -> {
-                    // Lenient: let user through on network failure
-                }
-                is Resource.Loading -> {}
-            }
 
-            checkAndApplyBan()
+                checkAndApplyBan()
+            } else {
+                logI(TAG, "Device checks bypassed (debug build)")
+            }
             resolveProfileState(userId)
         }
     }
@@ -123,26 +128,30 @@ class AuthViewModel(
 
     private suspend fun handleSignInSuccess(userId: String) {
         logI(TAG, "Sign-in success: userId=$userId")
-        when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
-            is Resource.Success -> {
-                val boundUserId = binding.data
-                if (boundUserId != null && boundUserId != userId) {
-                    logW(TAG, "Device locked for userId=$userId")
-                    authRepository.signOut()
-                    _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
-                    return
+        if (!bypassDeviceChecks) {
+            when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
+                is Resource.Success -> {
+                    val boundUserId = binding.data
+                    if (boundUserId != null && boundUserId != userId) {
+                        logW(TAG, "Device locked for userId=$userId")
+                        authRepository.signOut()
+                        _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
+                        return
+                    }
+                    if (boundUserId == null) {
+                        deviceRepository.bindDevice(deviceId, userId)
+                    }
                 }
-                if (boundUserId == null) {
-                    deviceRepository.bindDevice(deviceId, userId)
+                is Resource.Error -> {
+                    // Lenient: let user through on network failure
                 }
+                is Resource.Loading -> {}
             }
-            is Resource.Error -> {
-                // Lenient: let user through on network failure
-            }
-            is Resource.Loading -> {}
-        }
 
-        checkAndApplyBan()
+            checkAndApplyBan()
+        } else {
+            logI(TAG, "Device checks bypassed (debug build)")
+        }
         resolveProfileState(userId)
     }
 
