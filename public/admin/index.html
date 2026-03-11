@@ -4486,6 +4486,7 @@
       stopMonitoring();
       if (logsQuotaInterval) { clearInterval(logsQuotaInterval); logsQuotaInterval = null; }
       if (alertBellInterval) { clearInterval(alertBellInterval); alertBellInterval = null; }
+      sessionStorage.clear();
       await signOut(auth);
       userForm.classList.remove("visible");
       document.getElementById("user-subtabs").style.display = "none";

@@ -5,6 +5,11 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 concurrency:
   group: release-pipeline
   cancel-in-progress: false
@@ -17,6 +22,7 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -59,6 +65,7 @@ jobs:
   web-tests:
     name: Web Tests (Playwright)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -95,6 +102,7 @@ jobs:
   deploy-dev:
     name: Deploy to Dev
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [build-and-test, web-tests]
     steps:
       - uses: actions/checkout@v4
@@ -133,6 +141,7 @@ jobs:
   approve-production:
     name: Approve Production Release
     runs-on: ubuntu-latest
+    timeout-minutes: 1440
     needs: deploy-dev
     environment: production
     steps:
@@ -141,6 +150,7 @@ jobs:
   deploy-prod:
     name: Deploy to Production
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: approve-production
     steps:
       - uses: actions/checkout@v4
@@ -180,8 +190,6 @@ jobs:
           ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar czf /tmp/api-previous.tar.gz --exclude='node_modules' --exclude='.env' ."
 
       - name: Deploy Express API to Singapore (prod)
-        env:
-          SSH_KEY: ${{ secrets.SINGAPORE_SSH_KEY }}
         run: |
           cd express-api
           tar czf /tmp/api.tar.gz --exclude='node_modules' --exclude='.env' .
@@ -213,8 +221,9 @@ jobs:
       - name: Auto-merge PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr merge ${{ github.event.pull_request.number }} --merge --auto
+          gh pr merge "$PR_NUMBER" --merge --auto
 
   # ──────────────────────────────────────────────
   # Alert (if prod deploy fails)
@@ -223,6 +232,7 @@ jobs:
   alert-desync:
     name: Alert - Prod/Main Desync
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: deploy-prod
     if: failure()
     steps:
@@ -231,16 +241,20 @@ jobs:
       - name: Create critical issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           gh issue create \
             --title "CRITICAL: Production deployed but main not updated" \
             --label "critical,prod-desync" \
-            --assignee "${{ github.event.pull_request.user.login }}" \
+            --assignee "$PR_AUTHOR" \
             --body "## Production/Main Desync Alert
 
-          **PR:** #${{ github.event.pull_request.number }}
-          **Branch:** ${{ github.head_ref }}
-          **Deployed SHA:** ${{ github.event.pull_request.head.sha }}
+          **PR:** #${PR_NUMBER}
+          **Branch:** ${HEAD_REF}
+          **Deployed SHA:** ${HEAD_SHA}
 
           ### What happened
           Production was deployed successfully but the auto-merge to main failed.
@@ -255,6 +269,7 @@ jobs:
       - name: Comment on PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
+          gh pr comment "$PR_NUMBER" \
             --body "## CRITICAL: Production deployed but auto-merge failed. Main branch does not match production. See the created issue for resolution steps."

@@ -141,20 +141,20 @@ class RoomViewModel(
     private var isSeated = false
     // All accesses are on Dispatchers.Main via viewModelScope — safe without synchronization
     private val userCache: MutableMap<String, User> = mutableMapOf()
-    private var blockCheckDone = false
+    private var isBlockCheckDone = false
     @kotlin.concurrent.Volatile private var firstJoinTimestamp: Long? = null
     private var allMessages: List<Message> = emptyList()
     private var lastKnownRoom: ChatRoom? = null
-    private var ownerReturnTriggered = false
+    private var isOwnerReturnTriggered = false
     private var lastSeatedUserIds: Set<String> = emptySet()
     private var lastParticipantIds: Set<String> = emptySet()
     private var lastOwnerAwayState: Pair<RoomState, Long?>? = null
     private var lastFilteredMessages: List<Message> = emptyList()
     private var seatActionResetJob: Job? = null
-    private var autoRejoinAttempted = false
+    private var hasAutoRejoinAttempted = false
     private var userObserverJob: Job? = null
     private var observedUserIds: Set<String> = emptySet()
-    private var expiryUpsellShown = false
+    private var hasExpiryUpsellShown = false
     private val autoTranslatedMessageIds = mutableSetOf<String>()
 
     // Gift animation queue — room-wide gift events
@@ -247,7 +247,7 @@ class RoomViewModel(
         if (remaining > Constants.ROOM_EXPIRY_COUNTDOWN_THRESHOLD_MS && roomExpiryCountdownJob?.isActive == true) {
             roomExpiryCountdownJob?.cancel()
             roomExpiryCountdownJob = null
-            expiryUpsellShown = false
+            hasExpiryUpsellShown = false
             _uiState.update { it.copy(showExpiryUpsellDialog = false, roomExpiryRemainingMs = 0L) }
         }
     }
@@ -360,7 +360,7 @@ class RoomViewModel(
 
         val role = room.resolveRole(userId)
 
-        if (!blockCheckDone && !_uiState.value.hasJoined) {
+        if (!isBlockCheckDone && !_uiState.value.hasJoined) {
             handleFirstJoin(room, userId, role)
             return
         }
@@ -417,8 +417,8 @@ class RoomViewModel(
         if (userId !in room.participantIds) {
             // If not banned and room is active, attempt one auto-rejoin
             // (handles race between join write and stale Firestore emission)
-            if (!autoRejoinAttempted && room.state == RoomState.ACTIVE) {
-                autoRejoinAttempted = true
+            if (!hasAutoRejoinAttempted && room.state == RoomState.ACTIVE) {
+                hasAutoRejoinAttempted = true
                 logW(TAG, "User not in participantIds but not banned — attempting auto-rejoin")
                 viewModelScope.launch {
                     // Check if the current user was suspended — if so, don't rejoin
@@ -442,12 +442,12 @@ class RoomViewModel(
             _uiState.update { it.copy(isLoading = false, shouldNavigateBack = true) }
             return true
         }
-        autoRejoinAttempted = false
+        hasAutoRejoinAttempted = false
         return false
     }
 
     private fun handleFirstJoin(room: ChatRoom, userId: String, role: RoomRole) {
-        blockCheckDone = true
+        isBlockCheckDone = true
 
         // Detect "already joined" state (ViewModel recreated after back navigation)
         val alreadyInRoom = userId in room.participantIds && roomLifecycleManager.isInRoom(roomId)
@@ -503,7 +503,7 @@ class RoomViewModel(
             handleRoomExpiryCountdown(room)
             // Owner re-entering OWNER_AWAY room
             if (room.ownerId == userId && room.state == RoomState.OWNER_AWAY) {
-                ownerReturnTriggered = true
+                isOwnerReturnTriggered = true
                 ownerReturn()
             }
             return
@@ -528,7 +528,7 @@ class RoomViewModel(
         // are still false, and the Firestore writes in joinRoom() are no-ops
         // (owner already in participantIds), so no second emission arrives.
         if (room.ownerId == userId && room.state == RoomState.OWNER_AWAY) {
-            ownerReturnTriggered = true
+            isOwnerReturnTriggered = true
             ownerReturn()
         }
     }
@@ -538,22 +538,22 @@ class RoomViewModel(
 
         // Self-heal: if owner is online but somehow not in seat 0, restore immediately
         val ownerInSeat0 = room.seats[Constants.OWNER_SEAT_INDEX.toString()]?.isOccupiedBy(userId) == true
-        if (!ownerInSeat0 && roomLifecycleManager.isInRoom(roomId) && !ownerReturnTriggered) {
+        if (!ownerInSeat0 && roomLifecycleManager.isInRoom(roomId) && !isOwnerReturnTriggered) {
             logW(TAG, "Owner self-heal: not in seat 0, restoring via setOwnerReturned")
-            ownerReturnTriggered = true
+            isOwnerReturnTriggered = true
             ownerReturn()
             return
         }
 
         if (room.state == RoomState.OWNER_AWAY
-            && !ownerReturnTriggered
+            && !isOwnerReturnTriggered
             && roomLifecycleManager.isInRoom(roomId)
         ) {
-            ownerReturnTriggered = true
+            isOwnerReturnTriggered = true
             ownerReturn()
         }
         if (room.state == RoomState.ACTIVE) {
-            ownerReturnTriggered = false
+            isOwnerReturnTriggered = false
         }
     }
 
@@ -700,7 +700,7 @@ class RoomViewModel(
     private fun observeMessages() {
         viewModelScope.launch {
             messageRepository.getMessages(roomId)
-                .catch { /* ignore message errors */ }
+                .catch { e -> logW(TAG, "observeMessages error", e) }
                 .collect { messages ->
                     allMessages = messages
                     updateFilteredMessages()
@@ -924,8 +924,8 @@ class RoomViewModel(
         if (remaining <= Constants.ROOM_EXPIRY_COUNTDOWN_THRESHOLD_MS) {
             if (roomExpiryCountdownJob?.isActive == true) return
             // Show upsell dialog once when countdown starts for non-Super Shy owner
-            if (!expiryUpsellShown) {
-                expiryUpsellShown = true
+            if (!hasExpiryUpsellShown) {
+                hasExpiryUpsellShown = true
                 val ownerUser = _uiState.value.allKnownUsers[room.ownerId]
                 if (ownerUser?.isSuperShy != true) {
                     _uiState.update { it.copy(showExpiryUpsellDialog = true) }
@@ -1354,7 +1354,7 @@ class RoomViewModel(
                 }
             } catch (e: Exception) {
                 logE(TAG, "ownerReturn failed, will retry on next room update", e)
-                ownerReturnTriggered = false
+                isOwnerReturnTriggered = false
             }
         }
     }
@@ -1738,7 +1738,7 @@ class RoomViewModel(
     private fun observePendingRequests() {
         viewModelScope.launch {
             seatRequestRepository.getPendingRequests(roomId)
-                .catch { /* ignore */ }
+                .catch { e -> logW(TAG, "observePendingRequests error", e) }
                 .collect { requests ->
                     rawPendingRequests = requests
                     refilterPendingRequests()
@@ -1746,19 +1746,19 @@ class RoomViewModel(
         }
     }
 
-    private var initialApprovalsSuppressed = false
+    private var areInitialApprovalsSuppressed = false
 
     private fun observeMyRequest() {
         viewModelScope.launch {
             val userId = _uiState.value.currentUserId
             seatRequestRepository.getRequestsByUser(roomId, userId)
-                .catch { /* ignore */ }
+                .catch { e -> logW(TAG, "observeMyRequest error", e) }
                 .collect { requests ->
                     // On the first emission, suppress all existing approved requests.
                     // Only approvals that arrive in later emissions (freshly approved
                     // during this session) will trigger notifications.
-                    if (!initialApprovalsSuppressed) {
-                        initialApprovalsSuppressed = true
+                    if (!areInitialApprovalsSuppressed) {
+                        areInitialApprovalsSuppressed = true
                         requests.filter { it.status == SeatRequestStatus.APPROVED }
                             .forEach { processedApprovalIds.add(it.requestId) }
                         return@collect

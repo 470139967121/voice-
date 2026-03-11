@@ -12,7 +12,7 @@
  */
 
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand,
-        DeleteObjectsCommand, ListObjectsV2Command, HeadObjectCommand } = require('@aws-sdk/client-s3');
+        DeleteObjectsCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
 const accountId = process.env.R2_ACCOUNT_ID;
 const bucketName = process.env.R2_BUCKET_NAME || 'shytalk-media';
@@ -81,13 +81,4 @@ async function listObjects(prefix, maxKeys = 1000) {
   return allKeys;
 }
 
-async function headObject(key) {
-  try {
-    await s3.send(new HeadObjectCommand({ Bucket: bucketName, Key: key }));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-module.exports = { putObject, getObject, deleteObject, deleteObjects, listObjects, headObject, CDN_URL };
+module.exports = { putObject, getObject, deleteObject, deleteObjects, listObjects, CDN_URL };

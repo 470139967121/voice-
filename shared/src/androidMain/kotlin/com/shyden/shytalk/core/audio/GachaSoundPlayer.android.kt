@@ -81,7 +81,9 @@ actual object GachaSoundPlayer {
             track.pause()
             track.reloadStaticData()
             track.play()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("GachaSoundPlayer", "Audio track replay failed", e)
+        }
     }
 
     // -- Track builder --

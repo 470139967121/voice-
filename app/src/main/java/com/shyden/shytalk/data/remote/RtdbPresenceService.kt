@@ -52,7 +52,7 @@ class RtdbPresenceService(
     private var lastEventTs = 0L
 
     override fun setPresence(roomId: String, userId: String) {
-        if (currentRoomId != null && currentRoomId != roomId) {
+        if (currentRoomId != null) {
             removePresence()
         }
 

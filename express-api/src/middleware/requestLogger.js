@@ -44,7 +44,6 @@ function createRequestLogger(logger) {
     req.requestTraceId = requestTraceId;
     req.sessionTraceId = sessionTraceId;
 
-    // Set response header
     res.setHeader('x-request-trace-id', requestTraceId);
 
     // Log after response completes
