@@ -32,7 +32,7 @@ const log = require('../utils/log');
 // ─── Helpers ─────────────────────────────────────────────────────
 
 /**
- * Look up a Firebase Auth user's email and phone by UID.
+ * Look up a Firebase Auth user's email by UID.
  * Uses Firebase Admin SDK directly.
  */
 async function getFirebaseAuthInfo(uid) {
@@ -44,10 +44,10 @@ async function getFirebaseAuthInfo(uid) {
         if (provider.email) { email = provider.email; break; }
       }
     }
-    return { email, phoneNumber: userRecord.phoneNumber || null };
+    return { email };
   } catch (err) {
     log.error('admin-users', 'Firebase Auth lookup failed', { uid, error: err.message });
-    return { email: null, phoneNumber: null };
+    return { email: null };
   }
 }
 
@@ -89,18 +89,14 @@ function enrichUser(user) {
 }
 
 /**
- * Fetch email + phone from Firebase Auth and backfill into Firestore if missing.
+ * Fetch email from Firebase Auth and backfill into Firestore if missing.
  */
 async function backfillAuthInfo(user, uid) {
-  if (!user.email || !user.phoneNumber) {
+  if (!user.email) {
     const authInfo = await getFirebaseAuthInfo(uid);
-    if (!user.email && authInfo.email) {
+    if (authInfo.email) {
       user.email = authInfo.email;
       db.doc(`users/${uid}`).update({ email: authInfo.email }).catch(err => log.error('admin-users', 'Failed to backfill email', { uid, error: err.message }));
-    }
-    if (!user.phoneNumber && authInfo.phoneNumber) {
-      user.phoneNumber = authInfo.phoneNumber;
-      db.doc(`users/${uid}`).update({ phoneNumber: authInfo.phoneNumber }).catch(err => log.error('admin-users', 'Failed to backfill phoneNumber', { uid, error: err.message }));
     }
   }
 }
@@ -135,7 +131,6 @@ router.get('/user/:uid/auth-debug', async (req, res) => {
     res.json({
       uid: userRecord.uid,
       email: userRecord.email || null,
-      phoneNumber: userRecord.phoneNumber || null,
       providerData: userRecord.providerData,
       disabled: userRecord.disabled,
       metadata: userRecord.metadata,

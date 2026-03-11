@@ -465,7 +465,6 @@
 
     <!-- Auth -->
     <string name="sign_in">เข้าสู่ระบบ</string>
-    <string name="phone_number">หมายเลขโทรศัพท์</string>
     <string name="verification_code">รหัสยืนยัน</string>
     <string name="continue_with_google">ดำเนินการต่อด้วย Google</string>
 

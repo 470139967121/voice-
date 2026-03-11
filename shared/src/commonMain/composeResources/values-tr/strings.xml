@@ -465,7 +465,6 @@
 
     <!-- Auth -->
     <string name="sign_in">Giriş Yap</string>
-    <string name="phone_number">Telefon Numarası</string>
     <string name="verification_code">Doğrulama Kodu</string>
     <string name="continue_with_google">Google ile Devam Et</string>
 

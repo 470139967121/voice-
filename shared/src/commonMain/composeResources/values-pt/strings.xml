@@ -465,7 +465,6 @@
 
     <!-- Auth -->
     <string name="sign_in">Entrar</string>
-    <string name="phone_number">Número de telefone</string>
     <string name="verification_code">Código de verificação</string>
     <string name="continue_with_google">Continuar com Google</string>
 

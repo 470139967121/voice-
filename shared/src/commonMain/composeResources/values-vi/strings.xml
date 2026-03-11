@@ -465,7 +465,6 @@
 
     <!-- Auth -->
     <string name="sign_in">Đăng nhập</string>
-    <string name="phone_number">Số Điện Thoại</string>
     <string name="verification_code">Mã Xác Nhận</string>
     <string name="continue_with_google">Tiếp tục với Google</string>
 

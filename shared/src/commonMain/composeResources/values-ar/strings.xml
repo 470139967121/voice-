@@ -465,7 +465,6 @@
 
     <!-- Auth -->
     <string name="sign_in">تسجيل الدخول</string>
-    <string name="phone_number">رقم الهاتف</string>
     <string name="verification_code">رمز التحقق</string>
     <string name="continue_with_google">المتابعة مع Google</string>
 

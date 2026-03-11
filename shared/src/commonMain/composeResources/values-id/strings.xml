@@ -465,7 +465,6 @@
 
     <!-- Auth -->
     <string name="sign_in">Masuk</string>
-    <string name="phone_number">Nomor Telepon</string>
     <string name="verification_code">Kode Verifikasi</string>
     <string name="continue_with_google">Lanjutkan dengan Google</string>
 

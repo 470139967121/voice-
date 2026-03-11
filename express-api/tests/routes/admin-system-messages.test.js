@@ -35,7 +35,6 @@ jest.mock('../../src/utils/firebase', () => ({
     getUser: jest.fn().mockResolvedValue({
       uid: 'user-1',
       email: null,
-      phoneNumber: null,
       providerData: [],
     }),
   },

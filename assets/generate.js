@@ -293,7 +293,7 @@ async function main() {
         'Block and report disruptive users',
         'Room owners control who speaks',
         'Automatic ghost user removal',
-        'Phone or Google sign-in',
+        'Google sign-in',
       ],
       icon: 'shield',
       file: 'phone-5-safety.png',

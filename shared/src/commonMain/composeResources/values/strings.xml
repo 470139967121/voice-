@@ -473,7 +473,6 @@
 
     <!-- Auth -->
     <string name="sign_in">Sign In</string>
-    <string name="phone_number">Phone Number</string>
     <string name="verification_code">Verification Code</string>
     <string name="continue_with_google">Continue with Google</string>
 

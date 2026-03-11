@@ -465,7 +465,6 @@
 
     <!-- Auth -->
     <string name="sign_in">登录</string>
-    <string name="phone_number">手机号码</string>
     <string name="verification_code">验证码</string>
     <string name="continue_with_google">使用 Google 继续</string>
 

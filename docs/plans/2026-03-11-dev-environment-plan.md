@@ -17,7 +17,7 @@
 Go to https://console.firebase.google.com/ and create a new project:
 - Project name: `shytalk-dev`
 - Firestore location: `europe-west2` (London)
-- Enable: Authentication (Phone + Google Sign-In), Firestore, Realtime Database, Cloud Messaging
+- Enable: Authentication (Google Sign-In + Email/Password), Firestore, Realtime Database, Cloud Messaging
 
 **Step 2: Configure RTDB**
 

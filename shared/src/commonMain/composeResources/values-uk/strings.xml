@@ -465,7 +465,6 @@
 
     <!-- Auth -->
     <string name="sign_in">Увійти</string>
-    <string name="phone_number">Номер телефону</string>
     <string name="verification_code">Код підтвердження</string>
     <string name="continue_with_google">Продовжити з Google</string>
 
