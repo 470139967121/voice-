@@ -121,8 +121,9 @@ jobs:
       - name: Deploy web to dev site
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DEV_FIREBASE_API_KEY: ${{ secrets.DEV_FIREBASE_API_KEY }}
         run: |
-          cp public/admin/config.dev.js public/admin/config.js
+          sed "s/<DEV_FIREBASE_API_KEY>/$DEV_FIREBASE_API_KEY/" public/admin/config.dev.example.js > public/admin/config.js
           npx wrangler pages deploy public --project-name shytalk-site-dev
 
   # ──────────────────────────────────────────────
@@ -204,7 +205,9 @@ jobs:
       - name: Deploy web to prod site
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PROD_FIREBASE_API_KEY: ${{ secrets.PROD_FIREBASE_API_KEY }}
         run: |
+          sed "s/<PROD_FIREBASE_API_KEY>/$PROD_FIREBASE_API_KEY/" public/admin/config.example.js > public/admin/config.js
           npx wrangler pages deploy public --project-name shytalk-site
 
       - name: Auto-merge PR

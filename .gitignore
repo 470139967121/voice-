@@ -22,6 +22,10 @@ worker/.wrangler/
 worker-api/node_modules/
 worker-api/.wrangler/
 .env
+
+# Admin panel config files (contain Firebase API keys)
+public/admin/config.js
+public/admin/config.dev.js
 /node_modules/
 e2e_results/
 test_output.txt

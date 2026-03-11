@@ -1,4 +1,5 @@
-// Environment configuration — overridden per Cloudflare Pages deployment
+// Production environment configuration
+// Copy this to config.js and replace <PROD_FIREBASE_API_KEY> with the real key
 window.SHYTALK_CONFIG = {
   API_BASE: "https://api.shytalk.shyden.co.uk",
   FIREBASE_CONFIG: {
