@@ -4273,6 +4273,7 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="config.js"></script>
 <script type="module">
     // --- Firebase SDK (CDN) ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -4281,14 +4282,9 @@
     import { getFirestore as getClientFirestore, collection, query, where, onSnapshot, getDocs, orderBy, limit, doc, Timestamp }
       from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
-    // --- Config ---
-    const FIREBASE_CONFIG = {
-      apiKey: "AIzaSyDuJ6or7WuLTzby9g-MaOrqDYcYCu_qSAo",
-      authDomain: "shytalk-7ba69.firebaseapp.com",
-      projectId: "shytalk-7ba69"
-    };
-
-    const API_BASE = "https://api.shytalk.shyden.co.uk";
+    // --- Config (loaded from config.js) ---
+    const FIREBASE_CONFIG = window.SHYTALK_CONFIG.FIREBASE_CONFIG;
+    const API_BASE = window.SHYTALK_CONFIG.API_BASE;
 
     const app = initializeApp(FIREBASE_CONFIG);
     const auth = getAuth(app);
