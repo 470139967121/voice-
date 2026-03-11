@@ -23,8 +23,6 @@ worker-api/node_modules/
 worker-api/.wrangler/
 .env
 /node_modules/
-/package.json
-/package-lock.json
 e2e_results/
 test_output.txt
 nul
@@ -33,8 +31,10 @@ nul
 hs_err_pid*.log
 replay_pid*.log
 
-# Playwright MCP temp files
+# Playwright
 .playwright-mcp/
+playwright-report/
+playwright-results.xml
 
 # Migration scripts (one-time use)
 scripts/migrate-*.mjs
