@@ -1,0 +1,257 @@
+name: Release Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: release-pipeline
+  cancel-in-progress: false
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Stage 1: Build, Test & Deploy to Dev
+  # ──────────────────────────────────────────────
+
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Create dummy google-services.json for CI
+        run: |
+          DUMMY='{"project_info":{"project_number":"0","project_id":"dummy","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:dummy","android_client_info":{"package_name":"com.shyden.shytalk"}},"api_key":[{"current_key":"dummy"}]},{"client_info":{"mobilesdk_app_id":"1:0:android:dummy2","android_client_info":{"package_name":"com.shyden.shytalk.dev"}},"api_key":[{"current_key":"dummy"}]}],"configuration_version":"1"}'
+          mkdir -p app/src/dev app/src/prod
+          echo "$DUMMY" > app/src/dev/google-services.json
+          echo "$DUMMY" > app/src/prod/google-services.json
+
+      - name: Build devDebug
+        run: ./gradlew assembleDevDebug
+
+      - name: Run unit tests
+        run: ./gradlew testDevDebugUnitTest
+
+      - name: Publish unit test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Unit Tests
+          path: '**/build/test-results/**/TEST-*.xml'
+          reporter: java-junit
+
+      - name: Upload devDebug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-debug-apk
+          path: app/build/outputs/apk/dev/debug/*.apk
+
+  web-tests:
+    name: Web Tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          WEB_BASE_URL: https://dev.shytalk.shyden.co.uk
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+      - name: Publish Playwright results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Web Tests
+          path: playwright-results.xml
+          reporter: java-junit
+
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: [build-and-test, web-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Express API to London (dev)
+        env:
+          SSH_KEY: ${{ secrets.LONDON_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan 145.241.224.13 >> ~/.ssh/known_hosts
+
+          cd express-api
+          tar czf /tmp/api.tar.gz --exclude='node_modules' --exclude='.env' .
+          scp /tmp/api.tar.gz ubuntu@145.241.224.13:/tmp/
+          ssh ubuntu@145.241.224.13 "cd ~/express-api && tar xzf /tmp/api.tar.gz && npm install --production && pm2 restart shytalk-api"
+
+      - name: Verify dev API health
+        run: |
+          sleep 5
+          curl -sf https://dev-api.shytalk.shyden.co.uk/api/health
+
+      - name: Deploy web to dev site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          cp public/admin/config.dev.js public/admin/config.js
+          npx wrangler pages deploy public --project-name shytalk-site-dev
+
+  # ──────────────────────────────────────────────
+  # Stage 2: Production Release (after approval)
+  # ──────────────────────────────────────────────
+
+  approve-production:
+    name: Approve Production Release
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    environment: production
+    steps:
+      - run: echo "Production release approved"
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: approve-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Create dummy google-services.json for CI
+        run: |
+          DUMMY='{"project_info":{"project_number":"0","project_id":"dummy","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:dummy","android_client_info":{"package_name":"com.shyden.shytalk"}},"api_key":[{"current_key":"dummy"}]},{"client_info":{"mobilesdk_app_id":"1:0:android:dummy2","android_client_info":{"package_name":"com.shyden.shytalk.dev"}},"api_key":[{"current_key":"dummy"}]}],"configuration_version":"1"}'
+          mkdir -p app/src/dev app/src/prod
+          echo "$DUMMY" > app/src/dev/google-services.json
+          echo "$DUMMY" > app/src/prod/google-services.json
+
+      - name: Build prodRelease
+        run: ./gradlew assembleProdRelease bundleProdRelease
+
+      - name: Run prod smoke tests
+        run: ./gradlew testProdReleaseUnitTest
+
+      - name: Archive previous API version
+        env:
+          SSH_KEY: ${{ secrets.SINGAPORE_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan 213.35.98.160 >> ~/.ssh/known_hosts
+          ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar czf /tmp/api-previous.tar.gz --exclude='node_modules' --exclude='.env' ."
+
+      - name: Deploy Express API to Singapore (prod)
+        env:
+          SSH_KEY: ${{ secrets.SINGAPORE_SSH_KEY }}
+        run: |
+          cd express-api
+          tar czf /tmp/api.tar.gz --exclude='node_modules' --exclude='.env' .
+          scp /tmp/api.tar.gz ubuntu@213.35.98.160:/tmp/
+          ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar xzf /tmp/api.tar.gz && npm install --production && pm2 restart shytalk-api"
+
+      - name: Verify prod API health
+        run: |
+          sleep 5
+          curl -sf https://api.shytalk.shyden.co.uk/api/health
+
+      - name: Upload to Play Store production track
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.shyden.shytalk
+          releaseFiles: app/build/outputs/bundle/prodRelease/*.aab
+          track: production
+          status: draft
+
+      - name: Deploy web to prod site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npx wrangler pages deploy public --project-name shytalk-site
+
+      - name: Auto-merge PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --merge --auto
+
+  # ──────────────────────────────────────────────
+  # Alert (if prod deploy fails)
+  # ──────────────────────────────────────────────
+
+  alert-desync:
+    name: Alert - Prod/Main Desync
+    runs-on: ubuntu-latest
+    needs: deploy-prod
+    if: failure()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create critical issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "CRITICAL: Production deployed but main not updated" \
+            --label "critical,prod-desync" \
+            --assignee "${{ github.event.pull_request.user.login }}" \
+            --body "## Production/Main Desync Alert
+
+          **PR:** #${{ github.event.pull_request.number }}
+          **Branch:** ${{ github.head_ref }}
+          **Deployed SHA:** ${{ github.event.pull_request.head.sha }}
+
+          ### What happened
+          Production was deployed successfully but the auto-merge to main failed.
+          This means main does not match what is live in production.
+
+          ### Immediate action required
+          1. Check the PR for merge conflicts
+          2. Resolve conflicts and merge manually
+          3. Verify main matches the deployed SHA
+          4. Close this issue once resolved"
+
+      - name: Comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "## CRITICAL: Production deployed but auto-merge failed. Main branch does not match production. See the created issue for resolution steps."
