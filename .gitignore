@@ -51,3 +51,10 @@ backups/
 
 # Git worktrees
 .worktrees/
+
+# iOS / Xcode
+iosApp/iosApp.xcodeproj/xcuserdata/
+iosApp/iosApp.xcodeproj/project.xcworkspace/xcuserdata/
+iosApp/DerivedData/
+iosApp/Pods/
+*.xcarchive
