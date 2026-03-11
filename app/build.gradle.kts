@@ -126,14 +126,20 @@ val copyComposeResources = tasks.register<Copy>("copySharedComposeResourcesToAss
     val sharedBuildDir = project(":shared").layout.buildDirectory.get().asFile
     from(File(sharedBuildDir, "generated/compose/resourceGenerator/preparedResources/commonMain/composeResources"))
     into(File(sharedBuildDir, "generated/compose/resourceGenerator/androidAssetsForApp/composeResources/com.shyden.shytalk.resources"))
-    dependsOn(project(":shared").tasks.named("prepareComposeResourcesTaskForCommonMain"))
-    dependsOn(project(":shared").tasks.named("convertXmlValueResourcesForCommonMain"))
-    dependsOn(project(":shared").tasks.named("copyNonXmlValueResourcesForCommonMain"))
+}
+
+project(":shared").afterEvaluate {
+    val sharedProject = this
+    copyComposeResources.configure {
+        dependsOn(sharedProject.tasks.named("prepareComposeResourcesTaskForCommonMain"))
+        dependsOn(sharedProject.tasks.named("convertXmlValueResourcesForCommonMain"))
+        dependsOn(sharedProject.tasks.named("copyNonXmlValueResourcesForCommonMain"))
+    }
 }
 
 afterEvaluate {
-    tasks.matching { it.name.contains("mergeAssets", ignoreCase = true) }.configureEach {
-        dependsOn(copyComposeResources)
+    listOf("mergeDevDebugAssets", "mergeDevReleaseAssets", "mergeProdDebugAssets", "mergeProdReleaseAssets").forEach { taskName ->
+        tasks.findByName(taskName)?.dependsOn(copyComposeResources)
     }
 }
 
