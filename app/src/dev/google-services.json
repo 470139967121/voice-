@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "shytalk-dev",
+    "storage_bucket": "shytalk-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:placeholder",
+        "android_client_info": {
+          "package_name": "com.shyden.shytalk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "PLACEHOLDER_REPLACE_WITH_DEV_KEY"
+        }
+      ],
+      "services": {}
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:placeholder_dev",
+        "android_client_info": {
+          "package_name": "com.shyden.shytalk.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "PLACEHOLDER_REPLACE_WITH_DEV_KEY"
+        }
+      ],
+      "services": {}
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -30,22 +30,24 @@ android {
         ndk {
             debugSymbolLevel = "SYMBOL_TABLE"
         }
+    }
 
-        buildConfigField(
-            "String",
-            "LIVEKIT_SERVER_URL",
-            "\"${System.getenv("LIVEKIT_URL") ?: ""}\""
-        )
-        buildConfigField(
-            "String",
-            "WORKER_URL",
-            "\"${System.getenv("WORKER_URL") ?: "https://api.shytalk.shyden.co.uk"}\""
-        )
-        buildConfigField(
-            "String",
-            "API_BASE_URL",
-            "\"${System.getenv("API_BASE_URL") ?: "https://api.shytalk.shyden.co.uk"}\""
-        )
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            buildConfigField("String", "API_BASE_URL", "\"https://dev-api.shytalk.shyden.co.uk\"")
+            buildConfigField("String", "WORKER_URL", "\"https://dev-api.shytalk.shyden.co.uk\"")
+            buildConfigField("String", "LIVEKIT_SERVER_URL", "\"${System.getenv("LIVEKIT_URL") ?: ""}\"")
+            buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "false")
+        }
+        create("prod") {
+            dimension = "env"
+            buildConfigField("String", "API_BASE_URL", "\"https://api.shytalk.shyden.co.uk\"")
+            buildConfigField("String", "WORKER_URL", "\"https://api.shytalk.shyden.co.uk\"")
+            buildConfigField("String", "LIVEKIT_SERVER_URL", "\"${System.getenv("LIVEKIT_URL") ?: ""}\"")
+            buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "false")
+        }
     }
 
     signingConfigs {
@@ -58,6 +60,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".dev"
+            buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "true")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -126,7 +132,7 @@ val copyComposeResources = tasks.register<Copy>("copySharedComposeResourcesToAss
 }
 
 afterEvaluate {
-    tasks.matching { it.name.contains("mergeDebugAssets") || it.name.contains("mergeReleaseAssets") }.configureEach {
+    tasks.matching { it.name.contains("mergeAssets", ignoreCase = true) }.configureEach {
         dependsOn(copyComposeResources)
     }
 }
