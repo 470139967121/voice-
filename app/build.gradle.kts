@@ -54,9 +54,12 @@ android {
     signingConfigs {
         create("release") {
             storeFile = rootProject.file("keystore.jks")
-            storePassword = "2gXnsQ2YVDNVlUr28kTRuW99"
+            val keystorePassword = project.findProperty("KEYSTORE_PASSWORD")?.toString()
+                ?: System.getenv("KEYSTORE_PASSWORD")
+                ?: ""
+            storePassword = keystorePassword
             keyAlias = "shytalk"
-            keyPassword = "2gXnsQ2YVDNVlUr28kTRuW99"
+            keyPassword = keystorePassword
         }
     }
 
