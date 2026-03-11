@@ -13,14 +13,14 @@ const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const log = require('../utils/log');
 
-// Same collections the backup cron tracks
+// Same collections the backup cron tracks, minus large operational ones (logs, alerts)
 const TOP_LEVEL_COLLECTIONS = [
   'users', 'rooms', 'conversations', 'deviceBindings', 'gifts',
   'giftCatalog', 'economyConfig', 'funFacts', 'banners', 'reports',
   'appeals', 'subscriptions', 'logConfig', 'deviceBans', 'networkBans',
   'config', 'coinPackages', 'purchaseReceipts', 'reportLocks',
   'reportsArchive', 'suspensionAppeals', 'broadcasts', 'adminAuditLog',
-  'alertConfig', 'alerts', 'logs',
+  'alertConfig',
 ];
 
 const SUBCOLLECTIONS = [
@@ -135,7 +135,7 @@ router.post('/admin/migrate-prod-data', async (req, res) => {
     return res.status(403).json({ error: 'This endpoint is disabled in production' });
   }
 
-  log.info('admin-migrate', 'Starting prod → dev data migration', { adminUid: req.user.uid });
+  log.info('admin-migrate', 'Starting prod → dev data migration', { adminUid: req.auth.uid });
 
   try {
     const srcDb = getProdDb();

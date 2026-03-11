@@ -101,7 +101,7 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-  logger.error('Unhandled error', { error: err.message, stack: err.stack, path: req.path, method: req.method });
+  logger.log({ level: 'ERROR', source: 'server', message: 'Unhandled error', error: err.message, stack: err.stack, path: req.path, method: req.method });
   res.status(500).json({ error: 'Internal server error' });
 });
 

@@ -3827,6 +3827,38 @@
             </div>
         </div>
 
+        <!-- Sync from Production Confirmation Overlay -->
+        <div class="nuclear-overlay" id="sync-overlay">
+            <div class="nuclear-dialog" style="border-color:#3498db;">
+                <div class="step-indicator" id="sync-step-label" style="color:#3498db88;">Step 1 of 3</div>
+                <h2 id="sync-title" style="color:#3498db;">Sync from Production?</h2>
+                <p id="sync-desc">This will wipe ALL dev Firestore data and replace it with a copy of production data. Users, rooms, conversations, gifts, economy config, banners, and all subcollections will be overwritten. This cannot be undone.</p>
+                <div id="sync-input-wrap" style="display:none;">
+                    <input type="text" id="sync-confirm-input" placeholder="Type here..." autocomplete="off" style="border-color:#3498db66;">
+                </div>
+                <div class="btn-row" id="sync-btn-row">
+                    <button class="btn-cancel" id="sync-cancel">Cancel</button>
+                    <button class="btn-confirm" id="sync-proceed" style="background:#2980b9;">I understand, continue</button>
+                    <button id="sync-mute" style="padding:6px 12px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;" title="Mute/unmute sounds">Mute</button>
+                </div>
+                <div class="nuclear-progress" id="sync-progress">
+                    <div class="nuke-bar-wrap">
+                        <div class="nuke-bar-label">
+                            <span id="sync-bar-text">Syncing...</span>
+                            <span id="sync-bar-pct">0%</span>
+                        </div>
+                        <div class="nuke-bar-track">
+                            <div class="nuke-bar-fill" id="sync-bar-fill" style="background:linear-gradient(90deg,#2980b9,#3498db,#1abc9c);"></div>
+                        </div>
+                    </div>
+                    <div class="step" id="sp-delete-sub">&#9679; Delete dev subcollections</div>
+                    <div class="step" id="sp-delete-top">&#9679; Delete dev top-level data</div>
+                    <div class="step" id="sp-copy-top">&#9679; Copy prod top-level data</div>
+                    <div class="step" id="sp-copy-sub">&#9679; Copy prod subcollections</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Siren Light Overlay -->
         <div class="siren-overlay" id="siren-overlay">
             <div class="siren-beam red"></div>
@@ -8192,53 +8224,300 @@
     // --- Sync from Production (dev only) ---
     {
       const migrateCard = $("#migrate-prod-card");
-      // Show the card only on the dev admin panel
       if (API_BASE.includes("dev-api")) {
         migrateCard.style.display = "";
       }
 
       const migrateBtn = $("#migrate-prod-btn");
       const migrateResult = $("#migrate-prod-result");
+      const syncOverlay = $("#sync-overlay");
+      const syncStepLabel = $("#sync-step-label");
+      const syncTitle = $("#sync-title");
+      const syncDesc = $("#sync-desc");
+      const syncInputWrap = $("#sync-input-wrap");
+      const syncConfirmInput = $("#sync-confirm-input");
+      const syncBtnRow = $("#sync-btn-row");
+      const syncCancel = $("#sync-cancel");
+      const syncProceed = $("#sync-proceed");
+      const syncProgress = $("#sync-progress");
+      const SYNC_PHRASE = "SYNC";
+      let syncStep = 0;
+      let syncExecuting = false;
 
-      migrateBtn.addEventListener("click", async () => {
-        const msg = "This will WIPE ALL dev Firestore data and replace it with production data.\n\n" +
-          "Type SYNC to confirm:";
-        const answer = prompt(msg);
-        if (answer !== "SYNC") return;
+      // --- Web Audio: digital pulse (confirmation steps) ---
+      let syncBeepCtx = null;
+      let syncBeepInterval = null;
+      let syncMuted = false;
 
-        migrateBtn.disabled = true;
-        migrateBtn.textContent = "Migrating... (this may take a while)";
-        migrateResult.style.display = "none";
+      const syncMuteBtn = $("#sync-mute");
+      syncMuteBtn.addEventListener("click", () => {
+        syncMuted = !syncMuted;
+        syncMuteBtn.textContent = syncMuted ? "Unmute" : "Mute";
+        if (syncMuted) { stopSyncBeep(); stopSyncTransfer(); }
+      });
 
-        try {
-          const token = await auth.currentUser.getIdToken();
-          const resp = await fetch(`${API_BASE}/api/admin/migrate-prod-data`, {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-          });
-          const data = await resp.json();
-          if (!resp.ok) throw new Error(data.error || "Migration failed");
-
-          const lines = [
-            `Deleted ${data.totalDeleted} dev documents`,
-            `Copied ${data.totalCopied} prod documents`,
-          ];
-          if (data.errors && data.errors.length > 0) {
-            lines.push(`${data.errors.length} error(s):`);
-            for (const e of data.errors) {
-              lines.push(`  ${e.collection} (${e.phase}): ${e.error}`);
-            }
-          }
-          migrateResult.className = "maintenance-result success";
-          migrateResult.textContent = lines.join("\n");
-          migrateResult.style.display = "block";
-        } catch (err) {
-          migrateResult.className = "maintenance-result error";
-          migrateResult.textContent = err.message;
-          migrateResult.style.display = "block";
+      function startSyncBeep() {
+        if (syncBeepCtx || syncMuted) return;
+        syncBeepCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playPulse() {
+          if (!syncBeepCtx) return;
+          const osc = syncBeepCtx.createOscillator();
+          const gain = syncBeepCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = 1200;
+          osc.frequency.exponentialRampToValueAtTime(600, syncBeepCtx.currentTime + 0.2);
+          gain.gain.setValueAtTime(0.1, syncBeepCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, syncBeepCtx.currentTime + 0.2);
+          osc.connect(gain);
+          gain.connect(syncBeepCtx.destination);
+          osc.start(syncBeepCtx.currentTime);
+          osc.stop(syncBeepCtx.currentTime + 0.2);
         }
-        migrateBtn.disabled = false;
-        migrateBtn.textContent = "Copy Production Data";
+        playPulse();
+        syncBeepInterval = setInterval(playPulse, 1200);
+      }
+
+      function stopSyncBeep() {
+        if (syncBeepInterval) { clearInterval(syncBeepInterval); syncBeepInterval = null; }
+        if (syncBeepCtx) { syncBeepCtx.close(); syncBeepCtx = null; }
+      }
+
+      // --- Web Audio: data transfer sound (execution phase) ---
+      let syncTransferCtx = null;
+      let syncTransferInterval = null;
+
+      function startSyncTransfer() {
+        if (syncTransferCtx || syncMuted) return;
+        syncTransferCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const masterGain = syncTransferCtx.createGain();
+        masterGain.gain.value = 0.12;
+        masterGain.connect(syncTransferCtx.destination);
+
+        // Rapid data-transfer chirps
+        function chirp() {
+          if (!syncTransferCtx) return;
+          const osc = syncTransferCtx.createOscillator();
+          const g = syncTransferCtx.createGain();
+          osc.type = "triangle";
+          const freq = 300 + Math.random() * 1500;
+          osc.frequency.value = freq;
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.5, syncTransferCtx.currentTime + 0.08);
+          g.gain.setValueAtTime(0.15, syncTransferCtx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, syncTransferCtx.currentTime + 0.08);
+          osc.connect(g);
+          g.connect(masterGain);
+          osc.start(syncTransferCtx.currentTime);
+          osc.stop(syncTransferCtx.currentTime + 0.08);
+        }
+
+        // Low hum underneath
+        const drone = syncTransferCtx.createOscillator();
+        drone.type = "sine";
+        drone.frequency.value = 80;
+        const droneGain = syncTransferCtx.createGain();
+        droneGain.gain.value = 0.08;
+        drone.connect(droneGain);
+        droneGain.connect(syncTransferCtx.destination);
+        drone.start();
+
+        chirp();
+        syncTransferInterval = setInterval(chirp, 150);
+      }
+
+      function stopSyncTransfer() {
+        if (syncTransferInterval) { clearInterval(syncTransferInterval); syncTransferInterval = null; }
+        if (syncTransferCtx) {
+          setTimeout(() => {
+            try { syncTransferCtx.close(); } catch(_) {}
+            syncTransferCtx = null;
+          }, 200);
+        }
+      }
+
+      function updateSyncBar(completed, total) {
+        const pct = Math.round((completed / total) * 100);
+        $("#sync-bar-fill").style.width = pct + "%";
+        $("#sync-bar-pct").textContent = pct + "%";
+        const labels = ["Syncing...", "Copying data...", "Transferring records...", "Downloading..."];
+        $("#sync-bar-text").textContent = completed < total
+          ? labels[completed % labels.length]
+          : "Complete";
+      }
+
+      function openSyncOverlay() {
+        syncStep = 1;
+        syncStepLabel.textContent = "Step 1 of 3";
+        syncTitle.textContent = "Sync from Production?";
+        syncDesc.textContent = "This will wipe ALL dev Firestore data and replace it with a complete copy of production data. Users, rooms, conversations, gifts, economy config, banners, and all subcollections will be overwritten. This cannot be undone.";
+        syncInputWrap.style.display = "none";
+        syncConfirmInput.value = "";
+        syncBtnRow.style.display = "flex";
+        syncProceed.textContent = "I understand, continue";
+        syncProceed.disabled = false;
+        syncProceed.style.display = "";
+        syncProgress.classList.remove("visible");
+        for (const el of $$("#sync-progress .step")) { el.className = "step"; }
+        syncOverlay.classList.add("visible");
+        startSyncBeep();
+      }
+
+      function closeSyncOverlay() {
+        syncOverlay.classList.remove("visible");
+        stopSyncBeep();
+        stopSyncTransfer();
+        syncStep = 0;
+      }
+
+      function dismissSyncOverlay() {
+        if (syncExecuting) return;
+        closeSyncOverlay();
+        syncProceed.style.display = "";
+        syncCancel.textContent = "Cancel";
+      }
+
+      migrateBtn.addEventListener("click", () => {
+        migrateResult.style.display = "none";
+        openSyncOverlay();
+      });
+
+      syncCancel.addEventListener("click", dismissSyncOverlay);
+      syncOverlay.addEventListener("click", (e) => { if (e.target === syncOverlay) dismissSyncOverlay(); });
+
+      syncConfirmInput.addEventListener("input", () => {
+        syncProceed.disabled = syncConfirmInput.value !== SYNC_PHRASE;
+      });
+
+      syncProceed.addEventListener("click", async () => {
+        if (syncStep === 1) {
+          syncStep = 2;
+          syncStepLabel.textContent = "Step 2 of 3";
+          syncTitle.textContent = "This will overwrite everything";
+          syncDesc.textContent = "Every document in dev Firestore will be deleted first, then replaced with production data. All users, rooms, messages, gifts, economy settings, and configurations will be overwritten.";
+          syncProceed.textContent = "Continue to final step";
+          return;
+        }
+        if (syncStep === 2) {
+          syncStep = 3;
+          syncStepLabel.textContent = "Step 3 of 3";
+          syncTitle.textContent = "Type to confirm";
+          syncDesc.textContent = "";
+          // Build the confirmation prompt safely
+          const strong = document.createElement("strong");
+          strong.style.cssText = "color:#3498db;font-family:monospace";
+          strong.textContent = SYNC_PHRASE;
+          syncDesc.appendChild(document.createTextNode("Type "));
+          syncDesc.appendChild(strong);
+          syncDesc.appendChild(document.createTextNode(" exactly to proceed."));
+          syncInputWrap.style.display = "block";
+          syncConfirmInput.value = "";
+          syncConfirmInput.focus();
+          syncProceed.textContent = "START SYNC";
+          syncProceed.disabled = true;
+          return;
+        }
+        if (syncStep === 3) {
+          if (syncConfirmInput.value !== SYNC_PHRASE) return;
+
+          syncExecuting = true;
+          stopSyncBeep();
+          startSyncTransfer();
+          syncOverlay.classList.add("locked");
+          syncBtnRow.style.display = "none";
+          syncInputWrap.style.display = "none";
+          syncStepLabel.textContent = "SYNCING";
+          syncTitle.textContent = "Copying production data";
+          syncDesc.textContent = "Do not close this page. This may take a while.";
+          syncProgress.classList.add("visible");
+          updateSyncBar(0, 4);
+
+          migrateBtn.disabled = true;
+          migrateBtn.textContent = "SYNCING...";
+
+          const phases = [
+            { id: "sp-delete-sub", label: "Delete dev subcollections" },
+            { id: "sp-delete-top", label: "Delete dev top-level data" },
+            { id: "sp-copy-top", label: "Copy prod top-level data" },
+            { id: "sp-copy-sub", label: "Copy prod subcollections" },
+          ];
+          for (const p of phases) {
+            const el = $(`#${p.id}`);
+            el.className = "step";
+            el.textContent = "\u25CF " + p.label;
+          }
+          const firstEl = $(`#${phases[0].id}`);
+          firstEl.className = "step running";
+          firstEl.textContent = "\u25CF " + phases[0].label + "...";
+
+          try {
+            const token = await auth.currentUser.getIdToken();
+            const resp = await fetch(`${API_BASE}/api/admin/migrate-prod-data`, {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || "Migration failed");
+
+            let phaseIdx = 0;
+            for (const p of phases) {
+              phaseIdx++;
+              const el = $(`#${p.id}`);
+              el.className = "step done";
+              el.textContent = "\u2713 " + p.label + " \u2014 done";
+              updateSyncBar(phaseIdx, 4);
+            }
+
+            const hasErrors = data.errors && data.errors.length > 0;
+            if (hasErrors) {
+              for (const e of data.errors) {
+                const phaseMap = { "delete": 0, "copy": 2 };
+                const idx = (phaseMap[e.phase] || 0) + (e.collection.includes("/") ? 0 : 1);
+                if (phases[idx]) {
+                  $(`#${phases[idx].id}`).className = "step failed";
+                }
+              }
+            }
+
+            syncExecuting = false;
+            syncOverlay.classList.remove("locked");
+            stopSyncTransfer();
+            syncStepLabel.textContent = hasErrors ? `Done with ${data.errors.length} error(s)` : "Complete";
+            syncTitle.textContent = hasErrors ? "Sync completed with errors" : "Sync complete!";
+            syncDesc.textContent = `Deleted ${data.totalDeleted} dev documents, copied ${data.totalCopied} prod documents.`;
+            syncBtnRow.style.display = "flex";
+            syncProceed.style.display = "none";
+            syncCancel.textContent = "Close";
+
+            const lines = [
+              `Deleted ${data.totalDeleted} dev documents`,
+              `Copied ${data.totalCopied} prod documents`,
+            ];
+            if (hasErrors) {
+              lines.push(`${data.errors.length} error(s):`);
+              for (const e of data.errors) {
+                lines.push(`  ${e.collection} (${e.phase}): ${e.error}`);
+              }
+            }
+            migrateResult.className = hasErrors ? "maintenance-result error" : "maintenance-result success";
+            migrateResult.textContent = lines.join("\n");
+            migrateResult.style.display = "block";
+          } catch (err) {
+            syncExecuting = false;
+            syncOverlay.classList.remove("locked");
+            stopSyncTransfer();
+            syncStepLabel.textContent = "Failed";
+            syncTitle.textContent = "Sync failed";
+            syncDesc.textContent = err.message;
+            syncBtnRow.style.display = "flex";
+            syncProceed.style.display = "none";
+            syncCancel.textContent = "Close";
+
+            migrateResult.className = "maintenance-result error";
+            migrateResult.textContent = err.message;
+            migrateResult.style.display = "block";
+          }
+          migrateBtn.disabled = false;
+          migrateBtn.textContent = "Copy Production Data";
+        }
       });
     }
 
