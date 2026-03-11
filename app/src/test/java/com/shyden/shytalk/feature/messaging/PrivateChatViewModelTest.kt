@@ -28,10 +28,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.job
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -69,8 +66,8 @@ class PrivateChatViewModelTest {
     private lateinit var typingFlow: MutableSharedFlow<Boolean>
 
     @After
-    fun tearDown() = runBlocking {
-        activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
+    fun tearDown() {
+        activeViewModels.forEach { it.viewModelScope.coroutineContext.cancel() }
         activeViewModels.clear()
     }
 

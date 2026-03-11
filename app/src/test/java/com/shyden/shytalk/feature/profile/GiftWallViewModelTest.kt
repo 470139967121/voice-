@@ -10,9 +10,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.job
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -56,8 +54,8 @@ class GiftWallViewModelTest {
     }
 
     @After
-    fun tearDown() = runBlocking {
-        activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
+    fun tearDown() {
+        activeViewModels.forEach { it.viewModelScope.coroutineContext.cancel() }
         activeViewModels.clear()
     }
 

@@ -36,6 +36,7 @@ android {
     productFlavors {
         create("dev") {
             dimension = "env"
+            applicationIdSuffix = ".dev"
             buildConfigField("String", "API_BASE_URL", "\"https://dev-api.shytalk.shyden.co.uk\"")
             buildConfigField("String", "WORKER_URL", "\"https://dev-api.shytalk.shyden.co.uk\"")
             buildConfigField("String", "LIVEKIT_SERVER_URL", "\"${System.getenv("LIVEKIT_URL") ?: ""}\"")
@@ -61,7 +62,6 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".dev"
             buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "true")
         }
         release {

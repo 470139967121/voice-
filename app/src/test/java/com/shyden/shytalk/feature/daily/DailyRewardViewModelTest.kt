@@ -9,9 +9,7 @@ import com.shyden.shytalk.testutil.TestData
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.job
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -35,8 +33,8 @@ class DailyRewardViewModelTest {
     private val activeViewModels = mutableListOf<DailyRewardViewModel>()
 
     @After
-    fun tearDown() = runBlocking {
-        activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
+    fun tearDown() {
+        activeViewModels.forEach { it.viewModelScope.coroutineContext.cancel() }
         activeViewModels.clear()
     }
 

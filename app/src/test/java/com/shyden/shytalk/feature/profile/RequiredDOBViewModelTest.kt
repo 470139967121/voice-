@@ -11,9 +11,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.job
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -43,8 +41,8 @@ class RequiredDOBViewModelTest {
     }
 
     @After
-    fun tearDown() = runBlocking {
-        activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
+    fun tearDown() {
+        activeViewModels.forEach { it.viewModelScope.coroutineContext.cancel() }
         activeViewModels.clear()
     }
 
