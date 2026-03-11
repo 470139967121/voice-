@@ -48,19 +48,39 @@ function buildMessage(doc) {
 
 /**
  * Send FCM push notifications to conversation participants (except sender).
- * Checks DND schedule, muted conversations, and notification preferences.
+ * Uses batch Firestore reads to minimize read cost.
  */
 async function sendMessageNotifications(
   conversationId, senderId, senderName, previewText, type, recipients, isGroup, groupName
 ) {
   try {
+    if (recipients.length === 0) return;
+
+    // Batch-fetch all user docs and settings docs (2 reads instead of 2*N)
+    const userRefs = recipients.map(p => db.doc(`users/${p.userId}`));
+    const settingsRefs = recipients.map(p =>
+      db.doc(`conversations/${conversationId}/userSettings/${p.userId}`)
+    );
+
+    const [userSnaps, settingsSnaps] = await Promise.all([
+      db.getAll(...userRefs),
+      db.getAll(...settingsRefs),
+    ]);
+
+    // Build lookup maps
+    const usersById = {};
+    for (const snap of userSnaps) {
+      if (snap.exists) usersById[snap.id] = snap.data();
+    }
+    const settingsById = {};
+    for (const snap of settingsSnaps) {
+      if (snap.exists) settingsById[snap.id] = snap.data();
+    }
+
     for (const p of recipients) {
       const recipientId = p.userId;
-
-      // Fetch user doc for notification settings and FCM tokens
-      const userSnap = await db.doc(`users/${recipientId}`).get();
-      if (!userSnap.exists) continue;
-      const user = userSnap.data();
+      const user = usersById[recipientId];
+      if (!user) continue;
       if (user.pmNotificationsEnabled === false) continue;
 
       // Check DND schedule
@@ -73,16 +93,15 @@ async function sendMessageNotifications(
         if (dndStart <= dndEnd) {
           if (currentMinutes >= dndStart && currentMinutes < dndEnd) continue;
         } else {
-          // Wraps past midnight
           if (currentMinutes >= dndStart || currentMinutes < dndEnd) continue;
         }
       }
 
-      // Check if conversation is muted for this recipient
-      const settingsSnap = await db.doc(`conversations/${conversationId}/userSettings/${recipientId}`).get();
-      if (settingsSnap.exists && settingsSnap.data()?.isMuted) continue;
+      // Check if conversation is muted
+      const settings = settingsById[recipientId];
+      if (settings?.isMuted) continue;
 
-      // Get FCM tokens from user doc
+      // Get FCM tokens
       const tokens = user.fcmTokens || [];
       if (tokens.length === 0) continue;
 
