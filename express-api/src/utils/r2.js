@@ -81,4 +81,32 @@ async function listObjects(prefix, maxKeys = 1000) {
   return allKeys;
 }
 
-module.exports = { putObject, getObject, deleteObject, deleteObjects, listObjects, CDN_URL };
+/**
+ * List R2 objects under a prefix with full metadata (size, lastModified).
+ * Used by admin backup/cleanup routes for audit and display.
+ */
+async function listObjectsWithMetadata(prefix) {
+  const objects = [];
+  let continuationToken;
+
+  do {
+    const resp = await s3.send(new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+      MaxKeys: 1000,
+      ContinuationToken: continuationToken,
+    }));
+    for (const obj of (resp.Contents || [])) {
+      objects.push({ key: obj.Key, size: obj.Size, lastModified: obj.LastModified });
+    }
+    continuationToken = resp.IsTruncated ? resp.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return objects;
+}
+
+module.exports = {
+  s3, bucketName,
+  putObject, getObject, deleteObject, deleteObjects, listObjects, listObjectsWithMetadata,
+  CDN_URL,
+};
