@@ -26,6 +26,7 @@ const { db, FieldValue } = require('../utils/firebase');
 const { generateId, now, todayStr, yesterdayStr } = require('../utils/helpers');
 const { requireAdmin } = require('../middleware/auth');
 const log = require('../utils/log');
+const { verifyProductPurchase, verifySubscription } = require('../utils/playStore');
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -1027,9 +1028,6 @@ router.post('/economy/redeem-beans', async (req, res) => {
 });
 
 // ── Validate purchase ──
-// TODO(SECURITY/HIGH): Add server-side Google Play purchase verification via googleapis.
-// Without it, a crafted request with a fake purchaseToken can credit coins.
-// Currently unverified — relies on manual audit logging as a stopgap.
 router.post('/economy/purchase', async (req, res) => {
   try {
     const uid = req.auth.uid;
@@ -1037,11 +1035,6 @@ router.post('/economy/purchase', async (req, res) => {
     const { productId, purchaseToken, isSubscription } = body || {};
 
     if (!productId || !purchaseToken) return res.status(400).json({ error: 'productId and purchaseToken required' });
-
-    log.warn('economy', 'Purchase validation (unverified — no Google Play receipt check)', {
-      userId: uid, productId, isSubscription: !!isSubscription,
-      tokenPrefix: purchaseToken.substring(0, 16),
-    });
 
     // Check for duplicate purchase token to prevent replay attacks
     const existingSnap = await db.collection('purchaseReceipts')
@@ -1053,6 +1046,32 @@ router.post('/economy/purchase', async (req, res) => {
       return res.status(409).json({ error: 'Purchase already processed' });
     }
 
+    // Verify purchase with Google Play
+    const packageName = 'com.shyden.shytalk';
+    let verification;
+    if (process.env.NODE_ENV !== 'production') {
+      log.warn('economy', 'Skipping purchase verification in non-production environment', {
+        userId: uid, productId, isSubscription: !!isSubscription,
+      });
+      verification = { orderId: 'dev-unverified' };
+    } else {
+      try {
+        if (isSubscription) {
+          verification = await verifySubscription(packageName, productId, purchaseToken);
+        } else {
+          verification = await verifyProductPurchase(packageName, productId, purchaseToken);
+        }
+      } catch (verifyErr) {
+        log.warn('economy', 'Purchase verification rejected', {
+          userId: uid, productId, isSubscription: !!isSubscription,
+          error: verifyErr.message,
+        });
+        return res.status(403).json({ error: 'Purchase verification failed' });
+      }
+    }
+
+    const orderId = verification.orderId || verification.latestOrderId || null;
+
     // Store receipt for audit trail
     const receiptId = generateId();
     await db.doc(`purchaseReceipts/${receiptId}`).set({
@@ -1061,7 +1080,8 @@ router.post('/economy/purchase', async (req, res) => {
       purchaseToken,
       isSubscription: !!isSubscription,
       createdAt: now(),
-      verified: false,
+      verified: true,
+      orderId,
     });
 
     const timestamp = now();
