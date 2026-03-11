@@ -7,6 +7,7 @@ import com.shyden.shytalk.core.model.ChatRoom
 import com.shyden.shytalk.core.model.SeatState
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -44,12 +45,18 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private val userCache = linkedMapOf<String, User>()
+    private val userCacheTimestamps = mutableMapOf<String, Long>()
 
     private fun cacheUser(key: String, user: User) {
         userCache[key] = user
+        userCacheTimestamps[key] = currentTimeMillis()
         while (userCache.size > 500) {
             val iter = userCache.keys.iterator()
-            if (iter.hasNext()) { iter.next(); iter.remove() } else break
+            if (iter.hasNext()) {
+                val oldest = iter.next()
+                iter.remove()
+                userCacheTimestamps.remove(oldest)
+            } else break
         }
     }
     private var myBlockedUserIds: Set<String> = emptySet()
@@ -180,7 +187,13 @@ class HomeViewModel(
             is Resource.Success -> { myBlockedUserIds = result.data }
             else -> {}
         }
-        userCache.clear()
+        // Evict stale cache entries instead of clearing everything
+        val cutoff = currentTimeMillis() - REFRESH_INTERVAL_MS
+        val staleKeys = userCacheTimestamps.filter { it.value < cutoff }.keys
+        staleKeys.forEach { key ->
+            userCache.remove(key)
+            userCacheTimestamps.remove(key)
+        }
         filterAndEmitRooms()
         loadBanners()
     }
@@ -240,7 +253,7 @@ class HomeViewModel(
 
     companion object {
         private const val TAG = "HomeViewModel"
-        const val REFRESH_INTERVAL_MS = 120_000L
+        const val REFRESH_INTERVAL_MS = 300_000L
     }
 
     fun createRoom(name: String) {
