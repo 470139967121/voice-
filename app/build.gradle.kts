@@ -95,6 +95,11 @@ android {
     )
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.all {
+            // Restart test JVM every 40 classes to reset global state
+            // (Dispatchers.Main) and prevent cross-class contamination
+            it.forkEvery = 40
+        }
         managedDevices {
             localDevices {
                 create("pixel4a") {

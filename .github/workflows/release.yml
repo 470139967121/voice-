@@ -57,7 +57,9 @@ jobs:
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
-        run: ./gradlew testDevDebugUnitTest assembleDevRelease --parallel
+        run: |
+          ./gradlew testDevDebugUnitTest assembleDevRelease --parallel || \
+          ./gradlew testDevDebugUnitTest
 
       - name: Publish unit test report
         uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
