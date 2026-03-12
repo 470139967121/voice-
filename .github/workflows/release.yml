@@ -211,13 +211,20 @@ jobs:
           name: dev-release-apk
           path: /tmp/dev-release-apk
 
+      - name: Locate APK
+        id: find-apk
+        run: |
+          APK_PATH=$(find /tmp/dev-release-apk -name "*.apk" -type f | head -1)
+          echo "Found APK: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@bd494989dd4bec0343f78adee87fe66e48279ad6 # v1
         with:
           appId: "1:881846974606:android:fdcefe4da94d82718e31df"
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
           groups: internal-testers
-          file: /tmp/dev-release-apk/app-dev-release.apk
+          file: ${{ steps.find-apk.outputs.apk_path }}
           releaseNotes: "PR #${{ github.event.pull_request.number }}"
 
   # ──────────────────────────────────────────────
