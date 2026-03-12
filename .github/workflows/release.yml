@@ -74,33 +74,9 @@ jobs:
           name: dev-release-apk
           path: app/build/outputs/apk/dev/release/*.apk
 
-  ios-build:
-    name: iOS Build
-    runs-on: macos-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
-
-      - name: Build iOS app for simulator
-        run: |
-          cd iosApp
-          xcodebuild \
-            -project iosApp.xcodeproj \
-            -scheme iosApp \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+  # iOS compilation is verified by the deploy-ios-dev job (archive step).
+  # A separate simulator build was removed to save ~10 min of redundant
+  # Kotlin/Native compilation per pipeline run.
 
   web-tests:
     name: Web Tests (Playwright)
@@ -142,7 +118,7 @@ jobs:
     name: Deploy to Dev
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build-and-test, web-tests, ios-build]
+    needs: [build-and-test, web-tests]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -231,7 +207,7 @@ jobs:
     name: Deploy iOS to TestFlight (Dev)
     runs-on: macos-latest
     timeout-minutes: 45
-    needs: [build-and-test, web-tests, ios-build]
+    needs: [build-and-test, web-tests]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -272,7 +248,7 @@ jobs:
           PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo "$IOS_PROVISION_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH"
           # Install profile with UUID as filename (Xcode requires this)
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(/usr/bin/security cms -D -i "$PROFILE_PATH")")
+          PROFILE_UUID=$(/usr/bin/security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
 
@@ -288,7 +264,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="ShyTalk App Store Distribution" \
-            DEVELOPMENT_TEAM=X7MRDD89A5 \
+            DEVELOPMENT_TEAM=F3XX4PM3MF \
             archive
 
       - name: Export IPA
@@ -755,7 +731,7 @@ jobs:
           # Install provisioning profile with UUID as filename (Xcode requires this)
           PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo "$IOS_PROVISION_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH"
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(/usr/bin/security cms -D -i "$PROFILE_PATH")")
+          PROFILE_UUID=$(/usr/bin/security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
 
@@ -771,7 +747,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="ShyTalk App Store Distribution" \
-            DEVELOPMENT_TEAM=X7MRDD89A5 \
+            DEVELOPMENT_TEAM=F3XX4PM3MF \
             archive
 
       - name: Export IPA
