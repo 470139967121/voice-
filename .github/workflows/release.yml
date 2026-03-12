@@ -142,6 +142,14 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '24'
+
+      - name: Install deploy tools
+        run: npm install -g wrangler firebase-tools
+
       - name: Deploy Express API to London (dev)
         env:
           SSH_KEY: ${{ secrets.LONDON_SSH_KEY }}
@@ -154,7 +162,7 @@ jobs:
           cd express-api
           tar czf /tmp/api.tar.gz --exclude='node_modules' --exclude='.env' .
           scp /tmp/api.tar.gz ubuntu@145.241.224.13:/tmp/
-          ssh ubuntu@145.241.224.13 "cd ~/express-api && tar xzf /tmp/api.tar.gz && npm install --production && pm2 restart shytalk-api"
+          ssh ubuntu@145.241.224.13 "cd ~/express-api && tar xzf /tmp/api.tar.gz && npm install --omit=dev && pm2 restart shytalk-api"
 
       - name: Verify dev API health
         run: |
@@ -173,7 +181,7 @@ jobs:
           DEV_FIREBASE_API_KEY: ${{ secrets.DEV_FIREBASE_API_KEY }}
         run: |
           sed "s|<DEV_FIREBASE_API_KEY>|$DEV_FIREBASE_API_KEY|" public/admin/config.dev.example.js > public/admin/config.js
-          npx wrangler pages deploy public --project-name shytalk-site-dev
+          wrangler pages deploy public --project-name shytalk-site-dev
 
       - name: Deploy Firestore rules to dev
         env:
@@ -181,7 +189,7 @@ jobs:
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT_DEV" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          npx firebase-tools deploy --only firestore:rules --project shytalk-dev --non-interactive
+          firebase deploy --only firestore:rules --project shytalk-dev --non-interactive
           rm /tmp/firebase-sa.json
 
       - name: Deploy RTDB rules to dev
@@ -190,7 +198,7 @@ jobs:
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT_DEV" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          npx firebase-tools deploy --only database --project shytalk-dev --non-interactive
+          firebase deploy --only database --project shytalk-dev --non-interactive
           rm /tmp/firebase-sa.json
 
       - name: Download devRelease APK
@@ -426,12 +434,20 @@ jobs:
           ssh-keyscan 213.35.98.160 >> ~/.ssh/known_hosts
           ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar czf /tmp/api-previous.tar.gz --exclude='node_modules' --exclude='.env' ."
 
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '24'
+
+      - name: Install deploy tools
+        run: npm install -g wrangler firebase-tools
+
       - name: Deploy Express API to Singapore (prod)
         run: |
           cd express-api
           tar czf /tmp/api.tar.gz --exclude='node_modules' --exclude='.env' .
           scp /tmp/api.tar.gz ubuntu@213.35.98.160:/tmp/
-          ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar xzf /tmp/api.tar.gz && npm install --production && pm2 restart shytalk-api"
+          ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar xzf /tmp/api.tar.gz && npm install --omit=dev && pm2 restart shytalk-api"
 
       - name: Verify prod API health
         run: |
@@ -459,7 +475,7 @@ jobs:
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT_PROD" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          npx firebase-tools deploy --only firestore:rules --project shytalk-7ba69 --non-interactive
+          firebase deploy --only firestore:rules --project shytalk-7ba69 --non-interactive
           rm /tmp/firebase-sa.json
 
       - name: Deploy RTDB rules to prod
@@ -468,7 +484,7 @@ jobs:
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT_PROD" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          npx firebase-tools deploy --only database --project shytalk-7ba69 --non-interactive
+          firebase deploy --only database --project shytalk-7ba69 --non-interactive
           rm /tmp/firebase-sa.json
 
       - name: Deploy web to prod site
@@ -478,7 +494,7 @@ jobs:
           PROD_FIREBASE_API_KEY: ${{ secrets.PROD_FIREBASE_API_KEY }}
         run: |
           sed "s|<PROD_FIREBASE_API_KEY>|$PROD_FIREBASE_API_KEY|" public/admin/config.example.js > public/admin/config.js
-          npx wrangler pages deploy public --project-name shytalk-site
+          wrangler pages deploy public --project-name shytalk-site
 
       - name: Auto-merge PR
         env:
