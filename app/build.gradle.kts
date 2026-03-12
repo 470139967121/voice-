@@ -146,6 +146,9 @@ afterEvaluate {
     listOf("mergeDevDebugAssets", "mergeDevReleaseAssets", "mergeProdDebugAssets", "mergeProdReleaseAssets").forEach { taskName ->
         tasks.findByName(taskName)?.dependsOn(copyComposeResources)
     }
+    // Lint vital report also reads the Compose resources assets directory
+    tasks.matching { it.name.contains("LintVitalReportModel") || it.name.contains("LintVitalAnalyze") }
+        .configureEach { dependsOn(copyComposeResources) }
 }
 
 dependencies {

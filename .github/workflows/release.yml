@@ -9,6 +9,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+  checks: write
 
 concurrency:
   group: release-pipeline
@@ -24,16 +25,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       - name: Create dummy google-services.json for CI
         run: |
@@ -48,6 +49,8 @@ jobs:
         run: echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
 
       - name: Build devDebug
+        env:
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
         run: ./gradlew assembleDevDebug
 
       - name: Run unit tests
@@ -56,10 +59,11 @@ jobs:
       - name: Build devRelease APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
         run: ./gradlew assembleDevRelease
 
       - name: Publish unit test report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1
         if: always()
         with:
           name: Unit Tests
@@ -67,13 +71,13 @@ jobs:
           reporter: java-junit
 
       - name: Upload devDebug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dev-debug-apk
           path: app/build/outputs/apk/dev/debug/*.apk
 
       - name: Upload devRelease APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dev-release-apk
           path: app/build/outputs/apk/dev/release/*.apk
@@ -83,16 +87,16 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       - name: Build iOS app for simulator
         run: |
@@ -111,10 +115,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
 
@@ -129,14 +133,14 @@ jobs:
           WEB_BASE_URL: https://dev.shytalk.shyden.co.uk
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: playwright-report
           path: playwright-report/
 
       - name: Publish Playwright results
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1
         if: always()
         with:
           name: Web Tests
@@ -149,7 +153,7 @@ jobs:
     timeout-minutes: 15
     needs: [build-and-test, web-tests, ios-build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Deploy Express API to London (dev)
         env:
@@ -167,31 +171,54 @@ jobs:
 
       - name: Verify dev API health
         run: |
-          sleep 5
-          curl -sf https://dev-api.shytalk.shyden.co.uk/api/health
+          for i in 1 2 3 4 5; do
+            sleep 5
+            if curl -sf https://dev-api.shytalk.shyden.co.uk/api/health; then exit 0; fi
+            echo "Health check attempt $i failed, retrying..."
+          done
+          echo "Dev API health check failed after 5 attempts"
+          exit 1
 
       - name: Deploy web to dev site
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DEV_FIREBASE_API_KEY: ${{ secrets.DEV_FIREBASE_API_KEY }}
         run: |
-          sed "s/<DEV_FIREBASE_API_KEY>/$DEV_FIREBASE_API_KEY/" public/admin/config.dev.example.js > public/admin/config.js
+          sed "s|<DEV_FIREBASE_API_KEY>|$DEV_FIREBASE_API_KEY|" public/admin/config.dev.example.js > public/admin/config.js
           npx wrangler pages deploy public --project-name shytalk-site-dev
 
+      - name: Deploy Firestore rules to dev
+        env:
+          FIREBASE_SERVICE_ACCOUNT_DEV: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_DEV" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          npx firebase-tools deploy --only firestore:rules --project shytalk-dev --non-interactive
+          rm /tmp/firebase-sa.json
+
+      - name: Deploy RTDB rules to dev
+        env:
+          FIREBASE_SERVICE_ACCOUNT_DEV: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_DEV" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          npx firebase-tools deploy --only database --project shytalk-dev --non-interactive
+          rm /tmp/firebase-sa.json
+
       - name: Download devRelease APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: dev-release-apk
           path: /tmp/dev-release-apk
 
       - name: Upload to Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        uses: wzieba/Firebase-Distribution-Github-Action@bd494989dd4bec0343f78adee87fe66e48279ad6 # v1
         with:
           appId: "1:881846974606:android:fdcefe4da94d82718e31df"
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
           groups: internal-testers
           file: /tmp/dev-release-apk/app-dev-release.apk
-          releaseNotes: "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+          releaseNotes: "PR #${{ github.event.pull_request.number }}"
 
   # ──────────────────────────────────────────────
   # Stage 2: Approval Gate
@@ -241,16 +268,16 @@ jobs:
             target: aosp_atd
             profile: pixel_tablet
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       - name: Create dummy google-services.json for CI
         run: |
@@ -266,7 +293,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Run E2E tests on ${{ matrix.device }}
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@5d6e86df22ab11632167a1a6b0c9ab0dc3469586 # v2
         with:
           api-level: ${{ matrix.api-level }}
           target: ${{ matrix.target }}
@@ -278,14 +305,14 @@ jobs:
           script: ./gradlew connectedDevDebugAndroidTest
 
       - name: Upload E2E test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: e2e-results-${{ matrix.device }}
           path: app/build/reports/androidTests/connected/
 
       - name: Publish E2E test report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1
         if: always()
         with:
           name: E2E Tests (${{ matrix.device }})
@@ -368,18 +395,18 @@ jobs:
     timeout-minutes: 30
     needs: e2e-tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       - name: Create dummy google-services.json for CI
         run: |
@@ -396,6 +423,7 @@ jobs:
       - name: Build prodRelease
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
         run: ./gradlew assembleProdRelease bundleProdRelease
 
       - name: Run prod smoke tests
@@ -420,12 +448,17 @@ jobs:
 
       - name: Verify prod API health
         run: |
-          sleep 5
-          curl -sf https://api.shytalk.shyden.co.uk/api/health
+          for i in 1 2 3 4 5; do
+            sleep 5
+            if curl -sf https://api.shytalk.shyden.co.uk/api/health; then exit 0; fi
+            echo "Health check attempt $i failed, retrying..."
+          done
+          echo "Prod API health check failed after 5 attempts"
+          exit 1
 
       # Upload to internal testing track (prod build for testers)
       - name: Upload to Play Store internal testing track
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@935ef9c68bb393a8e6116b1575626a7f5be3a7fb # v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.shyden.shytalk
@@ -433,12 +466,30 @@ jobs:
           track: internal
           status: draft
 
+      - name: Deploy Firestore rules to prod
+        env:
+          FIREBASE_SERVICE_ACCOUNT_PROD: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_PROD" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          npx firebase-tools deploy --only firestore:rules --project shytalk-7ba69 --non-interactive
+          rm /tmp/firebase-sa.json
+
+      - name: Deploy RTDB rules to prod
+        env:
+          FIREBASE_SERVICE_ACCOUNT_PROD: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_PROD" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          npx firebase-tools deploy --only database --project shytalk-7ba69 --non-interactive
+          rm /tmp/firebase-sa.json
+
       - name: Deploy web to prod site
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           PROD_FIREBASE_API_KEY: ${{ secrets.PROD_FIREBASE_API_KEY }}
         run: |
-          sed "s/<PROD_FIREBASE_API_KEY>/$PROD_FIREBASE_API_KEY/" public/admin/config.example.js > public/admin/config.js
+          sed "s|<PROD_FIREBASE_API_KEY>|$PROD_FIREBASE_API_KEY|" public/admin/config.example.js > public/admin/config.js
           npx wrangler pages deploy public --project-name shytalk-site
 
       - name: Auto-merge PR
@@ -484,7 +535,7 @@ jobs:
     needs: deploy-prod
     if: failure()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Create critical issue
         env:
