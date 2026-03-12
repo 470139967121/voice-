@@ -6,7 +6,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
   checks: write
@@ -241,7 +241,7 @@ jobs:
       - run: echo "Production release approved — running E2E tests next"
 
   # ──────────────────────────────────────────────
-  # Stage 3: E2E Tests (dev environment only)
+  # Stage 3: E2E Tests (against dev environment)
   # ──────────────────────────────────────────────
 
   e2e-tests:
@@ -394,17 +394,36 @@ jobs:
   #         path: iosApp/build/reports/
 
   # ──────────────────────────────────────────────
-  # Stage 4: Production Release
+  # Stage 4: Merge PR to main
+  # ──────────────────────────────────────────────
+
+  merge-pr:
+    name: Merge PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: e2e-tests
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Merge PR to main and delete branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr merge "$PR_NUMBER" --merge --delete-branch
+
+  # ──────────────────────────────────────────────
+  # Stage 5: Deploy main to Production
   # ──────────────────────────────────────────────
 
   deploy-prod:
     name: Deploy to Production
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: e2e-tests
+    needs: merge-pr
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Set up JDK 17
@@ -511,15 +530,8 @@ jobs:
           sed "s|<PROD_FIREBASE_API_KEY>|$PROD_FIREBASE_API_KEY|" public/admin/config.example.js > public/admin/config.js
           wrangler pages deploy public --project-name shytalk-site
 
-      - name: Auto-merge PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr merge "$PR_NUMBER" --merge --auto
-
   # ──────────────────────────────────────────────
-  # Stage 5 (SIMULATED): Promote to Production
+  # Stage 6 (SIMULATED): Promote to Production
   # ──────────────────────────────────────────────
   # TODO: When ready, replace this with actual Play Store promotion
   # from internal track → production track. This will require:
@@ -544,11 +556,11 @@ jobs:
   #         status: completed
 
   # ──────────────────────────────────────────────
-  # Alert (if prod deploy fails)
+  # Alert (if prod deploy fails after merge)
   # ──────────────────────────────────────────────
 
   alert-desync:
-    name: Alert - Prod/Main Desync
+    name: Alert - Prod Deploy Failed
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: deploy-prod
@@ -565,29 +577,21 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           gh issue create \
-            --title "CRITICAL: Production deployed but main not updated" \
+            --title "CRITICAL: Main updated but production deploy failed" \
             --label "critical,prod-desync" \
             --assignee "$PR_AUTHOR" \
-            --body "## Production/Main Desync Alert
+            --body "## Production Deploy Failed
 
           **PR:** #${PR_NUMBER}
           **Branch:** ${HEAD_REF}
-          **Deployed SHA:** ${HEAD_SHA}
+          **Merged SHA:** ${HEAD_SHA}
 
           ### What happened
-          Production was deployed successfully but the auto-merge to main failed.
-          This means main does not match what is live in production.
+          PR was merged to main but the production deployment failed.
+          Main has new code that is not yet live in production.
 
           ### Immediate action required
-          1. Check the PR for merge conflicts
-          2. Resolve conflicts and merge manually
-          3. Verify main matches the deployed SHA
+          1. Check the deploy-prod job logs for the failure reason
+          2. Fix the issue and re-deploy manually or via a new PR
+          3. Verify production matches main
           4. Close this issue once resolved"
-
-      - name: Comment on PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr comment "$PR_NUMBER" \
-            --body "## CRITICAL: Production deployed but auto-merge failed. Main branch does not match production. See the created issue for resolution steps."
