@@ -3198,9 +3198,6 @@ class RoomViewModelTest {
 
         val remaining = viewModel.uiState.value.roomExpiryRemainingMs
         assertTrue("Expected remaining > 0 but was $remaining", remaining > 0)
-
-        // Advance through remaining time so loop finishes
-        advanceUntilIdle()
     }
 
     @Test

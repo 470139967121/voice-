@@ -88,6 +88,7 @@ android {
         buildConfig = true
     }
     // Workaround: KMP android library plugin doesn't auto-package Compose resources as assets
+    @Suppress("DEPRECATION")
     sourceSets.getByName("main").assets.srcDir(
         File(project(":shared").layout.buildDirectory.get().asFile,
             "generated/compose/resourceGenerator/androidAssetsForApp")

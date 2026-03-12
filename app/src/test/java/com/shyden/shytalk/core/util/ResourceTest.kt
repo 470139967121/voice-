@@ -166,8 +166,9 @@ class ResourceTest {
     @Test
     fun `nested Resource in Success`() {
         val inner = Resource.Success("inner")
-        val outer = Resource.Success(inner)
-        assertTrue(outer.data is Resource.Success)
-        assertEquals("inner", (outer.data as Resource.Success).data)
+        val outer: Resource<Resource<String>> = Resource.Success(inner)
+        val innerResult = (outer as Resource.Success).data
+        assertTrue(innerResult is Resource.Success)
+        assertEquals("inner", (innerResult as Resource.Success).data)
     }
 }
