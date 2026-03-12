@@ -209,12 +209,12 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: dev-release-apk
-          path: /tmp/dev-release-apk
+          path: dev-release-apk
 
       - name: Locate APK
         id: find-apk
         run: |
-          APK_PATH=$(find /tmp/dev-release-apk -name "*.apk" -type f | head -1)
+          APK_PATH=$(find dev-release-apk -name "*.apk" -type f | head -1)
           echo "Found APK: $APK_PATH"
           echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
