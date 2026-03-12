@@ -183,7 +183,7 @@ Create: `public/admin/config.js`
 window.SHYTALK_CONFIG = {
   API_BASE: "https://api.shytalk.shyden.co.uk",
   FIREBASE_CONFIG: {
-    apiKey: "AIzaSyDuJ6or7WuLTzby9g-MaOrqDYcYCu_qSAo",
+    apiKey: "<PROD_FIREBASE_API_KEY>",
     authDomain: "shytalk-7ba69.firebaseapp.com",
     projectId: "shytalk-7ba69"
   }

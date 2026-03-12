@@ -17,6 +17,10 @@ local.properties
 /keystore.jks
 /play-service-account.json
 shytalk-7ba69-firebase-adminsdk-*.json
+shytalk-dev-firebase-adminsdk*.json
+
+# Firebase config (contains API keys — injected from secrets in CI)
+**/google-services.json
 worker/node_modules/
 worker/.wrangler/
 worker-api/node_modules/
