@@ -4372,7 +4372,8 @@
     let currentUser = null;    // Firebase auth user
     let loadedData = {};       // Original user data from API (list fields stored as uniqueIds for display)
     let rawListData = {};      // Original Firebase UIDs for list fields (for diffing on save)
-    let currentUid = null;     // UID of the user being edited
+    let currentUid = null;     // uniqueId of the user being edited (stable numeric ID)
+    let currentFirebaseUid = null; // Firebase UID (only for direct Firestore access)
     let listWidgetData = {};   // Current items for each list widget: { field: ["123 (Name)", ...] }
     let emailRevealed = false; // Whether email field is unmasked
 
@@ -4682,7 +4683,8 @@
     }
 
     async function populateForm(data) {
-      currentUid = data.uid;
+      currentUid = String(data.uniqueId || "");
+      currentFirebaseUid = data.uid;
       fieldUid.textContent = data.uid || "";
       document.getElementById("field-uniqueId").textContent = data.uniqueId ?? "—";
 
@@ -5874,8 +5876,8 @@
       await _origPopulateWithSuspension(data);
       populateGcsSection(data);
       resetWarningForm();
-      loadWarningHistory(data.uid, false);
-      loadReportHistory(data.uid);
+      loadWarningHistory(String(data.uniqueId || data.uid), false);
+      loadReportHistory(String(data.uniqueId || data.uid));
       // Suspended banner — auto-hide when timed suspension expires
       var banner = document.getElementById("suspended-banner");
       if (window._suspensionTimer) { clearTimeout(window._suspensionTimer); window._suspensionTimer = null; }
@@ -6102,9 +6104,10 @@
       const myUid = currentUser?.uid;
 
       for (const user of batch) {
+        const userId = String(user.uniqueId || user.uid);
         const card = document.createElement("div");
         card.className = "report-card";
-        card.dataset.uid = user.uid;
+        card.dataset.uid = userId;
         reportCards.push(card);
 
         const gcsScore = user.gcsDisplayScore ?? 100;
@@ -6117,7 +6120,7 @@
           headerHtml += `<div class="report-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2);">\u{1F464}</div>`;
         }
         headerHtml += `<div class="report-user-info">
-          <div class="report-user-name" data-navigate-uid="${escapeHtml(user.uid)}">${escapeHtml(user.displayName || "Unknown")}${user.isSuspended ? ' <span style="color:var(--danger);font-size:11px;font-weight:600;background:rgba(231,76,60,0.1);padding:1px 6px;border-radius:4px;">Suspended</span>' : ""}</div>
+          <div class="report-user-name" data-navigate-uid="${escapeHtml(String(user.uniqueId || user.uid))}">${escapeHtml(user.displayName || "Unknown")}${user.isSuspended ? ' <span style="color:var(--danger);font-size:11px;font-weight:600;background:rgba(231,76,60,0.1);padding:1px 6px;border-radius:4px;">Suspended</span>' : ""}</div>
           <div class="report-user-id">ID: ${user.uniqueId || "?"} | Warnings: ${user.warningCount || 0}</div>
         </div>`;
         headerHtml += `<span class="gcs-badge ${gcsClass(gcsScore)}">${gcsEmoji(gcsScore)} ${gcsScore}</span>`;
@@ -6129,7 +6132,7 @@
           const canTakeover = lockAge > 2 * 60 * 1000;
           headerHtml += `<span class="review-lock-badge">\u{1F512} ${escapeHtml(user.lock.displayName)}`;
           if (canTakeover) {
-            headerHtml += ` <button class="takeover-btn" data-takeover-uid="${user.uid}">Take Over</button>`;
+            headerHtml += ` <button class="takeover-btn" data-takeover-uid="${userId}">Take Over</button>`;
           }
           headerHtml += `</span>`;
         }
@@ -6159,46 +6162,46 @@
             </div>`;
           }
           if (reports.length > maxShow) {
-            reportsHtml += `<button class="show-all-btn" data-show-all="${user.uid}">Show all ${reports.length} reports</button>`;
+            reportsHtml += `<button class="show-all-btn" data-show-all="${userId}">Show all ${reports.length} reports</button>`;
           }
           reportsHtml += '</div>';
 
           // Action form (only for pending)
           let actionHtml = "";
           if (currentReportFilter === "pending") {
-            actionHtml = `<div class="report-action-form" data-form-uid="${user.uid}">
+            actionHtml = `<div class="report-action-form" data-form-uid="${userId}">
               <div class="action-row">
                 <label>Action</label>
-                <select data-action-select="${user.uid}">
+                <select data-action-select="${userId}">
                   <option value="warn">Warn <span class="shortcut-hint">[W]</span></option>
                   <option value="suspend">Suspend <span class="shortcut-hint">[S]</span></option>
                   <option value="dismiss">Dismiss <span class="shortcut-hint">[D]</span></option>
                 </select>
               </div>
-              <div class="action-row" data-severity-row="${user.uid}">
+              <div class="action-row" data-severity-row="${userId}">
                 <label>Severity</label>
                 <div class="severity-radio">
-                  ${[1,2,3,4,5].map((n) => `<input type="radio" name="sev-${user.uid}" id="sev-${user.uid}-${n}" value="${n}" ${n===1?"checked":""}><label for="sev-${user.uid}-${n}">${n} (-${n*5})</label>`).join("")}
+                  ${[1,2,3,4,5].map((n) => `<input type="radio" name="sev-${userId}" id="sev-${userId}-${n}" value="${n}" ${n===1?"checked":""}><label for="sev-${userId}-${n}">${n} (-${n*5})</label>`).join("")}
                 </div>
               </div>
-              <div class="suspension-fields" data-suspension-fields="${user.uid}">
+              <div class="suspension-fields" data-suspension-fields="${userId}">
                 <label>Duration</label>
-                <select data-suspension-days="${user.uid}">
+                <select data-suspension-days="${userId}">
                   <option value="1">1 Day</option>
                   <option value="3">3 Days</option>
                   <option value="7" selected>7 Days</option>
                   <option value="30">30 Days</option>
                   <option value="0">Permanent</option>
                 </select>
-                <label style="min-width:auto;"><input type="checkbox" data-can-appeal="${user.uid}"> Can Appeal</label>
+                <label style="min-width:auto;"><input type="checkbox" data-can-appeal="${userId}"> Can Appeal</label>
               </div>
               <div class="action-row">
                 <label>Note</label>
-                <textarea data-admin-note="${user.uid}" placeholder="Admin note (optional)"></textarea>
+                <textarea data-admin-note="${userId}" placeholder="Admin note (optional)"></textarea>
               </div>
               <div class="resolve-buttons">
-                <button class="btn-resolve" data-resolve-first="${user.uid}">Resolve Latest</button>
-                <button class="btn-resolve-all" data-resolve-all="${user.uid}">Resolve All (${user.reportCount})</button>
+                <button class="btn-resolve" data-resolve-first="${userId}">Resolve Latest</button>
+                <button class="btn-resolve-all" data-resolve-all="${userId}">Resolve All (${user.reportCount})</button>
               </div>
             </div>`;
           }
@@ -6253,11 +6256,11 @@
       for (const el of reportsList.querySelectorAll("[data-navigate-uid]:not([data-wired])")) {
         el.dataset.wired = "1";
         el.addEventListener("click", async () => {
-          const uid = el.dataset.navigateUid;
+          const uniqueId = el.dataset.navigateUid;
           await flushNotifications();
           switchTab("users");
           try {
-            const data = await apiCall("GET", `/api/user/${uid}`);
+            const data = await apiCall("GET", `/api/user/${uniqueId}`);
             searchUid.value = data.uniqueId || "";
             await populateFormFull(data);
           } catch (err) {
@@ -6422,7 +6425,7 @@
           const reportItem = card?.querySelector(".report-item");
           // Need to get the report ID - let's fetch from API
           const reportsData = await apiCall("GET", `/api/reports?status=pending`);
-          const userReports = reportsData.users.find((u) => u.uid === reportedUserId);
+          const userReports = reportsData.users.find((u) => String(u.uniqueId || u.uid) === String(reportedUserId));
           if (!userReports || userReports.reports.length === 0) {
             showToast("No pending reports found", "error");
             return;
@@ -6783,7 +6786,7 @@
     populateFormFull = async function(data) {
       await _origPopulateFull(data);
       populateEconomySection(data);
-      loadBackpack(data.uid);
+      loadBackpack(String(data.uniqueId || data.uid));
       populateGiftSelect();
     };
 
@@ -9114,14 +9117,14 @@
       monitorStartBtn.textContent = "Connecting...";
 
       try {
-        // Resolve uniqueId to Firebase UID
+        // Resolve uniqueId to user data
         const searchResult = await apiCall("GET", `/api/search/uniqueId/${uniqueId}`);
-        const uid = searchResult.uid;
-        if (!uid) throw new Error("User not found");
+        const resolvedUniqueId = String(searchResult.uniqueId || uniqueId);
+        if (!resolvedUniqueId) throw new Error("User not found");
 
         // Get initial user data
-        const userData = await apiCall("GET", `/api/user/${uid}`);
-        monitorUid = uid;
+        const userData = await apiCall("GET", `/api/user/${resolvedUniqueId}`);
+        monitorUid = resolvedUniqueId;
 
         // Load gift catalog
         await loadGiftCatalog();
@@ -9140,7 +9143,7 @@
         monitorStats.style.display = "";
         monitorTotalsWrap.style.display = "";
         monitorDot.classList.add("live");
-        monitorStatusText.textContent = `Live — monitoring ${userData.displayName || uniqueId} (${uid.slice(0, 8)}...)`;
+        monitorStatusText.textContent = `Live — monitoring ${userData.displayName || uniqueId} (#${resolvedUniqueId})`;
         monitorStartBtn.style.display = "none";
         monitorStopBtn.style.display = "";
 
@@ -9158,7 +9161,7 @@
         // Load all-time stats from full transaction history
         try {
           const allTxQuery = query(
-            collection(clientDb, "users", uid, "transactions"),
+            collection(clientDb, "users", resolvedUniqueId, "transactions"),
             where("type", "==", "GACHA_PULL"),
             orderBy("timestamp", "desc")
           );
@@ -9189,13 +9192,13 @@
         }
 
         // Set up real-time user doc listener
-        monitorUserUnsub = onSnapshot(doc(clientDb, "users", uid), (snap) => {
+        monitorUserUnsub = onSnapshot(doc(clientDb, "users", resolvedUniqueId), (snap) => {
           if (snap.exists()) updateMonitorStats(snap.data());
         });
 
         // Set up real-time transactions listener
         const txQuery = query(
-          collection(clientDb, "users", uid, "transactions"),
+          collection(clientDb, "users", resolvedUniqueId, "transactions"),
           where("type", "==", "GACHA_PULL"),
           orderBy("timestamp", "desc"),
           limit(50)
@@ -10702,7 +10705,7 @@
         tr.style.cursor = "pointer";
         tr.innerHTML = `
           <td class="device-id-cell" title="${escapeHtml(d.id)}">${escapeHtml(d.id.substring(0, 16))}${d.id.length > 16 ? "..." : ""}</td>
-          <td>${escapeHtml(d.userId || "N/A")}</td>
+          <td>${escapeHtml(d.uniqueId || "N/A")}</td>
           <td>${escapeHtml((d.manufacturer ? d.manufacturer + " " : "") + (d.model || "N/A"))}</td>
           <td>${escapeHtml(d.osVersion || d.os || "N/A")}</td>
           <td style="font-family:monospace;font-size:11px;">${escapeHtml(d.lastIp || "N/A")}</td>
@@ -10712,9 +10715,9 @@
           <td><span class="${isBanned ? "device-status-banned" : "device-status-active"}">${isBanned ? "BANNED" : "Active"}</span></td>
           <td class="device-actions">
             <button class="device-btn-unbind" onclick="event.stopPropagation();" data-unbind="${escapeHtml(d.id)}">Unbind</button>
-            <button class="device-btn-ban" onclick="event.stopPropagation();" data-ban-device="${escapeHtml(d.id)}" data-ban-user="${escapeHtml(d.userId || "")}">Ban</button>
-            <button class="device-btn-ban-net" onclick="event.stopPropagation();" data-ban-net-ip="${escapeHtml(d.lastIp || "")}" data-ban-net-user="${escapeHtml(d.userId || "")}">Ban Net</button>
-            <button class="device-btn-logs" onclick="event.stopPropagation();" data-view-logs-user="${escapeHtml(d.userId || "")}">Logs</button>
+            <button class="device-btn-ban" onclick="event.stopPropagation();" data-ban-device="${escapeHtml(d.id)}" data-ban-user="${escapeHtml(d.uniqueId || "")}">Ban</button>
+            <button class="device-btn-ban-net" onclick="event.stopPropagation();" data-ban-net-ip="${escapeHtml(d.lastIp || "")}" data-ban-net-user="${escapeHtml(d.uniqueId || "")}">Ban Net</button>
+            <button class="device-btn-logs" onclick="event.stopPropagation();" data-view-logs-user="${escapeHtml(d.uniqueId || "")}">Logs</button>
           </td>`;
 
         // Detail row (expandable)
@@ -10722,7 +10725,7 @@
         detailTr.innerHTML = `<td colspan="10"><div class="device-detail" id="detail-${escapeHtml(d.id)}">
           <dl class="device-detail-grid">
             <dt>Device ID</dt><dd>${escapeHtml(d.id)}</dd>
-            <dt>User ID</dt><dd>${escapeHtml(d.userId || "N/A")}</dd>
+            <dt>User ID</dt><dd>${escapeHtml(d.uniqueId || "N/A")}</dd>
             <dt>Manufacturer</dt><dd>${escapeHtml(d.manufacturer || "N/A")}</dd>
             <dt>Model</dt><dd>${escapeHtml(d.model || "N/A")}</dd>
             <dt>OS Version</dt><dd>${escapeHtml(d.osVersion || d.os || "N/A")}</dd>
@@ -10792,7 +10795,7 @@
       if (!confirm("Ban this device?")) return;
       const reason = prompt("Reason (optional):") || "";
       try {
-        await apiCall("POST", "/api/admin/bans/device", { deviceId, reason, linkedUserId: userId || null });
+        await apiCall("POST", "/api/admin/bans/device", { deviceId, reason, linkedUniqueId: userId || null });
         showToast("Device banned", "success");
         loadDevices();
       } catch (err) {
@@ -10805,7 +10808,7 @@
       if (!confirm("Ban IP " + ip + "?")) return;
       const reason = prompt("Reason (optional):") || "";
       try {
-        await apiCall("POST", "/api/admin/bans/network", { type: "ip", value: ip, reason, linkedUserId: userId || null });
+        await apiCall("POST", "/api/admin/bans/network", { type: "ip", value: ip, reason, linkedUniqueId: userId || null });
         showToast("Network banned", "success");
         loadDevices();
       } catch (err) {
@@ -11085,7 +11088,7 @@
             deviceId,
             reason: reason || null,
             duration: durationSelect?.value || null,
-            linkedUserId: currentUid
+            linkedUniqueId: currentUid
           });
           showToast("Device banned", "success");
           populateBansSection(currentUid);
@@ -11113,7 +11116,7 @@
         const devicesData = await apiCall("GET", `/api/admin/devices/user/${currentUid}`);
         const devices = devicesData.devices || [];
         if (devices.length === 0) { showToast("No devices to ban", "error"); return; }
-        await Promise.all(devices.map(d => apiCall("POST", "/api/admin/bans/device", { deviceId: d.id, reason, linkedUserId: currentUid })));
+        await Promise.all(devices.map(d => apiCall("POST", "/api/admin/bans/device", { deviceId: d.id, reason, linkedUniqueId: currentUid })));
         showToast(`Banned ${devices.length} device(s)`, "success");
         populateBansSection(currentUid);
       } catch (err) {
@@ -11130,7 +11133,7 @@
         if (!lastDevice || !lastDevice.lastIp) { showToast("No IP address found", "error"); return; }
         if (!confirm("Ban IP " + lastDevice.lastIp + "?")) return;
         const reason = prompt("Reason (optional):") || "";
-        await apiCall("POST", "/api/admin/bans/network", { type: "ip", value: lastDevice.lastIp, reason, linkedUserId: currentUid });
+        await apiCall("POST", "/api/admin/bans/network", { type: "ip", value: lastDevice.lastIp, reason, linkedUniqueId: currentUid });
         showToast("IP banned", "success");
         populateBansSection(currentUid);
       } catch (err) {
@@ -11161,7 +11164,7 @@
     const _origPopulateFullForBans = populateFormFull;
     populateFormFull = async function(data) {
       await _origPopulateFullForBans(data);
-      if (data.uid) populateBansSection(data.uid);
+      if (data.uniqueId || data.uid) populateBansSection(String(data.uniqueId || data.uid));
     };
 
     // ══════════════════════════════════════════════════════════════
@@ -11230,7 +11233,7 @@
     const _origPopulateFullForDeviceBinding = populateFormFull;
     populateFormFull = async function(data) {
         await _origPopulateFullForDeviceBinding(data);
-        if (data.uid) populateDeviceBindingCard(data.uid);
+        if (data.uniqueId || data.uid) populateDeviceBindingCard(String(data.uniqueId || data.uid));
     };
 
     // ══════════════════════════════════════════════════════════════

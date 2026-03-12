@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -78,14 +80,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.R
+import com.shyden.shytalk.core.model.LinkedProvider
 import com.shyden.shytalk.core.model.PmPrivacy
+import com.shyden.shytalk.core.model.ProviderType
 import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
 import org.jetbrains.compose.resources.stringResource
 
-private enum class SettingsPage { Main, BlockedUsers, Account, Privacy, Notifications, Permissions, About }
+private enum class SettingsPage { Main, BlockedUsers, Account, LinkedAccounts, Privacy, Notifications, Permissions, About }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,6 +152,13 @@ fun AppSettingsScreen(
             SettingsPage.Account -> AccountPage(
                 uiState = uiState,
                 onBack = { currentPageName = SettingsPage.Main.name },
+                onNavigateToLinkedAccounts = { currentPageName = SettingsPage.LinkedAccounts.name },
+                snackbarHostState = snackbarHostState
+            )
+            SettingsPage.LinkedAccounts -> LinkedAccountsPage(
+                uiState = uiState,
+                onBack = { currentPageName = SettingsPage.Account.name },
+                onUnlinkProvider = { type, identifier -> viewModel.unlinkProvider(type, identifier) },
                 snackbarHostState = snackbarHostState
             )
             SettingsPage.Privacy -> PrivacyPage(
@@ -613,6 +624,7 @@ private fun BlockedUsersPage(
 private fun AccountPage(
     uiState: AppSettingsUiState,
     onBack: () -> Unit,
+    onNavigateToLinkedAccounts: () -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
@@ -636,7 +648,19 @@ private fun AccountPage(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
+            SettingsMenuItem(
+                icon = Icons.Default.Link,
+                title = stringResource(Res.string.linked_accounts),
+                subtitle = uiState.user?.let {
+                    "${it.activeProviders.size} ${stringResource(Res.string.linked).lowercase()}"
+                },
+                onClick = onNavigateToLinkedAccounts
+            )
+            HorizontalDivider()
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedButton(
                 onClick = { showDeleteAccountDialog = true },
@@ -666,6 +690,143 @@ private fun AccountPage(
             }
         )
     }
+}
+
+// ===== Linked Accounts Page =====
+
+@Composable
+private fun LinkedAccountsPage(
+    uiState: AppSettingsUiState,
+    onBack: () -> Unit,
+    onUnlinkProvider: (ProviderType, String) -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    var showUnlinkDialog by remember { mutableStateOf<LinkedProvider?>(null) }
+
+    SettingsSubPage(
+        title = stringResource(Res.string.linked_accounts),
+        onBack = onBack,
+        snackbarHostState = snackbarHostState
+    ) { modifier ->
+        Column(
+            modifier = modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+        ) {
+            val user = uiState.user
+            if (user == null || user.providers.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 64.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Text(
+                        text = stringResource(Res.string.no_linked_accounts),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                user.providers.forEach { provider ->
+                    key(provider.type.key + provider.identifier) {
+                        ProviderRow(
+                            provider = provider,
+                            canUnlink = user.activeProviders.size >= 2 && provider.active,
+                            isUnlinking = uiState.isUnlinkingProvider,
+                            onUnlink = { showUnlinkDialog = provider }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    showUnlinkDialog?.let { provider ->
+        AlertDialog(
+            onDismissRequest = { showUnlinkDialog = null },
+            title = { Text(stringResource(Res.string.unlink_provider_confirm, providerDisplayName(provider.type))) },
+            text = { Text(stringResource(Res.string.unlink_provider_description)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onUnlinkProvider(provider.type, provider.identifier)
+                    showUnlinkDialog = null
+                }) {
+                    Text(stringResource(Res.string.unlink), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnlinkDialog = null }) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ProviderRow(
+    provider: LinkedProvider,
+    canUnlink: Boolean,
+    isUnlinking: Boolean,
+    onUnlink: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(
+            imageVector = if (provider.active) Icons.Default.Link else Icons.Default.LinkOff,
+            contentDescription = null,
+            tint = if (provider.active) MaterialTheme.colorScheme.primary
+                   else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = providerDisplayName(provider.type),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = if (provider.type == ProviderType.APPLE) "Connected"
+                       else censorEmail(provider.identifier),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (!provider.active) {
+                Text(
+                    text = stringResource(Res.string.unlinked),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+        if (canUnlink) {
+            if (isUnlinking) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+                TextButton(onClick = onUnlink) {
+                    Text(
+                        text = stringResource(Res.string.unlink),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun providerDisplayName(type: ProviderType): String = when (type) {
+    ProviderType.GOOGLE -> stringResource(Res.string.provider_google)
+    ProviderType.APPLE -> stringResource(Res.string.provider_apple)
+    ProviderType.EMAIL -> stringResource(Res.string.provider_email)
+    ProviderType.UNKNOWN -> type.key
 }
 
 // ===== Privacy Page =====

@@ -9,8 +9,8 @@
  * GET    /api/reports/export                → CSV export of resolved reports (admin)
  * POST   /api/reports/:id/lock              → Lock a report (admin)
  * DELETE /api/reports/:id/lock              → Unlock a report (admin)
- * POST   /api/admin/users/:uid/suspend      → Suspend a user (admin)
- * POST   /api/admin/users/:uid/unsuspend    → Unsuspend a user (admin)
+ * POST   /api/admin/users/:uniqueId/suspend      → Suspend a user (admin)
+ * POST   /api/admin/users/:uniqueId/unsuspend    → Unsuspend a user (admin)
  * GET    /api/appeals                       → List appeals (admin)
  * PATCH  /api/appeals/:id                   → Review an appeal (admin)
  * POST   /api/appeals                       → Submit an appeal
@@ -74,13 +74,13 @@ router.post('/reports', async (req, res) => {
     }
 
     // Fetch reporter info
-    const reporter = await getDoc(`users/${req.auth.uid}`);
+    const reporter = await getDoc(`users/${req.auth.uniqueId}`);
 
     const reportId = generateId();
     const timestamp = now();
 
     await db.doc(`reports/${reportId}`).set({
-      reporterId:              req.auth.uid,
+      reporterId:              req.auth.uniqueId,
       reporterName:            reporter?.displayName ?? reporter?.display_name ?? null,
       reporterUniqueId:        reporter?.uniqueId ?? reporter?.unique_id ?? null,
       reportedUserId:          reportedUserId,
@@ -285,6 +285,7 @@ router.post('/reports/:id/resolve', async (req, res) => {
           source:         'report',
           linkedReportId: req.params.id,
           adminUid:       req.auth.uid,
+          adminUniqueId: req.auth.uniqueId,
         });
 
         // Send warning PM (fire-and-forget)
@@ -363,6 +364,7 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
           source:         'report',
           linkedReportId: null,
           adminUid:       req.auth.uid,
+          adminUniqueId: req.auth.uniqueId,
         });
 
         // Send warning PM (fire-and-forget)
@@ -538,7 +540,7 @@ router.post('/reports/:id/lock', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const admin = await getDoc(`users/${req.auth.uid}`);
+    const admin = await getDoc(`users/${req.auth.uniqueId}`);
     const displayName = admin?.displayName ?? admin?.display_name ?? null;
 
     // reportLocks is keyed by the reported userId (same as report ID here)
@@ -574,7 +576,7 @@ router.delete('/reports/:id/lock', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 
 // ── Suspend user ──
-router.post('/admin/users/:uid/suspend', async (req, res) => {
+router.post('/admin/users/:uniqueId/suspend', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -590,13 +592,13 @@ router.post('/admin/users/:uid/suspend', async (req, res) => {
       endTimestamp = endDate.getTime();
     }
 
-    const user = await getDoc(`users/${req.params.uid}`);
+    const user = await getDoc(`users/${req.params.uniqueId}`);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const timestamp = now();
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update({
+      db.doc(`users/${req.params.uniqueId}`).update({
         isSuspended:                  true,
         suspensionReason:             body.reason.trim(),
         suspensionStartDate:          timestamp,
@@ -616,29 +618,29 @@ router.post('/admin/users/:uid/suspend', async (req, res) => {
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'SUSPEND',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      body.reason.trim(),
         createdAt:    timestamp,
       }, { merge: true }),
     ]);
 
     // Evict from rooms (fire-and-forget)
-    evictSuspendedUser(req.params.uid)
-      .catch(err => log.error('reports', 'Failed to evict suspended user', { userId: req.params.uid, error: err.message }));
+    evictSuspendedUser(req.params.uniqueId)
+      .catch(err => log.error('reports', 'Failed to evict suspended user', { userId: req.params.uniqueId, error: err.message }));
 
     res.json({ success: true });
   } catch (err) {
-    log.error('reports', 'POST /api/admin/users/:uid/suspend failed', { userId: req.params.uid, error: err.message });
+    log.error('reports', 'POST /api/admin/users/:uniqueId/suspend failed', { userId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Unsuspend user ──
-router.post('/admin/users/:uid/unsuspend', async (req, res) => {
+router.post('/admin/users/:uniqueId/unsuspend', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const user = await getDoc(`users/${req.params.uid}`);
+    const user = await getDoc(`users/${req.params.uniqueId}`);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const preName  = user.preSuspensionDisplayName     ?? user.pre_suspension_display_name     ?? null;
@@ -651,7 +653,7 @@ router.post('/admin/users/:uid/unsuspend', async (req, res) => {
     if (preCover) restore.coverPhotoUrl   = preCover;
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update({
+      db.doc(`users/${req.params.uniqueId}`).update({
         isSuspended:                  false,
         suspensionReason:             null,
         suspensionStartDate:          null,
@@ -666,16 +668,16 @@ router.post('/admin/users/:uid/unsuspend', async (req, res) => {
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'UNSUSPEND',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      null,
         createdAt:    now(),
       }, { merge: true }),
     ]);
 
-    clearSuspensionCache(req.params.uid);
+    clearSuspensionCache(req.params.uniqueId);
     res.json({ success: true });
   } catch (err) {
-    log.error('reports', 'POST /api/admin/users/:uid/unsuspend failed', { userId: req.params.uid, error: err.message });
+    log.error('reports', 'POST /api/admin/users/:uniqueId/unsuspend failed', { userId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -693,9 +695,9 @@ router.post('/appeals', async (req, res) => {
       return res.status(400).json({ error: 'appealText must be a string of at most 500 characters' });
     }
 
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
 
-    const user = await getDoc(`users/${uid}`);
+    const user = await getDoc(`users/${uniqueId}`);
     const isSuspended      = user?.isSuspended      ?? user?.is_suspended      ?? false;
     const canAppeal        = user?.suspensionCanAppeal ?? user?.suspension_can_appeal ?? false;
 
@@ -705,7 +707,7 @@ router.post('/appeals', async (req, res) => {
     // Check for existing pending appeal
     const existing = await queryDocs(
       db.collection('suspensionAppeals')
-        .where('userId', '==', uid)
+        .where('userId', '==', uniqueId)
         .where('status', '==', 'pending')
         .limit(1)
     );
@@ -714,7 +716,7 @@ router.post('/appeals', async (req, res) => {
 
     const appealId = generateId();
     await db.doc(`suspensionAppeals/${appealId}`).set({
-      userId:     uid,
+      userId:     uniqueId,
       appealText: body.appealText,
       status:     'pending',
       reviewedBy: null,

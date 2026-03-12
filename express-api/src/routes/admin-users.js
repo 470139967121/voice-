@@ -1,23 +1,23 @@
 /**
  * Admin user routes — user CRUD, warnings, GCS reset, route aliases.
  *
- * GET    /user/:uid                 → Full user profile (admin)
- * GET    /user/:uid/auth-debug      → Debug endpoint
- * PATCH  /user/:uid                 → Update user fields (admin)
- * POST   /user/:uid/notify-changes  → Batched change notification PM (admin)
- * GET    /user/:uid/stalkers        → Read stalkers list (admin)
- * POST   /user/:uid/warn            → Issue warning (admin, creates warning doc)
- * GET    /user/:uid/warnings        → List warning history (admin, paginated)
- * POST   /user/:uid/warnings/:id/revoke → Revoke a warning (admin)
- * POST   /user/:uid/reset-gcs       → Reset GCS score (admin)
+ * GET    /user/:uniqueId                 → Full user profile (admin)
+ * GET    /user/:uid/auth-debug           → Debug endpoint (Firebase UID)
+ * PATCH  /user/:uniqueId                 → Update user fields (admin)
+ * POST   /user/:uniqueId/notify-changes  → Batched change notification PM (admin)
+ * GET    /user/:uniqueId/stalkers        → Read stalkers list (admin)
+ * POST   /user/:uniqueId/warn            → Issue warning (admin, creates warning doc)
+ * GET    /user/:uniqueId/warnings        → List warning history (admin, paginated)
+ * POST   /user/:uniqueId/warnings/:id/revoke → Revoke a warning (admin)
+ * POST   /user/:uniqueId/reset-gcs       → Reset GCS score (admin)
  * GET    /conversations/:id/messages → Admin view conversation messages
  * GET    /search/uniqueId/:id       → Search by unique ID (alias)
  * POST   /resolve/uids-to-uniqueIds → Resolve UIDs to unique IDs (alias)
  * POST   /resolve/uniqueIds-to-uids → Resolve unique IDs to UIDs (alias)
- * POST   /user/:uid/suspend         → Suspend user (alias)
- * POST   /user/:uid/unsuspend       → Unsuspend user (alias)
- * POST   /report-locks/:uid/lock    → Lock reports for user (alias)
- * DELETE /report-locks/:uid         → Unlock reports for user (alias)
+ * POST   /user/:uniqueId/suspend         → Suspend user (alias)
+ * POST   /user/:uniqueId/unsuspend       → Unsuspend user (alias)
+ * POST   /report-locks/:uniqueId/lock    → Lock reports for user (alias)
+ * DELETE /report-locks/:uniqueId         → Unlock reports for user (alias)
  */
 
 const router = require('express').Router();
@@ -90,13 +90,16 @@ function enrichUser(user) {
 
 /**
  * Fetch email from Firebase Auth and backfill into Firestore if missing.
+ * @param {object} user - User data object
+ * @param {string} uniqueId - User doc key (uniqueId)
+ * @param {string} firebaseUid - Firebase Auth UID for auth lookup
  */
-async function backfillAuthInfo(user, uid) {
+async function backfillAuthInfo(user, uniqueId, firebaseUid) {
   if (!user.email) {
-    const authInfo = await getFirebaseAuthInfo(uid);
+    const authInfo = await getFirebaseAuthInfo(firebaseUid);
     if (authInfo.email) {
       user.email = authInfo.email;
-      db.doc(`users/${uid}`).update({ email: authInfo.email }).catch(err => log.error('admin-users', 'Failed to backfill email', { uid, error: err.message }));
+      db.doc(`users/${uniqueId}`).update({ email: authInfo.email }).catch(err => log.error('admin-users', 'Failed to backfill email', { uniqueId, error: err.message }));
     }
   }
 }
@@ -106,18 +109,18 @@ async function backfillAuthInfo(user, uid) {
 // ══════════════════════════════════════════════════════════════
 
 // ── Get user profile (admin — no ownership check) ──
-router.get('/user/:uid', async (req, res) => {
+router.get('/user/:uniqueId', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const snap = await db.doc(`users/${req.params.uid}`).get();
+    const snap = await db.doc(`users/${req.params.uniqueId}`).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
     const user = enrichUser({ id: snap.id, ...snap.data() });
-    await backfillAuthInfo(user, req.params.uid);
+    await backfillAuthInfo(user, req.params.uniqueId, user.uid || snap.id);
 
     res.json(user);
   } catch (err) {
-    log.error('admin-users', 'GET /user/:uid failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'GET /user/:uniqueId failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -142,7 +145,7 @@ router.get('/user/:uid/auth-debug', async (req, res) => {
 });
 
 // ── Update user fields (admin — whitelisted fields) ──
-router.patch('/user/:uid', async (req, res) => {
+router.patch('/user/:uniqueId', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -194,14 +197,14 @@ router.patch('/user/:uid', async (req, res) => {
       }
     }
 
-    log.info('admin-users', 'Updating user fields', { adminId: req.auth.uid, targetUid: req.params.uid, fields: Object.keys(updates) });
-    await db.doc(`users/${req.params.uid}`).update(updates);
+    log.info('admin-users', 'Updating user fields', { adminId: req.auth.uid, targetUniqueId: req.params.uniqueId, fields: Object.keys(updates) });
+    await db.doc(`users/${req.params.uniqueId}`).update(updates);
 
     // Audit log
     await db.doc(`adminAuditLog/${generateId()}`).set({
       adminId:      req.auth.uid,
       action:       'EDIT_USER',
-      targetUserId: req.params.uid,
+      targetUserId: req.params.uniqueId,
       details:      `Updated fields: ${Object.keys(updates).join(', ')}`,
       createdAt:    now(),
     });
@@ -210,7 +213,7 @@ router.patch('/user/:uid', async (req, res) => {
     // When ?silent=true, skip PMs (used by per-field auto-save; PMs are batched separately)
     const silent = req.query.silent === 'true';
     if (!silent) {
-      const uid = req.params.uid;
+      const uid = req.params.uniqueId;
       const pmMessages = [];
       if (updates.displayName !== undefined) pmMessages.push('Your display name was updated by a moderator.');
       if (updates.profilePhotoUrl === '' || updates.profilePhotoUrl === null) pmMessages.push('Your profile photo was removed by a moderator.');
@@ -227,13 +230,13 @@ router.patch('/user/:uid', async (req, res) => {
 
     res.json({ success: true, updatedFields: Object.keys(updates) });
   } catch (err) {
-    log.error('admin-users', 'PATCH /user/:uid failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'PATCH /user/:uniqueId failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Batched change notification ──
-router.post('/user/:uid/notify-changes', async (req, res) => {
+router.post('/user/:uniqueId/notify-changes', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -263,18 +266,18 @@ router.post('/user/:uid/notify-changes', async (req, res) => {
 
     const fieldList = relevant.map(f => friendlyNames[f] || f).join(', ');
     const text = `A moderator has updated your profile. Changed: ${fieldList}.`;
-    await sendSystemPm(req.params.uid, text);
+    await sendSystemPm(req.params.uniqueId, text);
 
     log.info('admin-users', 'Sent batched change notification', {
       adminId: req.auth.uid,
-      targetUid: req.params.uid,
+      targetUniqueId: req.params.uniqueId,
       fields: relevant,
     });
 
     res.json({ ok: true, notified: true, fields: relevant });
   } catch (err) {
     log.error('admin-users', 'notify-changes failed', {
-      uid: req.params.uid,
+      uniqueId: req.params.uniqueId,
       error: err.message,
     });
     res.status(500).json({ error: 'Internal server error' });
@@ -282,17 +285,17 @@ router.post('/user/:uid/notify-changes', async (req, res) => {
 });
 
 // ── Read stalkers list (admin) ──
-router.get('/user/:uid/stalkers', async (req, res) => {
+router.get('/user/:uniqueId/stalkers', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const snap = await db.collection(`users/${req.params.uid}/stalkers`).get();
+    const snap = await db.collection(`users/${req.params.uniqueId}/stalkers`).get();
     const stalkerIds = snap.docs.map(doc => doc.id);
 
     res.json({ stalkers: stalkerIds, count: stalkerIds.length });
   } catch (err) {
     log.error('admin-users', 'GET stalkers failed', {
-      uid: req.params.uid,
+      uniqueId: req.params.uniqueId,
       error: err.message,
     });
     res.status(500).json({ error: 'Internal server error' });
@@ -311,11 +314,11 @@ const SEVERITY_DEDUCTION = { 1: 5, 2: 10, 3: 15, 4: 20, 5: 25 };
  * and update the user doc's GCS/warning fields.
  * Returns { warningId, newGcs, deduction, warningCount }.
  */
-async function createWarning(uid, { reason, severity, adminNote, source, linkedReportId, adminUid }) {
+async function createWarning(uniqueId, { reason, severity, adminNote, source, linkedReportId, adminUid, adminUniqueId }) {
   const deduction = SEVERITY_DEDUCTION[severity] || 15;
   const timestamp = now();
 
-  const snap = await db.doc(`users/${uid}`).get();
+  const snap = await db.doc(`users/${uniqueId}`).get();
   if (!snap.exists) throw new Error('User not found');
   const user = { id: snap.id, ...snap.data() };
 
@@ -327,7 +330,7 @@ async function createWarning(uid, { reason, severity, adminNote, source, linkedR
   // Look up admin display name
   let adminName = null;
   if (adminUid) {
-    const adminDoc = await getDoc(`users/${adminUid}`);
+    const adminDoc = await getDoc(`users/${adminUniqueId || adminUid}`);
     adminName = adminDoc?.displayName ?? adminDoc?.display_name ?? null;
   }
 
@@ -335,7 +338,7 @@ async function createWarning(uid, { reason, severity, adminNote, source, linkedR
 
   await Promise.all([
     // Write warning doc to subcollection
-    db.doc(`users/${uid}/warnings/${warningId}`).set({
+    db.doc(`users/${uniqueId}/warnings/${warningId}`).set({
       reason,
       severity,
       gcsDeduction: deduction,
@@ -352,7 +355,7 @@ async function createWarning(uid, { reason, severity, adminNote, source, linkedR
       createdAt:    timestamp,
     }),
     // Update user doc
-    db.doc(`users/${uid}`).update({
+    db.doc(`users/${uniqueId}`).update({
       gcsScore:           newGcs,
       gcsLastDeductionAt: timestamp,
       warningCount:       newWarningCount,
@@ -365,7 +368,7 @@ async function createWarning(uid, { reason, severity, adminNote, source, linkedR
     db.doc(`adminAuditLog/${generateId()}`).set({
       adminId:      adminUid,
       action:       'WARN',
-      targetUserId: uid,
+      targetUserId: uniqueId,
       details:      `Severity: ${severity}, GCS: ${gcsScore} → ${newGcs}, Reason: ${reason}, Source: ${source || 'direct'}`,
       createdAt:    timestamp,
     }),
@@ -375,7 +378,7 @@ async function createWarning(uid, { reason, severity, adminNote, source, linkedR
 }
 
 // ── Issue warning ──
-router.post('/user/:uid/warn', async (req, res) => {
+router.post('/user/:uniqueId/warn', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -385,38 +388,39 @@ router.post('/user/:uid/warn', async (req, res) => {
     const severity = parseInt(body.severity) || 3;
     if (severity < 1 || severity > 5) return res.status(400).json({ error: 'severity must be 1-5' });
 
-    log.info('admin-users', 'Issuing warning', { adminId: req.auth.uid, targetUid: req.params.uid, severity });
+    log.info('admin-users', 'Issuing warning', { adminId: req.auth.uid, targetUniqueId: req.params.uniqueId, severity });
 
-    const result = await createWarning(req.params.uid, {
+    const result = await createWarning(req.params.uniqueId, {
       reason:   body.reason,
       severity,
       adminNote: body.adminNote || null,
       source:   'direct',
       adminUid: req.auth.uid,
+      adminUniqueId: req.auth.uniqueId,
     });
 
     // Send system PM to warned user (fire-and-forget)
-    sendSystemPm(req.params.uid,
+    sendSystemPm(req.params.uniqueId,
       `\u26a0\ufe0f You have received a warning from the moderation team.\n\nReason: ${body.reason}\n\nRepeated violations may result in suspension.`
-    ).catch(err => log.error('admin-users', 'Failed to send warning PM', { targetUid: req.params.uid, error: err.message }));
+    ).catch(err => log.error('admin-users', 'Failed to send warning PM', { targetUniqueId: req.params.uniqueId, error: err.message }));
 
     res.json({ success: true, ...result });
   } catch (err) {
     if (err.message === 'User not found') return res.status(404).json({ error: err.message });
-    log.error('admin-users', 'Warn user failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'Warn user failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── List warnings ──
-router.get('/user/:uid/warnings', async (req, res) => {
+router.get('/user/:uniqueId/warnings', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const startAfter = req.query.startAfter ? parseInt(req.query.startAfter) : null;
 
-    let query = db.collection(`users/${req.params.uid}/warnings`)
+    let query = db.collection(`users/${req.params.uniqueId}/warnings`)
       .orderBy('createdAt', 'desc');
 
     if (startAfter) {
@@ -432,45 +436,45 @@ router.get('/user/:uid/warnings', async (req, res) => {
 
     res.json({ warnings: docs, hasMore });
   } catch (err) {
-    log.error('admin-users', 'List warnings failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'List warnings failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Revoke warning ──
-router.post('/user/:uid/warnings/:warningId/revoke', async (req, res) => {
+router.post('/user/:uniqueId/warnings/:warningId/revoke', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const uid = req.params.uid;
+    const uniqueId = req.params.uniqueId;
     const warningId = req.params.warningId;
     const timestamp = now();
 
-    const warningDoc = await getDoc(`users/${uid}/warnings/${warningId}`);
+    const warningDoc = await getDoc(`users/${uniqueId}/warnings/${warningId}`);
     if (!warningDoc) return res.status(404).json({ error: 'Warning not found' });
     if (warningDoc.revoked) return res.status(400).json({ error: 'Warning already revoked' });
 
     const deduction = warningDoc.gcsDeduction || 0;
 
     // Read current user GCS
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
     const currentGcs = user.gcsScore ?? user.gcs_score ?? 100;
     const currentCount = user.warningCount ?? user.warning_count ?? 0;
     const restoredGcs = Math.min(100, currentGcs + deduction);
 
-    log.info('admin-users', 'Revoking warning', { adminId: req.auth.uid, targetUid: uid, warningId, restored: deduction });
+    log.info('admin-users', 'Revoking warning', { adminId: req.auth.uid, targetUniqueId: uniqueId, warningId, restored: deduction });
 
     await Promise.all([
       // Mark warning as revoked
-      db.doc(`users/${uid}/warnings/${warningId}`).update({
+      db.doc(`users/${uniqueId}/warnings/${warningId}`).update({
         revoked:   true,
         revokedAt: timestamp,
         revokedBy: req.auth.uid,
       }),
       // Restore GCS points and decrement warning count
-      db.doc(`users/${uid}`).update({
+      db.doc(`users/${uniqueId}`).update({
         gcsScore:     restoredGcs,
         warningCount: Math.max(0, currentCount - 1),
       }),
@@ -478,7 +482,7 @@ router.post('/user/:uid/warnings/:warningId/revoke', async (req, res) => {
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'REVOKE_WARNING',
-        targetUserId: uid,
+        targetUserId: uniqueId,
         details:      `Revoked warning ${warningId}, restored ${deduction} GCS (${currentGcs} → ${restoredGcs})`,
         createdAt:    timestamp,
       }),
@@ -486,22 +490,22 @@ router.post('/user/:uid/warnings/:warningId/revoke', async (req, res) => {
 
     res.json({ success: true, restoredGcs, deduction });
   } catch (err) {
-    log.error('admin-users', 'Revoke warning failed', { uid: req.params.uid, warningId: req.params.warningId, error: err.message });
+    log.error('admin-users', 'Revoke warning failed', { uniqueId: req.params.uniqueId, warningId: req.params.warningId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Reset GCS ──
-router.post('/user/:uid/reset-gcs', async (req, res) => {
+router.post('/user/:uniqueId/reset-gcs', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
     const timestamp = now();
 
-    log.info('admin-users', 'Resetting GCS', { adminId: req.auth.uid, targetUid: req.params.uid });
+    log.info('admin-users', 'Resetting GCS', { adminId: req.auth.uid, targetUniqueId: req.params.uniqueId });
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update({
+      db.doc(`users/${req.params.uniqueId}`).update({
         gcsScore:           100,
         gcsLastDeductionAt: null,
         warningCount:       0,
@@ -513,7 +517,7 @@ router.post('/user/:uid/reset-gcs', async (req, res) => {
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'RESET_GCS',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      'GCS reset to 100',
         createdAt:    timestamp,
       }),
@@ -521,7 +525,7 @@ router.post('/user/:uid/reset-gcs', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-users', 'Reset GCS failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'Reset GCS failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -575,13 +579,13 @@ router.get('/search/uniqueId/:id', async (req, res) => {
       if (tempSnap.empty) return res.status(404).json({ error: 'User not found' });
       const doc = tempSnap.docs[0];
       const user = enrichUser({ id: doc.id, ...doc.data() });
-      await backfillAuthInfo(user, doc.id);
+      await backfillAuthInfo(user, doc.id, user.uid || doc.id);
       return res.json(user);
     }
 
     const doc = snapshot.docs[0];
     const user = enrichUser({ id: doc.id, ...doc.data() });
-    await backfillAuthInfo(user, doc.id);
+    await backfillAuthInfo(user, doc.id, user.uid || doc.id);
 
     res.json(user);
   } catch (err) {
@@ -654,7 +658,7 @@ router.post('/resolve/uniqueIds-to-uids', async (req, res) => {
 });
 
 // ── Suspend user ──
-router.post('/user/:uid/suspend', async (req, res) => {
+router.post('/user/:uniqueId/suspend', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -670,16 +674,16 @@ router.post('/user/:uid/suspend', async (req, res) => {
       endTimestamp = endDate.getTime();
     }
 
-    const snap = await db.doc(`users/${req.params.uid}`).get();
+    const snap = await db.doc(`users/${req.params.uniqueId}`).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
     const user = { id: snap.id, ...snap.data() };
 
     const timestamp = now();
 
-    log.info('admin-users', 'Suspending user', { adminId: req.auth.uid, targetUid: req.params.uid, endDate: body.endDate || 'permanent', canAppeal: body.canAppeal });
+    log.info('admin-users', 'Suspending user', { adminId: req.auth.uid, targetUniqueId: req.params.uniqueId, endDate: body.endDate || 'permanent', canAppeal: body.canAppeal });
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update({
+      db.doc(`users/${req.params.uniqueId}`).update({
         isSuspended:                    true,
         suspensionReason:               body.reason.trim(),
         suspensionStartDate:            timestamp,
@@ -699,7 +703,7 @@ router.post('/user/:uid/suspend', async (req, res) => {
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'SUSPEND',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      body.reason,
         createdAt:    timestamp,
       }),
@@ -710,7 +714,7 @@ router.post('/user/:uid/suspend', async (req, res) => {
     if (currentGcs > 0) {
       const warningId = generateId();
       await Promise.all([
-        db.doc(`users/${req.params.uid}/warnings/${warningId}`).set({
+        db.doc(`users/${req.params.uniqueId}/warnings/${warningId}`).set({
           reason:         `Account suspended: ${body.reason.trim()}`,
           severity:       5,
           gcsDeduction:   currentGcs,
@@ -726,7 +730,7 @@ router.post('/user/:uid/suspend', async (req, res) => {
           revokedBy:      null,
           createdAt:      timestamp,
         }),
-        db.doc(`users/${req.params.uid}`).update({
+        db.doc(`users/${req.params.uniqueId}`).update({
           gcsScore:           0,
           gcsLastDeductionAt: timestamp,
         }),
@@ -734,29 +738,29 @@ router.post('/user/:uid/suspend', async (req, res) => {
     }
 
     // Send system PM about suspension (non-blocking)
-    try { await sendSystemPm(req.params.uid, `Your account has been suspended. Reason: ${body.reason.trim()}`); } catch (e) { log.warn('system-pm', 'Failed to send', { uid: req.params.uid, error: e.message }); }
+    try { await sendSystemPm(req.params.uniqueId, `Your account has been suspended. Reason: ${body.reason.trim()}`); } catch (e) { log.warn('system-pm', 'Failed to send', { uniqueId: req.params.uniqueId, error: e.message }); }
 
     // Auto-apply device and network bans (fire-and-forget)
-    autoApplyBans(req.params.uid, body.endDate ? body.endDate : null)
-      .catch(err => log.error('admin-users', 'Failed to auto-apply bans', { uid: req.params.uid, error: err.message }));
+    autoApplyBans(req.params.uniqueId, body.endDate ? body.endDate : null)
+      .catch(err => log.error('admin-users', 'Failed to auto-apply bans', { uniqueId: req.params.uniqueId, error: err.message }));
 
     // Evict from any active rooms (fire-and-forget)
-    evictSuspendedUser(req.params.uid)
-      .catch(err => log.error('admin-users', 'Failed to evict suspended user', { uid: req.params.uid, error: err.message }));
+    evictSuspendedUser(req.params.uniqueId)
+      .catch(err => log.error('admin-users', 'Failed to evict suspended user', { uniqueId: req.params.uniqueId, error: err.message }));
 
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-users', 'Suspend user failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'Suspend user failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Unsuspend user ──
-router.post('/user/:uid/unsuspend', async (req, res) => {
+router.post('/user/:uniqueId/unsuspend', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const snap = await db.doc(`users/${req.params.uid}`).get();
+    const snap = await db.doc(`users/${req.params.uniqueId}`).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
     const user = { id: snap.id, ...snap.data() };
 
@@ -768,10 +772,10 @@ router.post('/user/:uid/unsuspend', async (req, res) => {
     if (prePhoto) restore.profilePhotoUrl  = prePhoto;
     if (preCover) restore.coverPhotoUrl    = preCover;
 
-    log.info('admin-users', 'Unsuspending user', { adminId: req.auth.uid, targetUid: req.params.uid });
+    log.info('admin-users', 'Unsuspending user', { adminId: req.auth.uid, targetUniqueId: req.params.uniqueId });
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update({
+      db.doc(`users/${req.params.uniqueId}`).update({
         isSuspended:                    false,
         suspensionReason:               null,
         suspensionStartDate:            null,
@@ -786,39 +790,39 @@ router.post('/user/:uid/unsuspend', async (req, res) => {
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'UNSUSPEND',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      null,
         createdAt:    now(),
       }),
     ]);
 
     // Lift auto-applied bans (non-blocking)
-    liftAutoAppliedBans(req.params.uid, req.auth.uid)
-      .catch(err => log.error('admin-users', 'Failed to lift auto-applied bans', { uid: req.params.uid, error: err.message }));
+    liftAutoAppliedBans(req.params.uniqueId, req.auth.uid)
+      .catch(err => log.error('admin-users', 'Failed to lift auto-applied bans', { uniqueId: req.params.uniqueId, error: err.message }));
 
     // Send system PM about unsuspension (non-blocking)
-    try { await sendSystemPm(req.params.uid, 'Your account suspension has been lifted.'); } catch (e) { log.warn('system-pm', 'Failed to send', { uid: req.params.uid, error: e.message }); }
+    try { await sendSystemPm(req.params.uniqueId, 'Your account suspension has been lifted.'); } catch (e) { log.warn('system-pm', 'Failed to send', { uniqueId: req.params.uniqueId, error: e.message }); }
 
-    clearSuspensionCache(req.params.uid);
+    clearSuspensionCache(req.params.uniqueId);
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-users', 'Unsuspend user failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'Unsuspend user failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Report locks by UID ──
-router.post('/report-locks/:uid/lock', async (req, res) => {
+// ── Report locks by uniqueId ──
+router.post('/report-locks/:uniqueId/lock', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    // Look up admin display name for the lock
-    const adminSnap = await db.doc(`users/${req.auth.uid}`).get();
+    // Look up admin display name for the lock (admin doc keyed by uniqueId)
+    const adminSnap = await db.doc(`users/${req.auth.uniqueId}`).get();
     const adminData = adminSnap.exists ? adminSnap.data() : null;
     const displayName = adminData?.displayName ?? adminData?.display_name ?? null;
 
-    await db.doc(`reportLocks/${req.params.uid}`).set({
-      reportId:    req.params.uid,
+    await db.doc(`reportLocks/${req.params.uniqueId}`).set({
+      reportId:    req.params.uniqueId,
       lockedBy:    req.auth.uid,
       lockedAt:    now(),
       displayName: displayName,
@@ -826,20 +830,20 @@ router.post('/report-locks/:uid/lock', async (req, res) => {
 
     res.json({ success: true, displayName });
   } catch (err) {
-    log.error('admin-users', 'Lock reports failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'Lock reports failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-router.delete('/report-locks/:uid', async (req, res) => {
+router.delete('/report-locks/:uniqueId', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    await db.doc(`reportLocks/${req.params.uid}`).delete();
+    await db.doc(`reportLocks/${req.params.uniqueId}`).delete();
 
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-users', 'Unlock reports failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-users', 'Unlock reports failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -853,7 +857,7 @@ router.delete('/report-locks/:uid', async (req, res) => {
  * and their last known IP address. Uses the same duration as the
  * suspension if an endDate is provided, otherwise permanent.
  */
-async function autoApplyBans(uid, endDate) {
+async function autoApplyBans(uniqueId, endDate) {
   const timestamp = now();
 
   // Calculate expiry — match suspension duration or permanent
@@ -866,7 +870,7 @@ async function autoApplyBans(uid, endDate) {
 
   // Find all devices bound to this user
   const bindingsSnap = await db.collection('deviceBindings')
-    .where('userId', '==', uid)
+    .where('uniqueId', '==', uniqueId)
     .get();
 
   let lastIp = null;
@@ -880,7 +884,7 @@ async function autoApplyBans(uid, endDate) {
       reason: 'Auto-applied: user suspended',
       duration,
       expiresAt,
-      linkedUserId: uid,
+      linkedUniqueId: uniqueId,
       autoApplied: true,
       createdAt: timestamp,
       createdBy: 'system',
@@ -900,7 +904,7 @@ async function autoApplyBans(uid, endDate) {
       reason: 'Auto-applied: user suspended',
       duration,
       expiresAt,
-      linkedUserId: uid,
+      linkedUniqueId: uniqueId,
       autoApplied: true,
       createdAt: timestamp,
       createdBy: 'system',
@@ -909,7 +913,7 @@ async function autoApplyBans(uid, endDate) {
 
   const deviceCount = bindingsSnap.docs.length;
   const networkCount = lastIp ? 1 : 0;
-  log.info('admin-users', 'Auto-bans applied', { uid, deviceBans: deviceCount, networkBans: networkCount });
+  log.info('admin-users', 'Auto-bans applied', { uniqueId, deviceBans: deviceCount, networkBans: networkCount });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -921,14 +925,14 @@ async function autoApplyBans(uid, endDate) {
  * Only removes bans with autoApplied === true and linkedUserId === uid.
  * Manually-applied bans are left untouched.
  */
-async function liftAutoAppliedBans(uid, adminUid) {
+async function liftAutoAppliedBans(uniqueId, adminUid) {
   const [deviceSnap, networkSnap] = await Promise.all([
     db.collection('deviceBans')
-      .where('linkedUserId', '==', uid)
+      .where('linkedUniqueId', '==', uniqueId)
       .where('autoApplied', '==', true)
       .get(),
     db.collection('networkBans')
-      .where('linkedUserId', '==', uid)
+      .where('linkedUniqueId', '==', uniqueId)
       .where('autoApplied', '==', true)
       .get(),
   ]);
@@ -942,12 +946,12 @@ async function liftAutoAppliedBans(uid, adminUid) {
   await db.doc(`adminAuditLog/${generateId()}`).set({
     adminId:      adminUid,
     action:       'LIFT_AUTO_BANS',
-    targetUserId: uid,
+    targetUserId: uniqueId,
     details:      `Removed ${allDocs.length} auto-applied ban(s) on unsuspension`,
     createdAt:    now(),
   });
 
-  log.info('admin-users', 'Auto-applied bans lifted', { uid, removed: allDocs.length });
+  log.info('admin-users', 'Auto-applied bans lifted', { uniqueId, removed: allDocs.length });
 }
 
 // ══════════════════════════════════════════════════════════════

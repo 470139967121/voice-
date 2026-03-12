@@ -63,17 +63,18 @@ class UserToMapTest {
     }
 
     @Test
-    fun `toMap contains exactly 61 keys`() {
+    fun `toMap contains exactly 63 keys`() {
         val user = TestData.createTestUser()
         val map = user.toMap()
-        assertEquals(61, map.size)
+        assertEquals(63, map.size)
     }
 
     @Test
     fun `toMap keys match expected field names`() {
         val expectedKeys = setOf(
             "uid", "displayName", "avatarUrl", "profilePhotoUrl", "coverPhotoUrl",
-            "description", "nationality", "uniqueId", "blockedUserIds",
+            "description", "nationality", "uniqueId", "firebaseUid", "providers",
+            "blockedUserIds",
             "followingIds", "followerIds", "dateOfBirth", "hideFollowing",
             "hideOnlineStatus", "hideAge", "email",
             "currentRoomId", "lastRoomName", "userType", "createdAt", "lastSeenAt",

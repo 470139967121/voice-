@@ -6,6 +6,7 @@ import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.UserInfo
 import com.shyden.shytalk.core.util.Resource
 import io.mockk.every
 import io.mockk.mockk
@@ -116,5 +117,130 @@ class AuthRepositoryImplTest {
     fun `signOut calls auth signOut`() {
         repo.signOut()
         verify { auth.signOut() }
+    }
+
+    @Test
+    fun `signOut clears resolvedUniqueId`() {
+        repo.resolvedUniqueId = "10000005"
+        repo.signOut()
+        assertNull(repo.resolvedUniqueId)
+    }
+
+    // ===== currentFirebaseUid =====
+
+    @Test
+    fun `currentFirebaseUid returns firebase uid`() {
+        val user = mockk<FirebaseUser>()
+        every { user.uid } returns "firebase-uid-1"
+        every { auth.currentUser } returns user
+        assertEquals("firebase-uid-1", repo.currentFirebaseUid)
+    }
+
+    @Test
+    fun `currentFirebaseUid returns null when not signed in`() {
+        every { auth.currentUser } returns null
+        assertNull(repo.currentFirebaseUid)
+    }
+
+    // ===== resolvedUniqueId =====
+
+    @Test
+    fun `currentUserId prefers resolvedUniqueId over firebase uid`() {
+        val user = mockk<FirebaseUser>()
+        every { user.uid } returns "firebase-uid-1"
+        every { auth.currentUser } returns user
+
+        repo.resolvedUniqueId = "10000005"
+        assertEquals("10000005", repo.currentUserId)
+    }
+
+    @Test
+    fun `currentUserId falls back to firebase uid when resolvedUniqueId is null`() {
+        val user = mockk<FirebaseUser>()
+        every { user.uid } returns "firebase-uid-1"
+        every { auth.currentUser } returns user
+
+        assertNull(repo.resolvedUniqueId)
+        assertEquals("firebase-uid-1", repo.currentUserId)
+    }
+
+    // ===== getProviderInfo =====
+
+    @Test
+    fun `getProviderInfo returns null when not signed in`() {
+        every { auth.currentUser } returns null
+        assertNull(repo.getProviderInfo())
+    }
+
+    @Test
+    fun `getProviderInfo returns google provider with email`() {
+        val googleProfile = mockk<UserInfo>()
+        every { googleProfile.providerId } returns GoogleAuthProvider.PROVIDER_ID
+        every { googleProfile.email } returns "alice@gmail.com"
+
+        val user = mockk<FirebaseUser>()
+        every { user.providerData } returns listOf(googleProfile)
+        every { auth.currentUser } returns user
+
+        val result = repo.getProviderInfo()
+        assertEquals("google" to "alice@gmail.com", result)
+    }
+
+    @Test
+    fun `getProviderInfo returns apple provider with uid`() {
+        val appleProfile = mockk<UserInfo>()
+        every { appleProfile.providerId } returns "apple.com"
+        every { appleProfile.uid } returns "001234.abcdef"
+
+        val user = mockk<FirebaseUser>()
+        every { user.providerData } returns listOf(appleProfile)
+        every { auth.currentUser } returns user
+
+        val result = repo.getProviderInfo()
+        assertEquals("apple" to "001234.abcdef", result)
+    }
+
+    @Test
+    fun `getProviderInfo returns email provider`() {
+        val emailProfile = mockk<UserInfo>()
+        every { emailProfile.providerId } returns "password"
+        every { emailProfile.email } returns "user@example.com"
+
+        val user = mockk<FirebaseUser>()
+        every { user.providerData } returns listOf(emailProfile)
+        every { auth.currentUser } returns user
+
+        val result = repo.getProviderInfo()
+        assertEquals("email" to "user@example.com", result)
+    }
+
+    @Test
+    fun `getProviderInfo skips firebase provider and returns google`() {
+        val firebaseProfile = mockk<UserInfo>()
+        every { firebaseProfile.providerId } returns "firebase"
+
+        val googleProfile = mockk<UserInfo>()
+        every { googleProfile.providerId } returns GoogleAuthProvider.PROVIDER_ID
+        every { googleProfile.email } returns "alice@gmail.com"
+
+        val user = mockk<FirebaseUser>()
+        every { user.providerData } returns listOf(firebaseProfile, googleProfile)
+        every { auth.currentUser } returns user
+
+        val result = repo.getProviderInfo()
+        assertEquals("google" to "alice@gmail.com", result)
+    }
+
+    @Test
+    fun `getProviderInfo returns null for google without email`() {
+        val googleProfile = mockk<UserInfo>()
+        every { googleProfile.providerId } returns GoogleAuthProvider.PROVIDER_ID
+        every { googleProfile.email } returns null
+
+        val user = mockk<FirebaseUser>()
+        every { user.providerData } returns listOf(googleProfile)
+        every { auth.currentUser } returns user
+
+        assertNull(repo.getProviderInfo())
     }
 }

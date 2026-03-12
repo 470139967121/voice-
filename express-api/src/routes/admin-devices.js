@@ -2,7 +2,7 @@
  * Admin device bindings routes — list, search, get, unbind devices.
  *
  * GET    /admin/devices              → List all device bindings (paginated, searchable)
- * GET    /admin/devices/user/:userId → Get all devices for a user
+ * GET    /admin/devices/user/:uniqueId → Get all devices for a user
  * GET    /admin/devices/:deviceId    → Get single device binding
  * DELETE /admin/devices/:deviceId    → Unbind device (delete binding)
  */
@@ -32,7 +32,7 @@ router.get('/admin/devices', async (req, res) => {
       devices = devices.filter(device => {
         const searchable = [
           device.id,
-          device.userId,
+          device.uniqueId,
           device.manufacturer,
           device.model,
           device.lastIp,
@@ -57,18 +57,18 @@ router.get('/admin/devices', async (req, res) => {
 
 // ─── Get all devices for a user ─────────────────────────────────
 
-router.get('/admin/devices/user/:userId', async (req, res) => {
+router.get('/admin/devices/user/:uniqueId', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const userId = req.params.userId;
-    const snap = await db.collection('deviceBindings').where('userId', '==', userId).get();
+    const uniqueId = req.params.uniqueId;
+    const snap = await db.collection('deviceBindings').where('uniqueId', '==', uniqueId).get();
 
     const devices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     res.json({ devices });
   } catch (err) {
-    log.error('admin-devices', 'Error fetching devices for user', { userId: req.params.userId, error: err.message });
+    log.error('admin-devices', 'Error fetching devices for user', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -120,8 +120,8 @@ router.delete('/admin/devices/:deviceId', async (req, res) => {
     });
 
     // Send system PM to the bound user (non-blocking)
-    if (deviceData.userId) {
-      try { await sendSystemPm(deviceData.userId, 'Your device binding has been reset by a moderator.'); } catch (e) { log.warn('system-pm', 'Failed to send', { error: e.message }); }
+    if (deviceData.uniqueId) {
+      try { await sendSystemPm(deviceData.uniqueId, 'Your device binding has been reset by a moderator.'); } catch (e) { log.warn('system-pm', 'Failed to send', { error: e.message }); }
     }
 
     res.json({ success: true });

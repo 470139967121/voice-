@@ -6,7 +6,9 @@ import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.CreateUserResult
 import com.shyden.shytalk.data.repository.EconomyRepository
+import com.shyden.shytalk.data.repository.IdentityRepository
 import com.shyden.shytalk.data.repository.ReportRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.StorageRepository
@@ -49,6 +51,7 @@ class ProfileViewModelTest {
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val reportRepository = mockk<ReportRepository>(relaxed = true)
     private val economyRepository = mockk<EconomyRepository>(relaxed = true)
+    private val identityRepository = mockk<IdentityRepository>(relaxed = true)
 
     private val currentUserId = "current-user"
     private val otherUserId = "other-user"
@@ -78,7 +81,8 @@ class ProfileViewModelTest {
             storageRepository = storageRepository,
             roomRepository = roomRepository,
             reportRepository = reportRepository,
-            economyRepository = economyRepository
+            economyRepository = economyRepository,
+            identityRepository = identityRepository
         ).also { activeViewModels.add(it) }
     }
 
@@ -262,7 +266,10 @@ class ProfileViewModelTest {
 
     @Test
     fun `saveProfile - success sets profileSaved`() = runTest {
-        coEvery { userRepository.createOrUpdateUser(any()) } returns Resource.Success(Unit)
+        every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
+        coEvery { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) } returns
+            Resource.Success(CreateUserResult(10000042))
+        coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
 
         val vm = createViewModel()
         vm.saveProfile("My Name", 946684800000L)
@@ -270,12 +277,15 @@ class ProfileViewModelTest {
 
         assertTrue(vm.uiState.value.profileSaved)
         assertEquals("My Name", vm.uiState.value.user?.displayName)
+        assertEquals(10000042L, vm.uiState.value.user?.uniqueId)
         assertFalse(vm.uiState.value.isLoading)
     }
 
     @Test
     fun `saveProfile - error sets error`() = runTest {
-        coEvery { userRepository.createOrUpdateUser(any()) } returns Resource.Error("save failed")
+        every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
+        coEvery { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) } returns
+            Resource.Error("save failed")
 
         val vm = createViewModel()
         vm.saveProfile("My Name", 946684800000L)
@@ -286,14 +296,15 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun `saveProfile - no auth user does nothing`() = runTest {
-        every { authRepository.currentUserId } returns null
+    fun `saveProfile - no provider info shows error`() = runTest {
+        every { authRepository.getProviderInfo() } returns null
 
         val vm = createViewModel()
         vm.saveProfile("My Name", 946684800000L)
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { userRepository.createOrUpdateUser(any()) }
+        assertNotNull(vm.uiState.value.error)
+        coVerify(exactly = 0) { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     // ===== saveProfileEdits =====

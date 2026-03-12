@@ -66,7 +66,7 @@ router.patch('/admin/alerts/:alertId', async (req, res) => {
     if (status === 'acknowledged') {
       update.acknowledgedBy = req.auth.uid;
     } else if (status === 'resolved') {
-      update.resolvedBy = req.auth.uid;
+      update.resolvedBy = req.auth.uniqueId;
       update.resolvedAt = new Date().toISOString();
     }
 

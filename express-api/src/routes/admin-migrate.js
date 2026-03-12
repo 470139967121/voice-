@@ -135,7 +135,7 @@ router.post('/admin/migrate-prod-data', async (req, res) => {
     return res.status(403).json({ error: 'This endpoint is disabled in production' });
   }
 
-  log.info('admin-migrate', 'Starting prod → dev data migration', { adminUid: req.auth.uid });
+  log.info('admin-migrate', 'Starting prod → dev data migration', { adminUid: req.auth.uniqueId });
 
   try {
     const srcDb = getProdDb();

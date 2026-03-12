@@ -2,261 +2,270 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Users ──────────────────────────────────────────────────────
-    match /users/{uid} {
+    // ── Helper: get caller's stable uniqueId from custom claims ───
+    // The Express API sets this via admin.auth().setCustomUserClaims()
+    // after user creation or sign-in. Client must force-refresh token.
+    function callerUniqueId() {
+      return request.auth.token.uniqueId;
+    }
+
+    // ── Users (keyed by uniqueId, not Firebase UID) ──────────────
+    match /users/{uniqueId} {
+      // Any authenticated user can read profiles
       allow read: if request.auth != null;
-      // Owner can update non-economy fields
-      allow create: if request.auth != null && request.auth.uid == uid;
-      allow update: if request.auth != null && request.auth.uid == uid
+      // Owner can update non-economy fields — verified via firebaseUid field
+      allow create: if false; // API only (atomic uniqueId + identity map)
+      allow update: if request.auth != null
+        && resource.data.firebaseUid == request.auth.uid
         && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(['shyCoins', 'shyBeans', 'isSuperShy', 'superShyExpiry', 'superShyTier',
                      'gcsLastDeductionAt', 'isSuspended', 'suspensionReason',
-                     'suspensionEndDate', 'userType']);
+                     'suspensionEndDate', 'userType', 'uniqueId', 'firebaseUid', 'providers']);
 
-      // Backpack — read own, write only via Worker API (economy safety)
+      // Backpack — read own, write only via API
       match /backpack/{giftId} {
-        allow read: if request.auth != null && request.auth.uid == uid;
+        allow read: if request.auth != null
+          && callerUniqueId() == int(uniqueId);
         allow write: if false;
       }
 
-      // Warnings — admin-only (write via Express API with service account)
+      // Warnings — server only
       match /warnings/{warningId} {
         allow read: if false;
         allow write: if false;
       }
 
-      // Gift Wall — auth read, write only via Worker API
+      // Gift Wall — auth read, write only via API
       match /giftWall/{giftId} {
         allow read: if request.auth != null;
         allow write: if false;
       }
 
-      // Transactions — owner or admin read, write only via Worker API
+      // Transactions — owner or admin read, write only via API
       match /transactions/{txId} {
         allow read: if request.auth != null
-                    && (request.auth.uid == uid || request.auth.token.admin == true);
+                    && (callerUniqueId() == int(uniqueId) || request.auth.token.admin == true);
         allow write: if false;
       }
 
-      // Stalkers (profile visitors) — owner reads, visitors can only create their own entry
+      // Stalkers (profile visitors) — owner reads, visitors create own entry
       match /stalkers/{visitorId} {
-        allow read: if request.auth != null && request.auth.uid == uid;
-        allow create: if request.auth != null && request.auth.uid == visitorId;
+        allow read: if request.auth != null
+          && callerUniqueId() == int(uniqueId);
+        allow create: if request.auth != null
+          && string(callerUniqueId()) == visitorId;
         allow update, delete: if false;
       }
     }
 
-    // ── Rooms ──────────────────────────────────────────────────────
+    // ── Identity Map — auth read, server write only ──────────────
+    match /identityMap/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ── Counters — server only ───────────────────────────────────
+    match /counters/{counterId} {
+      allow read, write: if false;
+    }
+
+    // ── Rooms ────────────────────────────────────────────────────
     match /rooms/{roomId} {
       allow read: if request.auth != null;
-      // Create: any authenticated user
       allow create: if request.auth != null;
-      // Update: owner or current participant
+      // Update: owner or current participant (IDs are uniqueIds)
       allow update: if request.auth != null
-        && (request.auth.uid == resource.data.ownerId
-            || request.auth.uid in resource.data.participantIds);
+        && (callerUniqueId() == resource.data.ownerId
+            || callerUniqueId() in resource.data.participantIds);
       // Delete: only owner
       allow delete: if request.auth != null
-        && request.auth.uid == resource.data.ownerId;
+        && callerUniqueId() == resource.data.ownerId;
 
       // Room chat messages
       match /messages/{messageId} {
         allow read: if request.auth != null;
         allow create: if request.auth != null;
-        // Edit/delete own messages only
         allow update, delete: if request.auth != null
-          && request.auth.uid == resource.data.senderId;
+          && callerUniqueId() == resource.data.senderId;
       }
 
-      // Seat requests within a room — any auth can read/create, only owner can approve/reject
+      // Seat requests
       match /seatRequests/{requestId} {
         allow read: if request.auth != null;
         allow create: if request.auth != null;
         allow update: if request.auth != null
-          && request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.ownerId;
+          && callerUniqueId() == get(/databases/$(database)/documents/rooms/$(roomId)).data.ownerId;
       }
     }
 
-    // ── Conversations ──────────────────────────────────────────────
+    // ── Conversations ────────────────────────────────────────────
     match /conversations/{conversationId} {
-      // get: allow on non-existent docs (existence check before create)
       allow get: if request.auth != null;
-      // list: only participants can query conversations
       allow list: if request.auth != null
-                  && request.auth.uid in resource.data.participantIds;
+                  && callerUniqueId() in resource.data.participantIds;
       allow create: if request.auth != null;
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.participantIds;
+                    && callerUniqueId() in resource.data.participantIds;
 
       match /messages/{messageId} {
         allow read: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+          && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow create: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        // Edit/recall own messages, or conversation admin/mod
+          && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow update, delete: if request.auth != null
-          && (request.auth.uid == resource.data.senderId
-              || request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.adminIds
-              || request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.modIds);
+          && (callerUniqueId() == resource.data.senderId
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.adminIds
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.modIds);
 
-        // Message edit history — participants only
         match /edits/{editId} {
           allow read: if request.auth != null
-            && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+            && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
           allow create: if request.auth != null
-            && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+            && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         }
       }
 
       // User-specific conversation settings — own settings only
-      match /userSettings/{userId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId;
-        allow update: if request.auth != null && request.auth.uid == userId;
+      match /userSettings/{settingsId} {
+        allow read, write: if request.auth != null
+          && string(callerUniqueId()) == settingsId;
       }
 
-      // Legacy settings path — keep for backwards compat during migration
-      match /settings/{userId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId;
-        allow update: if request.auth != null && request.auth.uid == userId;
+      // Legacy settings path
+      match /settings/{settingsId} {
+        allow read, write: if request.auth != null
+          && string(callerUniqueId()) == settingsId;
       }
 
-      // Mutes — participants can read, only own mute entry writable
-      match /mutes/{userId} {
+      // Mutes — participants read, own mute entry writable
+      match /mutes/{muteId} {
         allow read: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        allow write: if request.auth != null && request.auth.uid == userId;
+          && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow write: if request.auth != null
+          && string(callerUniqueId()) == muteId;
       }
 
-      // Mod log — participants can read, admins/mods can create
+      // Mod log — participants read, admins/mods create
       match /mod_log/{logId} {
         allow read: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+          && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow create: if request.auth != null
-          && (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.adminIds
-              || request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.modIds);
+          && (callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.adminIds
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.modIds);
       }
     }
 
-    // ── App config — auth read, server write only ──────────────────
+    // ── App config — auth read, server write ─────────────────────
     match /config/{configId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Device bindings — own read, create own, no hijacking others ─
+    // ── Device bindings — auth read own, API creates ─────────────
     match /deviceBindings/{deviceId} {
-      allow read: if request.auth != null
-        && resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null;
       allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.uniqueId == callerUniqueId();
       allow update: if request.auth != null
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == request.auth.uid;
+        && resource.data.uniqueId == callerUniqueId();
       allow delete: if false;
     }
 
-    // ── Counters (unique ID generation) — server only ──────────────
-    match /counters/{counterId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-
-    // ── Gift catalog — auth read, server write only ────────────────
+    // ── Gift catalog — auth read, server write ───────────────────
     match /gifts/{giftId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Gift rankings — auth read, server write only ───────────────
+    // ── Gift rankings — auth read, server write ──────────────────
     match /giftRankings/{giftId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Broadcasts — auth read, server write only ──────────────────
+    // ── Broadcasts — auth read, server write ─────────────────────
     match /broadcasts/{broadcastId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Coin packages — auth read, server write only ───────────────
+    // ── Coin packages — auth read, server write ──────────────────
     match /coinPackages/{packageId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Reports — admin reads (for real-time listeners), server writes
+    // ── Reports — admin reads, server writes ─────────────────────
     match /reports/{reportId} {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow create: if false;
       allow update: if false;
     }
 
-    // ── Archived reports — server only ─────────────────────────────
+    // ── Archived reports — server only ───────────────────────────
     match /reportsArchive/{reportId} {
       allow read, write: if false;
     }
 
-    // ── Suspension appeals ─────────────────────────────────────────
+    // ── Suspension appeals ───────────────────────────────────────
     match /suspensionAppeals/{appealId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null
+        && resource.data.uniqueId == callerUniqueId();
       allow create: if request.auth != null;
     }
 
-    // ── Fun facts — auth read, server write ────────────────────────
+    // ── Fun facts — auth read, server write ──────────────────────
     match /funFacts/{factId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Banners — auth read, server write only ─────────────────────
+    // ── Banners — auth read, server write ────────────────────────
     match /banners/{bannerId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Admin tokens — server only ─────────────────────────────────
+    // ── Admin tokens — server only ───────────────────────────────
     match /adminTokens/{tokenId} {
       allow read, write: if false;
     }
 
-    // ── Admin audit log — server only ──────────────────────────────
+    // ── Admin audit log — server only ────────────────────────────
     match /adminAuditLog/{logId} {
       allow read, write: if false;
     }
 
-    // ── Report locks — server only ─────────────────────────────────
+    // ── Report locks — server only ───────────────────────────────
     match /reportLocks/{lockId} {
       allow read, write: if false;
     }
 
-    // ── Logs — server writes, admin reads ────────────────────────
+    // ── Logs — admin reads, server writes ────────────────────────
     match /logs/{logId} {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow write: if false;
     }
 
-    // ── Log config — any auth read (mobile needs level config), server write ─
+    // ── Log config — any auth read, server write ─────────────────
     match /logConfig/{docId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Log stats — any auth read, server write ─────────────────
+    // ── Log stats — any auth read, server write ──────────────────
     match /logStats/{docId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ── Device bans — admin read, server write ──────────────────
+    // ── Device bans — admin read, server write ───────────────────
     match /deviceBans/{deviceId} {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow write: if false;
     }
 
-    // ── Network bans — admin read, server write ─────────────────
+    // ── Network bans — admin read, server write ──────────────────
     match /networkBans/{banId} {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow write: if false;
@@ -268,7 +277,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── Alert config — admin read, server write ─────────────────
+    // ── Alert config — admin read, server write ──────────────────
     match /alertConfig/{docId} {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow write: if false;

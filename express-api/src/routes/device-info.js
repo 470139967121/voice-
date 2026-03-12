@@ -70,7 +70,7 @@ router.post('/device-info', async (req, res) => {
     const timestamp = now();
     const deviceDoc = {
       deviceId,
-      userId: req.auth.uid,
+      uniqueId: req.auth.uniqueId,
       manufacturer: body.manufacturer || null,
       model: body.model || null,
       osVersion: body.osVersion || null,

@@ -534,6 +534,21 @@
     <string name="download_now">Download Now</string>
     <string name="edit_room_name">Edit Room Name</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">Powiązane konta</string>
+    <string name="linked">Powiązane</string>
+    <string name="unlinked">Niepowiązane</string>
+    <string name="unlink">Odłącz</string>
+    <string name="unlink_provider_confirm">Odłączyć %1$s?</string>
+    <string name="unlink_provider_description">Możesz ponownie powiązać to konto później, ale będziesz musiał je ponownie zweryfikować.</string>
+    <string name="cannot_unlink_last_provider">Musisz mieć co najmniej dwa powiązane konta, zanim będziesz mógł odłączyć jedno z nich.</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">E-mail</string>
+    <string name="no_linked_accounts">Nie znaleziono powiązanych kont</string>
+    <string name="unlinking_provider">Odłączanie…</string>
+
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
     <string name="end">End</string>

@@ -49,6 +49,8 @@ import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.EconomyRepositoryImpl
 import com.shyden.shytalk.data.repository.FunFactRepository
 import com.shyden.shytalk.data.repository.FunFactRepositoryImpl
+import com.shyden.shytalk.data.repository.IdentityRepository
+import com.shyden.shytalk.data.repository.IdentityRepositoryImpl
 import com.shyden.shytalk.data.repository.TranslationRepository
 import com.shyden.shytalk.data.repository.TranslationRepositoryImpl
 import com.shyden.shytalk.data.remote.BillingService
@@ -123,6 +125,7 @@ val appModule = module {
     singleOf(::SeatRequestRepositoryImpl) bind SeatRequestRepository::class
     single<StorageRepository> { StorageRepositoryImpl(get(), BuildConfig.WORKER_URL, get()) }
     singleOf(::DeviceRepositoryImpl) bind DeviceRepository::class
+    singleOf(::IdentityRepositoryImpl) bind IdentityRepository::class
     singleOf(::PrivateMessageRepositoryImpl) bind PrivateMessageRepository::class
     singleOf(::ReportRepositoryImpl) bind ReportRepository::class
     single<TypingRepository> { RtdbTypingRepository() }
@@ -139,13 +142,13 @@ val appModule = module {
     single<RoomLifecycleManager> { get<ActiveRoomManager>() }
 
     // ViewModels
-    viewModel { AuthViewModel(get(), get(), get(), get(named("deviceId")), get(named("bypassDeviceChecks"))) }
+    viewModel { AuthViewModel(get(), get(), get(), get(), get(named("deviceId")), get(named("bypassDeviceChecks"))) }
     viewModel { HomeViewModel(get(), get(), get(), get()) }
-    viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }
     viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }
     viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { AppSettingsViewModel(get(), get(), get()) }
+    viewModel { AppSettingsViewModel(get(), get(), get(), get()) }
     viewModel { RoomSettingsViewModel(get(), get(), get(), get()) }
     viewModel { ConversationListViewModel(get(), get(), get()) }
     viewModel { params ->

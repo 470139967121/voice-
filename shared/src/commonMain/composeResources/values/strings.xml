@@ -569,6 +569,20 @@
     <string name="shytalk_id">ShyTalk ID</string>
     <string name="email">Email</string>
 
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">Linked Accounts</string>
+    <string name="linked">Linked</string>
+    <string name="unlinked">Unlinked</string>
+    <string name="unlink">Unlink</string>
+    <string name="unlink_provider_confirm">Unlink %1$s?</string>
+    <string name="unlink_provider_description">You can re-link this account later, but you will need to verify it again.</string>
+    <string name="cannot_unlink_last_provider">You must have at least two linked accounts before you can unlink one.</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">Email</string>
+    <string name="no_linked_accounts">No linked accounts found</string>
+    <string name="unlinking_provider">Unlinking…</string>
+
     <!-- Settings - About page -->
     <string name="contact_us">Contact Us</string>
 

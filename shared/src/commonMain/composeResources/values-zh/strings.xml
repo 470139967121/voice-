@@ -534,6 +534,21 @@
     <string name="download_now">Download Now</string>
     <string name="edit_room_name">Edit Room Name</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">已关联的账户</string>
+    <string name="linked">已关联</string>
+    <string name="unlinked">未关联</string>
+    <string name="unlink">取消关联</string>
+    <string name="unlink_provider_confirm">取消关联 %1$s？</string>
+    <string name="unlink_provider_description">您可以稍后重新关联此账户，但需要重新验证。</string>
+    <string name="cannot_unlink_last_provider">您必须至少有两个已关联的账户才能取消关联其中一个。</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">电子邮件</string>
+    <string name="no_linked_accounts">未找到已关联的账户</string>
+    <string name="unlinking_provider">正在取消关联…</string>
+
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
     <string name="end">End</string>

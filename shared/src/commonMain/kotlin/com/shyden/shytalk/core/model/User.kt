@@ -13,6 +13,8 @@ data class User(
     val description: String? = null,
     val nationality: String? = null,
     val uniqueId: Long = 0L,
+    val firebaseUid: String = "",
+    val providers: List<LinkedProvider> = emptyList(),
     val blockedUserIds: Set<String> = emptySet(),
     val followingIds: Set<String> = emptySet(),
     val followerIds: Set<String> = emptySet(),
@@ -77,6 +79,12 @@ data class User(
             return currentTimeMillis() < endDate
         }
 
+    /** Active (non-unlinked) providers only. */
+    val activeProviders: List<LinkedProvider> get() = providers.filter { it.active }
+
+    /** Whether this user has an active provider of the given type. */
+    fun hasProvider(type: ProviderType): Boolean = activeProviders.any { it.type == type }
+
     /** Resolved photo URL: prefers profilePhotoUrl, falls back to avatarUrl. */
     val photoUrl: String? get() = profilePhotoUrl ?: avatarUrl
 
@@ -98,6 +106,8 @@ data class User(
         "description" to description,
         "nationality" to nationality,
         "uniqueId" to uniqueId,
+        "firebaseUid" to firebaseUid,
+        "providers" to providers.map { it.toMap() },
         "blockedUserIds" to blockedUserIds.toList(),
         "followingIds" to followingIds.toList(),
         "followerIds" to followerIds.toList(),
@@ -163,6 +173,11 @@ data class User(
             description = map["description"] as? String,
             nationality = map["nationality"] as? String,
             uniqueId = (map["uniqueId"] as? Long) ?: 0L,
+            firebaseUid = map["firebaseUid"] as? String ?: "",
+            providers = (map["providers"] as? List<*>)
+                ?.filterIsInstance<Map<*, *>>()
+                ?.map { @Suppress("UNCHECKED_CAST") LinkedProvider.fromMap(it as Map<String, Any?>) }
+                ?: emptyList(),
             blockedUserIds = (map["blockedUserIds"] as? List<*>)
                 ?.filterIsInstance<String>()?.toSet() ?: emptySet(),
             followingIds = (map["followingIds"] as? List<*>)

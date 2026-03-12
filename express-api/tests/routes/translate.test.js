@@ -53,11 +53,11 @@ afterAll(() => {
 
 const translateRouter = require('../../src/routes/translate');
 
-function createApp(uid = 'user-A') {
+function createApp(uniqueId = 12345) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid };
+    req.auth = { uid: 'firebase-uid', uniqueId };
     next();
   });
   app.use('/api', translateRouter);

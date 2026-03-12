@@ -534,6 +534,21 @@
     <string name="download_now">Download Now</string>
     <string name="edit_room_name">Edit Room Name</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">Gekoppelde accounts</string>
+    <string name="linked">Gekoppeld</string>
+    <string name="unlinked">Niet gekoppeld</string>
+    <string name="unlink">Ontkoppelen</string>
+    <string name="unlink_provider_confirm">%1$s ontkoppelen?</string>
+    <string name="unlink_provider_description">Je kunt dit account later opnieuw koppelen, maar je moet het dan opnieuw verifiëren.</string>
+    <string name="cannot_unlink_last_provider">Je moet minstens twee gekoppelde accounts hebben voordat je er een kunt ontkoppelen.</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">E-mail</string>
+    <string name="no_linked_accounts">Geen gekoppelde accounts gevonden</string>
+    <string name="unlinking_provider">Ontkoppelen…</string>
+
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
     <string name="end">End</string>

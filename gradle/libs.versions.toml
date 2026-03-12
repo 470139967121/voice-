@@ -97,6 +97,7 @@ lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", versio
 billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 
 # Testing
+kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }

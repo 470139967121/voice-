@@ -145,7 +145,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
     const convSnap = await db.doc(`conversations/${req.params.id}`).get();
     if (!convSnap.exists) return res.status(404).json({ error: 'Conversation not found' });
     const participantIds = convSnap.data().participantIds || [];
-    if (!participantIds.includes(req.auth.uid)) {
+    if (!participantIds.includes(req.auth.uniqueId)) {
       return res.status(403).json({ error: 'Not a participant of this conversation' });
     }
 
@@ -172,7 +172,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
 // -- Send message --
 router.post('/conversations/:id/messages', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     if (!body) return res.status(400).json({ error: 'Invalid body' });
 
@@ -180,7 +180,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
     const messageId = generateId();
     const timestamp = now();
     const type = body.type || 'TEXT';
-    const senderId = uid;
+    const senderId = uniqueId;
     const senderName = (body.senderName || '').slice(0, MAX_SENDER_NAME_LENGTH);
     const text = (body.text || '').slice(0, MAX_TEXT_LENGTH);
 
@@ -272,7 +272,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
     return res.json(buildMessage({ id: messageId, ...msgData, replyToMessageId: msgData.replyToId }));
   } catch (err) {
-    log.error('conversations', 'Failed to send message', { conversationId: req.params.id, senderId: req.auth?.uid, error: err.message });
+    log.error('conversations', 'Failed to send message', { conversationId: req.params.id, senderId: req.auth?.uniqueId, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

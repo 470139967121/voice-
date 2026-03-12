@@ -1,37 +1,199 @@
 /**
- * User routes — profile CRUD, unique ID, suspension appeals, social.
+ * User routes — identity-based profile CRUD, sign-in, provider linking.
  *
- * GET    /api/users/:uid              → Get user profile
- * PATCH  /api/users/:uid              → Update user profile fields
- * POST   /api/users                   → Create or update user (upsert)
- * POST   /api/users/:uid/unique-id    → Generate a unique numeric ID
- * POST   /api/users/:uid/appeal       → Submit suspension appeal
- * POST   /api/users/:uid/lift-suspension → Lift expired suspension
- * POST   /api/users/:uid/follow       → Follow a user
- * POST   /api/users/:uid/unfollow     → Unfollow a user
- * POST   /api/users/:uid/remove-follower → Remove a follower
- * POST   /api/users/:uid/record-visit → Record profile visit (stalker)
+ * POST   /api/users                          → Create new user (identity + uniqueId)
+ * POST   /api/users/sign-in                  → Resolve identity, update firebaseUid
+ * GET    /api/users/:uniqueId                → Get user profile
+ * PATCH  /api/users/:uniqueId                → Update user profile fields
+ * POST   /api/users/:uniqueId/link-provider  → Link additional provider
+ * DELETE /api/users/:uniqueId/link-provider  → Soft-remove (unlink) provider
+ * POST   /api/users/:uniqueId/appeal         → Submit suspension appeal
+ * POST   /api/users/:uniqueId/lift-suspension→ Lift expired suspension
+ * POST   /api/users/:uniqueId/follow         → Follow a user
+ * POST   /api/users/:uniqueId/unfollow       → Unfollow a user
+ * POST   /api/users/:uniqueId/remove-follower→ Remove a follower
+ * POST   /api/users/:uniqueId/record-visit   → Record profile visit (stalker)
  */
 
 const router = require('express').Router();
-const { db, FieldValue } = require('../utils/firebase');
+const { db, auth, FieldValue } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
 const { getDoc } = require('../utils/firestore-helpers');
 const log = require('../utils/log');
-const { clearSuspensionCache } = require('../middleware/auth');
+const { clearSuspensionCache, updateUniqueIdCache } = require('../middleware/auth');
 
-// ── Get user profile ──
-router.get('/users/:uid', async (req, res) => {
+const VALID_PROVIDERS = ['google', 'apple', 'email'];
+const MIN_UNIQUE_ID = 10000000;
+const MAX_IDENTIFIERS_PER_PROVIDER = 5;
+
+// ─── Helper: ownership check ────────────────────────────────────
+
+function requireOwner(req, res) {
+  const paramId = Number(req.params.uniqueId);
+  if (req.auth.uniqueId !== paramId) {
+    res.status(403).json({ error: 'Cannot modify another user' });
+    return true; // blocked
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users — Create new user with identity map
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/users', async (req, res) => {
   try {
-    const user = await getDoc(`users/${req.params.uid}`);
+    const { provider, identifier, displayName, email, profilePhotoUrl, dateOfBirth, language } = req.body || {};
+
+    if (!provider) return res.status(400).json({ error: 'provider required' });
+    if (!identifier) return res.status(400).json({ error: 'identifier required' });
+    if (!VALID_PROVIDERS.includes(provider)) {
+      return res.status(400).json({ error: `Invalid provider. Must be one of: ${VALID_PROVIDERS.join(', ')}` });
+    }
+
+    const identityDocId = `${provider}:${identifier}`;
+    const counterRef = db.doc('counters/uniqueId');
+    const identityRef = db.doc(`identityMap/${identityDocId}`);
+
+    const newUniqueId = await db.runTransaction(async (t) => {
+      // All reads first (Firestore transaction requirement)
+      const counterSnap = await t.get(counterRef);
+      const identitySnap = await t.get(identityRef);
+
+      // Check identity not already claimed
+      if (identitySnap.exists) {
+        const identityData = identitySnap.data();
+        if (identityData.unlinked) {
+          throw Object.assign(new Error('Identity deactivated'), { code: 'DEACTIVATED' });
+        }
+        throw Object.assign(new Error('Identity already linked'), { code: 'ALREADY_LINKED' });
+      }
+
+      // Atomic counter increment
+      let current = counterSnap.exists ? (counterSnap.data().value || 0) : 0;
+      if (current < MIN_UNIQUE_ID) current = MIN_UNIQUE_ID - 1;
+      const next = current + 1;
+
+      const timestamp = now();
+
+      // Write counter
+      t.set(counterRef, { value: next }, { merge: true });
+
+      // Write user doc
+      t.set(db.doc(`users/${next}`), {
+        uniqueId: next,
+        firebaseUid: req.auth.uid,
+        displayName: displayName || null,
+        email: email || null,
+        profilePhotoUrl: profilePhotoUrl || null,
+        dateOfBirth: dateOfBirth || null,
+        providers: [
+          { type: provider, identifier, active: true, linkedAt: timestamp },
+        ],
+        userType: 'MEMBER',
+        blockedUserIds: [],
+        followingIds: [],
+        followerIds: [],
+        fcmTokens: [],
+        aliases: {},
+        language: language || 'en',
+        stalkerCount: 0,
+        newStalkerCount: 0,
+        createdAt: timestamp,
+        lastSeenAt: timestamp,
+      });
+
+      // Write identity map entry
+      t.set(db.doc(`identityMap/${identityDocId}`), {
+        uniqueId: next,
+        provider,
+        identifier,
+        linkedAt: timestamp,
+        unlinked: false,
+        unlinkedAt: null,
+      });
+
+      return next;
+    });
+
+    // Set Firebase custom claims so Firestore security rules can use callerUniqueId()
+    await auth.setCustomUserClaims(req.auth.uid, { uniqueId: newUniqueId });
+
+    // Update uid → uniqueId cache so subsequent requests resolve instantly
+    updateUniqueIdCache(req.auth.uid, newUniqueId);
+
+    log.info('users', 'New user created', { uniqueId: newUniqueId, provider });
+    res.json({ success: true, created: true, uniqueId: newUniqueId });
+  } catch (err) {
+    if (err.code === 'ALREADY_LINKED') {
+      return res.status(409).json({ error: 'Identity already linked to an account' });
+    }
+    if (err.code === 'DEACTIVATED') {
+      return res.status(409).json({ error: 'This identity has been deactivated. Contact support for assistance.' });
+    }
+    log.error('users', 'POST /users failed', { error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users/sign-in — Identity resolution + firebaseUid update
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/users/sign-in', async (req, res) => {
+  try {
+    const { provider, identifier } = req.body || {};
+
+    if (!provider) return res.status(400).json({ error: 'provider required' });
+    if (!identifier) return res.status(400).json({ error: 'identifier required' });
+
+    const identityDocId = `${provider}:${identifier}`;
+    const identity = await getDoc(`identityMap/${identityDocId}`);
+
+    if (!identity) {
+      return res.json({ found: false });
+    }
+
+    if (identity.unlinked) {
+      return res.json({ found: false, deactivated: true });
+    }
+
+    const uniqueId = identity.uniqueId;
+
+    // Update firebaseUid to current project's UID + refresh lastSeenAt
+    await db.doc(`users/${uniqueId}`).update({
+      firebaseUid: req.auth.uid,
+      lastSeenAt: now(),
+    });
+
+    // Set Firebase custom claims so Firestore security rules can use callerUniqueId()
+    await auth.setCustomUserClaims(req.auth.uid, { uniqueId });
+
+    // Update caches
+    updateUniqueIdCache(req.auth.uid, uniqueId);
+
+    log.info('users', 'User signed in via identity', { uniqueId, provider });
+    res.json({ found: true, uniqueId });
+  } catch (err) {
+    log.error('users', 'POST /users/sign-in failed', { error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// GET /api/users/:uniqueId — Get user profile
+// ═══════════════════════════════════════════════════════════════════
+
+router.get('/users/:uniqueId', async (req, res) => {
+  try {
+    const user = await getDoc(`users/${req.params.uniqueId}`);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Ensure arrays are present even when missing from Firestore doc
     user.blockedUserIds = user.blockedUserIds || [];
     user.followingIds   = user.followingIds   || [];
     user.followerIds    = user.followerIds     || [];
 
-    // Strip admin-only fields (GCS, warning internals, moderation)
+    // Strip admin-only fields
     delete user.gcsScore;
     delete user.gcsLastDeductionAt;
     delete user.gcsDisplayScore;
@@ -41,22 +203,22 @@ router.get('/users/:uid', async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    log.error('users', 'GET /users/:uid failed', { uid: req.params.uid, error: err.message });
+    log.error('users', 'GET /users/:uniqueId failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Update user profile ──
-router.patch('/users/:uid', async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════
+// PATCH /api/users/:uniqueId — Update user profile
+// ═══════════════════════════════════════════════════════════════════
+
+router.patch('/users/:uniqueId', async (req, res) => {
   try {
-    if (req.auth.uid !== req.params.uid) {
-      return res.status(403).json({ error: 'Cannot update another user' });
-    }
+    if (requireOwner(req, res)) return;
 
     const body = req.body;
     if (!body) return res.status(400).json({ error: 'Invalid JSON body' });
 
-    // Only allow whitelisted camelCase fields
     const allowedFields = [
       'displayName', 'description', 'nationality',
       'profilePhotoUrl', 'coverPhotoUrl',
@@ -108,7 +270,6 @@ router.patch('/users/:uid', async (req, res) => {
         return res.status(400).json({ error: `${key} must be an integer` });
       }
     }
-    // Bounds validation for DND time fields
     for (const key of ['dndStartHour', 'dndEndHour']) {
       if (key in updates && (updates[key] < 0 || updates[key] > 23)) {
         return res.status(400).json({ error: `${key} must be between 0 and 23` });
@@ -120,146 +281,212 @@ router.patch('/users/:uid', async (req, res) => {
       }
     }
 
-    log.info('users', 'Updating profile', { userId: req.params.uid, fields: Object.keys(updates) });
-    await db.doc(`users/${req.params.uid}`).update(updates);
+    log.info('users', 'Updating profile', { uniqueId: req.params.uniqueId, fields: Object.keys(updates) });
+    await db.doc(`users/${req.params.uniqueId}`).update(updates);
 
     res.json({ success: true });
   } catch (err) {
-    log.error('users', 'PATCH /users/:uid failed', { uid: req.params.uid, error: err.message });
+    log.error('users', 'PATCH /users/:uniqueId failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Create or update user ──
-router.post('/users', async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users/:uniqueId/link-provider — Link additional provider
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/users/:uniqueId/link-provider', async (req, res) => {
   try {
-    const body = req.body;
-    if (!body?.uid) return res.status(400).json({ error: 'uid required' });
+    if (requireOwner(req, res)) return;
 
-    const uid = body.uid;
-    if (req.auth.uid !== uid) {
-      return res.status(403).json({ error: 'Cannot create user for another uid' });
+    const { provider, identifier } = req.body || {};
+    if (!provider) return res.status(400).json({ error: 'provider required' });
+    if (!identifier) return res.status(400).json({ error: 'identifier required' });
+    if (!VALID_PROVIDERS.includes(provider)) {
+      return res.status(400).json({ error: `Invalid provider. Must be one of: ${VALID_PROVIDERS.join(', ')}` });
     }
 
-    const existing = await getDoc(`users/${uid}`);
+    const uniqueId = Number(req.params.uniqueId);
+    const identityDocId = `${provider}:${identifier}`;
 
-    if (existing) {
-      log.info('users', 'User login (existing)', { userId: uid });
-      // Update lastSeenAt + backfill missing fields
-      const updates = { lastSeenAt: now() };
-      const incomingEmail = body.email || null;
-      if (incomingEmail && !existing.email) updates.email = incomingEmail;
-      if (!existing.userType) updates.userType = 'MEMBER';
-      await db.doc(`users/${uid}`).update(updates);
-      return res.json({ success: true, created: false });
+    // Load user doc + identity map entry in parallel
+    const [user, existingIdentity] = await Promise.all([
+      getDoc(`users/${uniqueId}`),
+      getDoc(`identityMap/${identityDocId}`),
+    ]);
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Check if identity is already claimed
+    if (existingIdentity) {
+      if (existingIdentity.uniqueId !== uniqueId) {
+        return res.status(409).json({ error: 'This identity is already linked to another account' });
+      }
+      // Re-linking own deactivated identity
+      if (existingIdentity.unlinked) {
+        const timestamp = now();
+
+        // Re-activate identity map entry
+        await db.doc(`identityMap/${identityDocId}`).update({
+          unlinked: false,
+          unlinkedAt: null,
+          linkedAt: timestamp,
+        });
+
+        // Update providers array in user doc
+        const providers = (user.providers || []).map(p =>
+          p.type === provider && p.identifier === identifier
+            ? { ...p, active: true, linkedAt: timestamp, unlinkedAt: undefined }
+            : p
+        );
+
+        await db.doc(`users/${uniqueId}`).update({ providers });
+
+        log.info('users', 'Provider re-linked', { uniqueId, provider, identifier });
+        return res.json({ success: true, relinked: true });
+      }
+      // Already active — no-op
+      return res.json({ success: true, alreadyLinked: true });
     }
 
-    // Create new user doc with camelCase fields
-    log.info('users', 'Creating new user', { userId: uid });
-    const photoUrl = body.profilePhotoUrl || body.profile_photo_url || null;
-    const dob = body.dateOfBirth || body.date_of_birth || null;
-    await db.doc(`users/${uid}`).set({
-      uid,
-      displayName:     body.displayName || body.display_name || null,
-      email:           body.email || null,
-      profilePhotoUrl: photoUrl,
-      dateOfBirth:     dob,
-      userType:        'MEMBER',
-      blockedUserIds:  [],
-      followingIds:    [],
-      followerIds:     [],
-      fcmTokens:       [],
-      aliases:         {},
-      language:        body.language || 'en',
-      stalkerCount:    0,
-      newStalkerCount: 0,
-      createdAt:       now(),
-      lastSeenAt:      now(),
-    }, { merge: true });
-
-    res.json({ success: true, created: true });
-  } catch (err) {
-    log.error('users', 'POST /users failed', { uid: req.body?.uid, error: err.message });
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ── Generate unique numeric ID ──
-// IDs are always 8-digit numbers starting at 10000000.
-const MIN_UNIQUE_ID = 10000000;
-
-router.post('/users/:uid/unique-id', async (req, res) => {
-  try {
-    if (req.auth.uid !== req.params.uid) {
-      return res.status(403).json({ error: 'Cannot generate ID for another user' });
+    // Check provider count limit
+    const existingOfType = (user.providers || []).filter(p => p.type === provider && p.active);
+    if (existingOfType.length >= MAX_IDENTIFIERS_PER_PROVIDER) {
+      return res.status(409).json({ error: 'Unable to link this account. Please contact support for assistance.' });
     }
 
-    // Return existing ID if already assigned
-    const user = await getDoc(`users/${req.params.uid}`);
-    const existingId = user?.uniqueId ?? user?.unique_id ?? null;
-    if (existingId && existingId >= MIN_UNIQUE_ID) {
-      return res.json({ uniqueId: existingId });
-    }
+    const timestamp = now();
 
-    // Atomic increment of the global counter via Firestore transaction
-    // Floor guard is inside the transaction to avoid race conditions
-    const counterRef = db.doc('counters/uniqueId');
-    const userRef = db.doc(`users/${req.params.uid}`);
-    let newId = await db.runTransaction(async (t) => {
-      const snap = await t.get(counterRef);
-      let current = snap.exists ? (snap.data().value || 0) : 0;
-      if (current < MIN_UNIQUE_ID) current = MIN_UNIQUE_ID - 1;
-      const next = current + 1;
-      t.set(counterRef, { value: next }, { merge: true });
-      t.update(userRef, { uniqueId: next });
-      return next;
+    // Create identity map entry
+    await db.doc(`identityMap/${identityDocId}`).set({
+      uniqueId,
+      provider,
+      identifier,
+      linkedAt: timestamp,
+      unlinked: false,
+      unlinkedAt: null,
     });
 
-    res.json({ uniqueId: newId });
+    // Update providers array
+    const providers = [
+      ...(user.providers || []),
+      { type: provider, identifier, active: true, linkedAt: timestamp },
+    ];
+    await db.doc(`users/${uniqueId}`).update({ providers });
+
+    log.info('users', 'Provider linked', { uniqueId, provider, identifier });
+    res.json({ success: true });
   } catch (err) {
-    log.error('users', 'Generate unique ID failed', { uid: req.params.uid, error: err.message });
-    res.status(500).json({ error: 'Failed to generate unique ID' });
+    log.error('users', 'Link provider failed', { uniqueId: req.params.uniqueId, error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Suspension appeal ──
-router.post('/users/:uid/appeal', async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════
+// DELETE /api/users/:uniqueId/link-provider — Soft-remove provider
+// ═══════════════════════════════════════════════════════════════════
+
+router.delete('/users/:uniqueId/link-provider', async (req, res) => {
   try {
-    if (req.auth.uid !== req.params.uid) return res.status(403).json({ error: 'Forbidden' });
+    if (requireOwner(req, res)) return;
+
+    const { provider, identifier } = req.body || {};
+    if (!provider) return res.status(400).json({ error: 'provider required' });
+    if (!identifier) return res.status(400).json({ error: 'identifier required' });
+
+    const uniqueId = Number(req.params.uniqueId);
+    const identityDocId = `${provider}:${identifier}`;
+
+    // Load user doc + identity map entry
+    const [user, identity] = await Promise.all([
+      getDoc(`users/${uniqueId}`),
+      getDoc(`identityMap/${identityDocId}`),
+    ]);
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!identity) return res.status(404).json({ error: 'Identity not found' });
+
+    // Verify identity belongs to this user
+    if (identity.uniqueId !== uniqueId) {
+      return res.status(403).json({ error: 'Identity does not belong to this user' });
+    }
+
+    // Check at least 2 active providers remain
+    const activeProviders = (user.providers || []).filter(p => p.active);
+    if (activeProviders.length < 2) {
+      return res.status(400).json({ error: 'Cannot unlink your only active provider. At least one provider must remain linked.' });
+    }
+
+    const timestamp = now();
+
+    // Soft-remove identity map entry
+    await db.doc(`identityMap/${identityDocId}`).update({
+      unlinked: true,
+      unlinkedAt: timestamp,
+    });
+
+    // Update providers array — set active=false + unlinkedAt
+    const providers = (user.providers || []).map(p =>
+      p.type === provider && p.identifier === identifier
+        ? { ...p, active: false, unlinkedAt: timestamp }
+        : p
+    );
+    await db.doc(`users/${uniqueId}`).update({ providers });
+
+    log.info('users', 'Provider unlinked', { uniqueId, provider, identifier });
+    res.json({ success: true });
+  } catch (err) {
+    log.error('users', 'Unlink provider failed', { uniqueId: req.params.uniqueId, error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users/:uniqueId/appeal — Suspension appeal
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/users/:uniqueId/appeal', async (req, res) => {
+  try {
+    if (requireOwner(req, res)) return;
+
     const body = req.body;
     if (!body?.appealText) return res.status(400).json({ error: 'appealText required' });
     if (typeof body.appealText !== 'string' || body.appealText.length > 500) {
       return res.status(400).json({ error: 'appealText must be a string of at most 500 characters' });
     }
 
-    log.info('users', 'Suspension appeal submitted', { userId: req.params.uid });
+    const uniqueId = req.params.uniqueId;
+    log.info('users', 'Suspension appeal submitted', { uniqueId });
 
-    // Write appeal to a subcollection and update the user doc status
     await Promise.all([
       db.doc(`suspensionAppeals/${generateId()}`).set({
-        userId:      req.params.uid,
-        appealText:  body.appealText,
-        status:      'pending',
-        createdAt:   now(),
+        uniqueId,
+        appealText: body.appealText,
+        status: 'pending',
+        createdAt: now(),
       }, { merge: true }),
-      db.doc(`users/${req.params.uid}`).update({
+      db.doc(`users/${uniqueId}`).update({
         suspensionAppealStatus: 'pending',
       }),
     ]);
 
     res.json({ success: true });
   } catch (err) {
-    log.error('users', 'Suspension appeal failed', { uid: req.params.uid, error: err.message });
+    log.error('users', 'Suspension appeal failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Lift expired suspension ──
-router.post('/users/:uid/lift-suspension', async (req, res) => {
-  try {
-    if (req.auth.uid !== req.params.uid) return res.status(403).json({ error: 'Forbidden' });
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users/:uniqueId/lift-suspension — Lift expired suspension
+// ═══════════════════════════════════════════════════════════════════
 
-    const user = await getDoc(`users/${req.params.uid}`);
+router.post('/users/:uniqueId/lift-suspension', async (req, res) => {
+  try {
+    if (requireOwner(req, res)) return;
+
+    const uniqueId = req.params.uniqueId;
+    const user = await getDoc(`users/${uniqueId}`);
     const isSuspended = user?.isSuspended ?? user?.is_suspended ?? false;
     if (!user || !isSuspended) {
       return res.status(400).json({ error: 'User is not suspended' });
@@ -270,112 +497,131 @@ router.post('/users/:uid/lift-suspension', async (req, res) => {
       return res.status(400).json({ error: 'Suspension has not expired yet' });
     }
 
-    log.info('users', 'Lifting expired suspension', { userId: req.params.uid });
+    log.info('users', 'Lifting expired suspension', { uniqueId });
 
-    await db.doc(`users/${req.params.uid}`).update({
-      isSuspended:            false,
-      suspensionReason:       null,
-      suspensionEndDate:      null,
-      suspensionCanAppeal:    true,
+    await db.doc(`users/${uniqueId}`).update({
+      isSuspended: false,
+      suspensionReason: null,
+      suspensionEndDate: null,
+      suspensionCanAppeal: true,
       suspensionAppealStatus: null,
-      suspendedBy:            null,
+      suspendedBy: null,
     });
 
-    clearSuspensionCache(req.params.uid);
+    clearSuspensionCache(Number(uniqueId));
 
     res.json({ success: true });
   } catch (err) {
-    log.error('users', 'Lift suspension failed', { uid: req.params.uid, error: err.message });
+    log.error('users', 'Lift suspension failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ── Follow user ──
-router.post('/users/:uid/follow', async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users/:uniqueId/follow — Follow a user
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/users/:uniqueId/follow', async (req, res) => {
   try {
     const body = req.body;
-    const targetUid = body?.targetUserId;
-    if (!targetUid) return res.status(400).json({ error: 'targetUserId required' });
-    if (req.auth.uid !== req.params.uid) return res.status(403).json({ error: 'Forbidden' });
-    if (req.params.uid === targetUid) return res.status(400).json({ error: 'Cannot follow yourself' });
+    const targetId = body?.targetUserId;
+    if (!targetId) return res.status(400).json({ error: 'targetUserId required' });
+    if (requireOwner(req, res)) return;
+    if (req.params.uniqueId === targetId) return res.status(400).json({ error: 'Cannot follow yourself' });
 
+    const uniqueId = req.params.uniqueId;
     const batch = db.batch();
-    batch.update(db.doc(`users/${req.params.uid}`), {
-      followingIds: FieldValue.arrayUnion(targetUid),
+    batch.update(db.doc(`users/${uniqueId}`), {
+      followingIds: FieldValue.arrayUnion(targetId),
     });
-    batch.update(db.doc(`users/${targetUid}`), {
-      followerIds: FieldValue.arrayUnion(req.params.uid),
+    batch.update(db.doc(`users/${targetId}`), {
+      followerIds: FieldValue.arrayUnion(uniqueId),
     });
     await batch.commit();
-    log.info('users', 'User followed', { userId: req.params.uid, targetUserId: targetUid });
+    log.info('users', 'User followed', { uniqueId, targetUserId: targetId });
 
     res.json({ success: true });
   } catch (err) {
-    log.error('users', 'Follow failed', { userId: req.params.uid, targetUserId: req.body?.targetUserId, error: err.message });
+    log.error('users', 'Follow failed', { uniqueId: req.params.uniqueId, targetUserId: req.body?.targetUserId, error: err.message });
     res.status(500).json({ error: 'Failed to follow user' });
   }
 });
 
-// ── Unfollow user ──
-router.post('/users/:uid/unfollow', async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users/:uniqueId/unfollow — Unfollow a user
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/users/:uniqueId/unfollow', async (req, res) => {
   try {
     const body = req.body;
-    const targetUid = body?.targetUserId;
-    if (!targetUid) return res.status(400).json({ error: 'targetUserId required' });
-    if (req.auth.uid !== req.params.uid) return res.status(403).json({ error: 'Forbidden' });
+    const targetId = body?.targetUserId;
+    if (!targetId) return res.status(400).json({ error: 'targetUserId required' });
+    if (requireOwner(req, res)) return;
 
+    const uniqueId = req.params.uniqueId;
     const batch = db.batch();
-    batch.update(db.doc(`users/${req.params.uid}`), {
-      followingIds: FieldValue.arrayRemove(targetUid),
+    batch.update(db.doc(`users/${uniqueId}`), {
+      followingIds: FieldValue.arrayRemove(targetId),
     });
-    batch.update(db.doc(`users/${targetUid}`), {
-      followerIds: FieldValue.arrayRemove(req.params.uid),
+    batch.update(db.doc(`users/${targetId}`), {
+      followerIds: FieldValue.arrayRemove(uniqueId),
     });
     await batch.commit();
-    log.info('users', 'User unfollowed', { userId: req.params.uid, targetUserId: targetUid });
+    log.info('users', 'User unfollowed', { uniqueId, targetUserId: targetId });
 
     res.json({ success: true });
   } catch (err) {
-    log.error('users', 'Unfollow failed', { userId: req.params.uid, targetUserId: req.body?.targetUserId, error: err.message });
+    log.error('users', 'Unfollow failed', { uniqueId: req.params.uniqueId, targetUserId: req.body?.targetUserId, error: err.message });
     res.status(500).json({ error: 'Failed to unfollow user' });
   }
 });
 
-// ── Remove follower ──
-router.post('/users/:uid/remove-follower', async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users/:uniqueId/remove-follower — Remove a follower
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/users/:uniqueId/remove-follower', async (req, res) => {
   try {
     const body = req.body;
-    const followerUid = body?.followerUserId;
-    if (!followerUid) return res.status(400).json({ error: 'followerUserId required' });
-    if (req.auth.uid !== req.params.uid) return res.status(403).json({ error: 'Forbidden' });
+    const followerId = body?.followerUserId;
+    if (!followerId) return res.status(400).json({ error: 'followerUserId required' });
+    if (requireOwner(req, res)) return;
 
+    const uniqueId = req.params.uniqueId;
     const batch = db.batch();
-    batch.update(db.doc(`users/${req.params.uid}`), {
-      followerIds: FieldValue.arrayRemove(followerUid),
+    batch.update(db.doc(`users/${uniqueId}`), {
+      followerIds: FieldValue.arrayRemove(followerId),
     });
-    batch.update(db.doc(`users/${followerUid}`), {
-      followingIds: FieldValue.arrayRemove(req.params.uid),
+    batch.update(db.doc(`users/${followerId}`), {
+      followingIds: FieldValue.arrayRemove(uniqueId),
     });
     await batch.commit();
-    log.info('users', 'Follower removed', { userId: req.params.uid, followerUserId: followerUid });
+    log.info('users', 'Follower removed', { uniqueId, followerUserId: followerId });
 
     res.json({ success: true });
   } catch (err) {
-    log.error('users', 'Remove follower failed', { userId: req.params.uid, followerUserId: req.body?.followerUserId, error: err.message });
+    log.error('users', 'Remove follower failed', { uniqueId: req.params.uniqueId, followerUserId: req.body?.followerUserId, error: err.message });
     res.status(500).json({ error: 'Failed to remove follower' });
   }
 });
 
-// ── Record profile visit (stalker) ──
-router.post('/users/:uid/record-visit', async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/users/:uniqueId/record-visit — Record profile visit
+// ═══════════════════════════════════════════════════════════════════
+
+router.post('/users/:uniqueId/record-visit', async (req, res) => {
   try {
     const body = req.body;
     const visitorId = body?.visitorId;
     if (!visitorId) return res.status(400).json({ error: 'visitorId required' });
-    if (req.auth.uid !== visitorId) return res.status(403).json({ error: 'Forbidden' });
-    if (req.params.uid === visitorId) return res.json({ success: true }); // don't stalk yourself
+    // visitorId must match caller's uniqueId (string comparison since param is string)
+    if (String(req.auth.uniqueId) !== String(visitorId)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (req.params.uniqueId === visitorId) return res.json({ success: true }); // don't stalk yourself
 
-    const stalkerPath = `users/${req.params.uid}/stalkers/${visitorId}`;
+    const profileUniqueId = req.params.uniqueId;
+    const stalkerPath = `users/${profileUniqueId}/stalkers/${visitorId}`;
     const existing = await getDoc(stalkerPath);
     const timestamp = now();
 
@@ -385,7 +631,7 @@ router.post('/users/:uid/record-visit', async (req, res) => {
         lastVisitedAt: timestamp,
         visitCount: (existing.visitCount || 1) + 1,
       });
-      batch.update(db.doc(`users/${req.params.uid}`), {
+      batch.update(db.doc(`users/${profileUniqueId}`), {
         newStalkerCount: FieldValue.increment(1),
       });
       await batch.commit();
@@ -397,8 +643,7 @@ router.post('/users/:uid/record-visit', async (req, res) => {
         firstVisitedAt: timestamp,
         visitCount: 1,
       }, { merge: true });
-      // Increment both counters in one write for new visitors
-      batch.update(db.doc(`users/${req.params.uid}`), {
+      batch.update(db.doc(`users/${profileUniqueId}`), {
         stalkerCount: FieldValue.increment(1),
         newStalkerCount: FieldValue.increment(1),
       });
@@ -407,7 +652,7 @@ router.post('/users/:uid/record-visit', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    log.error('users', 'Record visit failed', { profileUid: req.params.uid, visitorId: req.body?.visitorId, error: err.message });
+    log.error('users', 'Record visit failed', { profileUniqueId: req.params.uniqueId, visitorId: req.body?.visitorId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

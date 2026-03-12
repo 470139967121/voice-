@@ -5,6 +5,8 @@ import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
+import com.shyden.shytalk.data.repository.IdentityRepository
+import com.shyden.shytalk.data.repository.SignInResult
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
 import com.shyden.shytalk.testutil.TestData
@@ -36,9 +38,13 @@ class AuthViewModelTest {
     private val authRepository = mockk<AuthRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val deviceRepository = mockk<DeviceRepository>(relaxed = true)
+    private val identityRepository = mockk<IdentityRepository>(relaxed = true)
     private val deviceId = "test-device-id"
-    private val userId = "user-1"
 
+    // Identity system values
+    private val email = "test@example.com"
+    private val uniqueId = 10000005L
+    private val uniqueIdStr = "10000005"
     private val testDob = 946684800000L // 2000-01-01
 
     private val activeViewModels = mutableListOf<AuthViewModel>()
@@ -49,17 +55,38 @@ class AuthViewModelTest {
         activeViewModels.clear()
     }
 
+    /** Sets up mocks for init-time identity resolution (app restart). */
+    private fun setupAuthenticatedIdentity() {
+        every { authRepository.isAuthenticated } returns true
+        every { authRepository.getProviderInfo() } returns ("google" to email)
+        coEvery { identityRepository.resolveIdentity("google", email) } returns
+            Resource.Success(SignInResult.Found(uniqueId))
+        coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
+    }
+
+    /** Sets up mocks for sign-in-time identity resolution. */
+    private fun setupSignInIdentity() {
+        every { authRepository.isAuthenticated } returns false
+        every { authRepository.currentUserId } returns null
+        every { authRepository.currentUserEmail } returns email
+        coEvery { identityRepository.resolveIdentity("google", email) } returns
+            Resource.Success(SignInResult.Found(uniqueId))
+        coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
+    }
+
     private fun createViewModel() = AuthViewModel(
         authRepository = authRepository,
         userRepository = userRepository,
         deviceRepository = deviceRepository,
+        identityRepository = identityRepository,
         deviceId = deviceId
     ).also { activeViewModels.add(it) }
+
+    // ===== init (app restart) =====
 
     @Test
     fun `init - not authenticated stays default`() = runTest {
         every { authRepository.isAuthenticated } returns false
-        every { authRepository.currentUserId } returns null
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -70,12 +97,11 @@ class AuthViewModelTest {
 
     @Test
     fun `init - authenticated with profile and DOB sets all flags`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
-            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        setupAuthenticatedIdentity()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
+            TestData.createTestUser(uid = uniqueIdStr, dateOfBirth = testDob)
         )
 
         val vm = createViewModel()
@@ -88,12 +114,11 @@ class AuthViewModelTest {
 
     @Test
     fun `init - authenticated with profile but no DOB sets hasDOB false`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
-            TestData.createTestUser(uid = userId, dateOfBirth = null)
+        setupAuthenticatedIdentity()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
+            TestData.createTestUser(uid = uniqueIdStr, dateOfBirth = null)
         )
 
         val vm = createViewModel()
@@ -106,8 +131,7 @@ class AuthViewModelTest {
 
     @Test
     fun `init - device bound to different user locks device`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
+        setupAuthenticatedIdentity()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success("other-user")
 
         val vm = createViewModel()
@@ -119,28 +143,26 @@ class AuthViewModelTest {
 
     @Test
     fun `init - no device binding binds new device`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
+        setupAuthenticatedIdentity()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(null)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
-            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
+            TestData.createTestUser(uid = uniqueIdStr, dateOfBirth = testDob)
         )
 
         val vm = createViewModel()
         advanceUntilIdle()
 
-        coVerify { deviceRepository.bindDevice(deviceId, userId) }
+        coVerify { deviceRepository.bindDevice(deviceId, uniqueIdStr) }
     }
 
     @Test
     fun `init - device binding network error is lenient`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
+        setupAuthenticatedIdentity()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Error("network")
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
-            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
+            TestData.createTestUser(uid = uniqueIdStr, dateOfBirth = testDob)
         )
 
         val vm = createViewModel()
@@ -151,12 +173,39 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun `init - no provider info stops loading`() = runTest {
+        every { authRepository.isAuthenticated } returns true
+        every { authRepository.getProviderInfo() } returns null
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isAuthenticated)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `init - identity resolution error shows backend unreachable`() = runTest {
+        every { authRepository.isAuthenticated } returns true
+        every { authRepository.getProviderInfo() } returns ("google" to email)
+        coEvery { identityRepository.resolveIdentity("google", email) } returns
+            Resource.Error("Network error")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isBackendUnreachable)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    // ===== signInWithGoogle =====
+
+    @Test
     fun `signInWithGoogle - success with new user`() = runTest {
-        every { authRepository.isAuthenticated } returns false
-        every { authRepository.currentUserId } returns null
-        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success(userId)
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(null)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(false)
+        setupSignInIdentity()
+        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success("firebase-uid")
+        coEvery { identityRepository.resolveIdentity("google", email) } returns
+            Resource.Success(SignInResult.NotFound)
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -166,18 +215,16 @@ class AuthViewModelTest {
         assertTrue(vm.uiState.value.isAuthenticated)
         assertFalse(vm.uiState.value.hasProfile)
         assertFalse(vm.uiState.value.hasDOB)
-        coVerify { deviceRepository.bindDevice(deviceId, userId) }
     }
 
     @Test
     fun `signInWithGoogle - existing user with DOB`() = runTest {
-        every { authRepository.isAuthenticated } returns false
-        every { authRepository.currentUserId } returns null
-        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success(userId)
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
-            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        setupSignInIdentity()
+        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success("firebase-uid")
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
+            TestData.createTestUser(uid = uniqueIdStr, dateOfBirth = testDob)
         )
 
         val vm = createViewModel()
@@ -192,13 +239,12 @@ class AuthViewModelTest {
 
     @Test
     fun `signInWithGoogle - existing user without DOB`() = runTest {
-        every { authRepository.isAuthenticated } returns false
-        every { authRepository.currentUserId } returns null
-        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success(userId)
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
-            TestData.createTestUser(uid = userId, dateOfBirth = null)
+        setupSignInIdentity()
+        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success("firebase-uid")
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
+            TestData.createTestUser(uid = uniqueIdStr, dateOfBirth = null)
         )
 
         val vm = createViewModel()
@@ -213,9 +259,8 @@ class AuthViewModelTest {
 
     @Test
     fun `signInWithGoogle - device locked to different user`() = runTest {
-        every { authRepository.isAuthenticated } returns false
-        every { authRepository.currentUserId } returns null
-        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success(userId)
+        setupSignInIdentity()
+        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success("firebase-uid")
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success("other-user")
 
         val vm = createViewModel()
@@ -246,9 +291,10 @@ class AuthViewModelTest {
     fun `signInWithApple - success with new user`() = runTest {
         every { authRepository.isAuthenticated } returns false
         every { authRepository.currentUserId } returns null
-        coEvery { authRepository.signInWithAppleIdToken("token", "nonce") } returns Resource.Success(userId)
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(null)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(false)
+        coEvery { authRepository.signInWithAppleIdToken("token", "nonce") } returns Resource.Success("firebase-uid")
+        every { authRepository.getProviderInfo() } returns ("apple" to "001234.abcdef")
+        coEvery { identityRepository.resolveIdentity("apple", "001234.abcdef") } returns
+            Resource.Success(SignInResult.NotFound)
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -258,7 +304,6 @@ class AuthViewModelTest {
         assertTrue(vm.uiState.value.isAuthenticated)
         assertFalse(vm.uiState.value.hasProfile)
         assertFalse(vm.uiState.value.hasDOB)
-        coVerify { deviceRepository.bindDevice(deviceId, userId) }
     }
 
     @Test
@@ -275,14 +320,15 @@ class AuthViewModelTest {
         assertEquals(UiText.Plain("apple auth failed"), vm.uiState.value.error)
     }
 
+    // ===== signOut =====
+
     @Test
     fun `signOut resets state`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
-            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        setupAuthenticatedIdentity()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
+            TestData.createTestUser(uid = uniqueIdStr, dateOfBirth = testDob)
         )
 
         val vm = createViewModel()
@@ -311,8 +357,7 @@ class AuthViewModelTest {
 
     @Test
     fun `clearDeviceLocked clears flag`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
+        setupAuthenticatedIdentity()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success("other-user")
 
         val vm = createViewModel()
@@ -325,11 +370,10 @@ class AuthViewModelTest {
 
     @Test
     fun `init - getUser error sets isBackendUnreachable`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Error("fetch failed")
+        setupAuthenticatedIdentity()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Error("fetch failed")
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -342,13 +386,12 @@ class AuthViewModelTest {
 
     @Test
     fun `init - suspended user sets isSuspended true and isAuthenticated false`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+        setupAuthenticatedIdentity()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
             TestData.createTestUser(
-                uid = userId,
+                uid = uniqueIdStr,
                 dateOfBirth = testDob,
                 isSuspended = true,
                 suspensionReason = "Spam",
@@ -368,13 +411,12 @@ class AuthViewModelTest {
 
     @Test
     fun `init - expired suspension passes through normally`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+        setupAuthenticatedIdentity()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
             TestData.createTestUser(
-                uid = userId,
+                uid = uniqueIdStr,
                 dateOfBirth = testDob,
                 isSuspended = true,
                 suspensionEndDate = System.currentTimeMillis() - 86_400_000L
@@ -390,13 +432,12 @@ class AuthViewModelTest {
 
     @Test
     fun `init - permanent suspension blocks indefinitely`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+        setupAuthenticatedIdentity()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
             TestData.createTestUser(
-                uid = userId,
+                uid = uniqueIdStr,
                 dateOfBirth = testDob,
                 isSuspended = true,
                 suspensionEndDate = null,
@@ -415,19 +456,19 @@ class AuthViewModelTest {
 
     @Test
     fun `submitAppeal - success sets canAppeal to false`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+        setupAuthenticatedIdentity()
+        every { authRepository.currentUserId } returns "firebase-uid"
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
             TestData.createTestUser(
-                uid = userId,
+                uid = uniqueIdStr,
                 isSuspended = true,
                 suspensionEndDate = System.currentTimeMillis() + 86_400_000L,
                 suspensionCanAppeal = true
             )
         )
-        coEvery { userRepository.submitSuspensionAppeal(userId, any()) } returns Resource.Success(Unit)
+        coEvery { userRepository.submitSuspensionAppeal(any(), any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -442,19 +483,19 @@ class AuthViewModelTest {
 
     @Test
     fun `submitAppeal - failure sets error`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+        setupAuthenticatedIdentity()
+        every { authRepository.currentUserId } returns "firebase-uid"
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
             TestData.createTestUser(
-                uid = userId,
+                uid = uniqueIdStr,
                 isSuspended = true,
                 suspensionEndDate = System.currentTimeMillis() + 86_400_000L,
                 suspensionCanAppeal = true
             )
         )
-        coEvery { userRepository.submitSuspensionAppeal(userId, any()) } returns Resource.Error("network error")
+        coEvery { userRepository.submitSuspensionAppeal(any(), any()) } returns Resource.Error("network error")
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -465,11 +506,10 @@ class AuthViewModelTest {
 
         assertTrue(vm.uiState.value.error is UiText.Res)
         assertFalse(vm.uiState.value.isLoading)
-        // suspensionCanAppeal should still be true since appeal failed
         assertTrue(vm.uiState.value.suspensionCanAppeal)
     }
 
-    // ===== Additional Google sign-in error scenarios =====
+    // ===== Additional sign-in error scenarios =====
 
     @Test
     fun `signInWithGoogle - network error sets error and stops loading`() = runTest {
@@ -494,9 +534,10 @@ class AuthViewModelTest {
         every { authRepository.isAuthenticated } returns false
         every { authRepository.currentUserId } returns null
         coEvery { authRepository.signInWithGoogleIdToken("token1") } returns Resource.Error("first error")
-        coEvery { authRepository.signInWithGoogleIdToken("token2") } returns Resource.Success(userId)
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(null)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(false)
+        coEvery { authRepository.signInWithGoogleIdToken("token2") } returns Resource.Success("firebase-uid")
+        every { authRepository.currentUserEmail } returns email
+        coEvery { identityRepository.resolveIdentity("google", email) } returns
+            Resource.Success(SignInResult.NotFound)
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -517,7 +558,11 @@ class AuthViewModelTest {
     fun `signInWithApple - device locked to different user`() = runTest {
         every { authRepository.isAuthenticated } returns false
         every { authRepository.currentUserId } returns null
-        coEvery { authRepository.signInWithAppleIdToken("token", "nonce") } returns Resource.Success(userId)
+        coEvery { authRepository.signInWithAppleIdToken("token", "nonce") } returns Resource.Success("firebase-uid")
+        every { authRepository.getProviderInfo() } returns ("apple" to "001234.abcdef")
+        coEvery { identityRepository.resolveIdentity("apple", "001234.abcdef") } returns
+            Resource.Success(SignInResult.Found(uniqueId))
+        coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success("other-user")
 
         val vm = createViewModel()
@@ -551,13 +596,12 @@ class AuthViewModelTest {
 
     @Test
     fun `signOut clears suspension state`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns userId
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
+        setupAuthenticatedIdentity()
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
             TestData.createTestUser(
-                uid = userId,
+                uid = uniqueIdStr,
                 isSuspended = true,
                 suspensionEndDate = System.currentTimeMillis() + 86_400_000L,
                 suspensionCanAppeal = true
@@ -579,11 +623,10 @@ class AuthViewModelTest {
 
     @Test
     fun `signInWithGoogle - userExists error sets isBackendUnreachable`() = runTest {
-        every { authRepository.isAuthenticated } returns false
-        every { authRepository.currentUserId } returns null
-        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success(userId)
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Error("Firestore down")
+        setupSignInIdentity()
+        coEvery { authRepository.signInWithGoogleIdToken("token") } returns Resource.Success("firebase-uid")
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Error("Firestore down")
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -595,31 +638,21 @@ class AuthViewModelTest {
         assertFalse(state.isLoading)
     }
 
-    // ===== init with currentUserId null =====
-
-    @Test
-    fun `init - authenticated but currentUserId null stops loading`() = runTest {
-        every { authRepository.isAuthenticated } returns true
-        every { authRepository.currentUserId } returns null
-
-        val vm = createViewModel()
-        advanceUntilIdle()
-
-        assertFalse(vm.uiState.value.isAuthenticated)
-        assertFalse(vm.uiState.value.isLoading)
-    }
-
     // ===== Apple sign-in with existing user and DOB =====
 
     @Test
     fun `signInWithApple - existing user with DOB sets all flags`() = runTest {
         every { authRepository.isAuthenticated } returns false
         every { authRepository.currentUserId } returns null
-        coEvery { authRepository.signInWithAppleIdToken("token", "nonce") } returns Resource.Success(userId)
-        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(userId)
-        coEvery { userRepository.userExists(userId) } returns Resource.Success(true)
-        coEvery { userRepository.getUser(userId) } returns Resource.Success(
-            TestData.createTestUser(uid = userId, dateOfBirth = testDob)
+        coEvery { authRepository.signInWithAppleIdToken("token", "nonce") } returns Resource.Success("firebase-uid")
+        every { authRepository.getProviderInfo() } returns ("apple" to "001234.abcdef")
+        coEvery { identityRepository.resolveIdentity("apple", "001234.abcdef") } returns
+            Resource.Success(SignInResult.Found(uniqueId))
+        coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
+        coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
+        coEvery { userRepository.userExists(uniqueIdStr) } returns Resource.Success(true)
+        coEvery { userRepository.getUser(uniqueIdStr) } returns Resource.Success(
+            TestData.createTestUser(uid = uniqueIdStr, dateOfBirth = testDob)
         )
 
         val vm = createViewModel()

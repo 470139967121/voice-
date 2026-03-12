@@ -10,7 +10,12 @@ class AuthRepositoryImpl(
     private val auth: FirebaseAuth
 ) : AuthRepository {
 
+    override var resolvedUniqueId: String? = null
+
     override val currentUserId: String?
+        get() = resolvedUniqueId ?: auth.currentUser?.uid
+
+    override val currentFirebaseUid: String?
         get() = auth.currentUser?.uid
 
     override val isAuthenticated: Boolean
@@ -18,6 +23,26 @@ class AuthRepositoryImpl(
 
     override val currentUserEmail: String?
         get() = auth.currentUser?.email
+
+    override fun getProviderInfo(): Pair<String, String>? {
+        val user = auth.currentUser ?: return null
+        for (profile in user.providerData) {
+            when (profile.providerId) {
+                GoogleAuthProvider.PROVIDER_ID -> {
+                    val email = profile.email ?: continue
+                    return "google" to email
+                }
+                "apple.com" -> {
+                    return "apple" to profile.uid
+                }
+                "password" -> {
+                    val email = profile.email ?: continue
+                    return "email" to email
+                }
+            }
+        }
+        return null
+    }
 
     override suspend fun signInWithGoogleIdToken(idToken: String): Resource<String> = firebaseCall("Google sign in failed") {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
@@ -30,6 +55,7 @@ class AuthRepositoryImpl(
     }
 
     override fun signOut() {
+        resolvedUniqueId = null
         auth.signOut()
     }
 }

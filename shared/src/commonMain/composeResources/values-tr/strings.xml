@@ -534,6 +534,21 @@
     <string name="download_now">Download Now</string>
     <string name="edit_room_name">Edit Room Name</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">Bağlı Hesaplar</string>
+    <string name="linked">Bağlı</string>
+    <string name="unlinked">Bağlı değil</string>
+    <string name="unlink">Bağlantıyı kaldır</string>
+    <string name="unlink_provider_confirm">%1$s bağlantısı kaldırılsın mı?</string>
+    <string name="unlink_provider_description">Bu hesabı daha sonra tekrar bağlayabilirsiniz, ancak yeniden doğrulamanız gerekecektir.</string>
+    <string name="cannot_unlink_last_provider">Birinin bağlantısını kaldırabilmek için en az iki bağlı hesabınız olmalıdır.</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">E-posta</string>
+    <string name="no_linked_accounts">Bağlı hesap bulunamadı</string>
+    <string name="unlinking_provider">Bağlantı kaldırılıyor…</string>
+
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
     <string name="end">End</string>

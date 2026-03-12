@@ -534,6 +534,21 @@
     <string name="download_now">Download Now</string>
     <string name="edit_room_name">Edit Room Name</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">บัญชีที่เชื่อมต่อ</string>
+    <string name="linked">เชื่อมต่อแล้ว</string>
+    <string name="unlinked">ยังไม่เชื่อมต่อ</string>
+    <string name="unlink">ยกเลิกการเชื่อมต่อ</string>
+    <string name="unlink_provider_confirm">ยกเลิกการเชื่อมต่อ %1$s?</string>
+    <string name="unlink_provider_description">คุณสามารถเชื่อมต่อบัญชีนี้ใหม่ได้ในภายหลัง แต่คุณจะต้องยืนยันตัวตนอีกครั้ง</string>
+    <string name="cannot_unlink_last_provider">คุณต้องมีบัญชีที่เชื่อมต่ออย่างน้อยสองบัญชีก่อนจึงจะยกเลิกการเชื่อมต่อได้</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">อีเมล</string>
+    <string name="no_linked_accounts">ไม่พบบัญชีที่เชื่อมต่อ</string>
+    <string name="unlinking_provider">กำลังยกเลิกการเชื่อมต่อ…</string>
+
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
     <string name="end">End</string>

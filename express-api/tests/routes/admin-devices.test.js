@@ -57,7 +57,7 @@ function createApp(isAdmin = true) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'admin1', token: { admin: isAdmin } };
+    req.auth = { uid: 'admin1', uniqueId: 'admin1', token: { admin: isAdmin } };
     next();
   });
   app.use('/api', adminDevicesRouter);
@@ -155,7 +155,7 @@ describe('GET /api/admin/devices/:deviceId', () => {
   });
 });
 
-describe('GET /api/admin/devices/user/:userId', () => {
+describe('GET /api/admin/devices/user/:uniqueId', () => {
   test('returns all devices for a user (200)', async () => {
     mockWhereGet.mockResolvedValue({
       docs: [
@@ -168,7 +168,7 @@ describe('GET /api/admin/devices/user/:userId', () => {
     const res = await request(app).get('/api/admin/devices/user/user123').expect(200);
 
     expect(res.body.devices).toHaveLength(2);
-    expect(mockWhere).toHaveBeenCalledWith('userId', '==', 'user123');
+    expect(mockWhere).toHaveBeenCalledWith('uniqueId', '==', 'user123');
   });
 
   test('returns empty array when user has no devices', async () => {

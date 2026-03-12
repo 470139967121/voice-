@@ -2,8 +2,8 @@
  * Admin temporary unique ID routes.
  *
  * GET    /admin/users/check-id/:id   → Check if a unique ID is available
- * POST   /admin/users/:uid/temp-id   → Set a temporary unique ID
- * DELETE /admin/users/:uid/temp-id   → Clear a temporary unique ID
+ * POST   /admin/users/:uniqueId/temp-id   → Set a temporary unique ID
+ * DELETE /admin/users/:uniqueId/temp-id   → Clear a temporary unique ID
  */
 
 const router = require('express').Router();
@@ -45,7 +45,7 @@ router.get('/admin/users/check-id/:id', async (req, res) => {
 });
 
 // ── Set temporary unique ID ──
-router.post('/admin/users/:uid/temp-id', async (req, res) => {
+router.post('/admin/users/:uniqueId/temp-id', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -71,10 +71,10 @@ router.post('/admin/users/:uid/temp-id', async (req, res) => {
       }
     }
 
-    const uid = req.params.uid;
+    const targetUniqueId = req.params.uniqueId;
     const timestamp = now();
 
-    await db.doc(`users/${uid}`).update({
+    await db.doc(`users/${targetUniqueId}`).update({
       tempUniqueId,
       tempUniqueIdExpiry: expiryDate,
     });
@@ -83,33 +83,33 @@ router.post('/admin/users/:uid/temp-id', async (req, res) => {
     await db.doc(`adminAuditLog/${generateId()}`).set({
       adminId: req.auth.uid,
       action: 'SET_TEMP_ID',
-      targetUserId: uid,
+      targetUserId: targetUniqueId,
       details: `Set temp ID to ${tempUniqueId}, expires ${new Date(expiryDate).toISOString()}`,
       createdAt: timestamp,
     });
 
     // System PM (fire-and-forget)
     const expiryStr = new Date(expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-    sendSystemPm(uid, `Your display ID has been temporarily changed to ${tempUniqueId}. It will expire on ${expiryStr} and return to your original ID.`)
-      .catch(err => log.warn('system-pm', 'Failed to send', { uid, error: err.message }));
+    sendSystemPm(targetUniqueId, `Your display ID has been temporarily changed to ${tempUniqueId}. It will expire on ${expiryStr} and return to your original ID.`)
+      .catch(err => log.warn('system-pm', 'Failed to send', { uniqueId: targetUniqueId, error: err.message }));
 
-    log.info('admin-temp-id', 'Temp ID set', { adminId: req.auth.uid, targetUid: uid, tempUniqueId, expiryDate });
+    log.info('admin-temp-id', 'Temp ID set', { adminId: req.auth.uid, targetUniqueId, tempUniqueId, expiryDate });
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-temp-id', 'Set temp ID failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-temp-id', 'Set temp ID failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Clear temporary unique ID ──
-router.delete('/admin/users/:uid/temp-id', async (req, res) => {
+router.delete('/admin/users/:uniqueId/temp-id', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const uid = req.params.uid;
+    const targetUniqueId = req.params.uniqueId;
     const timestamp = now();
 
-    await db.doc(`users/${uid}`).update({
+    await db.doc(`users/${targetUniqueId}`).update({
       tempUniqueId: FieldValue.delete(),
       tempUniqueIdExpiry: FieldValue.delete(),
     });
@@ -118,19 +118,19 @@ router.delete('/admin/users/:uid/temp-id', async (req, res) => {
     await db.doc(`adminAuditLog/${generateId()}`).set({
       adminId: req.auth.uid,
       action: 'CLEAR_TEMP_ID',
-      targetUserId: uid,
+      targetUserId: targetUniqueId,
       details: 'Cleared temporary unique ID',
       createdAt: timestamp,
     });
 
     // System PM (fire-and-forget)
-    sendSystemPm(uid, 'Your display ID has been restored to your original ID.')
-      .catch(err => log.warn('system-pm', 'Failed to send', { uid, error: err.message }));
+    sendSystemPm(targetUniqueId, 'Your display ID has been restored to your original ID.')
+      .catch(err => log.warn('system-pm', 'Failed to send', { uniqueId: targetUniqueId, error: err.message }));
 
-    log.info('admin-temp-id', 'Temp ID cleared', { adminId: req.auth.uid, targetUid: uid });
+    log.info('admin-temp-id', 'Temp ID cleared', { adminId: req.auth.uid, targetUniqueId });
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-temp-id', 'Clear temp ID failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-temp-id', 'Clear temp ID failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -6,8 +6,8 @@
  * POST   /admin/bans/network          → Ban a network (ip/subnet/asn)
  * DELETE /admin/bans/device/:deviceId → Unban device
  * DELETE /admin/bans/network/:banId   → Unban network
- * POST   /admin/bans/unban-all/:userId → Remove all bans for a user
- * GET    /admin/bans/user/:userId     → Get all bans for a user
+ * POST   /admin/bans/unban-all/:uniqueId → Remove all bans for a user
+ * GET    /admin/bans/user/:uniqueId     → Get all bans for a user
  */
 
 const router = require('express').Router();
@@ -65,8 +65,9 @@ router.post('/admin/bans/device', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const { deviceId, reason, duration, linkedUserId } = req.body || {};
+    const { deviceId, reason, duration, linkedUniqueId } = req.body || {};
     if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
+    if (!reason) return res.status(400).json({ error: 'reason is required' });
 
     const expiresAt = parseExpiry(duration);
 
@@ -75,7 +76,7 @@ router.post('/admin/bans/device', async (req, res) => {
       reason,
       duration: duration || 'permanent',
       expiresAt,
-      linkedUserId: linkedUserId || null,
+      linkedUniqueId: linkedUniqueId || null,
       createdAt: now(),
       createdBy: req.auth.uid,
     });
@@ -90,8 +91,8 @@ router.post('/admin/bans/device', async (req, res) => {
     });
 
     // Send system PM if linked to a user (non-blocking)
-    if (linkedUserId) {
-      try { await sendSystemPm(linkedUserId, 'A restriction has been placed on your account.'); } catch (e) { log.warn('system-pm', 'Failed to send', { userId: linkedUserId, error: e.message }); }
+    if (linkedUniqueId) {
+      try { await sendSystemPm(linkedUniqueId, 'A restriction has been placed on your account.'); } catch (e) { log.warn('system-pm', 'Failed to send', { uniqueId: linkedUniqueId, error: e.message }); }
     }
 
     res.json({ success: true });
@@ -107,13 +108,14 @@ router.post('/admin/bans/network', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const { type, value, reason, duration, linkedUserId } = req.body || {};
+    const { type, value, reason, duration, linkedUniqueId } = req.body || {};
 
     const validTypes = ['ip', 'subnet', 'asn'];
     if (!type || !validTypes.includes(type)) {
       return res.status(400).json({ error: 'type must be one of: ip, subnet, asn' });
     }
     if (!value || typeof value !== 'string') return res.status(400).json({ error: 'value is required' });
+    if (!reason) return res.status(400).json({ error: 'reason is required' });
 
     // Validate format based on type
     const IP_REGEX = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
@@ -137,7 +139,7 @@ router.post('/admin/bans/network', async (req, res) => {
       reason,
       duration: duration || 'permanent',
       expiresAt,
-      linkedUserId: linkedUserId || null,
+      linkedUniqueId: linkedUniqueId || null,
       createdAt: now(),
       createdBy: req.auth.uid,
     });
@@ -152,8 +154,8 @@ router.post('/admin/bans/network', async (req, res) => {
     });
 
     // Send system PM if linked to a user (non-blocking)
-    if (linkedUserId) {
-      try { await sendSystemPm(linkedUserId, 'A restriction has been placed on your account.'); } catch (e) { log.warn('system-pm', 'Failed to send', { userId: linkedUserId, error: e.message }); }
+    if (linkedUniqueId) {
+      try { await sendSystemPm(linkedUniqueId, 'A restriction has been placed on your account.'); } catch (e) { log.warn('system-pm', 'Failed to send', { uniqueId: linkedUniqueId, error: e.message }); }
     }
 
     res.json({ success: true });
@@ -209,15 +211,15 @@ router.delete('/admin/bans/network/:banId', async (req, res) => {
 
 // ─── Unban all for user ──────────────────────────────────────────
 
-router.post('/admin/bans/unban-all/:userId', async (req, res) => {
+router.post('/admin/bans/unban-all/:uniqueId', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const userId = req.params.userId;
+    const uniqueId = req.params.uniqueId;
 
     const [deviceSnap, networkSnap] = await Promise.all([
-      db.collection('deviceBans').where('linkedUserId', '==', userId).get(),
-      db.collection('networkBans').where('linkedUserId', '==', userId).get(),
+      db.collection('deviceBans').where('linkedUniqueId', '==', uniqueId).get(),
+      db.collection('networkBans').where('linkedUniqueId', '==', uniqueId).get(),
     ]);
 
     const allDocs = [...deviceSnap.docs, ...networkSnap.docs];
@@ -227,32 +229,32 @@ router.post('/admin/bans/unban-all/:userId', async (req, res) => {
     await db.doc(`adminAuditLog/${generateId()}`).set({
       adminId: req.auth.uid,
       action: 'UNBAN_ALL',
-      targetUserId: userId,
+      targetUserId: uniqueId,
       details: `Removed ${allDocs.length} ban(s)`,
       createdAt: now(),
     });
 
     // Send system PM about restriction lifted (non-blocking)
-    try { await sendSystemPm(userId, 'A restriction on your account has been lifted.'); } catch (e) { log.warn('system-pm', 'Failed to send', { userId, error: e.message }); }
+    try { await sendSystemPm(uniqueId, 'A restriction on your account has been lifted.'); } catch (e) { log.warn('system-pm', 'Failed to send', { uniqueId, error: e.message }); }
 
     res.json({ success: true, removed: allDocs.length });
   } catch (err) {
-    log.error('admin-bans', 'Error unbanning all for user', { userId: req.params.userId, error: err.message });
+    log.error('admin-bans', 'Error unbanning all for user', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ─── Get bans for user ───────────────────────────────────────────
 
-router.get('/admin/bans/user/:userId', async (req, res) => {
+router.get('/admin/bans/user/:uniqueId', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const userId = req.params.userId;
+    const uniqueId = req.params.uniqueId;
 
     const [deviceSnap, networkSnap] = await Promise.all([
-      db.collection('deviceBans').where('linkedUserId', '==', userId).get(),
-      db.collection('networkBans').where('linkedUserId', '==', userId).get(),
+      db.collection('deviceBans').where('linkedUniqueId', '==', uniqueId).get(),
+      db.collection('networkBans').where('linkedUniqueId', '==', uniqueId).get(),
     ]);
 
     const deviceBans = deviceSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -260,7 +262,7 @@ router.get('/admin/bans/user/:userId', async (req, res) => {
 
     res.json({ deviceBans, networkBans });
   } catch (err) {
-    log.error('admin-bans', 'Error getting bans for user', { userId: req.params.userId, error: err.message });
+    log.error('admin-bans', 'Error getting bans for user', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

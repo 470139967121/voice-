@@ -17,8 +17,8 @@ router.post('/notifications/token', async (req, res) => {
       return res.status(400).json({ error: 'token must be a non-empty string' });
     }
 
-    const uid = req.auth.uid;
-    await db.doc(`users/${uid}`).update({
+    const uniqueId = req.auth.uniqueId;
+    await db.doc(`users/${uniqueId}`).update({
       fcmTokens: FieldValue.arrayUnion(req.body.token),
     });
 
@@ -36,8 +36,8 @@ router.delete('/notifications/token', async (req, res) => {
       return res.status(400).json({ error: 'token must be a non-empty string' });
     }
 
-    const uid = req.auth.uid;
-    await db.doc(`users/${uid}`).update({
+    const uniqueId = req.auth.uniqueId;
+    await db.doc(`users/${uniqueId}`).update({
       fcmTokens: FieldValue.arrayRemove(req.body.token),
     });
 
@@ -69,7 +69,7 @@ router.patch('/notifications/settings', async (req, res) => {
       return res.status(400).json({ error: 'No valid fields' });
     }
 
-    await db.doc(`users/${req.auth.uid}`).update(updates);
+    await db.doc(`users/${req.auth.uniqueId}`).update(updates);
 
     return res.json({ success: true });
   } catch (err) {

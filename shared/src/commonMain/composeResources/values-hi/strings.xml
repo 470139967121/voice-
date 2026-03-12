@@ -534,6 +534,21 @@
     <string name="download_now">Download Now</string>
     <string name="edit_room_name">Edit Room Name</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">लिंक किए गए खाते</string>
+    <string name="linked">लिंक किया गया</string>
+    <string name="unlinked">अनलिंक किया गया</string>
+    <string name="unlink">अनलिंक करें</string>
+    <string name="unlink_provider_confirm">%1$s को अनलिंक करें?</string>
+    <string name="unlink_provider_description">आप बाद में इस खाते को फिर से लिंक कर सकते हैं, लेकिन आपको इसे दोबारा सत्यापित करना होगा।</string>
+    <string name="cannot_unlink_last_provider">अनलिंक करने से पहले आपके पास कम से कम दो लिंक किए गए खाते होने चाहिए।</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">ईमेल</string>
+    <string name="no_linked_accounts">कोई लिंक किया गया खाता नहीं मिला</string>
+    <string name="unlinking_provider">अनलिंक हो रहा है…</string>
+
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
     <string name="end">End</string>

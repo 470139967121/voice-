@@ -70,7 +70,7 @@ jest.mock('../../src/middleware/auth', () => ({
 function withAuth(app) {
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'admin-1', token: { admin: true } };
+    req.auth = { uid: 'admin-1', uniqueId: 'admin-1', token: { admin: true } };
     next();
   });
   return app;
@@ -101,10 +101,10 @@ function createAdminDevicesApp() {
 }
 
 // ═════════════════════════════════════════════════════════════════
-// PATCH /api/user/:uid — system messages for user-visible changes
+// PATCH /api/user/:uniqueId — system messages for user-visible changes
 // ═════════════════════════════════════════════════════════════════
 
-describe('PATCH /api/user/:uid — system messages', () => {
+describe('PATCH /api/user/:uniqueId — system messages', () => {
   let app;
 
   beforeEach(() => {
@@ -301,10 +301,10 @@ describe('POST /api/user/:uid/unsuspend — system message', () => {
 });
 
 // ═════════════════════════════════════════════════════════════════
-// POST /api/users/:uid/adjust-balance — system message
+// POST /api/users/:uniqueId/adjust-balance — system message
 // ═════════════════════════════════════════════════════════════════
 
-describe('POST /api/users/:uid/adjust-balance — system message', () => {
+describe('POST /api/users/:uniqueId/adjust-balance — system message', () => {
   let app;
 
   beforeEach(() => {
@@ -391,10 +391,10 @@ describe('POST /api/admin/bans/device — system message', () => {
     jest.clearAllMocks();
   });
 
-  it('should send restriction PM when device is banned with linkedUserId', async () => {
+  it('should send restriction PM when device is banned with linkedUniqueId', async () => {
     const res = await request(app)
       .post('/api/admin/bans/device')
-      .send({ deviceId: 'dev-1', reason: 'Abuse', linkedUserId: 'user-1' });
+      .send({ deviceId: 'dev-1', reason: 'Abuse', linkedUniqueId: 'user-1' });
 
     expect(res.status).toBe(200);
     expect(mockSendSystemPm).toHaveBeenCalledWith(
@@ -403,7 +403,7 @@ describe('POST /api/admin/bans/device — system message', () => {
     );
   });
 
-  it('should not send PM when no linkedUserId', async () => {
+  it('should not send PM when no linkedUniqueId', async () => {
     const res = await request(app)
       .post('/api/admin/bans/device')
       .send({ deviceId: 'dev-1', reason: 'Abuse' });
@@ -425,10 +425,10 @@ describe('POST /api/admin/bans/network — system message', () => {
     jest.clearAllMocks();
   });
 
-  it('should send restriction PM when network is banned with linkedUserId', async () => {
+  it('should send restriction PM when network is banned with linkedUniqueId', async () => {
     const res = await request(app)
       .post('/api/admin/bans/network')
-      .send({ type: 'ip', value: '1.2.3.4', reason: 'VPN abuse', linkedUserId: 'user-1' });
+      .send({ type: 'ip', value: '1.2.3.4', reason: 'VPN abuse', linkedUniqueId: 'user-1' });
 
     expect(res.status).toBe(200);
     expect(mockSendSystemPm).toHaveBeenCalledWith(
@@ -482,7 +482,7 @@ describe('DELETE /api/admin/devices/:deviceId — system message', () => {
   it('should send device unbind PM to the bound user', async () => {
     mockDocGet.mockResolvedValueOnce({
       exists: true,
-      data: () => ({ userId: 'user-1', manufacturer: 'Samsung' }),
+      data: () => ({ uniqueId: 'user-1', manufacturer: 'Samsung' }),
     });
 
     const res = await request(app)
@@ -498,7 +498,7 @@ describe('DELETE /api/admin/devices/:deviceId — system message', () => {
   it('should not fail unbind if sendSystemPm throws', async () => {
     mockDocGet.mockResolvedValueOnce({
       exists: true,
-      data: () => ({ userId: 'user-1' }),
+      data: () => ({ uniqueId: 'user-1' }),
     });
     mockSendSystemPm.mockRejectedValue(new Error('PM down'));
 
@@ -509,7 +509,7 @@ describe('DELETE /api/admin/devices/:deviceId — system message', () => {
     expect(res.body.success).toBe(true);
   });
 
-  it('should not send PM if device binding has no userId', async () => {
+  it('should not send PM if device binding has no uniqueId', async () => {
     mockDocGet.mockResolvedValueOnce({
       exists: true,
       data: () => ({ manufacturer: 'Samsung' }),

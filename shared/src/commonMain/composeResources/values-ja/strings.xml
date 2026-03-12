@@ -534,6 +534,21 @@
     <string name="download_now">Download Now</string>
     <string name="edit_room_name">Edit Room Name</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">連携アカウント</string>
+    <string name="linked">連携済み</string>
+    <string name="unlinked">未連携</string>
+    <string name="unlink">連携解除</string>
+    <string name="unlink_provider_confirm">%1$sの連携を解除しますか？</string>
+    <string name="unlink_provider_description">後でこのアカウントを再連携できますが、再度認証が必要になります。</string>
+    <string name="cannot_unlink_last_provider">連携を解除するには、少なくとも2つの連携アカウントが必要です。</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">メール</string>
+    <string name="no_linked_accounts">連携アカウントが見つかりません</string>
+    <string name="unlinking_provider">連携解除中…</string>
+
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
     <string name="end">End</string>

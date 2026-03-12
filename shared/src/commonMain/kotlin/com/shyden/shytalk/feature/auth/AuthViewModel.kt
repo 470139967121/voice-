@@ -12,6 +12,8 @@ import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
+import com.shyden.shytalk.data.repository.IdentityRepository
+import com.shyden.shytalk.data.repository.SignInResult
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +46,7 @@ class AuthViewModel(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val deviceRepository: DeviceRepository,
+    private val identityRepository: IdentityRepository,
     private val deviceId: String,
     private val bypassDeviceChecks: Boolean = false
 ) : ViewModel() {
@@ -55,10 +58,17 @@ class AuthViewModel(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
+    /** Cached uniqueId from last successful identity resolution. */
+    private var resolvedUniqueId: String? = null
+
     init {
         checkAuthState()
     }
 
+    /**
+     * On app restart, if the user is already authenticated via Firebase,
+     * resolve their identity via the API to get the stable uniqueId.
+     */
     private fun checkAuthState() {
         logI(TAG, "Auth state check started")
         if (!authRepository.isAuthenticated) {
@@ -67,36 +77,16 @@ class AuthViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val userId = authRepository.currentUserId
-            if (userId == null) {
+
+            val providerInfo = authRepository.getProviderInfo()
+            if (providerInfo == null) {
+                logW(TAG, "Authenticated but no provider info found")
                 _uiState.update { it.copy(isLoading = false) }
                 return@launch
             }
 
-            if (!bypassDeviceChecks) {
-                when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
-                    is Resource.Success -> {
-                        val boundUserId = binding.data
-                        if (boundUserId != null && boundUserId != userId) {
-                            authRepository.signOut()
-                            _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
-                            return@launch
-                        }
-                        if (boundUserId == null) {
-                            deviceRepository.bindDevice(deviceId, userId)
-                        }
-                    }
-                    is Resource.Error -> {
-                        // Lenient: let user through on network failure
-                    }
-                    is Resource.Loading -> {}
-                }
-
-                checkAndApplyBan()
-            } else {
-                logI(TAG, "Device checks bypassed (debug build)")
-            }
-            resolveProfileState(userId)
+            val (provider, identifier) = providerInfo
+            resolveIdentityAndProceed(provider, identifier)
         }
     }
 
@@ -104,7 +94,16 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             when (val result = authRepository.signInWithGoogleIdToken(idToken)) {
-                is Resource.Success -> handleSignInSuccess(result.data)
+                is Resource.Success -> {
+                    val email = authRepository.currentUserEmail
+                    if (email == null) {
+                        _uiState.update {
+                            it.copy(isLoading = false, error = UiText.plain("Could not retrieve email from sign-in"))
+                        }
+                        return@launch
+                    }
+                    resolveIdentityAndProceed("google", email)
+                }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
@@ -117,7 +116,16 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             when (val result = authRepository.signInWithAppleIdToken(idToken, rawNonce)) {
-                is Resource.Success -> handleSignInSuccess(result.data)
+                is Resource.Success -> {
+                    val providerInfo = authRepository.getProviderInfo()
+                    if (providerInfo == null) {
+                        _uiState.update {
+                            it.copy(isLoading = false, error = UiText.plain("Could not retrieve provider info from sign-in"))
+                        }
+                        return@launch
+                    }
+                    resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
+                }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
@@ -126,33 +134,95 @@ class AuthViewModel(
         }
     }
 
-    private suspend fun handleSignInSuccess(userId: String) {
-        logI(TAG, "Sign-in success: userId=$userId")
-        if (!bypassDeviceChecks) {
-            when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
-                is Resource.Success -> {
-                    val boundUserId = binding.data
-                    if (boundUserId != null && boundUserId != userId) {
-                        logW(TAG, "Device locked for userId=$userId")
-                        authRepository.signOut()
-                        _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
-                        return
-                    }
-                    if (boundUserId == null) {
-                        deviceRepository.bindDevice(deviceId, userId)
-                    }
-                }
-                is Resource.Error -> {
-                    // Lenient: let user through on network failure
-                }
-                is Resource.Loading -> {}
-            }
+    /**
+     * Core identity resolution flow. Resolves the provider+identifier against
+     * the Express API identity map, handles device binding, ban checks, and
+     * profile resolution.
+     */
+    private suspend fun resolveIdentityAndProceed(provider: String, identifier: String) {
+        when (val result = identityRepository.resolveIdentity(provider, identifier)) {
+            is Resource.Success -> {
+                when (val signInResult = result.data) {
+                    is SignInResult.Found -> {
+                        val uniqueIdStr = signInResult.uniqueId.toString()
+                        resolvedUniqueId = uniqueIdStr
+                        authRepository.resolvedUniqueId = uniqueIdStr
+                        logI(TAG, "Identity resolved: uniqueId=${signInResult.uniqueId}")
 
-            checkAndApplyBan()
-        } else {
-            logI(TAG, "Device checks bypassed (debug build)")
+                        // Force token refresh to pick up custom claims
+                        identityRepository.forceRefreshToken()
+
+                        if (!bypassDeviceChecks) {
+                            when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
+                                is Resource.Success -> {
+                                    val boundUserId = binding.data
+                                    if (boundUserId != null && boundUserId != uniqueIdStr) {
+                                        logW(TAG, "Device locked for uniqueId=${signInResult.uniqueId}")
+                                        authRepository.signOut()
+                                        _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
+                                        return
+                                    }
+                                    if (boundUserId == null) {
+                                        deviceRepository.bindDevice(deviceId, uniqueIdStr)
+                                    }
+                                }
+                                is Resource.Error -> { /* lenient */ }
+                                is Resource.Loading -> {}
+                            }
+                            checkAndApplyBan()
+                        } else {
+                            logI(TAG, "Device checks bypassed (debug build)")
+                        }
+                        resolveProfileState(uniqueIdStr)
+                    }
+
+                    is SignInResult.NotFound -> {
+                        logI(TAG, "Identity not found — new user")
+                        if (!bypassDeviceChecks) {
+                            when (val binding = deviceRepository.getDeviceBinding(deviceId)) {
+                                is Resource.Success -> {
+                                    val boundUserId = binding.data
+                                    if (boundUserId != null) {
+                                        logW(TAG, "Device bound — blocking new account creation")
+                                        authRepository.signOut()
+                                        _uiState.update { it.copy(isLoading = false, isDeviceLocked = true) }
+                                        return
+                                    }
+                                }
+                                is Resource.Error -> { /* lenient */ }
+                                is Resource.Loading -> {}
+                            }
+                            checkAndApplyBan()
+                        }
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isAuthenticated = true,
+                                hasProfile = false,
+                                hasDOB = false
+                            )
+                        }
+                    }
+
+                    is SignInResult.Deactivated -> {
+                        logW(TAG, "Deactivated identity: $provider:$identifier")
+                        authRepository.signOut()
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isAuthenticated = false,
+                                error = UiText.plain("This sign-in method has been deactivated. Please use a different linked account or contact support.")
+                            )
+                        }
+                    }
+                }
+            }
+            is Resource.Error -> {
+                logE(TAG, "Identity resolution failed: ${result.message}")
+                _uiState.update { it.copy(isLoading = false, isBackendUnreachable = true) }
+            }
+            is Resource.Loading -> {}
         }
-        resolveProfileState(userId)
     }
 
     /**
@@ -261,15 +331,20 @@ class AuthViewModel(
     }
 
     fun retryConnection() {
-        val userId = authRepository.currentUserId ?: return
+        if (!authRepository.isAuthenticated) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, isBackendUnreachable = false) }
-            resolveProfileState(userId)
+            val providerInfo = authRepository.getProviderInfo()
+            if (providerInfo != null) {
+                resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
+            } else {
+                _uiState.update { it.copy(isLoading = false, isBackendUnreachable = true) }
+            }
         }
     }
 
     fun submitAppeal(appealText: String) {
-        val userId = authRepository.currentUserId ?: return
+        val userId = resolvedUniqueId ?: authRepository.currentUserId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             when (userRepository.submitSuspensionAppeal(userId, appealText)) {
@@ -294,6 +369,7 @@ class AuthViewModel(
 
     fun signOut() {
         logI(TAG, "User signed out")
+        resolvedUniqueId = null
         authRepository.signOut()
         _uiState.value = AuthUiState()
     }

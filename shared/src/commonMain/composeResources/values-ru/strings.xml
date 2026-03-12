@@ -534,6 +534,21 @@
     <string name="download_now">Download Now</string>
     <string name="edit_room_name">Edit Room Name</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">Привязанные аккаунты</string>
+    <string name="linked">Привязан</string>
+    <string name="unlinked">Не привязан</string>
+    <string name="unlink">Отвязать</string>
+    <string name="unlink_provider_confirm">Отвязать %1$s?</string>
+    <string name="unlink_provider_description">Вы сможете снова привязать этот аккаунт позже, но вам потребуется повторная верификация.</string>
+    <string name="cannot_unlink_last_provider">Для отвязки необходимо иметь как минимум два привязанных аккаунта.</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">Эл. почта</string>
+    <string name="no_linked_accounts">Привязанные аккаунты не найдены</string>
+    <string name="unlinking_provider">Отвязка…</string>
+
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
     <string name="end">End</string>

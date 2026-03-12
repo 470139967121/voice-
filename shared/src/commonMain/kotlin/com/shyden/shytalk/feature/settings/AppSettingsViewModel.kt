@@ -11,8 +11,10 @@ import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
+import com.shyden.shytalk.core.model.ProviderType
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.IdentityRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +32,7 @@ data class AppSettingsUiState(
     val isLoading: Boolean = true,
     val error: UiText? = null,
     val user: User? = null,
+    val isUnlinkingProvider: Boolean = false,
     val blockedUsers: List<User> = emptyList(),
     val hideFollowing: Boolean = false,
     val hideOnlineStatus: Boolean = false,
@@ -58,7 +61,8 @@ data class AppSettingsUiState(
 class AppSettingsViewModel(
     private val appConfigService: AppConfigService,
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val identityRepository: IdentityRepository
 ) : ViewModel() {
 
     companion object {
@@ -323,6 +327,40 @@ class AppSettingsViewModel(
 
     fun dismissUpdateResult() {
         _uiState.update { it.copy(updateCheckResult = null) }
+    }
+
+    fun unlinkProvider(type: ProviderType, identifier: String) {
+        val user = _uiState.value.user ?: return
+        val activeCount = user.activeProviders.size
+        if (activeCount < 2) {
+            _uiState.update { it.copy(error = UiText.res(Res.string.cannot_unlink_last_provider)) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUnlinkingProvider = true) }
+            when (identityRepository.unlinkProvider(user.uniqueId, type.key, identifier)) {
+                is Resource.Success -> {
+                    logI(TAG, "Unlinked ${type.key}:$identifier")
+                    val updatedProviders = user.providers.map { p ->
+                        if (p.type == type && p.identifier == identifier) p.copy(active = false)
+                        else p
+                    }
+                    _uiState.update {
+                        it.copy(
+                            isUnlinkingProvider = false,
+                            user = user.copy(providers = updatedProviders)
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    logE(TAG, "Failed to unlink ${type.key}:$identifier")
+                    _uiState.update {
+                        it.copy(isUnlinkingProvider = false, error = UiText.res(Res.string.error_update_privacy))
+                    }
+                }
+                is Resource.Loading -> {}
+            }
+        }
     }
 
     fun clearError() {

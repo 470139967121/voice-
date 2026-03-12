@@ -1,39 +1,86 @@
 /**
  * Firebase Auth middleware for Express.
  *
- * Uses Firebase Admin SDK to verify ID tokens (replaces 364 lines of
- * manual JWT verification, X.509 parsing, and signature caching).
+ * Verifies Firebase ID tokens and resolves Firebase UID → uniqueId
+ * via the identity system. Sets req.auth = { uid, uniqueId, token }.
  */
 
 const { auth, db } = require('../utils/firebase');
 const log = require('../utils/log');
 
-// In-memory suspension cache: uid → { isSuspended, expiresAt }
-const suspensionCache = new Map();
-const SUSPENSION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// ─── In-memory caches ────────────────────────────────────────────
 
-async function checkSuspension(uid) {
-  const cached = suspensionCache.get(uid);
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 500;
+
+// uid → { uniqueId, expiresAt }
+const uniqueIdCache = new Map();
+
+// uniqueId → { isSuspended, expiresAt }
+const suspensionCache = new Map();
+
+function evictOldest(cache) {
+  if (cache.size > MAX_CACHE_SIZE) {
+    const firstKey = cache.keys().next().value;
+    cache.delete(firstKey);
+  }
+}
+
+// ─── UniqueId resolution ─────────────────────────────────────────
+
+/**
+ * Resolves a Firebase UID to the user's stable uniqueId by querying
+ * the users collection for a doc where firebaseUid matches.
+ * Returns null if no user doc is found (new user or cross-project).
+ */
+async function resolveUniqueId(uid) {
+  const cached = uniqueIdCache.get(uid);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.uniqueId;
+  }
+
+  const snap = await db.collection('users')
+    .where('firebaseUid', '==', uid)
+    .limit(1)
+    .get();
+
+  const uniqueId = snap.empty ? null : (snap.docs[0].data().uniqueId ?? null);
+
+  uniqueIdCache.set(uid, { uniqueId, expiresAt: Date.now() + CACHE_TTL });
+  evictOldest(uniqueIdCache);
+
+  return uniqueId;
+}
+
+// ─── Suspension check ────────────────────────────────────────────
+
+/**
+ * Checks if a user is suspended by reading their user doc.
+ * Uses uniqueId-based doc path: users/{uniqueId}.
+ */
+async function checkSuspension(uniqueId) {
+  if (uniqueId == null) return false;
+
+  const cached = suspensionCache.get(uniqueId);
   if (cached && Date.now() < cached.expiresAt) {
     return cached.isSuspended;
   }
 
-  const snap = await db.doc(`users/${uid}`).get();
+  const snap = await db.doc(`users/${uniqueId}`).get();
   const user = snap.exists ? snap.data() : null;
   const isSuspended = !!(user?.isSuspended || user?.is_suspended);
 
-  suspensionCache.set(uid, { isSuspended, expiresAt: Date.now() + SUSPENSION_CACHE_TTL });
-  if (suspensionCache.size > 500) {
-    const firstKey = suspensionCache.keys().next().value;
-    suspensionCache.delete(firstKey);
-  }
+  suspensionCache.set(uniqueId, { isSuspended, expiresAt: Date.now() + CACHE_TTL });
+  evictOldest(suspensionCache);
 
   return isSuspended;
 }
 
+// ─── Middleware ───────────────────────────────────────────────────
+
 /**
- * Express middleware: verifies Firebase ID token from Authorization header.
- * Sets req.auth = { uid, token } on success.
+ * Express middleware: verifies Firebase ID token, resolves uniqueId,
+ * checks suspension. Sets req.auth = { uid, uniqueId, token }.
  */
 async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -47,7 +94,11 @@ async function authMiddleware(req, res, next) {
     const decoded = await auth.verifyIdToken(idToken);
     const uid = decoded.uid;
 
-    const isSuspended = await checkSuspension(uid);
+    // Resolve Firebase UID → stable uniqueId
+    const uniqueId = await resolveUniqueId(uid);
+
+    // Check suspension (only if user exists)
+    const isSuspended = await checkSuspension(uniqueId);
 
     if (isSuspended) {
       const isSuspensionExempt = /^\/users\/[^/]+\/appeal$/.test(req.path)
@@ -58,13 +109,15 @@ async function authMiddleware(req, res, next) {
       }
     }
 
-    req.auth = { uid, token: decoded };
+    req.auth = { uid, uniqueId, token: decoded };
     next();
   } catch (err) {
     log.error('auth', 'Authentication failed', { error: err.message });
     return res.status(401).json({ error: 'Authentication failed' });
   }
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────
 
 /**
  * Admin guard — call at the top of admin route handlers.
@@ -78,8 +131,29 @@ function requireAdmin(req, res) {
   return false;
 }
 
-function clearSuspensionCache(uid) {
-  suspensionCache.delete(uid);
+function clearSuspensionCache(uniqueId) {
+  suspensionCache.delete(uniqueId);
 }
 
-module.exports = { authMiddleware, requireAdmin, clearSuspensionCache };
+/** Clear uniqueId cache entry — call after firebaseUid is updated. */
+function clearUniqueIdCache(uid) {
+  if (uid) {
+    uniqueIdCache.delete(uid);
+  } else {
+    uniqueIdCache.clear();
+  }
+}
+
+/** Update uniqueId cache — call after sign-in resolves a new mapping. */
+function updateUniqueIdCache(uid, uniqueId) {
+  uniqueIdCache.set(uid, { uniqueId, expiresAt: Date.now() + CACHE_TTL });
+  evictOldest(uniqueIdCache);
+}
+
+module.exports = {
+  authMiddleware,
+  requireAdmin,
+  clearSuspensionCache,
+  clearUniqueIdCache,
+  updateUniqueIdCache,
+};

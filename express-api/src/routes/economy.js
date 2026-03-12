@@ -16,9 +16,9 @@
  * POST /api/economy/test-coins       → Add test coins (dev)
  * GET  /api/economy/balance          → Get coin/bean balance
  * GET  /api/economy/transactions     → Get transaction history
- * GET  /api/users/:uid/backpack      → Get user's backpack
- * GET  /api/users/:uid/gift-wall     → Get user's gift wall
- * GET  /api/users/:uid/gift-wall/:giftId/senders → Get gift wall senders
+ * GET  /api/users/:uniqueId/backpack      → Get user's backpack
+ * GET  /api/users/:uniqueId/gift-wall     → Get user's gift wall
+ * GET  /api/users/:uniqueId/gift-wall/:giftId/senders → Get gift wall senders
  */
 
 const router = require('express').Router();
@@ -225,12 +225,12 @@ async function updateGiftRankings(recipientId, giftId, quantity) {
 // ── Daily reward ──
 router.post('/economy/daily-reward', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const config = await loadEconomyConfig();
     const today = todayStr();
     const yesterday = yesterdayStr();
 
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
 
@@ -270,13 +270,13 @@ router.post('/economy/daily-reward', async (req, res) => {
       lastLoginRewardDate: today,
     };
     if (coinReward > 0) userUpdates.shyCoins = newBalance;
-    await db.doc(`users/${uid}`).update(userUpdates);
+    await db.doc(`users/${uniqueId}`).update(userUpdates);
 
     // Add gift to backpack if gift reward
     if (giftReward) {
-      const bpSnap = await db.doc(`users/${uid}/backpack/${giftReward.giftId}`).get();
+      const bpSnap = await db.doc(`users/${uniqueId}/backpack/${giftReward.giftId}`).get();
       const currentQty = bpSnap.exists ? (bpSnap.data().quantity || 0) : 0;
-      await db.doc(`users/${uid}/backpack/${giftReward.giftId}`).set({
+      await db.doc(`users/${uniqueId}/backpack/${giftReward.giftId}`).set({
         giftId: giftReward.giftId,
         quantity: currentQty + giftReward.quantity,
         lastAcquired: now(),
@@ -289,7 +289,7 @@ router.post('/economy/daily-reward', async (req, res) => {
       ? `Day ${newStreak} (milestone) — ${giftReward.quantity}x ${giftReward.giftId}`
       : `Day ${newStreak}${isMilestone ? ' (milestone)' : ''}`;
 
-    await writeTransaction(uid, txId, {
+    await writeTransaction(uniqueId, txId, {
       type: 'DAILY_REWARD',
       amount: giftReward ? giftReward.quantity : coinReward,
       currency: giftReward ? 'GIFT' : 'COINS',
@@ -302,7 +302,7 @@ router.post('/economy/daily-reward', async (req, res) => {
       result.giftId = giftReward.giftId;
       result.giftQuantity = giftReward.quantity;
     }
-    log.info('economy', 'Daily reward claimed', { userId: uid, coinReward, streak: newStreak });
+    log.info('economy', 'Daily reward claimed', { userId: uniqueId, coinReward, streak: newStreak });
     res.json(result);
   } catch (err) {
     log.error('economy', 'POST /economy/daily-reward failed', { error: err.message });
@@ -313,7 +313,7 @@ router.post('/economy/daily-reward', async (req, res) => {
 // ── Gacha ──
 router.post('/economy/gacha', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const pullCount = body?.pullCount;
     const expectedCost = body?.expectedCost;
@@ -336,7 +336,7 @@ router.post('/economy/gacha', async (req, res) => {
       });
     }
 
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
 
@@ -474,7 +474,7 @@ router.post('/economy/gacha', async (req, res) => {
     // Fetch existing backpack docs in parallel
     const existingDocs = await Promise.all(
       uniqueGiftIds.map(async gid => {
-        const snap = await db.doc(`users/${uid}/backpack/${gid}`).get();
+        const snap = await db.doc(`users/${uniqueId}/backpack/${gid}`).get();
         return snap.exists ? snap.data() : null;
       })
     );
@@ -489,7 +489,7 @@ router.post('/economy/gacha', async (req, res) => {
       const expiresAt = gift.expiresAfterDays
         ? timestamp + gift.expiresAfterDays * 86400000
         : bpDoc?.expiresAt || null;
-      batch.set(db.doc(`users/${uid}/backpack/${gid}`), {
+      batch.set(db.doc(`users/${uniqueId}/backpack/${gid}`), {
         giftId: gid,
         quantity: currentQty + giftCounts[gid],
         lastAcquired: timestamp,
@@ -501,7 +501,7 @@ router.post('/economy/gacha', async (req, res) => {
     }
 
     // Include coin deduction in the same batch
-    batch.update(db.doc(`users/${uid}`), {
+    batch.update(db.doc(`users/${uniqueId}`), {
       shyCoins: newBalance,
       pityCounter: pity,
       luckScore: luck,
@@ -514,7 +514,7 @@ router.post('/economy/gacha', async (req, res) => {
     // Transaction record (best-effort — coins already deducted)
     try {
       const gachaTxId = generateId();
-      await writeTransaction(uid, gachaTxId, {
+      await writeTransaction(uniqueId, gachaTxId, {
         type: 'GACHA_PULL',
         amount: -cost,
         currency: 'COINS',
@@ -524,7 +524,7 @@ router.post('/economy/gacha', async (req, res) => {
         guaranteed: !!guaranteedFirstPull,
       });
     } catch (err) {
-      log.error('economy', 'Failed to write gacha transaction', { uid, error: err.message });
+      log.error('economy', 'Failed to write gacha transaction', { uniqueId, error: err.message });
     }
 
     // Broadcast qualifying wins (best-effort)
@@ -545,7 +545,7 @@ router.post('/economy/gacha', async (req, res) => {
         }
       }
     } catch (err) {
-      log.error('economy', 'Failed to broadcast gacha win', { uid, error: err.message });
+      log.error('economy', 'Failed to broadcast gacha win', { uniqueId, error: err.message });
     }
 
     res.json({
@@ -557,7 +557,7 @@ router.post('/economy/gacha', async (req, res) => {
       newPityCounter: pity, newLuckScore: luck,
       currentPullCosts: pullCosts,
     });
-    log.info('economy', `Gacha pull x${pullCount}`, { userId: uid, cost, newBalance });
+    log.info('economy', `Gacha pull x${pullCount}`, { userId: uniqueId, cost, newBalance });
   } catch (err) {
     log.error('economy', 'POST /economy/gacha failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
@@ -567,19 +567,19 @@ router.post('/economy/gacha', async (req, res) => {
 // ── Send gift from backpack ──
 router.post('/economy/gift', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const { recipientId, giftId } = body || {};
     const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity) || 1));
 
     if (!recipientId || !giftId) return res.status(400).json({ error: 'recipientId and giftId required' });
     if (giftId === 'super_shy_trial') return res.status(400).json({ error: 'Trial items cannot be transferred' });
-    if (uid === recipientId) return res.status(400).json({ error: 'Cannot send gift to yourself' });
+    if (uniqueId === recipientId) return res.status(400).json({ error: 'Cannot send gift to yourself' });
 
     const [giftSnap, bpSnap, senderSnap, recipientSnap] = await Promise.all([
       db.doc(`gifts/${giftId}`).get(),
-      db.doc(`users/${uid}/backpack/${giftId}`).get(),
-      db.doc(`users/${uid}`).get(),
+      db.doc(`users/${uniqueId}/backpack/${giftId}`).get(),
+      db.doc(`users/${uniqueId}`).get(),
       db.doc(`users/${recipientId}`).get(),
     ]);
 
@@ -602,13 +602,13 @@ router.post('/economy/gift', async (req, res) => {
     // Decrement backpack
     const newQty = (bpItem.quantity || 0) - quantity;
     if (newQty <= 0) {
-      await db.doc(`users/${uid}/backpack/${giftId}`).delete();
+      await db.doc(`users/${uniqueId}/backpack/${giftId}`).delete();
     } else {
-      await db.doc(`users/${uid}/backpack/${giftId}`).update({ quantity: newQty });
+      await db.doc(`users/${uniqueId}/backpack/${giftId}`).update({ quantity: newQty });
     }
 
     // Update recipient gift wall
-    await updateGiftWall(recipientId, giftId, uid, quantity);
+    await updateGiftWall(recipientId, giftId, uniqueId, quantity);
 
     // Credit beans (atomic increment to avoid race conditions)
     await db.doc(`users/${recipientId}`).update({ shyBeans: FieldValue.increment(beanReward) });
@@ -619,13 +619,13 @@ router.post('/economy/gift', async (req, res) => {
       const sName = userField(sender, 'displayName', 'display_name') || 'Someone';
       const rName = userField(recipient, 'displayName', 'display_name') || 'Someone';
       const qtyLabel = quantity > 1 ? `${quantity}x ` : '';
-      await writeRoomGiftMessage(currentRoomId, uid, sName,
+      await writeRoomGiftMessage(currentRoomId, uniqueId, sName,
         `${sName} sent ${qtyLabel}${gift.name} to ${rName}`, giftId, gift.iconUrl || gift.icon_url || '');
 
       // Update last gift event on room doc
       await db.doc(`rooms/${currentRoomId}`).update({
         lastGiftEvent: {
-          senderId: uid, senderName: sName,
+          senderId: uniqueId, senderName: sName,
           recipientId, recipientName: rName,
           giftId, giftName: gift.name,
           coinValue, quantity, timestamp,
@@ -638,7 +638,7 @@ router.post('/economy/gift', async (req, res) => {
     const giftReceivedTxId = generateId();
 
     await Promise.all([
-      writeTransaction(uid, giftSentTxId, {
+      writeTransaction(uniqueId, giftSentTxId, {
         type: 'GIFT_SENT', amount: -quantity, currency: 'COINS',
         balanceAfter: senderCoins, giftId, giftName: gift.name,
         recipientId, quantity, timestamp,
@@ -646,7 +646,7 @@ router.post('/economy/gift', async (req, res) => {
       writeTransaction(recipientId, giftReceivedTxId, {
         type: 'GIFT_RECEIVED', amount: beanReward, currency: 'BEANS',
         balanceAfter: recipientBeans + beanReward, giftId, giftName: gift.name,
-        senderId: uid, quantity, timestamp,
+        senderId: uniqueId, quantity, timestamp,
       }),
     ]);
 
@@ -675,17 +675,17 @@ router.post('/economy/gift', async (req, res) => {
 // ── Send gift directly (buy + send) ──
 router.post('/economy/gift-direct', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const { recipientId, giftId } = body || {};
     const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity) || 1));
 
     if (!recipientId || !giftId) return res.status(400).json({ error: 'recipientId and giftId required' });
-    if (uid === recipientId) return res.status(400).json({ error: 'Cannot send gift to yourself' });
+    if (uniqueId === recipientId) return res.status(400).json({ error: 'Cannot send gift to yourself' });
 
     const [giftSnap, senderSnap, recipientSnap] = await Promise.all([
       db.doc(`gifts/${giftId}`).get(),
-      db.doc(`users/${uid}`).get(),
+      db.doc(`users/${uniqueId}`).get(),
       db.doc(`users/${recipientId}`).get(),
     ]);
 
@@ -708,10 +708,10 @@ router.post('/economy/gift-direct', async (req, res) => {
     const timestamp = now();
 
     // Deduct coins (atomic)
-    await db.doc(`users/${uid}`).update({ shyCoins: FieldValue.increment(-totalCost) });
+    await db.doc(`users/${uniqueId}`).update({ shyCoins: FieldValue.increment(-totalCost) });
 
     // Gift wall
-    await updateGiftWall(recipientId, giftId, uid, quantity);
+    await updateGiftWall(recipientId, giftId, uniqueId, quantity);
 
     // Beans (atomic)
     await db.doc(`users/${recipientId}`).update({ shyBeans: FieldValue.increment(beanReward) });
@@ -722,7 +722,7 @@ router.post('/economy/gift-direct', async (req, res) => {
       const sName = userField(sender, 'displayName', 'display_name') || 'Someone';
       const rName = userField(recipient, 'displayName', 'display_name') || 'Someone';
       const qtyLabel = quantity > 1 ? `${quantity}x ` : '';
-      await writeRoomGiftMessage(currentRoomId, uid, sName,
+      await writeRoomGiftMessage(currentRoomId, uniqueId, sName,
         `${sName} sent ${qtyLabel}${gift.name} to ${rName}`, giftId, gift.iconUrl || gift.icon_url || '');
     }
 
@@ -731,7 +731,7 @@ router.post('/economy/gift-direct', async (req, res) => {
     const directReceivedTxId = generateId();
 
     await Promise.all([
-      writeTransaction(uid, directSentTxId, {
+      writeTransaction(uniqueId, directSentTxId, {
         type: 'GIFT_SENT', amount: -totalCost, currency: 'COINS',
         balanceAfter: newSenderCoins, giftId, giftName: gift.name,
         recipientId, quantity,
@@ -741,7 +741,7 @@ router.post('/economy/gift-direct', async (req, res) => {
       writeTransaction(recipientId, directReceivedTxId, {
         type: 'GIFT_RECEIVED', amount: beanReward, currency: 'BEANS',
         balanceAfter: recipientBeans + beanReward, giftId, giftName: gift.name,
-        senderId: uid, quantity, timestamp,
+        senderId: uniqueId, quantity, timestamp,
       }),
     ]);
 
@@ -768,7 +768,7 @@ router.post('/economy/gift-direct', async (req, res) => {
 // ── Send gifts to multiple recipients (batch) ──
 router.post('/economy/gift-batch', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const { recipientIds, giftId, fromBackpack } = body || {};
     const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity) || 1));
@@ -777,14 +777,14 @@ router.post('/economy/gift-batch', async (req, res) => {
       return res.status(400).json({ error: 'recipientIds array and giftId required' });
     }
     if (giftId === 'super_shy_trial') return res.status(400).json({ error: 'Trial items cannot be transferred' });
-    if (recipientIds.includes(uid)) return res.status(400).json({ error: 'Cannot send gift to yourself' });
+    if (recipientIds.includes(uniqueId)) return res.status(400).json({ error: 'Cannot send gift to yourself' });
     if (recipientIds.length > 50) return res.status(400).json({ error: 'Max 50 recipients' });
 
     const giftSnap = await db.doc(`gifts/${giftId}`).get();
     if (!giftSnap.exists) return res.status(404).json({ error: 'Gift not found' });
     const gift = { id: giftSnap.id, ...giftSnap.data() };
 
-    const senderSnap = await db.doc(`users/${uid}`).get();
+    const senderSnap = await db.doc(`users/${uniqueId}`).get();
     if (!senderSnap.exists) return res.status(404).json({ error: 'Sender not found' });
     const sender = senderSnap.data();
 
@@ -794,7 +794,7 @@ router.post('/economy/gift-batch', async (req, res) => {
 
     let bpItem = null;
     if (fromBackpack) {
-      const bpSnap = await db.doc(`users/${uid}/backpack/${giftId}`).get();
+      const bpSnap = await db.doc(`users/${uniqueId}/backpack/${giftId}`).get();
       bpItem = bpSnap.exists ? bpSnap.data() : null;
       if (!bpItem || (bpItem.quantity || 0) < totalQty) return res.status(402).json({ error: 'Insufficient items in backpack' });
     } else {
@@ -808,13 +808,13 @@ router.post('/economy/gift-batch', async (req, res) => {
     if (fromBackpack) {
       const newQty = (bpItem?.quantity || 0) - totalQty;
       if (newQty <= 0) {
-        await db.doc(`users/${uid}/backpack/${giftId}`).delete();
+        await db.doc(`users/${uniqueId}/backpack/${giftId}`).delete();
       } else {
-        await db.doc(`users/${uid}/backpack/${giftId}`).update({ quantity: newQty });
+        await db.doc(`users/${uniqueId}/backpack/${giftId}`).update({ quantity: newQty });
       }
     } else {
       const totalCost = coinValue * totalQty;
-      await db.doc(`users/${uid}`).update({ shyCoins: FieldValue.increment(-totalCost) });
+      await db.doc(`users/${uniqueId}`).update({ shyCoins: FieldValue.increment(-totalCost) });
     }
 
     // Process each recipient
@@ -827,7 +827,7 @@ router.post('/economy/gift-batch', async (req, res) => {
       const beanReward = Math.floor(coinValue * config.beanConversionRate * quantity);
 
       // Gift wall + beans (atomic) + transaction
-      await updateGiftWall(recipientId, giftId, uid, quantity);
+      await updateGiftWall(recipientId, giftId, uniqueId, quantity);
       await updateGiftRankings(recipientId, giftId, quantity);
       await db.doc(`users/${recipientId}`).update({ shyBeans: FieldValue.increment(beanReward) });
 
@@ -835,14 +835,14 @@ router.post('/economy/gift-batch', async (req, res) => {
       await writeTransaction(recipientId, recipientTxId, {
         type: 'GIFT_RECEIVED', amount: beanReward, currency: 'BEANS',
         balanceAfter: recipientBeans + beanReward, giftId, giftName: gift.name,
-        senderId: uid, quantity, timestamp,
+        senderId: uniqueId, quantity, timestamp,
       });
     }
 
     // Sender transaction
     const source = fromBackpack ? 'backpack' : 'direct';
     const batchSenderTxId = generateId();
-    await writeTransaction(uid, batchSenderTxId, {
+    await writeTransaction(uniqueId, batchSenderTxId, {
       type: 'GIFT_SENT',
       amount: fromBackpack ? 0 : -(coinValue * totalQty),
       currency: 'COINS',
@@ -856,7 +856,7 @@ router.post('/economy/gift-batch', async (req, res) => {
     const currentRoomId = userField(sender, 'currentRoomId', 'current_room_id');
     if (currentRoomId) {
       const sName = userField(sender, 'displayName', 'display_name') || 'Someone';
-      await writeRoomGiftMessage(currentRoomId, uid, sName,
+      await writeRoomGiftMessage(currentRoomId, uniqueId, sName,
         `${sName} sent ${totalQty}x ${gift.name} to ${recipientIds.length} people`,
         giftId, gift.iconUrl || gift.icon_url || '');
     }
@@ -882,15 +882,15 @@ router.post('/economy/gift-batch', async (req, res) => {
 // ── Send entire backpack ──
 router.post('/economy/backpack-send', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const { recipientId } = body || {};
 
     if (!recipientId) return res.status(400).json({ error: 'recipientId required' });
-    if (uid === recipientId) return res.status(400).json({ error: 'Cannot send to yourself' });
+    if (uniqueId === recipientId) return res.status(400).json({ error: 'Cannot send to yourself' });
 
     const [senderSnap, recipientSnap] = await Promise.all([
-      db.doc(`users/${uid}`).get(),
+      db.doc(`users/${uniqueId}`).get(),
       db.doc(`users/${recipientId}`).get(),
     ]);
     const sender = senderSnap.exists ? senderSnap.data() : null;
@@ -899,7 +899,7 @@ router.post('/economy/backpack-send', async (req, res) => {
     if (!recipient) return res.status(404).json({ error: 'Recipient not found' });
 
     // Get backpack items (excluding trial items)
-    const backpackSnap = await db.collection(`users/${uid}/backpack`).get();
+    const backpackSnap = await db.collection(`users/${uniqueId}/backpack`).get();
     const backpackItems = backpackSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const sendableItems = backpackItems.filter(
       item => item.giftId !== 'super_shy_trial' && (item.quantity || 0) > 0
@@ -929,7 +929,7 @@ router.post('/economy/backpack-send', async (req, res) => {
       totalBeanReward += beanReward;
 
       // Gift wall + rankings
-      await updateGiftWall(recipientId, item.giftId, uid, qty);
+      await updateGiftWall(recipientId, item.giftId, uniqueId, qty);
       await updateGiftRankings(recipientId, item.giftId, qty);
     }
 
@@ -941,7 +941,7 @@ router.post('/economy/backpack-send', async (req, res) => {
       const batch = db.batch();
       const chunk = sendableItems.slice(i, i + 500);
       for (const item of chunk) {
-        batch.delete(db.doc(`users/${uid}/backpack/${item.giftId}`));
+        batch.delete(db.doc(`users/${uniqueId}/backpack/${item.giftId}`));
       }
       await batch.commit();
     }
@@ -955,7 +955,7 @@ router.post('/economy/backpack-send', async (req, res) => {
     const recipientName = userField(recipient, 'displayName', 'display_name') || 'user';
 
     await Promise.all([
-      writeTransaction(uid, bpSentTxId, {
+      writeTransaction(uniqueId, bpSentTxId, {
         type: 'BACKPACK_SENT', amount: 0, currency: 'ITEMS',
         balanceAfter: senderCoins, totalItemsSent,
         details: `Sent entire backpack (${totalItemsSent} items) to ${recipientName}`, timestamp,
@@ -970,7 +970,7 @@ router.post('/economy/backpack-send', async (req, res) => {
     // Room message
     const currentRoomId = userField(sender, 'currentRoomId', 'current_room_id');
     if (currentRoomId) {
-      await writeRoomGiftMessage(currentRoomId, uid, senderName,
+      await writeRoomGiftMessage(currentRoomId, uniqueId, senderName,
         `${senderName} sent their entire backpack (${totalItemsSent} items) to ${recipientName}`,
         null, '');
     }
@@ -985,7 +985,7 @@ router.post('/economy/backpack-send', async (req, res) => {
 // ── Redeem beans ──
 router.post('/economy/redeem-beans', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const amount = body?.amount;
 
@@ -993,7 +993,7 @@ router.post('/economy/redeem-beans', async (req, res) => {
       return res.status(400).json({ error: 'amount must be a positive number' });
     }
 
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
 
@@ -1007,14 +1007,14 @@ router.post('/economy/redeem-beans', async (req, res) => {
     const newBeans = shyBeans - amount;
     const newCoins = shyCoins + coins;
 
-    await db.doc(`users/${uid}`).update({
+    await db.doc(`users/${uniqueId}`).update({
       shyBeans: FieldValue.increment(-amount),
       shyCoins: FieldValue.increment(coins)
     });
 
     const bonusPct = Math.round((config.beanRedeemBonusMultiplier - 1) * 100);
     const redeemTxId = generateId();
-    await writeTransaction(uid, redeemTxId, {
+    await writeTransaction(uniqueId, redeemTxId, {
       type: 'BEAN_REDEEM', amount: coins, currency: 'COINS',
       balanceAfter: newCoins,
       details: `Redeemed ${amount} beans${hasBonus ? ` (${bonusPct}% bonus)` : ''}`,
@@ -1030,7 +1030,7 @@ router.post('/economy/redeem-beans', async (req, res) => {
 // ── Validate purchase ──
 router.post('/economy/purchase', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const { productId, purchaseToken, isSubscription } = body || {};
 
@@ -1042,7 +1042,7 @@ router.post('/economy/purchase', async (req, res) => {
       .limit(1)
       .get();
     if (!existingSnap.empty) {
-      log.warn('economy', 'Duplicate purchase token rejected', { userId: uid, productId });
+      log.warn('economy', 'Duplicate purchase token rejected', { userId: uniqueId, productId });
       return res.status(409).json({ error: 'Purchase already processed' });
     }
 
@@ -1051,7 +1051,7 @@ router.post('/economy/purchase', async (req, res) => {
     let verification;
     if (process.env.NODE_ENV !== 'production') {
       log.warn('economy', 'Skipping purchase verification in non-production environment', {
-        userId: uid, productId, isSubscription: !!isSubscription,
+        userId: uniqueId, productId, isSubscription: !!isSubscription,
       });
       verification = { orderId: 'dev-unverified' };
     } else {
@@ -1063,7 +1063,7 @@ router.post('/economy/purchase', async (req, res) => {
         }
       } catch (verifyErr) {
         log.warn('economy', 'Purchase verification rejected', {
-          userId: uid, productId, isSubscription: !!isSubscription,
+          userId: uniqueId, productId, isSubscription: !!isSubscription,
           error: verifyErr.message,
         });
         return res.status(403).json({ error: 'Purchase verification failed' });
@@ -1075,7 +1075,7 @@ router.post('/economy/purchase', async (req, res) => {
     // Store receipt for audit trail
     const receiptId = generateId();
     await db.doc(`purchaseReceipts/${receiptId}`).set({
-      userId: uid,
+      userId: uniqueId,
       productId,
       purchaseToken,
       isSubscription: !!isSubscription,
@@ -1098,14 +1098,14 @@ router.post('/economy/purchase', async (req, res) => {
 
       const expiry = sub.days ? timestamp + sub.days * 86400000 : null;
 
-      await db.doc(`users/${uid}`).update({
+      await db.doc(`users/${uniqueId}`).update({
         isSuperShy: true,
         superShyExpiry: expiry,
         superShyTier: sub.tier,
       });
 
       const subTxId = generateId();
-      await writeTransaction(uid, subTxId, {
+      await writeTransaction(uniqueId, subTxId, {
         type: 'SUBSCRIPTION', amount: 0, currency: 'COINS',
         balanceAfter: 0, details: `Super Shy ${sub.tier}`, timestamp,
       });
@@ -1123,17 +1123,17 @@ router.post('/economy/purchase', async (req, res) => {
 
     const totalCoins = (pkg.coins || 0) + (pkg.bonusCoins || 0);
 
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
 
     const shyCoins = userField(user, 'shyCoins', 'shy_coins') || 0;
 
-    await db.doc(`users/${uid}`).update({ shyCoins: FieldValue.increment(totalCoins) });
+    await db.doc(`users/${uniqueId}`).update({ shyCoins: FieldValue.increment(totalCoins) });
 
     const newBalance = shyCoins + totalCoins;
     const purchaseTxId = generateId();
-    await writeTransaction(uid, purchaseTxId, {
+    await writeTransaction(uniqueId, purchaseTxId, {
       type: 'PURCHASE', amount: totalCoins, currency: 'COINS',
       balanceAfter: newBalance,
       details: `${pkg.coins} + ${pkg.bonusCoins || 0} bonus coins`, timestamp,
@@ -1149,9 +1149,9 @@ router.post('/economy/purchase', async (req, res) => {
 // ── Super Shy trial claim ──
 router.post('/economy/trial-claim', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
 
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
 
@@ -1160,17 +1160,17 @@ router.post('/economy/trial-claim', async (req, res) => {
 
     const shyCoins = userField(user, 'shyCoins', 'shy_coins') || 0;
 
-    await db.doc(`users/${uid}`).update({ hasClaimedSuperShyTrial: true });
+    await db.doc(`users/${uniqueId}`).update({ hasClaimedSuperShyTrial: true });
 
     // Add trial item to backpack
-    await db.doc(`users/${uid}/backpack/super_shy_trial`).set({
+    await db.doc(`users/${uniqueId}/backpack/super_shy_trial`).set({
       giftId: 'super_shy_trial',
       quantity: 1,
       giftName: 'Super Shy Trial',
     });
 
     const trialClaimTxId = generateId();
-    await writeTransaction(uid, trialClaimTxId, {
+    await writeTransaction(uniqueId, trialClaimTxId, {
       type: 'TRIAL_CLAIM', amount: 0, currency: 'COINS',
       balanceAfter: shyCoins, details: 'Claimed 30 days of Super Shy',
     });
@@ -1185,11 +1185,11 @@ router.post('/economy/trial-claim', async (req, res) => {
 // ── Super Shy trial activate ──
 router.post('/economy/trial-activate', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
 
     const [userSnap, bpSnap] = await Promise.all([
-      db.doc(`users/${uid}`).get(),
-      db.doc(`users/${uid}/backpack/super_shy_trial`).get(),
+      db.doc(`users/${uniqueId}`).get(),
+      db.doc(`users/${uniqueId}/backpack/super_shy_trial`).get(),
     ]);
 
     const user = userSnap.exists ? userSnap.data() : null;
@@ -1207,8 +1207,8 @@ router.post('/economy/trial-activate', async (req, res) => {
     const newTier = (currentTier && currentTier !== 'trial') ? currentTier : 'trial';
 
     // Remove trial from backpack and activate
-    await db.doc(`users/${uid}/backpack/super_shy_trial`).delete();
-    await db.doc(`users/${uid}`).update({
+    await db.doc(`users/${uniqueId}/backpack/super_shy_trial`).delete();
+    await db.doc(`users/${uniqueId}`).update({
       isSuperShy: true,
       superShyExpiry: newExpiry,
       superShyTier: newTier,
@@ -1216,7 +1216,7 @@ router.post('/economy/trial-activate', async (req, res) => {
 
     const shyCoins = userField(user, 'shyCoins', 'shy_coins') || 0;
     const trialActivateTxId = generateId();
-    await writeTransaction(uid, trialActivateTxId, {
+    await writeTransaction(uniqueId, trialActivateTxId, {
       type: 'TRIAL_ACTIVATE', amount: 0, currency: 'COINS',
       balanceAfter: shyCoins, details: 'Activated 30 days of Super Shy', timestamp,
     });
@@ -1233,7 +1233,7 @@ router.post('/economy/test-coins', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const amount = body?.amount;
 
@@ -1241,17 +1241,17 @@ router.post('/economy/test-coins', async (req, res) => {
       return res.status(400).json({ error: 'amount must be 1-100000' });
     }
 
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
 
     const shyCoins = userField(user, 'shyCoins', 'shy_coins') || 0;
 
-    await db.doc(`users/${uid}`).update({ shyCoins: FieldValue.increment(amount) });
+    await db.doc(`users/${uniqueId}`).update({ shyCoins: FieldValue.increment(amount) });
 
     const newBalance = shyCoins + amount;
     const testTxId = generateId();
-    await writeTransaction(uid, testTxId, {
+    await writeTransaction(uniqueId, testTxId, {
       type: 'PURCHASE', amount, currency: 'COINS',
       balanceAfter: newBalance, details: `Test purchase (+${amount} coins)`,
     });
@@ -1266,8 +1266,8 @@ router.post('/economy/test-coins', async (req, res) => {
 // ── Balance ──
 router.get('/economy/balance', async (req, res) => {
   try {
-    const uid = req.auth.uid;
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const uniqueId = req.auth.uniqueId;
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
     res.json({
@@ -1283,11 +1283,11 @@ router.get('/economy/balance', async (req, res) => {
 // ── Transactions ──
 router.get('/economy/transactions', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const filterType = req.query.type;
 
-    let query = db.collection(`users/${uid}/transactions`);
+    let query = db.collection(`users/${uniqueId}/transactions`);
 
     if (filterType) {
       query = query.where('type', '==', filterType);
@@ -1305,43 +1305,43 @@ router.get('/economy/transactions', async (req, res) => {
 });
 
 // ── Backpack ──
-router.get('/users/:uid/backpack', async (req, res) => {
+router.get('/users/:uniqueId/backpack', async (req, res) => {
   try {
     const isAdmin = req.auth.token && req.auth.token.admin;
-    if (req.auth.uid !== req.params.uid && !isAdmin) {
+    if (String(req.auth.uniqueId) !== req.params.uniqueId && !isAdmin) {
       return res.status(403).json({ error: 'Cannot access another user\'s backpack' });
     }
-    const snap = await db.collection(`users/${req.params.uid}/backpack`).get();
+    const snap = await db.collection(`users/${req.params.uniqueId}/backpack`).get();
     const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     res.json(results);
   } catch (err) {
-    log.error('economy', 'GET /users/:uid/backpack failed', { error: err.message });
+    log.error('economy', 'GET /users/:uniqueId/backpack failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Gift wall ──
-router.get('/users/:uid/gift-wall', async (req, res) => {
+router.get('/users/:uniqueId/gift-wall', async (req, res) => {
   try {
-    const snap = await db.collection(`users/${req.params.uid}/giftWall`).get();
+    const snap = await db.collection(`users/${req.params.uniqueId}/giftWall`).get();
     const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     res.json(results);
   } catch (err) {
-    log.error('economy', 'GET /users/:uid/gift-wall failed', { error: err.message });
+    log.error('economy', 'GET /users/:uniqueId/gift-wall failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Gift wall senders ──
-router.get('/users/:uid/gift-wall/:giftId/senders', async (req, res) => {
+router.get('/users/:uniqueId/gift-wall/:giftId/senders', async (req, res) => {
   try {
-    const docSnap = await db.doc(`users/${req.params.uid}/giftWall/${req.params.giftId}`).get();
+    const docSnap = await db.doc(`users/${req.params.uniqueId}/giftWall/${req.params.giftId}`).get();
     const senders = docSnap.exists ? (docSnap.data().senders || []) : [];
     // Sort by sendCount descending
     senders.sort((a, b) => (b.sendCount || 0) - (a.sendCount || 0));
     res.json(senders);
   } catch (err) {
-    log.error('economy', 'GET /users/:uid/gift-wall/:giftId/senders failed', { error: err.message });
+    log.error('economy', 'GET /users/:uniqueId/gift-wall/:giftId/senders failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
