@@ -5,12 +5,11 @@
       "WebFetch",
       "Bash",
       "mcp__ide__getDiagnostics",
-      "mcp__plugin_playwright_playwright__browser_navigate",
-      "mcp__plugin_context7_context7__resolve-library-id",
-      "mcp__plugin_context7_context7__query-docs",
-      "mcp__plugin_playwright_playwright__browser_snapshot",
-      "mcp__plugin_playwright_playwright__browser_console_messages",
-      "mcp__plugin_playwright_playwright__browser_evaluate"
+      "mcp__plugin_playwright_playwright__*",
+      "mcp__plugin_context7_context7__*",
+      "mcp__plugin_firebase_firebase__*",
+      "mcp__plugin_pinecone_pinecone__*",
+      "mcp__plugin_sonatype-guide_sonatype-guide__*"
     ]
   }
 }

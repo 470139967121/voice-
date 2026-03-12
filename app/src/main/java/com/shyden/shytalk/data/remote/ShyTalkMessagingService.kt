@@ -21,6 +21,7 @@ private const val TAG = "FCMService"
 
 class ShyTalkMessagingService : FirebaseMessagingService() {
 
+    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         @Suppress("GlobalCoroutineUsage")

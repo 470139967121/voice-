@@ -268,13 +268,19 @@ jobs:
             archive
 
       - name: Export IPA
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           cd iosApp
           xcodebuild \
             -exportArchive \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath $RUNNER_TEMP/export
+            -exportPath $RUNNER_TEMP/export \
+            -authenticationKeyPath ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8 \
+            -authenticationKeyID $APP_STORE_CONNECT_KEY_ID \
+            -authenticationKeyIssuerID $APP_STORE_CONNECT_ISSUER_ID
 
       - name: Upload to TestFlight (dev build for testers)
         env:
@@ -751,13 +757,19 @@ jobs:
             archive
 
       - name: Export IPA
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           cd iosApp
           xcodebuild \
             -exportArchive \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath $RUNNER_TEMP/export
+            -exportPath $RUNNER_TEMP/export \
+            -authenticationKeyPath ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8 \
+            -authenticationKeyID $APP_STORE_CONNECT_KEY_ID \
+            -authenticationKeyIssuerID $APP_STORE_CONNECT_ISSUER_ID
 
       - name: Upload to App Store Connect
         env:

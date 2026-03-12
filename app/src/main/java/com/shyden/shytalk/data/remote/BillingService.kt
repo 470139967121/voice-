@@ -32,7 +32,7 @@ class BillingService(context: Context) {
     private val _purchaseEvents = MutableSharedFlow<PurchaseResult>(extraBufferCapacity = 5)
     val purchaseEvents: SharedFlow<PurchaseResult> = _purchaseEvents.asSharedFlow()
 
-    private lateinit var billingClient: BillingClient
+    private val billingClient: BillingClient
 
     private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
