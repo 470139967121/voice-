@@ -37,6 +37,10 @@ android {
         create("dev") {
             dimension = "env"
             applicationIdSuffix = ".dev"
+            val buildNum = System.getenv("GITHUB_RUN_NUMBER")
+                ?: providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }
+                    .standardOutput.asText.get().trim()
+            versionNameSuffix = "-b$buildNum"
             buildConfigField("String", "API_BASE_URL", "\"https://dev-api.shytalk.shyden.co.uk\"")
             buildConfigField("String", "WORKER_URL", "\"https://dev-api.shytalk.shyden.co.uk\"")
             buildConfigField("String", "LIVEKIT_SERVER_URL", "\"${System.getenv("LIVEKIT_URL") ?: ""}\"")
