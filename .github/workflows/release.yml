@@ -66,12 +66,11 @@ jobs:
         run: ./gradlew assembleDevRelease
 
       - name: Publish unit test report
-        uses: dorny/test-reporter@5540be7d257d0059d55ee0c144ab5a516329d0a1 # v2
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
         if: always()
         with:
-          name: Unit Tests
-          path: '**/build/test-results/**/TEST-*.xml'
-          reporter: java-junit
+          check_name: Unit Tests
+          files: '**/build/test-results/**/TEST-*.xml'
 
       - name: Upload devDebug APK
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
@@ -143,12 +142,11 @@ jobs:
           path: playwright-report/
 
       - name: Publish Playwright results
-        uses: dorny/test-reporter@5540be7d257d0059d55ee0c144ab5a516329d0a1 # v2
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
         if: always()
         with:
-          name: Web Tests
-          path: playwright-results.xml
-          reporter: java-junit
+          check_name: Web Tests
+          files: playwright-results.xml
 
   deploy-dev:
     name: Deploy to Dev
@@ -316,12 +314,11 @@ jobs:
           path: app/build/reports/androidTests/connected/
 
       - name: Publish E2E test report
-        uses: dorny/test-reporter@5540be7d257d0059d55ee0c144ab5a516329d0a1 # v2
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
         if: always()
         with:
-          name: E2E Tests (${{ matrix.device }})
-          path: '**/build/outputs/androidTest-results/connected/**/TEST-*.xml'
-          reporter: java-junit
+          check_name: E2E Tests (${{ matrix.device }})
+          files: '**/build/outputs/androidTest-results/connected/**/TEST-*.xml'
 
   # TODO: iOS E2E tests — enable once iOS app has real screens and UI test targets
   # ios-e2e-tests:

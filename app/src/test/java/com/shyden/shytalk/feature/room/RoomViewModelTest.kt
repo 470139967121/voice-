@@ -35,7 +35,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
@@ -130,7 +131,7 @@ class RoomViewModelTest {
             block()
         } finally {
             if (::viewModel.isInitialized) {
-                viewModel.viewModelScope.cancel()
+                viewModel.viewModelScope.coroutineContext.job.cancelAndJoin()
             }
         }
     }

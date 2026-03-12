@@ -20,7 +20,9 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -63,8 +65,8 @@ class ProfileViewModelTest {
     }
 
     @After
-    fun tearDown() {
-        activeViewModels.forEach { it.viewModelScope.coroutineContext.cancel() }
+    fun tearDown() = runBlocking {
+        activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
         activeViewModels.clear()
         unmockkStatic("com.shyden.shytalk.core.util.ImageCompressor_androidKt")
     }

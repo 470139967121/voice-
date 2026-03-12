@@ -14,7 +14,9 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -85,8 +87,8 @@ class GachaViewModelTest {
     }
 
     @After
-    fun tearDown() {
-        activeViewModels.forEach { it.viewModelScope.coroutineContext.cancel() }
+    fun tearDown() = runBlocking {
+        activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
         activeViewModels.clear()
     }
 

@@ -13,7 +13,9 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -61,8 +63,8 @@ class WalletViewModelTest {
     }
 
     @After
-    fun tearDown() {
-        activeViewModels.forEach { it.viewModelScope.coroutineContext.cancel() }
+    fun tearDown() = runBlocking {
+        activeViewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() }
         activeViewModels.clear()
     }
 
