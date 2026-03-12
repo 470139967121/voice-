@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Admin Panel', () => {
   test('loads login page', async ({ page }) => {
     await page.goto('/admin/');
-    await expect(page.locator('text=Sign in')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
   });
 
   test('shows correct API endpoint', async ({ page }) => {
