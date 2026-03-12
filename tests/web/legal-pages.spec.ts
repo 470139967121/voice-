@@ -16,8 +16,8 @@ test.describe('Privacy Policy', () => {
 
   test('contains key privacy sections', async ({ page }) => {
     const body = page.locator('body');
-    await expect(body).toContainText('collect');
-    await expect(body).toContainText('data');
+    await expect(body).toContainText('Information We Collect');
+    await expect(body).toContainText('Data Storage');
   });
 
   test('page is not empty', async ({ page }) => {
@@ -42,7 +42,8 @@ test.describe('Terms of Service', () => {
 
   test('contains key terms sections', async ({ page }) => {
     const body = page.locator('body');
-    await expect(body).toContainText('service');
+    await expect(body).toContainText('Terms of Service');
+    await expect(body).toContainText('Acceptable Use');
   });
 
   test('page is not empty', async ({ page }) => {
@@ -67,7 +68,8 @@ test.describe('Community Guidelines', () => {
 
   test('contains community-related content', async ({ page }) => {
     const body = page.locator('body');
-    await expect(body).toContainText('community');
+    await expect(body).toContainText('Community Guidelines');
+    await expect(body).toContainText('Be Respectful');
   });
 
   test('page is not empty', async ({ page }) => {
