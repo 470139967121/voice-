@@ -106,7 +106,7 @@ class AuthViewModel(
             when (val result = authRepository.signInWithGoogleIdToken(idToken)) {
                 is Resource.Success -> handleSignInSuccess(result.data)
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -119,7 +119,7 @@ class AuthViewModel(
             when (val result = authRepository.signInWithAppleIdToken(idToken, rawNonce)) {
                 is Resource.Success -> handleSignInSuccess(result.data)
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }

@@ -220,7 +220,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -253,7 +253,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, profileSaved = true, user = user) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -267,7 +267,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(user = it.user?.copy(uniqueId = result.data)) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -285,7 +285,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -319,7 +319,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -363,7 +363,7 @@ class ProfileViewModel(
                         }
                         is Resource.Error -> {
                             _uiState.update {
-                                it.copy(isUploadingPhoto = false, error = saveResult.message?.let { msg -> UiText.plain(msg) })
+                                it.copy(isUploadingPhoto = false, error = UiText.plain(saveResult.message))
                             }
                         }
                         is Resource.Loading -> {}
@@ -371,7 +371,7 @@ class ProfileViewModel(
                 }
                 is Resource.Error -> {
                     logE(TAG, "Photo upload failed: ${result.message}")
-                    _uiState.update { it.copy(isUploadingPhoto = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isUploadingPhoto = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -531,7 +531,7 @@ class ProfileViewModel(
                     loadProfile(null)
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -547,7 +547,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -563,7 +563,7 @@ class ProfileViewModel(
                     loadProfile(null)
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasingSuperShy = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isPurchasingSuperShy = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }

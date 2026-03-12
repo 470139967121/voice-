@@ -217,7 +217,7 @@ class GachaViewModel(
                 }
                 is Resource.Error -> {
                     logE(TAG, "Gacha pull failed: ${result.message}")
-                    _uiState.update { it.copy(isPulling = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isPulling = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }

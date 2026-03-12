@@ -118,7 +118,7 @@ class AppSettingsViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
