@@ -227,6 +227,88 @@ jobs:
           file: ${{ steps.find-apk.outputs.apk_path }}
           releaseNotes: "PR #${{ github.event.pull_request.number }}"
 
+  deploy-ios-dev:
+    name: Deploy iOS to TestFlight (Dev)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    needs: [build-and-test, web-tests, ios-build]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+
+      - name: Install Apple API key
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$APP_STORE_CONNECT_KEY" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
+
+      - name: Decode signing certificate and provisioning profile
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo "$IOS_CERTIFICATE_BASE64" | base64 -d > "$CERTIFICATE_PATH"
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "$IOS_PROVISION_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH"
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Build and archive iOS app
+        run: |
+          cd iosApp
+          xcodebuild \
+            -project iosApp.xcodeproj \
+            -scheme iosApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            archive
+
+      - name: Export IPA
+        run: |
+          cd iosApp
+          xcodebuild \
+            -exportArchive \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/export
+
+      - name: Upload to TestFlight (dev build for testers)
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app \
+            -f $RUNNER_TEMP/export/*.ipa \
+            -t ios \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+
   # ──────────────────────────────────────────────
   # Stage 2: Approval Gate
   # ──────────────────────────────────────────────
@@ -235,7 +317,7 @@ jobs:
     name: Approve Production Release
     runs-on: ubuntu-latest
     timeout-minutes: 1440
-    needs: deploy-dev
+    needs: [deploy-dev, deploy-ios-dev]
     environment: production
     steps:
       - run: echo "Production release approved — running E2E tests next"
@@ -394,14 +476,89 @@ jobs:
   #         path: iosApp/build/reports/
 
   # ──────────────────────────────────────────────
-  # Stage 4: Merge PR to main
+  # Stage 4: Prepare Release (bump version + release notes)
+  # ──────────────────────────────────────────────
+
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: e2e-tests
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump version
+        run: |
+          CURRENT_CODE=$(grep 'versionCode' app/build.gradle.kts | head -1 | sed 's/[^0-9]//g')
+          NEW_CODE=$((CURRENT_CODE + 1))
+          NEW_NAME="0.${NEW_CODE}"
+
+          sed -i "s/versionCode = ${CURRENT_CODE}/versionCode = ${NEW_CODE}/" app/build.gradle.kts
+          sed -i "s/versionName = \".*\"/versionName = \"${NEW_NAME}\"/" app/build.gradle.kts
+
+          echo "Bumped version: ${CURRENT_CODE} → ${NEW_CODE} (v${NEW_NAME})"
+          echo "NEW_VERSION=${NEW_NAME}" >> "$GITHUB_ENV"
+
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
+
+          # Collect commit subjects from this PR (excluding merge commits)
+          COMMITS=$(gh pr view "$PR_NUMBER" --json commits --jq '.commits[].messageHeadline' | grep -v '^Merge ' | head -10)
+
+          # Build user-friendly release notes (max 500 chars for Google Play)
+          NOTES_FILE="app/src/main/play/release-notes/en-US/internal.txt"
+          {
+            echo "v${NEW_VERSION}"
+            echo ""
+            # Convert commit messages to user-friendly bullet points
+            echo "$COMMITS" | while IFS= read -r msg; do
+              # Skip CI/chore commits, keep feature/fix commits
+              case "$msg" in
+                ci:*|chore:*|build:*|style:*) continue ;;
+              esac
+              # Clean up conventional commit prefixes
+              clean=$(echo "$msg" | sed 's/^feat: //' | sed 's/^fix: //' | sed 's/^docs: //' | sed 's/^refactor: //')
+              echo "- ${clean}"
+            done
+          } > "$NOTES_FILE"
+
+          # If no meaningful commits were found, use PR title
+          LINE_COUNT=$(wc -l < "$NOTES_FILE")
+          if [ "$LINE_COUNT" -le 2 ]; then
+            echo "- ${PR_TITLE}" >> "$NOTES_FILE"
+          fi
+
+          # Truncate to 500 chars (Google Play limit)
+          truncated=$(head -c 500 "$NOTES_FILE")
+          echo "$truncated" > "$NOTES_FILE"
+
+          echo "=== Release notes ==="
+          cat "$NOTES_FILE"
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts app/src/main/play/release-notes/en-US/internal.txt
+          git commit -m "chore: bump version to v${NEW_VERSION} and update release notes"
+          git push
+
+  # ──────────────────────────────────────────────
+  # Stage 5: Merge PR to main
   # ──────────────────────────────────────────────
 
   merge-pr:
     name: Merge PR
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: e2e-tests
+    needs: prepare-release
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -419,19 +576,14 @@ jobs:
           TAG="v${VERSION}"
           NOTES=$(cat app/src/main/play/release-notes/en-US/internal.txt)
 
-          # Skip if this version tag already exists (e.g. version wasn't bumped)
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "Release $TAG already exists — skipping"
-          else
-            gh release create "$TAG" \
-              --target main \
-              --title "$TAG" \
-              --notes "$NOTES"
-            echo "Created release $TAG"
-          fi
+          gh release create "$TAG" \
+            --target main \
+            --title "$TAG" \
+            --notes "$NOTES"
+          echo "Created release $TAG"
 
   # ──────────────────────────────────────────────
-  # Stage 5: Deploy main to Production
+  # Stage 6: Deploy main to Production
   # ──────────────────────────────────────────────
 
   deploy-prod:
@@ -549,21 +701,104 @@ jobs:
           sed "s|<PROD_FIREBASE_API_KEY>|$PROD_FIREBASE_API_KEY|" public/admin/config.example.js > public/admin/config.js
           wrangler pages deploy public --project-name shytalk-site
 
+  deploy-ios-prod:
+    name: Deploy iOS to App Store
+    runs-on: macos-latest
+    timeout-minutes: 45
+    needs: merge-pr
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+
+      - name: Install Apple API key
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$APP_STORE_CONNECT_KEY" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
+
+      - name: Decode signing certificate and provisioning profile
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          # Import certificate to keychain
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo "$IOS_CERTIFICATE_BASE64" | base64 -d > "$CERTIFICATE_PATH"
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          # Install provisioning profile
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "$IOS_PROVISION_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH"
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Build iOS app for release
+        run: |
+          cd iosApp
+          xcodebuild \
+            -project iosApp.xcodeproj \
+            -scheme iosApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            archive
+
+      - name: Export IPA
+        run: |
+          cd iosApp
+          xcodebuild \
+            -exportArchive \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/export
+
+      - name: Upload to App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app \
+            -f $RUNNER_TEMP/export/*.ipa \
+            -t ios \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+
   # ──────────────────────────────────────────────
-  # Stage 6 (SIMULATED): Promote to Production
+  # Stage 7 (FUTURE): Promote to Public Release
   # ──────────────────────────────────────────────
-  # TODO: When ready, replace this with actual Play Store promotion
-  # from internal track → production track. This will require:
-  #   1. A second approval gate (approve-public-release)
-  #   2. Use r0adkll/upload-google-play with track: production
-  #      and fromTrack: internal (promote, not re-upload)
+  # TODO: When ready, add a second approval gate + promote from
+  # internal → production on Play Store, and from TestFlight → App Store.
   #
   # promote-to-production:
   #   name: Promote to Public Release
   #   runs-on: ubuntu-latest
   #   timeout-minutes: 10
-  #   needs: deploy-prod
-  #   environment: public-release  # separate approval gate
+  #   needs: [deploy-prod, deploy-ios-prod]
+  #   environment: public-release
   #   steps:
   #     - name: Promote internal → production on Play Store
   #       uses: r0adkll/upload-google-play@v1
@@ -575,15 +810,15 @@ jobs:
   #         status: completed
 
   # ──────────────────────────────────────────────
-  # Alert (if prod deploy fails after merge)
+  # Alert (if prod deploy fails after merge — Stage 6 failure)
   # ──────────────────────────────────────────────
 
   alert-desync:
     name: Alert - Prod Deploy Failed
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: deploy-prod
-    if: ${{ always() && needs.deploy-prod.result == 'failure' }}
+    needs: [deploy-prod, deploy-ios-prod]
+    if: ${{ always() && (needs.deploy-prod.result == 'failure' || needs.deploy-ios-prod.result == 'failure') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
