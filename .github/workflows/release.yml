@@ -51,19 +51,11 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
 
-      - name: Build devDebug
-        env:
-          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
-        run: ./gradlew assembleDevDebug
-
-      - name: Run unit tests
-        run: ./gradlew testDevDebugUnitTest
-
-      - name: Build devRelease APK
+      - name: Run unit tests and build devRelease APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
-        run: ./gradlew assembleDevRelease
+        run: ./gradlew testDevDebugUnitTest assembleDevRelease --parallel
 
       - name: Publish unit test report
         uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
@@ -71,12 +63,6 @@ jobs:
         with:
           check_name: Unit Tests
           files: '**/build/test-results/**/TEST-*.xml'
-
-      - name: Upload devDebug APK
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
-        with:
-          name: dev-debug-apk
-          path: app/build/outputs/apk/dev/debug/*.apk
 
       - name: Upload devRelease APK
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
