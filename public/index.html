@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f0d15">
+<meta name="description" content="ShyTalk — Voice chat rooms, reimagined.">
 <title>ShyTalk — Coming Soon</title>
 <style>
   :root {
@@ -111,8 +113,14 @@
     transition: color 0.2s;
   }
 
-  .links a:hover {
+  .links a:hover, .links a:focus-visible {
     color: var(--accent);
+  }
+
+  .links a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   .links .coming-soon-link {
@@ -129,7 +137,7 @@
     <div class="badge"><span class="dot"></span><span data-i18n="coming_soon">Coming Soon</span></div>
     <div class="links">
       <a href="https://play.google.com/store/apps/details?id=com.shyden.shytalk" rel="noopener noreferrer" data-log="google-play-link">Google Play</a>
-      <a class="coming-soon-link" data-i18n="app_store" data-i18n-title="app_store_title" title="Coming soon to iOS" data-log="app-store-link">App Store (Coming Soon)</a>
+      <span class="coming-soon-link" data-i18n="app_store" title="Coming soon to iOS">App Store (Coming Soon)</span>
     </div>
     <div class="links" style="margin-top: 1.5rem;">
       <a href="/privacy.html">Privacy Policy</a>
@@ -175,7 +183,7 @@
 })();
   ShyTalkLogger.init({
     source: 'landing-page',
-    endpoint: 'https://api.shytalk.shyden.co.uk/api/logs'
+    endpoint: (location.hostname.includes('dev') ? 'https://dev-api.shytalk.shyden.co.uk' : 'https://api.shytalk.shyden.co.uk') + '/api/logs'
   });
 </script>
 </body>

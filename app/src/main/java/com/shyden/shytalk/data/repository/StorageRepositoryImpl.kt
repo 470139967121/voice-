@@ -87,7 +87,7 @@ class StorageRepositoryImpl(
                     .build()
             ).executeAsync().close()
         } catch (e: Exception) {
-            Log.d("StorageRepository", "Best-effort image delete failed", e)
+            Log.d(TAG, "Best-effort image delete failed", e)
         }
     }
 }

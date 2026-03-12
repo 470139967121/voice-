@@ -46,6 +46,7 @@ android {
             buildConfigField("String", "LIVEKIT_SERVER_URL", "\"${System.getenv("LIVEKIT_URL") ?: ""}\"")
             buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "false")
             buildConfigField("String", "WEB_CLIENT_ID", "\"881846974606-kv99pjv92i6me0emb2j3uacbhnqqvfj4.apps.googleusercontent.com\"")
+            buildConfigField("String", "RTDB_URL", "\"https://shytalk-dev-default-rtdb.europe-west1.firebasedatabase.app\"")
         }
         create("prod") {
             dimension = "env"
@@ -54,6 +55,7 @@ android {
             buildConfigField("String", "LIVEKIT_SERVER_URL", "\"${System.getenv("LIVEKIT_URL") ?: ""}\"")
             buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "false")
             buildConfigField("String", "WEB_CLIENT_ID", "\"517834977595-cdu78p6q7vg57utpsvtik04c195lbh8b.apps.googleusercontent.com\"")
+            buildConfigField("String", "RTDB_URL", "\"https://shytalk-7ba69-default-rtdb.asia-southeast1.firebasedatabase.app\"")
         }
     }
 

@@ -13,6 +13,7 @@ import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.PendingPurchasesParams
+import android.util.Log
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -28,6 +29,10 @@ data class PurchaseResult(
 )
 
 class BillingService(context: Context) {
+
+    companion object {
+        private const val TAG = "BillingService"
+    }
 
     private val _purchaseEvents = MutableSharedFlow<PurchaseResult>(extraBufferCapacity = 5)
     val purchaseEvents: SharedFlow<PurchaseResult> = _purchaseEvents.asSharedFlow()
@@ -52,7 +57,11 @@ class BillingService(context: Context) {
                         val params = AcknowledgePurchaseParams.newBuilder()
                             .setPurchaseToken(purchase.purchaseToken)
                             .build()
-                        billingClient.acknowledgePurchase(params) { /* result logged */ }
+                        billingClient.acknowledgePurchase(params) { ackResult ->
+                            if (ackResult.responseCode != BillingClient.BillingResponseCode.OK) {
+                                Log.w(TAG, "Acknowledge failed: ${ackResult.debugMessage}")
+                            }
+                        }
                     }
                 }
             }

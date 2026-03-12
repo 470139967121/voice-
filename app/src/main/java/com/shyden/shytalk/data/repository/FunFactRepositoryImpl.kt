@@ -14,6 +14,10 @@ class FunFactRepositoryImpl(
     private val context: Context
 ) : FunFactRepository {
 
+    companion object {
+        private const val TAG = "FunFactRepository"
+    }
+
     private val cacheFile get() = File(context.filesDir, "fun_facts_cache.json")
 
     @Volatile
@@ -62,7 +66,7 @@ class FunFactRepositoryImpl(
             memoryCache = facts
             facts
         } catch (e: Exception) {
-            Log.w("FunFactRepository", "Failed to parse cached fun facts", e)
+            Log.w(TAG, "Failed to parse cached fun facts", e)
             emptyList()
         }
     }
