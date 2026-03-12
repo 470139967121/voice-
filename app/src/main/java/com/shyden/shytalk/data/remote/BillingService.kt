@@ -76,6 +76,7 @@ class BillingService(context: Context) {
             .build()
     }
 
+    @Volatile
     private var isConnected = false
 
     suspend fun connect(): Boolean = suspendCancellableCoroutine { cont ->

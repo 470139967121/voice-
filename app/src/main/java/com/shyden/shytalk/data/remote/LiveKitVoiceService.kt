@@ -377,7 +377,7 @@ class LiveKitVoiceService(
             Log.e(TAG, "destroy failed", e)
         }
         eventCollectionJob?.cancel()
-        scope.coroutineContext[Job]?.cancelChildren()
+        scope.coroutineContext.cancelChildren()
         _isJoined.value = false
         _speakingUsers.value = emptySet()
         _connectionState.value = VoiceConnectionState.DISCONNECTED

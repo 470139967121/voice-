@@ -43,7 +43,7 @@ router.post('/storage/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Only image uploads are allowed (jpeg, png, webp, gif)' });
     }
     const extension = getExtension(contentType);
-    const key = `${path}/${uid}/${Date.now()}.${extension}`;
+    const key = `${path}/${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
 
     const url = await r2.putObject(key, file.buffer, contentType);
     log.info('storage', 'File uploaded', { key, uid, contentType });

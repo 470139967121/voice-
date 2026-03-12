@@ -101,6 +101,10 @@ router.get('/test/verify/:collection/:id', async (req, res) => {
     if (requireTestApiKey(req, res)) return;
 
     const { collection, id } = req.params;
+    const ALLOWED_COLLECTIONS = ['users', 'rooms', 'gifts', 'conversations', 'banners', 'funFacts'];
+    if (!ALLOWED_COLLECTIONS.includes(collection)) {
+      return res.status(400).json({ error: 'Collection not allowed' });
+    }
     const doc = await db.doc(`${collection}/${id}`).get();
 
     if (!doc.exists) {
