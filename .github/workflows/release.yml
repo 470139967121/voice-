@@ -252,6 +252,20 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
 
+      - name: Select Xcode 26
+        run: |
+          # Find the Xcode 26 app path (name may vary across runner images)
+          XCODE_26=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | head -1)
+          if [ -z "$XCODE_26" ]; then
+            echo "Available Xcode versions:"
+            ls /Applications/Xcode*.app
+            echo "::error::Xcode 26 not found on this runner"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_26/Contents/Developer"
+          echo "Selected: $(xcode-select -p)"
+          xcodebuild -version
+
       - name: Build and archive iOS app
         run: |
           cd iosApp
@@ -740,6 +754,19 @@ jobs:
           PROFILE_UUID=$(/usr/bin/security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
+
+      - name: Select Xcode 26
+        run: |
+          XCODE_26=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | head -1)
+          if [ -z "$XCODE_26" ]; then
+            echo "Available Xcode versions:"
+            ls /Applications/Xcode*.app
+            echo "::error::Xcode 26 not found on this runner"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_26/Contents/Developer"
+          echo "Selected: $(xcode-select -p)"
+          xcodebuild -version
 
       - name: Build iOS app for release
         run: |

@@ -625,6 +625,10 @@
     <string name="show_timestamps_description">Display message timestamps in chat.</string>
     <string name="shytalk_id">ShyTalk ID</string>
     <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_in_with_email">Zaloguj się e-mailem</string>
+    <string name="email_hint">Adres e-mail</string>
+    <string name="email_link_sent">Sprawdź swoją pocztę</string>
+    <string name="check_your_email_description">Wysłaliśmy link do logowania na Twój e-mail. Kliknij link, aby kontynuować.</string>
     <string name="signing_in">Signing in…</string>
     <string name="stalkers">Stalkers</string>
     <string name="start">Start</string>

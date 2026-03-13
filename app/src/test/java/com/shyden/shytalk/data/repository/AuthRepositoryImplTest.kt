@@ -243,4 +243,49 @@ class AuthRepositoryImplTest {
 
         assertNull(repo.getProviderInfo())
     }
+
+    // ===== Email sign-in =====
+
+    @Test
+    fun `sendSignInLink calls Firebase sendSignInLinkToEmail`() = runTest {
+        every { auth.sendSignInLinkToEmail(any(), any()) } returns Tasks.forResult(null)
+
+        val result = repo.sendSignInLink("user@example.com")
+
+        assertTrue(result is Resource.Success)
+        verify { auth.sendSignInLinkToEmail("user@example.com", any()) }
+    }
+
+    @Test
+    fun `sendSignInLink returns Error on exception`() = runTest {
+        every { auth.sendSignInLinkToEmail(any(), any()) } returns
+            Tasks.forException(RuntimeException("Send failed"))
+
+        val result = repo.sendSignInLink("user@example.com")
+
+        assertTrue(result is Resource.Error)
+    }
+
+    @Test
+    fun `signInWithEmailLink authenticates and returns uid`() = runTest {
+        val user = mockk<FirebaseUser>()
+        every { user.uid } returns "email-user-uid"
+        val authResult = mockk<AuthResult> { every { this@mockk.user } returns user }
+        every { auth.signInWithEmailLink("user@example.com", "https://link") } returns Tasks.forResult(authResult)
+
+        val result = repo.signInWithEmailLink("user@example.com", "https://link")
+
+        assertTrue(result is Resource.Success)
+        assertEquals("email-user-uid", (result as Resource.Success).data)
+    }
+
+    @Test
+    fun `signInWithEmailLink returns Error on failure`() = runTest {
+        every { auth.signInWithEmailLink(any(), any()) } returns
+            Tasks.forException(RuntimeException("Invalid link"))
+
+        val result = repo.signInWithEmailLink("user@example.com", "bad-link")
+
+        assertTrue(result is Resource.Error)
+    }
 }

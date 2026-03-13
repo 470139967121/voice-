@@ -37,8 +37,9 @@ class PrivateMessageRepositoryImpl(
         // for splash screen — just do a Firestore read to warm the cache
         try {
             val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+            val uidAsLong = uid.toLongOrNull()
             val snapshot = firestore.collection("conversations")
-                .whereArrayContains("participantIds", uid)
+                .whereArrayContains("participantIds", uidAsLong ?: uid)
                 .orderBy("lastMessageAt", Query.Direction.DESCENDING)
                 .get()
                 .await()
@@ -57,8 +58,9 @@ class PrivateMessageRepositoryImpl(
             trySend(it)
             prefetchedConversations = null
         }
+        val userIdQuery: Any = userId.toLongOrNull() ?: userId
         val listener = firestore.collection("conversations")
-            .whereArrayContains("participantIds", userId)
+            .whereArrayContains("participantIds", userIdQuery)
             .orderBy("lastMessageAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
@@ -82,7 +84,7 @@ class PrivateMessageRepositoryImpl(
             } else {
                 val now = System.currentTimeMillis()
                 val data = mapOf(
-                    "participantIds" to listOf(uid1, uid2).sorted(),
+                    "participantIds" to listOf(uid1.toLong(), uid2.toLong()).sorted(),
                     "isGroup" to false,
                     "createdAt" to now,
                     "lastMessageAt" to now,
@@ -124,7 +126,12 @@ class PrivateMessageRepositoryImpl(
             .orderBy("createdAt", Query.Direction.ASCENDING)
             .limitToLast(limit.toLong())
             .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+                if (error != null) {
+                    Log.e(TAG, "Messages listener error: ${error.message}", error)
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) return@addSnapshotListener
                 val messages = snapshot.documents.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
                     PrivateMessage.fromMap(data, doc.id)

@@ -110,6 +110,8 @@ fun NavGraph(
     navController: NavHostController,
     startDestination: String,
     isBackendDegraded: Boolean = false,
+    pendingEmailLink: String? = null,
+    onEmailLinkConsumed: () -> Unit = {},
     onSignOut: () -> Unit
 ) {
     val activeRoomManager: RoomLifecycleManager = koinInject()
@@ -172,6 +174,8 @@ fun NavGraph(
     ) {
         composable(Screen.SignIn.route) {
             GoogleSignInScreen(
+                pendingEmailLink = pendingEmailLink,
+                onEmailLinkConsumed = onEmailLinkConsumed,
                 onAuthSuccess = { hasProfile, hasDOB, needsLegalAcceptance ->
                     when {
                         !hasProfile -> navController.navigate(Screen.ProfileSetup.route) {

@@ -21,6 +21,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
@@ -305,6 +306,35 @@ class ProfileViewModelTest {
 
         assertNotNull(vm.uiState.value.error)
         coVerify(exactly = 0) { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `saveProfile sets resolvedUniqueId on authRepository after successful creation`() = runTest {
+        every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
+        coEvery { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) } returns
+            Resource.Success(CreateUserResult(10000042))
+        coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.saveProfile("My Name", 946684800000L)
+        advanceUntilIdle()
+
+        // After profile creation, resolvedUniqueId must be set so currentUserId returns the uniqueId
+        verify { authRepository.resolvedUniqueId = "10000042" }
+    }
+
+    @Test
+    fun `saveProfile does not set resolvedUniqueId when creation fails`() = runTest {
+        every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
+        coEvery { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) } returns
+            Resource.Error("creation failed")
+
+        val vm = createViewModel()
+        vm.saveProfile("My Name", 946684800000L)
+        advanceUntilIdle()
+
+        // resolvedUniqueId should NOT be set on failure
+        verify(exactly = 0) { authRepository.resolvedUniqueId = any() }
     }
 
     // ===== saveProfileEdits =====

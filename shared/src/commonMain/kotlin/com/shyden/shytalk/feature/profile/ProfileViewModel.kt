@@ -264,6 +264,8 @@ class ProfileViewModel(
                 is Resource.Success -> {
                     val uniqueId = result.data.uniqueId
                     logI(TAG, "User created with uniqueId=$uniqueId")
+                    // Set resolvedUniqueId so currentUserId returns the new uniqueId
+                    authRepository.resolvedUniqueId = uniqueId.toString()
                     // Refresh token to pick up custom claims (uniqueId)
                     identityRepository.forceRefreshToken()
                     val user = User(

@@ -292,13 +292,18 @@ class PrivateChatViewModel(
     private fun observeMessages(conversationId: String) {
         messagesJob?.cancel()
         messagesJob = viewModelScope.launch {
-            pmRepository.getMessages(conversationId, Constants.PM_MESSAGES_PAGE_SIZE).collect { liveMessages ->
-                val pending = pendingMessages.values.toList()
-                val combined = (olderMessages + liveMessages + pending)
-                    .distinctBy { it.messageId }
-                    .sortedBy { it.createdAt }
-                _uiState.update { it.copy(messages = combined) }
-                resolveRoomInvites(combined)
+            try {
+                pmRepository.getMessages(conversationId, Constants.PM_MESSAGES_PAGE_SIZE).collect { liveMessages ->
+                    val pending = pendingMessages.values.toList()
+                    val combined = (olderMessages + liveMessages + pending)
+                        .distinctBy { it.messageId }
+                        .sortedBy { it.createdAt }
+                    _uiState.update { it.copy(messages = combined) }
+                    resolveRoomInvites(combined)
+                }
+            } catch (e: Exception) {
+                logE(TAG, "Messages observation failed: ${e.message}")
+                _uiState.update { it.copy(error = e.message ?: "Failed to load messages") }
             }
         }
     }

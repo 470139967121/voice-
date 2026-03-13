@@ -664,4 +664,70 @@ class AuthViewModelTest {
         assertTrue(vm.uiState.value.hasProfile)
         assertTrue(vm.uiState.value.hasDOB)
     }
+
+    // ===== Email sign-in =====
+
+    @Test
+    fun `signInWithEmail sends link and sets awaitingEmailLink state`() = runTest {
+        every { authRepository.isAuthenticated } returns false
+        every { authRepository.currentUserId } returns null
+        coEvery { authRepository.sendSignInLink(email) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.signInWithEmail(email)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.awaitingEmailLink)
+        assertEquals(email, vm.uiState.value.emailForLink)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `signInWithEmail handles send failure gracefully`() = runTest {
+        every { authRepository.isAuthenticated } returns false
+        every { authRepository.currentUserId } returns null
+        coEvery { authRepository.sendSignInLink(email) } returns Resource.Error("Failed to send email")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.signInWithEmail(email)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.awaitingEmailLink)
+        assertEquals(UiText.Plain("Failed to send email"), vm.uiState.value.error)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `handleEmailLink completes sign-in and resolves identity`() = runTest {
+        setupSignInIdentity()
+        coEvery { authRepository.signInWithEmailLink(email, "https://link") } returns Resource.Success("firebase-uid")
+        coEvery { authRepository.getProviderInfo() } returns ("email" to email)
+        coEvery { identityRepository.resolveIdentity("email", email) } returns
+            Resource.Success(SignInResult.NotFound)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.handleEmailLink(email, "https://link")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isAuthenticated)
+        assertFalse(vm.uiState.value.awaitingEmailLink)
+    }
+
+    @Test
+    fun `handleEmailLink handles invalid link error`() = runTest {
+        every { authRepository.isAuthenticated } returns false
+        every { authRepository.currentUserId } returns null
+        coEvery { authRepository.signInWithEmailLink(email, "bad-link") } returns Resource.Error("Invalid link")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.handleEmailLink(email, "bad-link")
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isAuthenticated)
+        assertEquals(UiText.Plain("Invalid link"), vm.uiState.value.error)
+    }
 }

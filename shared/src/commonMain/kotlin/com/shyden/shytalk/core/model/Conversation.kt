@@ -98,7 +98,7 @@ data class Conversation(
         fun fromMap(map: Map<String, Any?>, conversationId: String): Conversation = Conversation(
             conversationId = conversationId,
             participantIds = (map["participantIds"] as? List<*>)
-                ?.filterIsInstance<String>() ?: emptyList(),
+                ?.mapNotNull { it?.toString() } ?: emptyList(),
             lastMessage = (map["lastMessage"] as? Map<*, *>)?.let { raw ->
                 ConversationPreview.fromMap(
                     raw.entries.associate { (k, v) -> k.toString() to v }

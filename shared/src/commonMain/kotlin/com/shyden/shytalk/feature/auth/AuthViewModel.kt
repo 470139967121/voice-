@@ -39,7 +39,9 @@ data class AuthUiState(
     val isDeviceBanned: Boolean = false,
     val isNetworkBanned: Boolean = false,
     val banReason: String? = null,
-    val banExpiresAt: String? = null
+    val banExpiresAt: String? = null,
+    val awaitingEmailLink: Boolean = false,
+    val emailForLink: String? = null
 )
 
 class AuthViewModel(
@@ -327,6 +329,51 @@ class AuthViewModel(
                 }
             }
             is Resource.Loading -> {}
+        }
+    }
+
+    fun signInWithEmail(email: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            when (val result = authRepository.sendSignInLink(email)) {
+                is Resource.Success -> {
+                    logI(TAG, "Sign-in link sent to $email")
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            awaitingEmailLink = true,
+                            emailForLink = email
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    logE(TAG, "Failed to send sign-in link: ${result.message}")
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun handleEmailLink(email: String, link: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null, awaitingEmailLink = false) }
+            when (val result = authRepository.signInWithEmailLink(email, link)) {
+                is Resource.Success -> {
+                    val providerInfo = authRepository.getProviderInfo()
+                    if (providerInfo == null) {
+                        _uiState.update {
+                            it.copy(isLoading = false, error = UiText.plain("Could not retrieve provider info from sign-in"))
+                        }
+                        return@launch
+                    }
+                    resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
+                }
+                is Resource.Loading -> {}
+            }
         }
     }
 

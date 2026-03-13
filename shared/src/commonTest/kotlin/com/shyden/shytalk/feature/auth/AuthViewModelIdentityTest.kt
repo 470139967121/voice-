@@ -61,6 +61,8 @@ class AuthViewModelIdentityTest {
         override fun getProviderInfo(): Pair<String, String>? = providerInfo
         override suspend fun signInWithGoogleIdToken(idToken: String): Resource<String> = signInResult
         override suspend fun signInWithAppleIdToken(idToken: String, rawNonce: String): Resource<String> = signInResult
+        override suspend fun sendSignInLink(email: String): Resource<Unit> = Resource.Success(Unit)
+        override suspend fun signInWithEmailLink(email: String, link: String): Resource<String> = signInResult
         override fun signOut() { signedOut = true; resolvedUniqueId = null; firebaseUid = null }
     }
 
@@ -289,5 +291,68 @@ class AuthViewModelIdentityTest {
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.isBackendUnreachable, "Should show backend unreachable on identity resolution failure")
+    }
+
+    @Test
+    fun emailProvider_signIn_resolvesIdentityViaEmailIdentifier() = runTest {
+        val identityRepo = FakeIdentityRepository().apply {
+            resolveResult = Resource.Success(SignInResult.Found(10000099))
+        }
+        val userRepo = FakeUserRepository().apply {
+            existsResult = Resource.Success(true)
+            getUserResult = Resource.Success(User(
+                uid = "10000099",
+                uniqueId = 10000099,
+                displayName = "EmailUser",
+                acceptedLegalVersion = 999
+            ))
+        }
+        // Simulate post-email-sign-in state: authenticated with email provider
+        val authRepo = FakeAuthRepository(
+            firebaseUid = "firebase-email-uid",
+            isAuthenticated = true,
+            currentUserEmail = "emailuser@example.com",
+            providerInfo = "email" to "emailuser@example.com"
+        )
+
+        val vm = AuthViewModel(authRepo, userRepo, FakeDeviceRepository(), identityRepo, "device-1", bypassDeviceChecks = true)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.isAuthenticated, "Should be authenticated after email provider sign-in")
+        assertTrue(state.hasProfile, "Should have profile for existing email user")
+        assertEquals("email", identityRepo.resolvedProvider)
+        assertEquals("emailuser@example.com", identityRepo.resolvedIdentifier)
+        assertEquals("10000099", authRepo.resolvedUniqueId)
+    }
+
+    @Test
+    fun afterIdentityResolution_resolvedUniqueIdIsSet_soCurrentUserIdReturnsUniqueId() = runTest {
+        val identityRepo = FakeIdentityRepository().apply {
+            resolveResult = Resource.Success(SignInResult.Found(10000005))
+        }
+        val userRepo = FakeUserRepository().apply {
+            existsResult = Resource.Success(true)
+            getUserResult = Resource.Success(User(
+                uid = "10000005",
+                uniqueId = 10000005,
+                displayName = "Alice",
+                acceptedLegalVersion = 999
+            ))
+        }
+        val authRepo = FakeAuthRepository(
+            firebaseUid = "firebase-uid-1",
+            isAuthenticated = true,
+            currentUserEmail = "alice@gmail.com",
+            providerInfo = "google" to "alice@gmail.com"
+        )
+
+        val vm = AuthViewModel(authRepo, userRepo, FakeDeviceRepository(), identityRepo, "device-1", bypassDeviceChecks = true)
+        advanceUntilIdle()
+
+        // After identity resolution, authRepo.resolvedUniqueId should be set
+        assertEquals("10000005", authRepo.resolvedUniqueId, "resolvedUniqueId should be set after identity resolution")
+        // And currentUserId should return the uniqueId, not the Firebase UID
+        assertEquals("10000005", authRepo.currentUserId, "currentUserId should return uniqueId, not Firebase UID")
     }
 }

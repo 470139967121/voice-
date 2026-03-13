@@ -625,6 +625,10 @@
     <string name="show_timestamps_description">Display message timestamps in chat.</string>
     <string name="shytalk_id">ShyTalk ID</string>
     <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_in_with_email">이메일로 로그인</string>
+    <string name="email_hint">이메일 주소</string>
+    <string name="email_link_sent">이메일을 확인하세요</string>
+    <string name="check_your_email_description">로그인 링크를 이메일로 보냈습니다. 링크를 탭하여 계속하세요.</string>
     <string name="signing_in">Signing in…</string>
     <string name="stalkers">Stalkers</string>
     <string name="start">Start</string>

@@ -104,12 +104,13 @@ class ConversationFromMapTest {
     }
 
     @Test
-    fun `fromMap filters non-string items from participantIds`() {
+    fun `fromMap converts all participantIds to strings and filters nulls`() {
         val map = mapOf<String, Any?>(
-            "participantIds" to listOf("user-1", 42, null, "user-2")
+            "participantIds" to listOf("user-1", 42L, null, "user-2")
         )
         val conv = Conversation.fromMap(map, "conv-1")
-        assertEquals(listOf("user-1", "user-2"), conv.participantIds)
+        // Numeric IDs are converted to String; nulls are filtered out
+        assertEquals(listOf("user-1", "42", "user-2"), conv.participantIds)
     }
 
     @Test
