@@ -250,15 +250,7 @@ class AuthViewModelIdentityTest {
     }
 
     @Test
-    fun checkAuthState_restoresSessionViaIdentityResolution() = runTest {
-        val identityRepo = FakeIdentityRepository().apply {
-            resolveResult = Resource.Success(SignInResult.Found(10000005))
-        }
-        val userRepo = FakeUserRepository().apply {
-            existsResult = Resource.Success(true)
-            getUserResult = Resource.Success(User(uid = "10000005", uniqueId = 10000005, acceptedLegalVersion = 999))
-        }
-        // Already authenticated (app restart scenario)
+    fun init_signsOutPersistedSession() = runTest {
         val authRepo = FakeAuthRepository(
             firebaseUid = "firebase-uid-1",
             isAuthenticated = true,
@@ -266,28 +258,28 @@ class AuthViewModelIdentityTest {
             providerInfo = "google" to "alice@gmail.com"
         )
 
-        val vm = AuthViewModel(authRepo, userRepo, FakeDeviceRepository(), identityRepo, "device-1", bypassDeviceChecks = true)
+        val vm = AuthViewModel(authRepo, FakeUserRepository(), FakeDeviceRepository(), FakeIdentityRepository(), "device-1", bypassDeviceChecks = true)
         advanceUntilIdle()
 
-        val state = vm.uiState.value
-        assertTrue(state.isAuthenticated, "Should restore session via identity resolution")
-        assertTrue(state.hasProfile)
-        assertEquals("google", identityRepo.resolvedProvider)
-        assertEquals("alice@gmail.com", identityRepo.resolvedIdentifier)
+        assertTrue(authRepo.signedOut, "Should sign out persisted session on launch")
+        assertFalse(vm.uiState.value.isAuthenticated, "Should not be auto-authenticated after init")
     }
 
     @Test
-    fun checkAuthState_identityResolutionFails_showsBackendUnreachable() = runTest {
+    fun signInWithGoogle_identityResolutionFails_showsBackendUnreachable() = runTest {
         val identityRepo = FakeIdentityRepository().apply {
             resolveResult = Resource.Error("Network error")
         }
         val authRepo = FakeAuthRepository(
-            firebaseUid = "firebase-uid-1",
-            isAuthenticated = true,
-            providerInfo = "google" to "alice@gmail.com"
+            firebaseUid = null,
+            isAuthenticated = false,
+            currentUserEmail = "alice@gmail.com"
         )
 
         val vm = AuthViewModel(authRepo, FakeUserRepository(), FakeDeviceRepository(), identityRepo, "device-1", bypassDeviceChecks = true)
+        advanceUntilIdle()
+
+        vm.signInWithGoogle("fake-id-token")
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.isBackendUnreachable, "Should show backend unreachable on identity resolution failure")
@@ -307,15 +299,17 @@ class AuthViewModelIdentityTest {
                 acceptedLegalVersion = 999
             ))
         }
-        // Simulate post-email-sign-in state: authenticated with email provider
         val authRepo = FakeAuthRepository(
-            firebaseUid = "firebase-email-uid",
-            isAuthenticated = true,
+            firebaseUid = null,
+            isAuthenticated = false,
             currentUserEmail = "emailuser@example.com",
             providerInfo = "email" to "emailuser@example.com"
         )
 
         val vm = AuthViewModel(authRepo, userRepo, FakeDeviceRepository(), identityRepo, "device-1", bypassDeviceChecks = true)
+        advanceUntilIdle()
+
+        vm.handleEmailLink("emailuser@example.com", "https://sign-in-link")
         advanceUntilIdle()
 
         val state = vm.uiState.value
@@ -341,13 +335,15 @@ class AuthViewModelIdentityTest {
             ))
         }
         val authRepo = FakeAuthRepository(
-            firebaseUid = "firebase-uid-1",
-            isAuthenticated = true,
-            currentUserEmail = "alice@gmail.com",
-            providerInfo = "google" to "alice@gmail.com"
+            firebaseUid = null,
+            isAuthenticated = false,
+            currentUserEmail = "alice@gmail.com"
         )
 
         val vm = AuthViewModel(authRepo, userRepo, FakeDeviceRepository(), identityRepo, "device-1", bypassDeviceChecks = true)
+        advanceUntilIdle()
+
+        vm.signInWithGoogle("fake-id-token")
         advanceUntilIdle()
 
         // After identity resolution, authRepo.resolvedUniqueId should be set

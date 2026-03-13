@@ -64,31 +64,11 @@ class AuthViewModel(
     private var resolvedUniqueId: String? = null
 
     init {
-        checkAuthState()
-    }
-
-    /**
-     * On app restart, if the user is already authenticated via Firebase,
-     * resolve their identity via the API to get the stable uniqueId.
-     */
-    private fun checkAuthState() {
-        logI(TAG, "Auth state check started")
-        if (!authRepository.isAuthenticated) {
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            val providerInfo = authRepository.getProviderInfo()
-            if (providerInfo == null) {
-                logW(TAG, "Authenticated but no provider info found")
-                _uiState.update { it.copy(isLoading = false) }
-                return@launch
-            }
-
-            val (provider, identifier) = providerInfo
-            resolveIdentityAndProceed(provider, identifier)
+        // Sign out any persisted Firebase session so the user always
+        // sees the sign-in screen on launch.
+        if (authRepository.isAuthenticated) {
+            logI(TAG, "Clearing persisted Firebase session on launch")
+            authRepository.signOut()
         }
     }
 
