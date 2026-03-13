@@ -1,6 +1,15 @@
 const express = require('express');
 const request = require('supertest');
 
+// ─── Must mock firebase/log before any route require ─────────────
+jest.mock('../../src/utils/firebase', () => ({
+  db: {},
+  admin: { firestore: () => ({}) },
+}));
+jest.mock('../../src/utils/log', () => ({
+  debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+}));
+
 // ─── LiveKit SDK mock ────────────────────────────────────────────
 
 const mockToJwt = jest.fn().mockResolvedValue('mock-jwt-token');
@@ -19,6 +28,11 @@ beforeEach(() => {
   jest.clearAllMocks();
   process.env.LIVEKIT_API_KEY = 'test-key';
   process.env.LIVEKIT_API_SECRET = 'test-secret';
+});
+
+afterEach(() => {
+  delete process.env.LIVEKIT_API_KEY;
+  delete process.env.LIVEKIT_API_SECRET;
 });
 
 // ─── App setup ───────────────────────────────────────────────────

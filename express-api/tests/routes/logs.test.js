@@ -1,5 +1,15 @@
 const express = require('express');
 const request = require('supertest');
+
+// Must mock firebase/log before route require (firebase.js calls process.exit without FIREBASE_DATABASE_URL)
+jest.mock('../../src/utils/firebase', () => ({
+  db: {},
+  admin: { firestore: () => ({}) },
+}));
+jest.mock('../../src/utils/log', () => ({
+  debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+}));
+
 const { createLogsRouter } = require('../../src/routes/logs');
 
 // Mock logger

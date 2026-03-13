@@ -73,8 +73,8 @@ describe('rotateLogs', () => {
     mockGet.mockResolvedValueOnce({ exists: true, data: () => ({ retentionHours: 48 }) });
 
     const docs = [
-      makeLogDoc('log1', { timestamp: '2026-01-01T00:00:00Z', level: 'INFO', message: 'hello' }),
-      makeLogDoc('log2', { timestamp: '2026-01-01T01:00:00Z', level: 'ERROR', message: 'oops' }),
+      makeLogDoc('log1', { timestamp: '2020-01-01T00:00:00Z', level: 'INFO', message: 'hello' }),
+      makeLogDoc('log2', { timestamp: '2020-01-01T01:00:00Z', level: 'ERROR', message: 'oops' }),
     ];
     // Second call: logs query
     mockGet.mockResolvedValueOnce({ empty: false, docs });
@@ -90,16 +90,16 @@ describe('rotateLogs', () => {
     // Verify NDJSON content
     const lines = body.split('\n');
     expect(lines).toHaveLength(2);
-    expect(JSON.parse(lines[0])).toEqual({ id: 'log1', timestamp: '2026-01-01T00:00:00Z', level: 'INFO', message: 'hello' });
-    expect(JSON.parse(lines[1])).toEqual({ id: 'log2', timestamp: '2026-01-01T01:00:00Z', level: 'ERROR', message: 'oops' });
+    expect(JSON.parse(lines[0])).toEqual({ id: 'log1', timestamp: '2020-01-01T00:00:00Z', level: 'INFO', message: 'hello' });
+    expect(JSON.parse(lines[1])).toEqual({ id: 'log2', timestamp: '2020-01-01T01:00:00Z', level: 'ERROR', message: 'oops' });
   });
 
   test('deletes archived docs from Firestore', async () => {
     mockGet.mockResolvedValueOnce({ exists: true, data: () => ({ retentionHours: 48 }) });
 
     const docs = [
-      makeLogDoc('log1', { timestamp: '2026-01-01T00:00:00Z', level: 'INFO', message: 'a' }),
-      makeLogDoc('log2', { timestamp: '2026-01-01T01:00:00Z', level: 'WARN', message: 'b' }),
+      makeLogDoc('log1', { timestamp: '2020-01-01T00:00:00Z', level: 'INFO', message: 'a' }),
+      makeLogDoc('log2', { timestamp: '2020-01-01T01:00:00Z', level: 'WARN', message: 'b' }),
     ];
     mockGet.mockResolvedValueOnce({ empty: false, docs });
 

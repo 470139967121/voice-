@@ -85,7 +85,7 @@ class DeviceRepositoryImplTest {
                 put("isBanned", true)
                 put("banType", "device")
                 put("reason", "Spam")
-                put("expiresAt", "2026-04-01T00:00:00Z")
+                put("expiresAt", "2099-01-01T00:00:00Z")
             })
         }
         coEvery { workerApiClient.post(any(), any()) } returns response
@@ -97,7 +97,7 @@ class DeviceRepositoryImplTest {
         assertTrue(ban.isBanned)
         assertEquals("device", ban.banType)
         assertEquals("Spam", ban.reason)
-        assertEquals("2026-04-01T00:00:00Z", ban.expiresAt)
+        assertEquals("2099-01-01T00:00:00Z", ban.expiresAt)
     }
 
     @Test

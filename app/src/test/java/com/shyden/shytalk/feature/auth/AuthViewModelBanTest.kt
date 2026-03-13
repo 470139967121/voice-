@@ -77,7 +77,7 @@ class AuthViewModelBanTest {
         setupSignInIdentity()
         coEvery { deviceRepository.getDeviceBinding(deviceId) } returns Resource.Success(uniqueIdStr)
         coEvery { deviceRepository.checkBanStatus(deviceId) } returns Resource.Success(
-            BanStatus(isBanned = true, banType = "device", reason = "Spam", expiresAt = "2026-04-01T00:00:00Z")
+            BanStatus(isBanned = true, banType = "device", reason = "Spam", expiresAt = "2099-01-01T00:00:00Z")
         )
 
         val vm = createViewModel()
@@ -89,7 +89,7 @@ class AuthViewModelBanTest {
         assertFalse(vm.uiState.value.isNetworkBanned)
         assertFalse(vm.uiState.value.isAuthenticated)
         assertEquals("Spam", vm.uiState.value.banReason)
-        assertEquals("2026-04-01T00:00:00Z", vm.uiState.value.banExpiresAt)
+        assertEquals("2099-01-01T00:00:00Z", vm.uiState.value.banExpiresAt)
     }
 
     @Test

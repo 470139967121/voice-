@@ -49,8 +49,8 @@ jest.mock('../../src/middleware/auth', () => ({
 jest.mock('../../src/utils/helpers', () => ({
   generateId: () => 'tx-123',
   now: () => 1709913600000,
-  todayStr: () => '2026-03-08',
-  yesterdayStr: () => '2026-03-07',
+  todayStr: () => new Date().toISOString().split('T')[0],
+  yesterdayStr: () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]; },
 }));
 
 beforeEach(() => {
@@ -187,7 +187,7 @@ describe('POST /api/economy/daily-reward', () => {
         exists: true,
         data: () => ({
           shyCoins: 100,
-          lastLoginRewardDate: '2026-03-08', // already claimed today
+          lastLoginRewardDate: new Date().toISOString().split('T')[0], // already claimed today
         }),
       });
     });

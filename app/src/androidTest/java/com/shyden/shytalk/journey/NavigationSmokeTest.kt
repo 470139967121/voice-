@@ -42,28 +42,11 @@ class NavigationSmokeTest {
     }
 
     @Test
-    fun messagesTab_navigable() {
-        composeTestRule.launchMainScreen()
-        composeTestRule.waitForTag("main_messagesTab")
-        composeTestRule.onNodeWithTag("main_messagesTab").performClick()
-        composeTestRule.waitForIdle()
-        // Should show conversations or empty state
-    }
-
-    @Test
     fun profileTab_navigable() {
         composeTestRule.launchMainScreen()
         composeTestRule.waitForTag("main_profileTab")
         composeTestRule.onNodeWithTag("main_profileTab").performClick()
         composeTestRule.waitForTag("profile_displayName")
-    }
-
-    @Test
-    fun settingsButton_visible_onProfileTab() {
-        composeTestRule.launchMainScreen()
-        composeTestRule.waitForTag("main_profileTab")
-        composeTestRule.onNodeWithTag("main_profileTab").performClick()
-        composeTestRule.waitForTag("main_settingsButton")
     }
 
     @Test

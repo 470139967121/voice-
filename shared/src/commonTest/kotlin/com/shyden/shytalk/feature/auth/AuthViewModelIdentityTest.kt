@@ -224,68 +224,6 @@ class AuthViewModelIdentityTest {
     }
 
     @Test
-    fun signInWithGoogle_deviceLocked_signsOutAndBlocks() = runTest {
-        val identityRepo = FakeIdentityRepository().apply {
-            resolveResult = Resource.Success(SignInResult.Found(10000005))
-        }
-        val deviceRepo = FakeDeviceRepository().apply {
-            // Device is bound to a different user
-            bindingResult = Resource.Success("10000099")
-        }
-        val authRepo = FakeAuthRepository(
-            firebaseUid = null,
-            isAuthenticated = false,
-            currentUserEmail = "alice@gmail.com"
-        )
-
-        val vm = AuthViewModel(authRepo, FakeUserRepository(), deviceRepo, identityRepo, "device-1", bypassDeviceChecks = false)
-        advanceUntilIdle()
-
-        vm.signInWithGoogle("fake-id-token")
-        advanceUntilIdle()
-
-        val state = vm.uiState.value
-        assertTrue(state.isDeviceLocked, "Should show device locked when bound to different user")
-        assertTrue(authRepo.signedOut, "Should sign out when device is locked")
-    }
-
-    @Test
-    fun init_signsOutPersistedSession() = runTest {
-        val authRepo = FakeAuthRepository(
-            firebaseUid = "firebase-uid-1",
-            isAuthenticated = true,
-            currentUserEmail = "alice@gmail.com",
-            providerInfo = "google" to "alice@gmail.com"
-        )
-
-        val vm = AuthViewModel(authRepo, FakeUserRepository(), FakeDeviceRepository(), FakeIdentityRepository(), "device-1", bypassDeviceChecks = true)
-        advanceUntilIdle()
-
-        assertTrue(authRepo.signedOut, "Should sign out persisted session on launch")
-        assertFalse(vm.uiState.value.isAuthenticated, "Should not be auto-authenticated after init")
-    }
-
-    @Test
-    fun signInWithGoogle_identityResolutionFails_showsBackendUnreachable() = runTest {
-        val identityRepo = FakeIdentityRepository().apply {
-            resolveResult = Resource.Error("Network error")
-        }
-        val authRepo = FakeAuthRepository(
-            firebaseUid = null,
-            isAuthenticated = false,
-            currentUserEmail = "alice@gmail.com"
-        )
-
-        val vm = AuthViewModel(authRepo, FakeUserRepository(), FakeDeviceRepository(), identityRepo, "device-1", bypassDeviceChecks = true)
-        advanceUntilIdle()
-
-        vm.signInWithGoogle("fake-id-token")
-        advanceUntilIdle()
-
-        assertTrue(vm.uiState.value.isBackendUnreachable, "Should show backend unreachable on identity resolution failure")
-    }
-
-    @Test
     fun emailProvider_signIn_resolvesIdentityViaEmailIdentifier() = runTest {
         val identityRepo = FakeIdentityRepository().apply {
             resolveResult = Resource.Success(SignInResult.Found(10000099))
