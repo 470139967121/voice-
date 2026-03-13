@@ -16,7 +16,7 @@ env:
 
 concurrency:
   group: release-pipeline
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   # ──────────────────────────────────────────────
