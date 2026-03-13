@@ -426,7 +426,7 @@ class ProfileViewModelTest {
     fun `uploadProfilePhoto - success updates user`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://photo.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "profiles", any()) } returns Resource.Success("https://photo.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -473,7 +473,7 @@ class ProfileViewModelTest {
         val oldUrl = "https://firebase.storage/old-profile.jpg"
         val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = oldUrl)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://new.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "profiles", any()) } returns Resource.Success("https://new.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -491,7 +491,7 @@ class ProfileViewModelTest {
     fun `uploadProfilePhoto - no old photo skips delete`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = null)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://new.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "profiles", any()) } returns Resource.Success("https://new.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -548,7 +548,7 @@ class ProfileViewModelTest {
     fun `uploadCoverPhoto - success updates user`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "cover_photos", any()) } returns Resource.Success("https://cover.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "covers", any()) } returns Resource.Success("https://cover.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -568,7 +568,7 @@ class ProfileViewModelTest {
         val oldUrl = "https://firebase.storage/old-cover.jpg"
         val user = TestData.createTestUser(uid = currentUserId, coverPhotoUrl = oldUrl)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "cover_photos", any()) } returns Resource.Success("https://new-cover.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "covers", any()) } returns Resource.Success("https://new-cover.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -1523,5 +1523,43 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { reportRepository.reportUser(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    // ===== Upload folder name verification =====
+
+    @Test
+    fun `uploadProfilePhoto uses profiles folder`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val folderSlot = io.mockk.slot<String>()
+        coEvery { storageRepository.uploadImage(any(), capture(folderSlot), any()) } returns Resource.Success("https://photo.url")
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadProfilePhoto(byteArrayOf(1, 2, 3))
+        advanceUntilIdle()
+
+        assertEquals("profiles", folderSlot.captured)
+    }
+
+    @Test
+    fun `uploadCoverPhoto uses covers folder`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val folderSlot = io.mockk.slot<String>()
+        coEvery { storageRepository.uploadImage(any(), capture(folderSlot), any()) } returns Resource.Success("https://cover.url")
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadCoverPhoto(byteArrayOf(1, 2, 3))
+        advanceUntilIdle()
+
+        assertEquals("covers", folderSlot.captured)
     }
 }

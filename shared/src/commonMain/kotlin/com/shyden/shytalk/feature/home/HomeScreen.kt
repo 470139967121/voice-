@@ -1,5 +1,6 @@
 package com.shyden.shytalk.feature.home
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,8 +60,8 @@ fun RoomListContent(
 
     LaunchedEffect(uiState.createdRoomId) {
         uiState.createdRoomId?.let { roomId ->
-            viewModel.onRoomNavigated()
             onNavigateToRoom(roomId)
+            viewModel.onRoomNavigated()
         }
     }
 
@@ -134,6 +135,7 @@ fun RoomListContent(
                     } else {
                         LazyColumn(
                             state = listState,
+                            verticalArrangement = Arrangement.Top,
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(uiState.rooms, key = { it.roomId }) { room ->

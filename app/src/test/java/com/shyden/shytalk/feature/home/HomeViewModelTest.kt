@@ -57,6 +57,7 @@ class HomeViewModelTest {
         every { roomRepository.getActiveRooms() } returns roomsFlow
         every { userRepository.userUpdates } returns MutableSharedFlow()
         coEvery { userRepository.getBlockedUserIds(currentUserId) } returns Resource.Success(emptySet())
+        coEvery { roomRepository.findActiveRoomByOwner(any()) } returns null
     }
 
     @After
@@ -530,6 +531,38 @@ class HomeViewModelTest {
 
         assertNull(vm.uiState.value.error)
         assertEquals("room-2", vm.uiState.value.createdRoomId)
+    }
+
+    // ===== createRoom - duplicate room prevention =====
+
+    @Test
+    fun `createRoom fails when user already has active room after close attempt`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+        // closeAllRoomsByOwner runs but an active room still exists (race condition / failed close)
+        coEvery { roomRepository.findActiveRoomByOwner(currentUserId) } returns "existing-room-id"
+
+        vm.createRoom("New Room")
+        advanceUntilIdle()
+
+        // Should NOT call createRoom if an active room still exists
+        coVerify(exactly = 0) { roomRepository.createRoom(any(), any()) }
+        assertNotNull(vm.uiState.value.error)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `createRoom proceeds when no active room exists after close`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+        coEvery { roomRepository.findActiveRoomByOwner(currentUserId) } returns null
+        coEvery { roomRepository.createRoom(any(), any()) } returns Resource.Success("new-room-id")
+
+        vm.createRoom("New Room")
+        advanceUntilIdle()
+
+        coVerify { roomRepository.createRoom("New Room", currentUserId) }
+        assertEquals("new-room-id", vm.uiState.value.createdRoomId)
     }
 
     @Test

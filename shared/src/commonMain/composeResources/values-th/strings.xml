@@ -548,6 +548,9 @@
     <string name="provider_email">อีเมล</string>
     <string name="no_linked_accounts">ไม่พบบัญชีที่เชื่อมต่อ</string>
     <string name="unlinking_provider">กำลังยกเลิกการเชื่อมต่อ…</string>
+    <string name="connect_account">เชื่อมต่อบัญชี</string>
+    <string name="connect">เชื่อมต่อ</string>
+    <string name="signed_in_with">Signed in with</string>
 
     <string name="enable_dnd">Enable Do Not Disturb</string>
     <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
@@ -577,11 +580,11 @@
     <string name="error_upload_group_photo">Failed to upload group photo</string>
     <string name="everyone">Everyone</string>
     <string name="hide_age">Hide Age</string>
-    <string name="hide_age_description">Others won\'t see your age on your profile.</string>
-    <string name="hide_following_description">Others won\'t see who you follow. Followers are always visible.</string>
+    <string name="hide_age_description">Others won&apos;t see your age on your profile.</string>
+    <string name="hide_following_description">Others won&apos;t see who you follow. Followers are always visible.</string>
     <string name="hide_following_list">Hide Following List</string>
     <string name="hide_online_status">Hide Online Status</string>
-    <string name="hide_online_status_description">Others won\'t see when you\'re online.</string>
+    <string name="hide_online_status_description">Others won&apos;t see when you&apos;re online.</string>
     <string name="i_understand">I Understand</string>
     <string name="i_understand_and_accept">I Understand and Accept</string>
     <string name="kick_reason">Reason: %1$s</string>
@@ -603,7 +606,7 @@
     <string name="notice">Notice</string>
     <string name="notification_sound">Notification Sound</string>
     <string name="notification_sound_description">Play a sound when a new message arrives.</string>
-    <string name="notifications_permission_description">Receive alerts when you\'re in a live room in the background.</string>
+    <string name="notifications_permission_description">Receive alerts when you&apos;re in a live room in the background.</string>
     <string name="official_warning">Official Warning</string>
     <string name="overlay_permission_description">Show a floating bubble when you leave a voice room, so you can quickly return.</string>
     <string name="people_i_follow">People I follow</string>
@@ -618,7 +621,7 @@
     <string name="retrying">Retrying…</string>
     <string name="room_alerts">Room Alerts</string>
     <string name="self_destruct_countdown">Self-Destruct Countdown</string>
-    <string name="self_destruct_description">Play a voice announcement when a room\'s 5-minute self-destruct timer starts or stops.</string>
+    <string name="self_destruct_description">Play a voice announcement when a room&apos;s 5-minute self-destruct timer starts or stops.</string>
     <string name="show_date_separators">Show Date Separators</string>
     <string name="show_date_separators_description">Show date labels between messages on different days.</string>
     <string name="show_timestamps">Show Timestamps</string>
@@ -630,6 +633,7 @@
     <string name="email_link_sent">ตรวจสอบอีเมลของคุณ</string>
     <string name="check_your_email_description">เราส่งลิงก์เข้าสู่ระบบไปยังอีเมลของคุณแล้ว แตะลิงก์เพื่อดำเนินการต่อ</string>
     <string name="signing_in">Signing in…</string>
+    <string name="error_disposable_email">Disposable email addresses are not allowed. Please use a permanent email address.</string>
     <string name="stalkers">Stalkers</string>
     <string name="start">Start</string>
     <string name="submit_appeal">Submit Appeal</string>
@@ -655,7 +659,7 @@
     <string name="unblock_confirm">Unblock %1$s?</string>
     <string name="unblock_description">They will be able to view your profile again.</string>
     <string name="up_to_date">Up to Date</string>
-    <string name="up_to_date_description">You\'re on the latest version.</string>
+    <string name="up_to_date_description">You&apos;re on the latest version.</string>
     <string name="update_available">Update Available</string>
     <string name="update_available_description">Version %1$s is available.</string>
     <string name="update_available_soft">A new version (%1$s) of ShyTalk is available.</string>

@@ -265,6 +265,16 @@ class HomeViewModel(
             // Close old rooms BEFORE creating new one to avoid race where the
             // closeAll query picks up the newly-created room and closes it.
             roomRepository.closeAllRoomsByOwner(userId)
+
+            // Safety check: verify no active room remains after close attempt.
+            // This prevents duplicate rooms from race conditions or failed closes.
+            val existingRoomId = roomRepository.findActiveRoomByOwner(userId)
+            if (existingRoomId != null) {
+                logE(TAG, "Active room still exists after close attempt: $existingRoomId")
+                _uiState.update { it.copy(isLoading = false, error = "You already have an active room") }
+                return@launch
+            }
+
             when (val result = roomRepository.createRoom(name, userId)) {
                 is Resource.Success -> {
                     logI(TAG, "Room created: id=${result.data}")

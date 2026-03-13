@@ -353,14 +353,14 @@ class ProfileViewModel(
 
     fun uploadProfilePhoto(imageData: ByteArray) {
         val oldUrl = _uiState.value.user?.profilePhotoUrl
-        uploadPhoto(imageData, "profile_photos", "profilePhotoUrl", oldUrl) { url ->
+        uploadPhoto(imageData, "profiles", "profilePhotoUrl", oldUrl) { url ->
             _uiState.value.user?.copy(profilePhotoUrl = url)
         }
     }
 
     fun uploadCoverPhoto(imageData: ByteArray) {
         val oldUrl = _uiState.value.user?.coverPhotoUrl
-        uploadPhoto(imageData, "cover_photos", "coverPhotoUrl", oldUrl) { url ->
+        uploadPhoto(imageData, "covers", "coverPhotoUrl", oldUrl) { url ->
             _uiState.value.user?.copy(coverPhotoUrl = url)
         }
     }

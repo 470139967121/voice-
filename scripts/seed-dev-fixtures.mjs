@@ -68,6 +68,16 @@ async function seed() {
     { id: 'ff1', text: 'Honey never spoils.', category: 'science' },
     { id: 'ff2', text: 'Octopuses have three hearts.', category: 'animals' },
     { id: 'ff3', text: 'Bananas are berries, but strawberries are not.', category: 'food' },
+    { id: 'ff4', text: 'There are over 7,000 languages spoken worldwide.', category: 'language' },
+    { id: 'ff5', text: 'Mandarin Chinese has the most native speakers of any language.', category: 'language' },
+    { id: 'ff6', text: 'The word "emoji" comes from Japanese: e (picture) + moji (character).', category: 'language' },
+    { id: 'ff7', text: 'Papua New Guinea has over 840 living languages — the most of any country.', category: 'language' },
+    { id: 'ff8', text: 'The shortest complete sentence in English is "I am."', category: 'language' },
+    { id: 'ff9', text: 'In Japan, bowing is a common greeting that shows respect.', category: 'culture' },
+    { id: 'ff10', text: 'In many Middle Eastern countries, it is polite to refuse a gift before accepting it.', category: 'culture' },
+    { id: 'ff11', text: 'Tipping is considered rude in Japan and South Korea.', category: 'culture' },
+    { id: 'ff12', text: 'In Thailand, the head is considered the most sacred part of the body.', category: 'culture' },
+    { id: 'ff13', text: 'Diwali, the festival of lights, is celebrated by over a billion people worldwide.', category: 'culture' },
   ];
 
   for (const f of funFacts) {
@@ -88,6 +98,21 @@ async function seed() {
     endDate: null,
   }, { merge: true });
   console.log('  Created 1 banner');
+
+  // Coin packages
+  const coinPackages = [
+    { id: 'cp_100', name: '100 Coins', coins: 100, price: 0.99, currency: 'USD', order: 1, isActive: true, isBestValue: false },
+    { id: 'cp_500', name: '500 Coins', coins: 500, price: 3.99, currency: 'USD', order: 2, isActive: true, isBestValue: false },
+    { id: 'cp_1200', name: '1,200 Coins', coins: 1200, price: 7.99, currency: 'USD', order: 3, isActive: true, isBestValue: true },
+    { id: 'cp_3000', name: '3,000 Coins', coins: 3000, price: 17.99, currency: 'USD', order: 4, isActive: true, isBestValue: false },
+    { id: 'cp_6500', name: '6,500 Coins', coins: 6500, price: 34.99, currency: 'USD', order: 5, isActive: true, isBestValue: false },
+    { id: 'cp_15000', name: '15,000 Coins', coins: 15000, price: 69.99, currency: 'USD', order: 6, isActive: true, isBestValue: false },
+  ];
+
+  for (const cp of coinPackages) {
+    await db.doc(`coinPackages/${cp.id}`).set({ ...cp, createdAt: Date.now() }, { merge: true });
+  }
+  console.log(`  Created ${coinPackages.length} coin packages`);
 
   // Economy config
   await db.doc('config/economy').set({

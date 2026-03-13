@@ -11,7 +11,9 @@ import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
+import com.shyden.shytalk.core.model.LinkedProvider
 import com.shyden.shytalk.core.model.ProviderType
+import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.IdentityRepository
@@ -55,7 +57,8 @@ data class AppSettingsUiState(
     val showClearCacheDialog: Boolean = false,
     val updateCheckResult: UpdateCheckResult? = null,
     val isCheckingUpdate: Boolean = false,
-    val language: String = LanguagePreference.get()
+    val language: String = LanguagePreference.get(),
+    val currentSignInProvider: String? = null
 )
 
 class AppSettingsViewModel(
@@ -88,6 +91,7 @@ class AppSettingsViewModel(
         if (currentUserId.isEmpty()) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
+            val providerInfo = authRepository.getProviderInfo()
             when (val result = userRepository.getUser(currentUserId)) {
                 is Resource.Success -> {
                     val user = result.data
@@ -117,7 +121,8 @@ class AppSettingsViewModel(
                             dndEndMinute = user.dndEndMinute,
                             minGiftAnimationValue = user.minGiftAnimationValue,
                             selfDestructAlertEnabled = user.selfDestructAlertEnabled,
-                            language = user.language
+                            language = user.language,
+                            currentSignInProvider = providerInfo?.first
                         )
                     }
                 }
@@ -356,6 +361,38 @@ class AppSettingsViewModel(
                     logE(TAG, "Failed to unlink ${type.key}:$identifier")
                     _uiState.update {
                         it.copy(isUnlinkingProvider = false, error = UiText.res(Res.string.error_update_privacy))
+                    }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun linkProvider(type: ProviderType, identifier: String) {
+        val user = _uiState.value.user ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUnlinkingProvider = true) }
+            when (identityRepository.linkProvider(user.uniqueId, type.key, identifier)) {
+                is Resource.Success -> {
+                    logI(TAG, "Linked ${type.key}:$identifier")
+                    val newProvider = LinkedProvider(
+                        type = type,
+                        identifier = identifier,
+                        active = true,
+                        linkedAt = currentTimeMillis()
+                    )
+                    val updatedProviders = user.providers + newProvider
+                    _uiState.update {
+                        it.copy(
+                            isUnlinkingProvider = false,
+                            user = user.copy(providers = updatedProviders)
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    logE(TAG, "Failed to link ${type.key}:$identifier")
+                    _uiState.update {
+                        it.copy(isUnlinkingProvider = false, error = UiText.plain("Failed to link account"))
                     }
                 }
                 is Resource.Loading -> {}

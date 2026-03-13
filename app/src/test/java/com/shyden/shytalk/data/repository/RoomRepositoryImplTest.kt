@@ -370,6 +370,36 @@ class RoomRepositoryImplTest {
 
     // endregion
 
+    // region findActiveRoomByOwner
+
+    @Test
+    fun `findActiveRoomByOwner returns roomId when active room exists`() = runTest {
+        val mockDoc = mockk<DocumentSnapshot>(relaxed = true)
+        every { mockDoc.id } returns "active-room-id"
+        every { mockQuerySnapshot.documents } returns listOf(mockDoc)
+
+        val result = repo.findActiveRoomByOwner("owner-1")
+        assertTrue(result == "active-room-id")
+    }
+
+    @Test
+    fun `findActiveRoomByOwner returns null when no active room exists`() = runTest {
+        every { mockQuerySnapshot.documents } returns emptyList()
+
+        val result = repo.findActiveRoomByOwner("owner-1")
+        assertTrue(result == null)
+    }
+
+    @Test
+    fun `findActiveRoomByOwner returns null on exception`() = runTest {
+        every { mockQuery.get() } returns Tasks.forException(RuntimeException("Network error"))
+
+        val result = repo.findActiveRoomByOwner("owner-1")
+        assertTrue(result == null)
+    }
+
+    // endregion
+
     // region removeDisconnectedUser
 
     @Test

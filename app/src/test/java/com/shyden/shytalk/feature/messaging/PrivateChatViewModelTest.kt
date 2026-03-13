@@ -1835,4 +1835,44 @@ class PrivateChatViewModelTest {
         assertFalse("isLoading should be false after failure", vm.uiState.value.isLoading)
         assertNotNull("error should be set", vm.uiState.value.error)
     }
+
+    // ===== Empty state (Bug 9: loading spinner stuck) =====
+
+    @Test
+    fun `isLoading is false after conversation loaded with no messages`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Emit empty messages from the Firestore listener
+        messagesFlow.emit(emptyList())
+        advanceUntilIdle()
+
+        assertFalse("isLoading should be false after init completes", vm.uiState.value.isLoading)
+        assertTrue("messages should be empty", vm.uiState.value.messages.isEmpty())
+        assertNull("error should be null when no error occurred", vm.uiState.value.error)
+    }
+
+    @Test
+    fun `isLoading is false after successful init completes`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse("isLoading should be false after init completes", vm.uiState.value.isLoading)
+        assertEquals("conversationId should be set", conversationId, vm.uiState.value.conversationId)
+    }
+
+    @Test
+    fun `empty messages list does not show error state`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        messagesFlow.emit(emptyList())
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertFalse("isLoading should be false", state.isLoading)
+        assertTrue("messages should be empty", state.messages.isEmpty())
+        assertNull("error should be null for empty messages (not an error)", state.error)
+        assertFalse("isBlocked should be false", state.isBlocked)
+    }
 }

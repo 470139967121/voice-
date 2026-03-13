@@ -451,6 +451,29 @@ fun PrivateChatScreen(
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
+                // Empty state when no messages and not loading
+                val displayMessages = if (uiState.isSearching && uiState.searchQuery.length >= 2) uiState.searchResults else uiState.messages
+                if (displayMessages.isEmpty() && !uiState.isSearching) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = stringResource(Res.string.no_messages),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(Res.string.start_conversation),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),

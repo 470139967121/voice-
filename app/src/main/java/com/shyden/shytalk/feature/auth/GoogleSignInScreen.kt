@@ -1,5 +1,6 @@
 package com.shyden.shytalk.feature.auth
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -12,10 +13,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -242,10 +245,10 @@ fun GoogleSignInScreen(
             var isSigningIn by remember { mutableStateOf(false) }
             val isBusy = uiState.isLoading || isSigningIn
 
-            // Google Sign-In button
-            Button(
+            // Google Sign-In button (Google-branded: white/surface background with outline)
+            OutlinedButton(
                 onClick = {
-                    if (isBusy) return@Button
+                    if (isBusy) return@OutlinedButton
                     isSigningIn = true
                     scope.launch {
                         try {
@@ -279,17 +282,28 @@ fun GoogleSignInScreen(
                     }
                 },
                 enabled = !isBusy,
-                modifier = Modifier.fillMaxWidth().testTag("signIn_googleButton")
+                modifier = Modifier.fillMaxWidth().testTag("signIn_googleButton"),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 if (isBusy) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp).testTag("signIn_loadingIndicator"),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(Res.string.signing_in))
                 } else {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(Res.string.sign_in_with_google))
                 }
             }
@@ -354,7 +368,7 @@ fun GoogleSignInScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedButton(
+                Button(
                     onClick = {
                         val email = emailInput.trim()
                         context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)

@@ -642,6 +642,37 @@ class AuthViewModelTest {
     // ===== Email sign-in =====
 
     @Test
+    fun `signInWithEmail rejects disposable email domains`() = runTest {
+        every { authRepository.isAuthenticated } returns false
+        every { authRepository.currentUserId } returns null
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.signInWithEmail("test@mailinator.com")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.error is UiText.Res)
+        assertFalse(vm.uiState.value.awaitingEmailLink)
+        assertFalse(vm.uiState.value.isLoading)
+        coVerify(exactly = 0) { authRepository.sendSignInLink(any()) }
+    }
+
+    @Test
+    fun `signInWithEmail accepts normal email domains`() = runTest {
+        every { authRepository.isAuthenticated } returns false
+        every { authRepository.currentUserId } returns null
+        coEvery { authRepository.sendSignInLink("test@gmail.com") } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        vm.signInWithEmail("test@gmail.com")
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.error)
+        assertTrue(vm.uiState.value.awaitingEmailLink)
+    }
+
+    @Test
     fun `signInWithEmail sends link and sets awaitingEmailLink state`() = runTest {
         every { authRepository.isAuthenticated } returns false
         every { authRepository.currentUserId } returns null

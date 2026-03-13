@@ -49,6 +49,7 @@ class AppSettingsViewModelTest {
     @Before
     fun setup() {
         every { authRepository.currentUserId } returns currentUserId
+        every { authRepository.getProviderInfo() } returns null
 
         // Default: user with no blocked users
         val user = TestData.createTestUser(uid = currentUserId)
@@ -774,5 +775,73 @@ class AppSettingsViewModelTest {
         assertEquals(2, vm.uiState.value.user!!.activeProviders.size)
         assertTrue(vm.uiState.value.error is UiText.Res)
         assertFalse(vm.uiState.value.isUnlinkingProvider)
+    }
+
+    // ===== linkProvider =====
+
+    @Test
+    fun `linkProvider calls identityRepository linkProvider`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId).copy(uniqueId = 12345L)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        coEvery { identityRepository.linkProvider(12345L, "google", "user@gmail.com") } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.linkProvider(ProviderType.GOOGLE, "user@gmail.com")
+        advanceUntilIdle()
+
+        coVerify { identityRepository.linkProvider(12345L, "google", "user@gmail.com") }
+    }
+
+    @Test
+    fun `linkProvider success adds provider to user`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId).copy(
+            uniqueId = 12345L,
+            providers = listOf(googleProvider)
+        )
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        coEvery { identityRepository.linkProvider(12345L, "email", "test@example.com") } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.user!!.activeProviders.size)
+
+        vm.linkProvider(ProviderType.EMAIL, "test@example.com")
+        advanceUntilIdle()
+
+        val updatedUser = vm.uiState.value.user!!
+        assertEquals(2, updatedUser.activeProviders.size)
+        assertTrue(updatedUser.hasProvider(ProviderType.EMAIL))
+        assertFalse(vm.uiState.value.isUnlinkingProvider)
+    }
+
+    @Test
+    fun `linkProvider error shows error message`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId).copy(uniqueId = 12345L)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        coEvery { identityRepository.linkProvider(12345L, "email", "test@example.com") } returns Resource.Error("Failed")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.linkProvider(ProviderType.EMAIL, "test@example.com")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.error is UiText.Plain)
+        assertFalse(vm.uiState.value.isUnlinkingProvider)
+    }
+
+    @Test
+    fun `linkProvider does nothing when no user`() = runTest {
+        every { authRepository.currentUserId } returns null
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.linkProvider(ProviderType.GOOGLE, "user@gmail.com")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { identityRepository.linkProvider(any(), any(), any()) }
     }
 }

@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.util.DisposableEmailDomains
 import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.UiText
@@ -313,6 +314,11 @@ class AuthViewModel(
     }
 
     fun signInWithEmail(email: String) {
+        if (DisposableEmailDomains.isDisposable(email)) {
+            logW(TAG, "Blocked disposable email domain: ${email.substringAfter("@")}")
+            _uiState.update { it.copy(error = UiText.res(Res.string.error_disposable_email)) }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             when (val result = authRepository.sendSignInLink(email)) {

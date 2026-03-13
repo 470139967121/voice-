@@ -31,6 +31,7 @@ import com.shyden.shytalk.testutil.MainDispatcherRule
 import com.shyden.shytalk.testutil.TestData
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -3935,5 +3936,49 @@ class RoomViewModelTest {
         advanceTimeBy(100L)
 
         assertEquals("No seats available", viewModel.uiState.value.error)
+    }
+
+    // ===== Join Room Operation Order Tests (Bug 6 fix) =====
+
+    @Test
+    fun `handleFirstJoin - non-owner calls joinRoom before recordFirstJoinTimestamp`() = roomTest {
+        viewModel = createViewModel()
+
+        // Emit room where current user is NOT in participantIds (new join)
+        val room = TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId)
+        )
+        coEvery { userRepository.getUser(ownerId) } returns Resource.Success(
+            TestData.createTestUser(uid = ownerId, displayName = "Owner")
+        )
+        // Mock checkBlockedBy to return no conflicts so joinRoom() is called
+        coEvery { userRepository.checkBlockedBy(any(), any()) } returns Resource.Success(emptySet<String>())
+        roomFlow.value = room
+        advanceUntilIdle()
+
+        coVerifyOrder {
+            roomRepository.joinRoom("room-1", currentUserId)
+            roomRepository.recordFirstJoinTimestamp("room-1", currentUserId)
+        }
+    }
+
+    @Test
+    fun `handleFirstJoin - joinRoom is called with correct roomId and userId`() = roomTest {
+        viewModel = createViewModel()
+
+        // Emit room where current user is NOT in participantIds (new join)
+        val room = TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId)
+        )
+        coEvery { userRepository.getUser(ownerId) } returns Resource.Success(
+            TestData.createTestUser(uid = ownerId, displayName = "Owner")
+        )
+        coEvery { userRepository.checkBlockedBy(any(), any()) } returns Resource.Success(emptySet<String>())
+        roomFlow.value = room
+        advanceUntilIdle()
+
+        coVerify { roomRepository.joinRoom("room-1", currentUserId) }
     }
 }

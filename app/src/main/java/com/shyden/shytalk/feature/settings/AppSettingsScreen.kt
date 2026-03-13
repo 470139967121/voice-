@@ -159,6 +159,7 @@ fun AppSettingsScreen(
                 uiState = uiState,
                 onBack = { currentPageName = SettingsPage.Account.name },
                 onUnlinkProvider = { type, identifier -> viewModel.unlinkProvider(type, identifier) },
+                onLinkProvider = { type -> viewModel.linkProvider(type, "") },
                 snackbarHostState = snackbarHostState
             )
             SettingsPage.Privacy -> PrivacyPage(
@@ -647,6 +648,12 @@ private fun AccountPage(
                     SettingsRow(stringResource(Res.string.email), censorEmail(email))
                 }
             }
+            uiState.currentSignInProvider?.let { provider ->
+                SettingsRow(
+                    stringResource(Res.string.signed_in_with),
+                    provider.replaceFirstChar { it.uppercase() }
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
@@ -699,6 +706,7 @@ private fun LinkedAccountsPage(
     uiState: AppSettingsUiState,
     onBack: () -> Unit,
     onUnlinkProvider: (ProviderType, String) -> Unit,
+    onLinkProvider: (ProviderType) -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
     var showUnlinkDialog by remember { mutableStateOf<LinkedProvider?>(null) }
@@ -738,6 +746,42 @@ private fun LinkedAccountsPage(
                             onUnlink = { showUnlinkDialog = provider }
                         )
                         HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                    }
+                }
+
+                // Show "Connect" buttons for providers not yet linked
+                val allProviderTypes = listOf(ProviderType.GOOGLE, ProviderType.APPLE, ProviderType.EMAIL)
+                val linkedTypes = user.activeProviders.map { it.type }.toSet()
+                val unlinkedTypes = allProviderTypes.filter { it !in linkedTypes }
+
+                if (unlinkedTypes.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(Res.string.connect_account),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                    unlinkedTypes.forEach { type ->
+                        OutlinedButton(
+                            onClick = { onLinkProvider(type) },
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = when (type) {
+                                    ProviderType.GOOGLE -> Icons.Default.Person
+                                    ProviderType.APPLE -> Icons.Default.Lock
+                                    ProviderType.EMAIL -> Icons.Default.Link
+                                    else -> Icons.Default.Link
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(Res.string.connect) + " " + providerDisplayName(type))
+                        }
                     }
                 }
             }

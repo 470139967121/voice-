@@ -829,10 +829,17 @@ class RoomViewModel(
 
             // Run all independent operations in parallel for faster room join
             // Firestore room writes (sequential — same document)
+            // joinRoom MUST come before recordFirstJoinTimestamp because joinRoom
+            // adds the user to participantIds, which is required by Firestore
+            // security rules before they can write to firstJoinTimestamps.
             launch {
-                roomRepository.leaveAllRooms(userId, exceptRoomId = roomId)
-                roomRepository.recordFirstJoinTimestamp(roomId, userId)
-                roomRepository.joinRoom(roomId, userId)
+                try {
+                    roomRepository.leaveAllRooms(userId, exceptRoomId = roomId)
+                    roomRepository.joinRoom(roomId, userId)
+                    roomRepository.recordFirstJoinTimestamp(roomId, userId)
+                } catch (e: Exception) {
+                    logE(TAG, "Failed to join room: ${e.message}")
+                }
             }
             // RTDB presence (independent)
             launch { presenceService.setPresence(roomId, userId) }
