@@ -62,3 +62,12 @@ iosApp/iosApp.xcodeproj/project.xcworkspace/xcuserdata/
 iosApp/DerivedData/
 iosApp/Pods/
 *.xcarchive
+
+# Test results
+test-results/
+
+# IDE artifacts
+/.idea/artifacts/
+
+# Claude Code agents (auto-generated)
+.claude/agents/

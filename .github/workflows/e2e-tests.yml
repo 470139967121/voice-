@@ -1,0 +1,515 @@
+name: E2E Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to test'
+        required: true
+        type: choice
+        options:
+          - both
+          - android
+          - ios
+        default: both
+      parallel:
+        description: 'Run matrix jobs in parallel'
+        required: true
+        type: boolean
+        default: true
+
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  issues: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: e2e-tests-${{ github.event.inputs.platform || 'comment' }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Parse PR comment trigger ──────────────────────────────────
+  parse-comment:
+    name: Parse Comment
+    if: github.event_name == 'issue_comment'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      should_run: ${{ steps.parse.outputs.should_run }}
+      platform: ${{ steps.parse.outputs.platform }}
+      ref: ${{ steps.parse.outputs.ref }}
+    steps:
+      - name: Parse /run-e2e comment
+        id: parse
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            const comment = context.payload.comment.body.trim();
+            const issue = context.payload.issue;
+
+            // Only react to /run-e2e commands on PRs
+            if (!issue.pull_request) {
+              core.setOutput('should_run', 'false');
+              return;
+            }
+
+            const match = comment.match(/^\/run-e2e(?:\s+(android|ios|all|both))?$/i);
+            if (!match) {
+              core.setOutput('should_run', 'false');
+              return;
+            }
+
+            // Check if commenter has write access
+            const { data: permLevel } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.payload.comment.user.login,
+            });
+            if (!['admin', 'write'].includes(permLevel.permission)) {
+              core.setOutput('should_run', 'false');
+              return;
+            }
+
+            // Get PR head ref
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: issue.number,
+            });
+
+            let platform = (match[1] || 'both').toLowerCase();
+            if (platform === 'all') platform = 'both';
+
+            core.setOutput('should_run', 'true');
+            core.setOutput('platform', platform);
+            core.setOutput('ref', pr.head.sha);
+
+            // React to the comment with a rocket emoji
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket',
+            });
+
+  # ── Resolve inputs ────────────────────────────────────────────
+  resolve-inputs:
+    name: Resolve Inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [parse-comment]
+    if: |
+      always() &&
+      (github.event_name == 'workflow_dispatch' ||
+       (needs.parse-comment.result == 'success' && needs.parse-comment.outputs.should_run == 'true'))
+    outputs:
+      platform: ${{ steps.resolve.outputs.platform }}
+      run_android: ${{ steps.resolve.outputs.run_android }}
+      run_ios: ${{ steps.resolve.outputs.run_ios }}
+      parallel: ${{ steps.resolve.outputs.parallel }}
+      ref: ${{ steps.resolve.outputs.ref }}
+    steps:
+      - name: Resolve platform and ref
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PLATFORM="${{ github.event.inputs.platform }}"
+            PARALLEL="${{ github.event.inputs.parallel }}"
+            REF="${{ github.sha }}"
+          else
+            PLATFORM="${{ needs.parse-comment.outputs.platform }}"
+            PARALLEL="true"
+            REF="${{ needs.parse-comment.outputs.ref }}"
+          fi
+
+          echo "platform=$PLATFORM" >> "$GITHUB_OUTPUT"
+          echo "parallel=$PARALLEL" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+          if [ "$PLATFORM" = "android" ] || [ "$PLATFORM" = "both" ]; then
+            echo "run_android=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_android=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$PLATFORM" = "ios" ] || [ "$PLATFORM" = "both" ]; then
+            echo "run_ios=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_ios=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── Build Android test APKs ───────────────────────────────────
+  build-android:
+    name: Build Android
+    needs: [resolve-inputs]
+    if: needs.resolve-inputs.outputs.run_android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.resolve-inputs.outputs.ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+        with:
+          cache-read-only: false
+
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_DEV_BASE64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
+        run: |
+          mkdir -p app/src/dev app/src/prod
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/dev/google-services.json
+          # Prod slot uses DEV config too — avoids any accidental prod data/service access.
+          # Only needed to satisfy Gradle compilation (prod flavor resolves google-services.json).
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/prod/google-services.json
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+
+      - name: Build app and test APKs
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+        run: ./gradlew assembleDevDebug assembleDevDebugAndroidTest --parallel
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: android-test-apks
+          path: |
+            app/build/outputs/apk/dev/debug/*.apk
+            app/build/outputs/apk/androidTest/dev/debug/*.apk
+          retention-days: 3
+
+  # ── Android E2E test matrix ───────────────────────────────────
+  test-android:
+    name: "Android E2E (API ${{ matrix.api-level }}, ${{ matrix.form-factor }})"
+    needs: [resolve-inputs, build-android]
+    if: needs.resolve-inputs.outputs.run_android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(needs.resolve-inputs.outputs.parallel && '99' || '1') }}
+      matrix:
+        api-level: [28, 30, 33, 35]
+        form-factor: [phone, tablet]
+        include:
+          # Phone profiles
+          - api-level: 28
+            form-factor: phone
+            profile: pixel_2
+            ram-size: 2048
+          - api-level: 30
+            form-factor: phone
+            profile: pixel_4
+            ram-size: 2048
+          - api-level: 33
+            form-factor: phone
+            profile: pixel_6
+            ram-size: 4096
+          - api-level: 35
+            form-factor: phone
+            profile: pixel_8
+            ram-size: 4096
+          # Tablet profiles
+          - api-level: 28
+            form-factor: tablet
+            profile: Nexus 9
+            ram-size: 2048
+          - api-level: 30
+            form-factor: tablet
+            profile: Nexus 9
+            ram-size: 2048
+          - api-level: 33
+            form-factor: tablet
+            profile: pixel_tablet
+            ram-size: 4096
+          - api-level: 35
+            form-factor: tablet
+            profile: pixel_tablet
+            ram-size: 4096
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.resolve-inputs.outputs.ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+        with:
+          cache-read-only: false
+
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_DEV_BASE64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
+        run: |
+          mkdir -p app/src/dev app/src/prod
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/dev/google-services.json
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/prod/google-services.json
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run E2E tests on emulator
+        uses: reactivecircus/android-emulator-runner@62dbb605bba737720e10b196cb4220d374026a6d # v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.api-level >= 30 && 'google_apis' || 'default' }}
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          ram-size: ${{ matrix.ram-size }}
+          heap-size: 512
+          disk-size: 6144M
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
+            ./gradlew connectedDevDebugAndroidTest --no-parallel
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        if: always()
+        with:
+          name: android-results-api${{ matrix.api-level }}-${{ matrix.form-factor }}
+          path: app/build/reports/androidTests/connected/
+          retention-days: 14
+
+      - name: Publish test report
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
+        if: always()
+        with:
+          check_name: "Android E2E (API ${{ matrix.api-level }}, ${{ matrix.form-factor }})"
+          files: '**/build/outputs/androidTest-results/connected/TEST-*.xml'
+
+  # ── Build iOS test bundle ─────────────────────────────────────
+  build-ios:
+    name: Build iOS
+    needs: [resolve-inputs]
+    if: needs.resolve-inputs.outputs.run_ios == 'true'
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.resolve-inputs.outputs.ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+        with:
+          cache-read-only: false
+
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_DEV_BASE64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
+        run: |
+          mkdir -p app/src/dev app/src/prod
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/dev/google-services.json
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/prod/google-services.json
+
+      - name: Check for iOS test targets
+        id: check-tests
+        run: |
+          # Check if any XCTest files or test targets exist
+          if grep -rq 'XCTestCase\|import XCTest' iosApp/ 2>/dev/null; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No iOS test targets found. Skipping iOS E2E tests. Add XCTest files to iosApp/ to enable."
+          fi
+
+      - name: Build shared KMP framework for iOS Simulator
+        if: steps.check-tests.outputs.has_tests == 'true'
+        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
+
+      - name: Build iOS app for testing
+        if: steps.check-tests.outputs.has_tests == 'true'
+        run: |
+          xcodebuild build-for-testing \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios-derived-data \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload iOS test bundle
+        if: steps.check-tests.outputs.has_tests == 'true'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: ios-test-bundle
+          path: build/ios-derived-data/
+          retention-days: 3
+
+    outputs:
+      has_tests: ${{ steps.check-tests.outputs.has_tests }}
+
+  # ── iOS E2E test matrix ───────────────────────────────────────
+  test-ios:
+    name: "iOS E2E (iOS ${{ matrix.ios-version }}, ${{ matrix.form-factor }})"
+    needs: [resolve-inputs, build-ios]
+    if: needs.resolve-inputs.outputs.run_ios == 'true' && needs.build-ios.outputs.has_tests == 'true'
+    runs-on: macos-14
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(needs.resolve-inputs.outputs.parallel && '99' || '1') }}
+      matrix:
+        ios-version: ['16.4', '17.5', '18.1']
+        form-factor: [iphone, ipad]
+        include:
+          # iPhone models
+          - ios-version: '16.4'
+            form-factor: iphone
+            simulator: 'iPhone 14'
+          - ios-version: '17.5'
+            form-factor: iphone
+            simulator: 'iPhone 15'
+          - ios-version: '18.1'
+            form-factor: iphone
+            simulator: 'iPhone 16'
+          # iPad models
+          - ios-version: '16.4'
+            form-factor: ipad
+            simulator: 'iPad (10th generation)'
+          - ios-version: '17.5'
+            form-factor: ipad
+            simulator: 'iPad Air (M2)'
+          - ios-version: '18.1'
+            form-factor: ipad
+            simulator: 'iPad Air (M3)'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.resolve-inputs.outputs.ref }}
+
+      - name: Download iOS test bundle
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
+        with:
+          name: ios-test-bundle
+          path: build/ios-derived-data/
+
+      - name: Install iOS ${{ matrix.ios-version }} simulator runtime
+        run: |
+          # Check if the target runtime version is already available
+          RUNTIME_ID="com.apple.CoreSimulator.SimRuntime.iOS-$(echo '${{ matrix.ios-version }}' | tr '.' '-')"
+          if xcrun simctl list runtimes | grep -q "$RUNTIME_ID"; then
+            echo "Runtime $RUNTIME_ID already installed"
+          else
+            echo "Installing iOS ${{ matrix.ios-version }} simulator runtime..."
+            # Try version-specific install first, fall back to latest
+            xcodebuild -downloadPlatform iOS -buildVersion "${{ matrix.ios-version }}" 2>/dev/null || \
+            xcodebuild -downloadPlatform iOS || \
+            echo "::warning::Could not install iOS ${{ matrix.ios-version }} runtime. Using available runtime."
+          fi
+          echo "Available runtimes:"
+          xcrun simctl list runtimes
+
+      - name: Boot simulator
+        id: sim
+        run: |
+          DEVICE_ID=$(xcrun simctl create "test-device" \
+            "${{ matrix.simulator }}" \
+            "com.apple.CoreSimulator.SimRuntime.iOS-$(echo '${{ matrix.ios-version }}' | tr '.' '-')")
+          echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$DEVICE_ID"
+          # Wait for boot to complete
+          xcrun simctl bootstatus "$DEVICE_ID"
+
+      - name: Run iOS E2E tests
+        run: |
+          xcodebuild test-without-building \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -destination "id=${{ steps.sim.outputs.device_id }}" \
+            -derivedDataPath build/ios-derived-data \
+            -resultBundlePath build/ios-results/result.xcresult \
+            CODE_SIGNING_ALLOWED=NO || true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        if: always()
+        with:
+          name: ios-results-${{ matrix.ios-version }}-${{ matrix.form-factor }}
+          path: build/ios-results/
+          retention-days: 14
+
+      - name: Shutdown simulator
+        if: always()
+        run: xcrun simctl shutdown "${{ steps.sim.outputs.device_id }}" || true
+
+  # ── Summary ───────────────────────────────────────────────────
+  e2e-summary:
+    name: E2E Summary
+    needs: [resolve-inputs, test-android, test-ios]
+    if: always() && needs.resolve-inputs.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check results
+        run: |
+          echo "## E2E Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          ANDROID_RESULT="${{ needs.test-android.result }}"
+          IOS_RESULT="${{ needs.test-ios.result }}"
+
+          if [ "$ANDROID_RESULT" = "success" ] || [ "$ANDROID_RESULT" = "skipped" ]; then
+            echo "- Android: $ANDROID_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Android: FAILED" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "$IOS_RESULT" = "success" ] || [ "$IOS_RESULT" = "skipped" ]; then
+            echo "- iOS: $IOS_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- iOS: FAILED" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Fail if any non-skipped test job failed
+          if [ "$ANDROID_RESULT" != "success" ] && [ "$ANDROID_RESULT" != "skipped" ]; then
+            echo "Android E2E tests failed"
+            exit 1
+          fi
+          if [ "$IOS_RESULT" != "success" ] && [ "$IOS_RESULT" != "skipped" ]; then
+            echo "iOS E2E tests failed"
+            exit 1
+          fi
