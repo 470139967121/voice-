@@ -22,7 +22,7 @@ object TestData {
         acceptedLegalVersion = CURRENT_LEGAL_VERSION,
         shyCoins = 1000,
         loginStreak = 3,
-        lastLoginRewardDate = "2026-02-20"
+        lastLoginRewardDate = "2020-01-01" // old date ensures daily reward is claimable
     )
 
     val otherUser = User(

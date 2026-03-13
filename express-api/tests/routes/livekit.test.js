@@ -30,6 +30,11 @@ beforeEach(() => {
   process.env.LIVEKIT_API_SECRET = 'test-secret';
 });
 
+afterEach(() => {
+  delete process.env.LIVEKIT_API_KEY;
+  delete process.env.LIVEKIT_API_SECRET;
+});
+
 // ─── App setup ───────────────────────────────────────────────────
 
 const livekitRouter = require('../../src/routes/livekit');

@@ -23,10 +23,9 @@ class BannerRepositoryImplTest {
     private lateinit var mockQuery: Query
     private lateinit var mockQuerySnapshot: QuerySnapshot
 
-    // A "now" value we can use to derive relative timestamps
-    // We freeze the clock indirectly by constructing timestamps around the actual current time.
-    // The implementation calls System.currentTimeMillis() internally, so we keep a wide buffer.
-    private val now get() = System.currentTimeMillis()
+    // Freeze "now" once per test class to avoid drift between calls
+    // The implementation calls System.currentTimeMillis() internally, so we keep a wide buffer (±100s).
+    private val now = System.currentTimeMillis()
 
     @Before
     fun setup() {
