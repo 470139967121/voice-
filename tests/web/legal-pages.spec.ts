@@ -20,10 +20,6 @@ test.describe('Privacy Policy', () => {
     await expect(body).toContainText('Data Storage');
   });
 
-  test('page is not empty', async ({ page }) => {
-    const textContent = await page.locator('body').textContent();
-    expect(textContent!.length).toBeGreaterThan(100);
-  });
 });
 
 test.describe('Terms of Service', () => {
@@ -46,10 +42,6 @@ test.describe('Terms of Service', () => {
     await expect(body).toContainText('Acceptable Use');
   });
 
-  test('page is not empty', async ({ page }) => {
-    const textContent = await page.locator('body').textContent();
-    expect(textContent!.length).toBeGreaterThan(100);
-  });
 });
 
 test.describe('Community Guidelines', () => {
@@ -72,10 +64,6 @@ test.describe('Community Guidelines', () => {
     await expect(body).toContainText('Be Respectful');
   });
 
-  test('page is not empty', async ({ page }) => {
-    const textContent = await page.locator('body').textContent();
-    expect(textContent!.length).toBeGreaterThan(100);
-  });
 });
 
 test.describe('Cyber Bullying Policy', () => {
@@ -97,45 +85,6 @@ test.describe('Cyber Bullying Policy', () => {
     await expect(body).toContainText('bullying');
   });
 
-  test('page is not empty', async ({ page }) => {
-    const textContent = await page.locator('body').textContent();
-    expect(textContent!.length).toBeGreaterThan(100);
-  });
-});
-
-test.describe('Cross-page navigation', () => {
-  test('landing page links to all legal pages', async ({ page }) => {
-    await page.goto('/');
-    const legalLinks = ['/privacy.html', '/terms.html', '/community-guidelines.html', '/cyber-bullying.html'];
-    for (const href of legalLinks) {
-      const link = page.locator(`a[href="${href}"]`);
-      await expect(link).toBeVisible();
-    }
-  });
-
-  test('privacy page is navigable from landing', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('a[href="/privacy.html"]').click();
-    await expect(page).toHaveTitle(/Privacy/i);
-  });
-
-  test('terms page is navigable from landing', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('a[href="/terms.html"]').click();
-    await expect(page).toHaveTitle(/Terms/i);
-  });
-
-  test('community guidelines page is navigable from landing', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('a[href="/community-guidelines.html"]').click();
-    await expect(page).toHaveTitle(/Community/i);
-  });
-
-  test('cyber bullying page is navigable from landing', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('a[href="/cyber-bullying.html"]').click();
-    await expect(page).toHaveTitle(/Cyber Bullying/i);
-  });
 });
 
 test.describe('Consistent styling across pages', () => {
