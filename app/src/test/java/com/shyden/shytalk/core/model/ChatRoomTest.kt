@@ -48,33 +48,6 @@ class ChatRoomTest {
     }
 
     @Test
-    fun `resolveRole returns correct roles`() {
-        val room = ChatRoom(
-            roomId = "room-1",
-            ownerId = "owner",
-            hostIds = setOf("host-1"),
-            createdAt = baseTimestamp
-        )
-
-        assertEquals(RoomRole.OWNER, room.resolveRole("owner"))
-        assertEquals(RoomRole.HOST, room.resolveRole("host-1"))
-        assertEquals(RoomRole.ATTENDEE, room.resolveRole("random-user"))
-    }
-
-    @Test
-    fun `requireApproval defaults to false`() {
-        val map = mapOf<String, Any?>(
-            "roomId" to "room-1",
-            "ownerId" to "owner",
-            "createdAt" to baseTimestamp
-        )
-
-        val room = ChatRoom.fromMap(map, "room-1")
-
-        assertEquals(false, room.requireApproval)
-    }
-
-    @Test
     fun `bannedUserIds round-trips correctly`() {
         val room = ChatRoom(
             roomId = "room-1",

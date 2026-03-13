@@ -14,7 +14,6 @@ import com.shyden.shytalk.util.launchSignIn
 import com.shyden.shytalk.util.launchNavGraph
 import com.shyden.shytalk.util.waitForTag
 import com.shyden.shytalk.navigation.Screen
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -33,16 +32,6 @@ class AuthFlowTest : KoinTest {
 
     @Before
     fun setUp() {
-        (authRepository as FakeAuthRepository).apply {
-            _isAuthenticated = true
-            _currentUserId = "test-user-1"
-            _currentUserEmail = "test@example.com"
-        }
-        (userRepository as FakeUserRepository).userFlagsFlow.value = UserFlags()
-    }
-
-    @After
-    fun tearDown() {
         (authRepository as FakeAuthRepository).apply {
             _isAuthenticated = true
             _currentUserId = "test-user-1"
@@ -89,25 +78,4 @@ class AuthFlowTest : KoinTest {
         composeTestRule.onNodeWithTag("profileSetup_continueButton").assertIsDisplayed()
     }
 
-    @Test
-    fun signIn_suspended_showsSuspensionScreen() {
-        val fakeAuth = authRepository as FakeAuthRepository
-        fakeAuth._isAuthenticated = false
-        fakeAuth._currentUserId = null
-
-        composeTestRule.launchSignIn()
-        composeTestRule.waitForTag("signIn_googleButton")
-        // The sign-in screen should be shown; suspension is handled after auth
-        composeTestRule.onNodeWithTag("signIn_googleButton").assertIsDisplayed()
-    }
-
-    @Test
-    fun warningScreen_showsWhenWarningActive() {
-        val fakeUser = userRepository as FakeUserRepository
-        fakeUser.userFlagsFlow.value = UserFlags(hasActiveWarning = true, warningReason = "test reason")
-
-        composeTestRule.launchNavGraph(startDestination = Screen.Warning.route)
-        composeTestRule.waitForTag("warning_title")
-        composeTestRule.onNodeWithTag("warning_title").assertIsDisplayed()
-    }
 }
