@@ -194,6 +194,25 @@ jobs:
           echo "Found APK: $APK_PATH"
           echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
+      - name: Generate dev release notes
+        id: dev-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
+          COMMITS=$(gh pr view "$PR_NUMBER" --json commits --jq '[.commits[].messageHeadline] | reverse | .[0:5] | .[]' | grep -v '^Merge ' | grep -v '^chore:')
+          NOTES="PR #${PR_NUMBER}: ${PR_TITLE}"
+          if [ -n "$COMMITS" ]; then
+            NOTES="${NOTES}
+          $(echo "$COMMITS" | while IFS= read -r msg; do echo "- $msg"; done)"
+          fi
+          # Truncate to 16384 chars (Firebase App Distribution limit)
+          NOTES=$(echo "$NOTES" | head -c 16384)
+          echo "notes<<EOFNOTES" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOFNOTES" >> "$GITHUB_OUTPUT"
+
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@bd494989dd4bec0343f78adee87fe66e48279ad6 # v1
         with:
@@ -201,7 +220,7 @@ jobs:
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
           groups: internal-testers
           file: ${{ steps.find-apk.outputs.apk_path }}
-          releaseNotes: "PR #${{ github.event.pull_request.number }}"
+          releaseNotes: ${{ steps.dev-notes.outputs.notes }}
 
   deploy-ios-dev:
     name: Deploy iOS to TestFlight (Dev)
