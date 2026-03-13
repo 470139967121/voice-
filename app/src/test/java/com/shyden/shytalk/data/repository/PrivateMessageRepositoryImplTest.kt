@@ -85,7 +85,10 @@ class PrivateMessageRepositoryImplTest {
             Tasks.forResult(null)
         }
 
-        repo = PrivateMessageRepositoryImpl(api, firestore)
+        val authRepository = mockk<AuthRepository> {
+            every { currentUserId } returns "10000001"
+        }
+        repo = PrivateMessageRepositoryImpl(api, firestore, authRepository)
     }
 
     // region getOrCreateConversation — direct Firestore
@@ -212,10 +215,13 @@ class PrivateMessageRepositoryImplTest {
 
     @Test
     fun `editMessage returns Error on exception`() = runTest {
-        every { mockDocRef.update(any<Map<String, Any>>()) } returns Tasks.forException(RuntimeException("Fail"))
+        every { mockBatch.commit() } returns Tasks.forException(RuntimeException("Fail"))
 
         val result = repo.editMessage("conv-1", "msg-1", "Updated text")
         assertTrue(result is Resource.Error)
+
+        // Restore default for subsequent tests
+        every { mockBatch.commit() } returns Tasks.forResult(null)
     }
 
     // endregion

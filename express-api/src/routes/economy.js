@@ -599,13 +599,19 @@ router.post('/economy/gift', async (req, res) => {
     const recipientBeans = userField(recipient, 'shyBeans', 'shy_beans') || 0;
     const timestamp = now();
 
-    // Decrement backpack
-    const newQty = (bpItem.quantity || 0) - quantity;
-    if (newQty <= 0) {
-      await db.doc(`users/${uniqueId}/backpack/${giftId}`).delete();
-    } else {
-      await db.doc(`users/${uniqueId}/backpack/${giftId}`).update({ quantity: newQty });
-    }
+    // Decrement backpack atomically via transaction to prevent race conditions
+    const bpRef = db.doc(`users/${uniqueId}/backpack/${giftId}`);
+    await db.runTransaction(async (t) => {
+      const snap = await t.get(bpRef);
+      const qty = snap.exists ? (snap.data().quantity || 0) : 0;
+      if (qty < quantity) throw new Error('Insufficient items in backpack');
+      const newQty = qty - quantity;
+      if (newQty <= 0) {
+        t.delete(bpRef);
+      } else {
+        t.update(bpRef, { quantity: newQty });
+      }
+    });
 
     // Update recipient gift wall
     await updateGiftWall(recipientId, giftId, uniqueId, quantity);
@@ -805,23 +811,44 @@ router.post('/economy/gift-batch', async (req, res) => {
     const config = await loadEconomyConfig();
     const timestamp = now();
 
-    if (fromBackpack) {
-      const newQty = (bpItem?.quantity || 0) - totalQty;
-      if (newQty <= 0) {
-        await db.doc(`users/${uniqueId}/backpack/${giftId}`).delete();
-      } else {
-        await db.doc(`users/${uniqueId}/backpack/${giftId}`).update({ quantity: newQty });
-      }
-    } else {
-      const totalCost = coinValue * totalQty;
-      await db.doc(`users/${uniqueId}`).update({ shyCoins: FieldValue.increment(-totalCost) });
-    }
+    // Debit sender and credit all recipients in a single transaction
+    // to prevent partial failure (sender debited but recipients not credited)
+    const bpRef = fromBackpack ? db.doc(`users/${uniqueId}/backpack/${giftId}`) : null;
+    const senderRef = db.doc(`users/${uniqueId}`);
+    const totalCost = coinValue * totalQty;
 
-    // Process each recipient
-    for (const recipientId of recipientIds) {
-      const recipientSnap = await db.doc(`users/${recipientId}`).get();
-      if (!recipientSnap.exists) continue;
-      const recipient = recipientSnap.data();
+    // Validate recipient docs exist before starting
+    const recipientSnaps = await Promise.all(
+      recipientIds.map(id => db.doc(`users/${id}`).get())
+    );
+    const validRecipients = recipientIds.filter((_, i) => recipientSnaps[i].exists);
+    if (validRecipients.length === 0) return res.status(404).json({ error: 'No valid recipients' });
+
+    // Atomic debit via transaction
+    await db.runTransaction(async (t) => {
+      if (fromBackpack) {
+        const snap = await t.get(bpRef);
+        const qty = snap.exists ? (snap.data().quantity || 0) : 0;
+        if (qty < totalQty) throw new Error('Insufficient items in backpack');
+        const newQty = qty - totalQty;
+        if (newQty <= 0) {
+          t.delete(bpRef);
+        } else {
+          t.update(bpRef, { quantity: newQty });
+        }
+      } else {
+        const snap = await t.get(senderRef);
+        const coins = snap.exists ? (userField(snap.data(), 'shyCoins', 'shy_coins') || 0) : 0;
+        if (coins < totalCost) throw new Error('Insufficient coins');
+        t.update(senderRef, { shyCoins: FieldValue.increment(-totalCost) });
+      }
+    });
+
+    // Credit recipients (idempotent operations — safe outside transaction)
+    for (let i = 0; i < recipientIds.length; i++) {
+      const recipientId = recipientIds[i];
+      if (!recipientSnaps[i].exists) continue;
+      const recipient = recipientSnaps[i].data();
       const recipientBeans = userField(recipient, 'shyBeans', 'shy_beans') || 0;
 
       const beanReward = Math.floor(coinValue * config.beanConversionRate * quantity);

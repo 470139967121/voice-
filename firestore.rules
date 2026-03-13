@@ -92,12 +92,13 @@ service cloud.firestore {
           && callerUniqueId() == resource.data.senderId;
       }
 
-      // Seat requests
+      // Seat requests — owner can approve/deny, requester can cancel own
       match /seatRequests/{requestId} {
         allow read: if request.auth != null;
         allow create: if request.auth != null;
         allow update: if request.auth != null
-          && callerUniqueId() == get(/databases/$(database)/documents/rooms/$(roomId)).data.ownerId;
+          && (callerUniqueId() == get(/databases/$(database)/documents/rooms/$(roomId)).data.ownerId
+              || callerUniqueId() == resource.data.userId);
       }
     }
 
@@ -117,8 +118,8 @@ service cloud.firestore {
           && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow update, delete: if request.auth != null
           && (callerUniqueId() == resource.data.senderId
-              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.adminIds
-              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.modIds);
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.groupAdminIds
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.groupModIds);
 
         match /edits/{editId} {
           allow read: if request.auth != null
@@ -128,10 +129,13 @@ service cloud.firestore {
         }
       }
 
-      // User-specific conversation settings — own settings only
+      // User-specific conversation settings — own settings, or participant can init others during group creation
       match /userSettings/{settingsId} {
-        allow read, write: if request.auth != null
-          && string(callerUniqueId()) == settingsId;
+        allow read: if request.auth != null
+          && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow write: if request.auth != null
+          && (string(callerUniqueId()) == settingsId
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.groupAdminIds);
       }
 
       // Legacy settings path
@@ -140,12 +144,14 @@ service cloud.firestore {
           && string(callerUniqueId()) == settingsId;
       }
 
-      // Mutes — participants read, own mute entry writable
+      // Mutes — participants read, admins/mods can mute/unmute members
       match /mutes/{muteId} {
         allow read: if request.auth != null
           && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow write: if request.auth != null
-          && string(callerUniqueId()) == muteId;
+          && (string(callerUniqueId()) == muteId
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.groupAdminIds
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.groupModIds);
       }
 
       // Mod log — participants read, admins/mods create
@@ -153,8 +159,8 @@ service cloud.firestore {
         allow read: if request.auth != null
           && callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
         allow create: if request.auth != null
-          && (callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.adminIds
-              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.modIds);
+          && (callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.groupAdminIds
+              || callerUniqueId() in get(/databases/$(database)/documents/conversations/$(conversationId)).data.groupModIds);
       }
     }
 
@@ -165,12 +171,15 @@ service cloud.firestore {
     }
 
     // ── Device bindings — auth read own, API creates ─────────────
+    // Client writes "userId" field, API writes "uniqueId" — accept either
     match /deviceBindings/{deviceId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
-        && request.resource.data.uniqueId == callerUniqueId();
+        && (request.resource.data.userId == callerUniqueId()
+            || request.resource.data.uniqueId == callerUniqueId());
       allow update: if request.auth != null
-        && resource.data.uniqueId == callerUniqueId();
+        && (resource.data.userId == callerUniqueId()
+            || resource.data.uniqueId == callerUniqueId());
       allow delete: if false;
     }
 

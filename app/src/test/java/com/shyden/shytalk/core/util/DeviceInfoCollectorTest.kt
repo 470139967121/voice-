@@ -52,8 +52,7 @@ class DeviceInfoCollectorTest {
     }
 
     @Test
-    fun `DeviceInfo toMap returns all fields`() {
-        // Test that we can convert to a map (useful for sending to API)
+    fun `DeviceInfo copy preserves all fields`() {
         val info = DeviceInfo(
             deviceId = "d1",
             manufacturer = "Mfg",
@@ -69,9 +68,18 @@ class DeviceInfoCollectorTest {
             carrierName = "SoftBank",
             firebaseInstallationId = "fid"
         )
-        // DeviceInfo is a data class, so copy should work
         val copy = info.copy(deviceId = "d2")
         assertEquals("d2", copy.deviceId)
         assertEquals("Mfg", copy.manufacturer)
+        assertEquals("Mdl", copy.model)
+        assertEquals("OS", copy.osVersion)
+        assertEquals(3.0f, copy.screenDensity)
+        assertEquals(4096L, copy.totalRamMb)
+        assertEquals("2.0", copy.appVersion)
+        assertEquals(10, copy.buildNumber)
+        assertEquals("ja-JP", copy.locale)
+        assertEquals("cellular", copy.networkType)
+        assertEquals("SoftBank", copy.carrierName)
+        assertEquals("fid", copy.firebaseInstallationId)
     }
 }

@@ -880,7 +880,9 @@ class RoomViewModel(
         }
     }
 
-    /** Close OWNER_AWAY room immediately once all non-owner seats are empty. */
+    /** Close OWNER_AWAY room immediately once all non-owner seats are empty.
+     *  Any participant can trigger this — closeRoom is idempotent and the owner
+     *  has already left, so their ViewModel won't receive updates to act on. */
     private fun closeOwnerAwayIfSeatsEmpty(room: ChatRoom) {
         if (room.state != RoomState.OWNER_AWAY) return
         if (room.hasSeatedNonOwners()) return

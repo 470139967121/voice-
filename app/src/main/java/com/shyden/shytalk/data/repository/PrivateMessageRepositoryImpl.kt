@@ -27,7 +27,8 @@ private const val TAG = "PMRepository"
 
 class PrivateMessageRepositoryImpl(
     private val api: WorkerApiClient,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val authRepository: AuthRepository
 ) : PrivateMessageRepository {
 
     @Volatile private var prefetchedConversations: List<Conversation>? = null
@@ -36,10 +37,10 @@ class PrivateMessageRepositoryImpl(
         // Firestore offline cache handles this, but we still support the prefetch API
         // for splash screen — just do a Firestore read to warm the cache
         try {
-            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-            val uidAsLong = uid.toLongOrNull()
+            val uid = authRepository.currentUserId ?: return
+            val uidQuery: Any = uid.toLongOrNull() ?: uid
             val snapshot = firestore.collection("conversations")
-                .whereArrayContains("participantIds", uidAsLong ?: uid)
+                .whereArrayContains("participantIds", uidQuery)
                 .orderBy("lastMessageAt", Query.Direction.DESCENDING)
                 .get()
                 .await()
@@ -84,7 +85,7 @@ class PrivateMessageRepositoryImpl(
             } else {
                 val now = System.currentTimeMillis()
                 val data = mapOf(
-                    "participantIds" to listOf(uid1.toLong(), uid2.toLong()).sorted(),
+                    "participantIds" to listOf<Any>(uid1.toLongOrNull() ?: uid1, uid2.toLongOrNull() ?: uid2).sortedBy { it.toString() },
                     "isGroup" to false,
                     "createdAt" to now,
                     "lastMessageAt" to now,
@@ -249,22 +250,20 @@ class PrivateMessageRepositoryImpl(
         val currentDoc = messageRef.get().await()
         val currentText = currentDoc.getString("text") ?: ""
         val now = System.currentTimeMillis()
-        // Save previous text to edits subcollection
-        messageRef.collection("edits").add(
-            mapOf(
-                "previousText" to currentText,
-                "editedAt" to now
-            )
-        ).await()
-        // Update the message
-        messageRef.update(
-            mapOf(
-                "text" to newText,
-                "isEdited" to true,
-                "editedAt" to now,
-                "editCount" to FieldValue.increment(1)
-            )
-        ).await()
+        // Atomic batch: save edit history + update message together
+        val editRef = messageRef.collection("edits").document()
+        val batch = firestore.batch()
+        batch.set(editRef, mapOf(
+            "previousText" to currentText,
+            "editedAt" to now
+        ))
+        batch.update(messageRef, mapOf(
+            "text" to newText,
+            "isEdited" to true,
+            "editedAt" to now,
+            "editCount" to FieldValue.increment(1)
+        ))
+        batch.commit().await()
     }
 
     override suspend fun getEditHistory(

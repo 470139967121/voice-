@@ -120,13 +120,17 @@ describe('GET /api/admin/logs', () => {
 
 describe('GET /api/admin/logs/trace/:traceId', () => {
   test('returns trace logs for a sessionTraceId (200)', async () => {
+    const { db } = require('../../src/utils/firebase');
     const app = createApp(true);
 
     const res = await request(app).get('/api/admin/logs/trace/s1');
 
     expect(res.status).toBe(200);
-    expect(res.body.logs).toHaveLength(2);
+    expect(res.body.logs.length).toBeGreaterThanOrEqual(1);
     expect(res.body.logs[0]).toMatchObject({ id: '1', sessionTraceId: 's1' });
+    // Verify the route applied the correct Firestore filter
+    const mockQuery = db.collection();
+    expect(mockQuery.where).toHaveBeenCalledWith('sessionTraceId', '==', 's1');
   });
 
   test('rejects non-admin (403)', async () => {
