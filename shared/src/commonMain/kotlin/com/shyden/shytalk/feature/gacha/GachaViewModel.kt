@@ -15,6 +15,7 @@ import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.GiftRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -98,7 +99,7 @@ class GachaViewModel(
     private fun observeConfig() {
         viewModelScope.launch {
             economyRepository.observeEconomyConfig()
-                .catch { /* ignore */ }
+                .catch { e -> logW(TAG, "observeEconomyConfig error", e) }
                 .collect { config ->
                     _uiState.update {
                         it.copy(
@@ -114,7 +115,7 @@ class GachaViewModel(
     private fun observeBalance() {
         viewModelScope.launch {
             economyRepository.observeBalance()
-                .catch { /* ignore */ }
+                .catch { e -> logW(TAG, "observeBalance error", e) }
                 .collect { coins ->
                     // Ignore stale Firestore snapshots for 3s after a pull set the balance
                     val elapsed = currentTimeMillis() - pullBalanceSetAt
@@ -216,7 +217,7 @@ class GachaViewModel(
                 }
                 is Resource.Error -> {
                     logE(TAG, "Gacha pull failed: ${result.message}")
-                    _uiState.update { it.copy(isPulling = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isPulling = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }

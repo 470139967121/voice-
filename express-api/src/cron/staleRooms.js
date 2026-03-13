@@ -9,6 +9,13 @@
 const { db } = require('../utils/firebase');
 const log = require('../utils/log');
 
+function hasNonOwnerSeated(room) {
+  if (!room.seats) return false;
+  return Object.values(room.seats).some(seat =>
+    seat.userId && seat.userId !== room.ownerId && seat.state === 'OCCUPIED'
+  );
+}
+
 async function staleRooms() {
   const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
 
@@ -19,10 +26,14 @@ async function staleRooms() {
 
   if (snapshot.empty) return;
 
-  // Filter by ownerLeftAt client-side (Firestore needs composite index for two inequality fields)
+  // Close immediately if no non-owner seats occupied; otherwise wait 10 minutes
   const toClose = snapshot.docs
     .map(d => ({ id: d.id, ...d.data() }))
-    .filter(r => r.ownerLeftAt && r.ownerLeftAt < tenMinutesAgo);
+    .filter(r => {
+      if (!r.ownerLeftAt) return false;
+      if (!hasNonOwnerSeated(r)) return true;
+      return r.ownerLeftAt < tenMinutesAgo;
+    });
 
   if (toClose.length === 0) return;
 

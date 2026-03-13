@@ -4,7 +4,12 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Transaction
 import com.google.firebase.firestore.WriteBatch
@@ -13,8 +18,14 @@ import com.shyden.shytalk.data.remote.WorkerApiClient
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -74,14 +85,17 @@ class PrivateMessageRepositoryImplTest {
             Tasks.forResult(null)
         }
 
-        repo = PrivateMessageRepositoryImpl(api, firestore)
+        val authRepository = mockk<AuthRepository> {
+            every { currentUserId } returns "10000001"
+        }
+        repo = PrivateMessageRepositoryImpl(api, firestore, authRepository)
     }
 
     // region getOrCreateConversation — direct Firestore
 
     @Test
     fun `getOrCreateConversation returns Success when creating new`() = runTest {
-        val result = repo.getOrCreateConversation("uid1", "uid2")
+        val result = repo.getOrCreateConversation("10000001", "10000002")
         assertTrue(result is Resource.Success)
     }
 
@@ -89,15 +103,30 @@ class PrivateMessageRepositoryImplTest {
     fun `getOrCreateConversation returns Success when existing`() = runTest {
         every { mockDocSnapshot.exists() } returns true
         every { mockDocSnapshot.data } returns mapOf(
-            "participantIds" to listOf("uid1", "uid2"),
+            "participantIds" to listOf(10000001L, 10000002L),
             "isGroup" to false,
             "createdAt" to 1700000000000L,
             "lastMessageAt" to 1700000000000L,
             "isClosed" to false
         )
 
-        val result = repo.getOrCreateConversation("uid1", "uid2")
+        val result = repo.getOrCreateConversation("10000001", "10000002")
         assertTrue(result is Resource.Success)
+    }
+
+    @Test
+    fun `getOrCreateConversation stores participantIds as Long values`() = runTest {
+        val dataSlot = slot<Map<String, Any>>()
+        every { mockDocRef.set(capture(dataSlot)) } returns Tasks.forResult(null)
+
+        val result = repo.getOrCreateConversation("10000001", "10000002")
+        assertTrue(result is Resource.Success)
+
+        val participantIds = dataSlot.captured["participantIds"] as List<*>
+        // Both values must be Long, not String
+        assertTrue("participantIds[0] should be Long", participantIds[0] is Long)
+        assertTrue("participantIds[1] should be Long", participantIds[1] is Long)
+        assertEquals(listOf(10000001L, 10000002L), participantIds)
     }
 
     @Test
@@ -186,10 +215,13 @@ class PrivateMessageRepositoryImplTest {
 
     @Test
     fun `editMessage returns Error on exception`() = runTest {
-        every { mockDocRef.update(any<Map<String, Any>>()) } returns Tasks.forException(RuntimeException("Fail"))
+        every { mockBatch.commit() } returns Tasks.forException(RuntimeException("Fail"))
 
         val result = repo.editMessage("conv-1", "msg-1", "Updated text")
         assertTrue(result is Resource.Error)
+
+        // Restore default for subsequent tests
+        every { mockBatch.commit() } returns Tasks.forResult(null)
     }
 
     // endregion
@@ -260,6 +292,45 @@ class PrivateMessageRepositoryImplTest {
     fun `recallMessage returns Success`() = runTest {
         val result = repo.recallMessage("conv-1", "msg-1")
         assertTrue(result is Resource.Success)
+    }
+
+    // endregion
+
+    // region getMessages — real-time listener error handling
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `getMessages emits empty list and logs when listener receives error`() = runTest {
+        val mockQuery = mockk<Query>(relaxed = true)
+        val listenerSlot = slot<EventListener<QuerySnapshot>>()
+        val mockRegistration = mockk<ListenerRegistration>(relaxed = true)
+
+        every { firestore.collection("conversations/conv-1/messages") } returns mockCollRef
+        every { mockCollRef.orderBy(any<String>(), any()) } returns mockQuery
+        every { mockQuery.limitToLast(any()) } returns mockQuery
+        every { mockQuery.addSnapshotListener(capture(listenerSlot)) } returns mockRegistration
+
+        var emittedMessages: List<*>? = null
+        val job = launch {
+            repo.getMessages("conv-1", 50).first { messages ->
+                emittedMessages = messages
+                true
+            }
+        }
+
+        // Let the callbackFlow start and register the snapshot listener
+        advanceUntilIdle()
+
+        // Simulate a PERMISSION_DENIED error from Firestore
+        val error = mockk<FirebaseFirestoreException>(relaxed = true)
+        every { error.message } returns "PERMISSION_DENIED"
+        listenerSlot.captured.onEvent(null, error)
+
+        advanceUntilIdle()
+
+        // Should emit empty list instead of silently swallowing
+        assertEquals(emptyList<Any>(), emittedMessages)
+        job.cancel()
     }
 
     // endregion

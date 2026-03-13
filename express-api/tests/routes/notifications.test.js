@@ -25,11 +25,11 @@ jest.mock('../../src/utils/log', () => ({
 
 const notificationsRouter = require('../../src/routes/notifications');
 
-function createApp(uid = 'user-A') {
+function createApp(uniqueId = 12345) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid };
+    req.auth = { uid: 'firebase-uid', uniqueId };
     next();
   });
   app.use('/api', notificationsRouter);
@@ -53,7 +53,7 @@ describe('POST /api/notifications/token', () => {
     expect(res.body).toEqual({ success: true });
 
     const { db, FieldValue } = require('../../src/utils/firebase');
-    expect(db.doc).toHaveBeenCalledWith('users/user-A');
+    expect(db.doc).toHaveBeenCalledWith('users/12345');
     expect(FieldValue.arrayUnion).toHaveBeenCalledWith('fcm-token-abc123');
     expect(mockDocUpdate).toHaveBeenCalledTimes(1);
   });
@@ -138,7 +138,7 @@ describe('DELETE /api/notifications/token', () => {
     expect(res.body).toEqual({ success: true });
 
     const { db, FieldValue } = require('../../src/utils/firebase');
-    expect(db.doc).toHaveBeenCalledWith('users/user-A');
+    expect(db.doc).toHaveBeenCalledWith('users/12345');
     expect(FieldValue.arrayRemove).toHaveBeenCalledWith('fcm-token-abc123');
     expect(mockDocUpdate).toHaveBeenCalledTimes(1);
   });

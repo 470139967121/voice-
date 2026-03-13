@@ -23,7 +23,7 @@
  * POST /api/cleanup/all-audit-logs             → Delete all admin audit logs
  * POST /api/cleanup/destroyed-users            → Delete corrupted user profiles
  * POST /api/cleanup/all-device-bindings        → Delete all device bindings
- * POST /api/cleanup/device-binding/:uid        → Delete device binding for a user
+ * POST /api/cleanup/device-binding/:uniqueId   → Delete device binding for a user
  * GET  /api/storage/audit                      → R2 folder audit
  * POST /api/cleanup/orphaned-storage           → Smart R2 cleanup
  * POST /api/cleanup/all-stalkers              → Delete all stalker records + reset counts
@@ -33,23 +33,10 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const r2 = require('../utils/r2');
-const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const { queryDocs } = require('../utils/firestore-helpers');
 const log = require('../utils/log');
 
-// ─── S3 client for audit (needs object sizes, not just keys) ─────
-
-const accountId = process.env.R2_ACCOUNT_ID;
-const bucketName = process.env.R2_BUCKET_NAME || 'shytalk-media';
-
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-  },
-});
+const listObjectsWithMeta = r2.listObjectsWithMetadata;
 
 /**
  * Delete a conversation and all its associated subcollection data from Firestore.
@@ -119,29 +106,6 @@ async function deleteR2Prefix(prefix) {
   }
 }
 
-/**
- * List R2 objects with full metadata (size, lastModified) for audit.
- */
-async function listObjectsWithMeta(prefix) {
-  const objects = [];
-  let continuationToken;
-
-  do {
-    const resp = await s3.send(new ListObjectsV2Command({
-      Bucket: bucketName,
-      Prefix: prefix,
-      MaxKeys: 1000,
-      ContinuationToken: continuationToken,
-    }));
-    for (const obj of (resp.Contents || [])) {
-      objects.push({ key: obj.Key, size: obj.Size, lastModified: obj.LastModified });
-    }
-    continuationToken = resp.IsTruncated ? resp.NextContinuationToken : undefined;
-  } while (continuationToken);
-
-  return objects;
-}
-
 // ══════════════════════════════════════════════════════════════
 // CLEANUP ROUTES
 // ══════════════════════════════════════════════════════════════
@@ -151,7 +115,7 @@ router.post('/cleanup/system-conversations', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting duplicate system conversations', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting duplicate system conversations', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('conversations')
       .where('participantIds', 'array-contains', 'SHYTALK_SYSTEM')
@@ -194,7 +158,7 @@ router.post('/cleanup/all-system-conversations', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all system conversations', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all system conversations', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('conversations')
       .where('participantIds', 'array-contains', 'SHYTALK_SYSTEM')
@@ -217,7 +181,7 @@ router.post('/cleanup/all-reports', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all reports', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all reports', { adminId: req.auth.uniqueId });
 
     // Delete R2 evidence files first
     await deleteR2Prefix('evidence/');
@@ -255,7 +219,7 @@ router.post('/cleanup/all-warnings', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Resetting all warnings', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Resetting all warnings', { adminId: req.auth.uniqueId });
 
     const [usersSnap, activeSnap] = await Promise.all([
       db.collection('users').where('warningCount', '>', 0).get(),
@@ -296,7 +260,7 @@ router.post('/cleanup/all-backpacks', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Clearing all backpacks', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Clearing all backpacks', { adminId: req.auth.uniqueId });
 
     const usersSnap = await db.collection('users').orderBy('uid').get();
     const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -330,7 +294,7 @@ router.post('/cleanup/all-giftwalls', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Clearing all gift walls', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Clearing all gift walls', { adminId: req.auth.uniqueId });
 
     const usersSnap = await db.collection('users').orderBy('uid').get();
     const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -364,7 +328,7 @@ router.post('/cleanup/all-coins', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Resetting all coin balances', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Resetting all coin balances', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('users').where('shyCoins', '>', 0).get();
     const docs = snap.docs;
@@ -389,7 +353,7 @@ router.post('/cleanup/all-beans', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Resetting all bean balances', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Resetting all bean balances', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('users').where('shyBeans', '>', 0).get();
     const docs = snap.docs;
@@ -414,7 +378,7 @@ router.post('/cleanup/all-spin-history', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all spin history', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all spin history', { adminId: req.auth.uniqueId });
 
     // Clear pity counters on all users who have one
     const pitySnap = await db.collection('users').where('pityCounter', '>', 0).get();
@@ -463,7 +427,7 @@ router.post('/cleanup/all-supershy', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Clearing all Super Shy status', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Clearing all Super Shy status', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('users').where('isSuperShy', '==', true).get();
     const docs = snap.docs;
@@ -493,7 +457,7 @@ router.post('/cleanup/all-transactions', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all transactions', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all transactions', { adminId: req.auth.uniqueId });
 
     const usersSnap = await db.collection('users').orderBy('uid').get();
     const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -527,7 +491,7 @@ router.post('/cleanup/all-appeals', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all suspension appeals', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all suspension appeals', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('suspensionAppeals').get();
     const docs = snap.docs;
@@ -552,7 +516,7 @@ router.post('/cleanup/backfill-user-type', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Backfilling userType', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Backfilling userType', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('users').limit(5000).get();
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -582,7 +546,7 @@ router.post('/cleanup/all-private-messages', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all private messages', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all private messages', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('conversations').limit(5000).get();
     const allConvs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -621,7 +585,7 @@ router.post('/cleanup/all-group-chats', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all group chats', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all group chats', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('conversations')
       .where('isGroup', '==', true)
@@ -668,7 +632,7 @@ router.post('/cleanup/all-rooms', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all closed rooms', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all closed rooms', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('rooms')
       .where('state', '==', 'CLOSED')
@@ -700,7 +664,7 @@ router.post('/cleanup/all-broadcasts', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all broadcasts', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all broadcasts', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('broadcasts').limit(5000).get();
     const docs = snap.docs;
@@ -729,7 +693,7 @@ router.post('/cleanup/all-audit-logs', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all audit logs', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all audit logs', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('adminAuditLog').limit(5000).get();
     const docs = snap.docs;
@@ -758,7 +722,7 @@ router.post('/cleanup/destroyed-users', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Cleaning up destroyed user profiles', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Cleaning up destroyed user profiles', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('users').limit(5000).get();
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -795,7 +759,7 @@ router.post('/cleanup/all-device-bindings', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Deleting all device bindings', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Deleting all device bindings', { adminId: req.auth.uniqueId });
 
     const snap = await db.collection('deviceBindings').limit(5000).get();
     const docs = snap.docs;
@@ -820,14 +784,14 @@ router.post('/cleanup/all-device-bindings', async (req, res) => {
 });
 
 // ── Delete device binding for a specific user ──
-router.post('/cleanup/device-binding/:uid', async (req, res) => {
+router.post('/cleanup/device-binding/:uniqueId', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const uid = req.params.uid;
-    log.info('admin-cleanup', 'Deleting device binding for user', { adminId: req.auth.uid, targetUid: uid });
+    const uniqueId = req.params.uniqueId;
+    log.info('admin-cleanup', 'Deleting device binding for user', { adminId: req.auth.uniqueId, targetUniqueId: uniqueId });
     const snap = await db.collection('deviceBindings')
-      .where('userId', '==', uid)
+      .where('uniqueId', '==', uniqueId)
       .limit(50)
       .get();
     const docs = snap.docs;
@@ -844,7 +808,7 @@ router.post('/cleanup/device-binding/:uid', async (req, res) => {
 
     res.json({ success: true, deleted: docs.length });
   } catch (err) {
-    log.error('admin-cleanup', 'Cleanup device binding failed', { uid: req.params.uid, error: err.message });
+    log.error('admin-cleanup', 'Cleanup device binding failed', { uniqueId: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -892,7 +856,7 @@ router.post('/cleanup/orphaned-storage', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Running orphaned storage cleanup', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Running orphaned storage cleanup', { adminId: req.auth.uniqueId });
 
     const CDN_PREFIX = 'https://images.shytalk.shyden.co.uk/';
     const extractKey = (url) => {
@@ -1022,7 +986,7 @@ router.post('/cleanup/all-stalkers', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    log.info('admin-cleanup', 'Clearing all stalkers', { adminId: req.auth.uid });
+    log.info('admin-cleanup', 'Clearing all stalkers', { adminId: req.auth.uniqueId });
 
     const usersSnap = await db.collection('users').orderBy('uid').get();
     let totalDeleted = 0;

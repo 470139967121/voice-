@@ -38,7 +38,7 @@ router.post('/rooms/:roomId/invites/send', async (req, res) => {
     if (!body?.userId || !body?.invitedBy) {
       return res.status(400).json({ error: 'userId and invitedBy required' });
     }
-    if (req.auth.uid !== body.invitedBy) {
+    if (req.auth.uniqueId !== body.invitedBy) {
       return res.status(403).json({ error: 'Cannot send invite on behalf of another user' });
     }
     const roomId = req.params.roomId;
@@ -97,7 +97,7 @@ router.post('/rooms/:roomId/invites/send', async (req, res) => {
 // -- Create seat request --
 router.post('/rooms/:roomId/seat-requests', async (req, res) => {
   try {
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const seatIndex = body?.seatIndex;
     const userName = (body?.userName || '').slice(0, MAX_USER_NAME_LENGTH);
@@ -106,11 +106,11 @@ router.post('/rooms/:roomId/seat-requests', async (req, res) => {
     }
     const roomId = req.params.roomId;
 
-    log.info('rooms', 'Creating seat request', { roomId, userId: uid, seatIndex });
+    log.info('rooms', 'Creating seat request', { roomId, userId: uniqueId, seatIndex });
 
     // Check for existing pending request
     const existingSnap = await db.collection(`rooms/${roomId}/seatRequests`)
-      .where('userId', '==', uid)
+      .where('userId', '==', uniqueId)
       .where('status', '==', 'PENDING')
       .limit(1)
       .get();
@@ -131,7 +131,7 @@ router.post('/rooms/:roomId/seat-requests', async (req, res) => {
 
     await db.doc(`rooms/${roomId}/seatRequests/${reqId}`).set({
       requestId: reqId,
-      userId: uid,
+      userId: uniqueId,
       userName: userName || '',
       seatIndex,
       status: 'PENDING',
@@ -153,7 +153,7 @@ router.post('/rooms/:roomId/seat-requests', async (req, res) => {
             type: 'SEAT_REQUEST',
             roomId,
             roomName: room.name || 'a room',
-            requesterId: uid,
+            requesterId: uniqueId,
             requesterName: userName || '',
             seatIndex: String(seatIndex),
           });
@@ -164,13 +164,13 @@ router.post('/rooms/:roomId/seat-requests', async (req, res) => {
         }
       }
     } catch (err) {
-      log.error('rooms', 'Failed to send seat request FCM', { roomId, userId: uid, error: err.message });
+      log.error('rooms', 'Failed to send seat request FCM', { roomId, userId: uniqueId, error: err.message });
     }
 
     await broadcastToRoom(roomId, { type: 'seat_request_updated' });
     return res.json({ requestId: reqId });
   } catch (err) {
-    log.error('rooms', 'Create seat request failed', { roomId: req.params.roomId, userId: req.auth?.uid, error: err.message });
+    log.error('rooms', 'Create seat request failed', { roomId: req.params.roomId, userId: req.auth?.uniqueId, error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

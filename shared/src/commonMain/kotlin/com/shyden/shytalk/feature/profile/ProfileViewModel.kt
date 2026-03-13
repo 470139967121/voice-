@@ -13,8 +13,10 @@ import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.core.util.compressImage
 import com.shyden.shytalk.core.util.currentTimeMillis
+import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
+import com.shyden.shytalk.data.repository.IdentityRepository
 import com.shyden.shytalk.data.repository.ReportRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.StorageRepository
@@ -63,7 +65,8 @@ class ProfileViewModel(
     private val storageRepository: StorageRepository,
     private val roomRepository: RoomRepository,
     private val reportRepository: ReportRepository,
-    private val economyRepository: EconomyRepository
+    private val economyRepository: EconomyRepository,
+    private val identityRepository: IdentityRepository
 ) : ViewModel() {
 
     companion object {
@@ -220,7 +223,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -238,22 +241,44 @@ class ProfileViewModel(
     }
 
     fun saveProfile(displayName: String, dateOfBirth: Long) {
-        val userId = authRepository.currentUserId ?: return
-        logI(TAG, "Saving profile for userId=$userId")
+        logI(TAG, "Creating new user profile")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            val user = User(
-                uid = userId,
+
+            val providerInfo = authRepository.getProviderInfo()
+            if (providerInfo == null) {
+                _uiState.update { it.copy(isLoading = false, error = UiText.plain("No provider info available")) }
+                return@launch
+            }
+            val (provider, identifier) = providerInfo
+
+            when (val result = identityRepository.createUser(
+                provider = provider,
+                identifier = identifier,
                 displayName = displayName,
+                email = authRepository.currentUserEmail,
+                profilePhotoUrl = null,
                 dateOfBirth = dateOfBirth,
-                email = authRepository.currentUserEmail
-            )
-            when (val result = userRepository.createOrUpdateUser(user)) {
+                language = LanguagePreference.get()
+            )) {
                 is Resource.Success -> {
+                    val uniqueId = result.data.uniqueId
+                    logI(TAG, "User created with uniqueId=$uniqueId")
+                    // Set resolvedUniqueId so currentUserId returns the new uniqueId
+                    authRepository.resolvedUniqueId = uniqueId.toString()
+                    // Refresh token to pick up custom claims (uniqueId)
+                    identityRepository.forceRefreshToken()
+                    val user = User(
+                        uid = uniqueId.toString(),
+                        uniqueId = uniqueId,
+                        displayName = displayName,
+                        dateOfBirth = dateOfBirth,
+                        email = authRepository.currentUserEmail
+                    )
                     _uiState.update { it.copy(isLoading = false, profileSaved = true, user = user) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -267,7 +292,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(user = it.user?.copy(uniqueId = result.data)) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -285,7 +310,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -319,7 +344,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -328,14 +353,14 @@ class ProfileViewModel(
 
     fun uploadProfilePhoto(imageData: ByteArray) {
         val oldUrl = _uiState.value.user?.profilePhotoUrl
-        uploadPhoto(imageData, "profile_photos", "profilePhotoUrl", oldUrl) { url ->
+        uploadPhoto(imageData, "profiles", "profilePhotoUrl", oldUrl) { url ->
             _uiState.value.user?.copy(profilePhotoUrl = url)
         }
     }
 
     fun uploadCoverPhoto(imageData: ByteArray) {
         val oldUrl = _uiState.value.user?.coverPhotoUrl
-        uploadPhoto(imageData, "cover_photos", "coverPhotoUrl", oldUrl) { url ->
+        uploadPhoto(imageData, "covers", "coverPhotoUrl", oldUrl) { url ->
             _uiState.value.user?.copy(coverPhotoUrl = url)
         }
     }
@@ -363,7 +388,7 @@ class ProfileViewModel(
                         }
                         is Resource.Error -> {
                             _uiState.update {
-                                it.copy(isUploadingPhoto = false, error = saveResult.message?.let { msg -> UiText.plain(msg) })
+                                it.copy(isUploadingPhoto = false, error = UiText.plain(saveResult.message))
                             }
                         }
                         is Resource.Loading -> {}
@@ -371,7 +396,7 @@ class ProfileViewModel(
                 }
                 is Resource.Error -> {
                     logE(TAG, "Photo upload failed: ${result.message}")
-                    _uiState.update { it.copy(isUploadingPhoto = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isUploadingPhoto = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -531,7 +556,7 @@ class ProfileViewModel(
                     loadProfile(null)
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -547,7 +572,7 @@ class ProfileViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -563,7 +588,7 @@ class ProfileViewModel(
                     loadProfile(null)
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasingSuperShy = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isPurchasingSuperShy = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }

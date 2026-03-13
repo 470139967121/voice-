@@ -1,7 +1,7 @@
 [versions]
 agp = "9.1.0"
 kotlin = "2.3.10"
-composeMultiplatform = "1.10.1"
+composeMultiplatform = "1.10.2"
 composeBom = "2026.01.01"
 coreKtx = "1.17.0"
 lifecycleRuntimeKtx = "2.10.0"
@@ -18,7 +18,7 @@ livekit = "2.23.3"
 credentials = "1.5.0"
 googleid = "1.2.0"
 koin = "4.1.1"
-kotlinxDatetime = "0.6.2"
+kotlinxDatetime = "0.7.1"
 mockk = "1.14.9"
 turbine = "1.2.1"
 junit = "4.13.2"
@@ -97,6 +97,7 @@ lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", versio
 billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 
 # Testing
+kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }

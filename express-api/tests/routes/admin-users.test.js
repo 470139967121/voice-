@@ -32,7 +32,6 @@ jest.mock('../../src/utils/firebase', () => ({
     getUser: jest.fn().mockResolvedValue({
       uid: 'user-1',
       email: null,
-      phoneNumber: null,
       providerData: [],
     }),
   },
@@ -69,7 +68,7 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'admin-1', token: { admin: true } };
+    req.auth = { uid: 'admin-1', uniqueId: 'admin-1', token: { admin: true } };
     next();
   });
   app.use('/api', adminUsersRouter);

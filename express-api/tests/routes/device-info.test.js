@@ -64,7 +64,7 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'user123' };
+    req.auth = { uid: 'user123', uniqueId: 'user123' };
     next();
   });
   app.use('/api', deviceInfoRouter);
@@ -108,7 +108,7 @@ describe('POST /api/device-info', () => {
     expect(mockSet).toHaveBeenCalledWith(
       expect.objectContaining({
         deviceId: 'abc-xyz',
-        userId: 'user123',
+        uniqueId: 'user123',
         manufacturer: 'Samsung',
         model: 'Galaxy S24',
         isp: 'BT',

@@ -1,11 +1,14 @@
 package com.shyden.shytalk.feature.settings
 
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.model.LinkedProvider
 import com.shyden.shytalk.core.model.PmPrivacy
+import com.shyden.shytalk.core.model.ProviderType
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.IdentityRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.testutil.MainDispatcherRule
 import com.shyden.shytalk.testutil.TestData
@@ -38,6 +41,7 @@ class AppSettingsViewModelTest {
     private val authRepository = mockk<AuthRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val appConfigService = mockk<AppConfigService>(relaxed = true)
+    private val identityRepository = mockk<IdentityRepository>(relaxed = true)
 
     private val currentUserId = "current-user"
     private val activeViewModels = mutableListOf<AppSettingsViewModel>()
@@ -45,6 +49,7 @@ class AppSettingsViewModelTest {
     @Before
     fun setup() {
         every { authRepository.currentUserId } returns currentUserId
+        every { authRepository.getProviderInfo() } returns null
 
         // Default: user with no blocked users
         val user = TestData.createTestUser(uid = currentUserId)
@@ -61,7 +66,8 @@ class AppSettingsViewModelTest {
         return AppSettingsViewModel(
             appConfigService = appConfigService,
             authRepository = authRepository,
-            userRepository = userRepository
+            userRepository = userRepository,
+            identityRepository = identityRepository
         ).also { activeViewModels.add(it) }
     }
 
@@ -708,5 +714,134 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         assertEquals("ja", vm.uiState.value.language)
+    }
+
+    // ===== unlinkProvider =====
+
+    private val googleProvider = LinkedProvider(ProviderType.GOOGLE, "test@gmail.com", true, 1000L)
+    private val emailProvider = LinkedProvider(ProviderType.EMAIL, "test@example.com", true, 2000L)
+
+    @Test
+    fun `unlinkProvider - success removes provider from active list`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId, uniqueId = 10000005)
+            .copy(providers = listOf(googleProvider, emailProvider))
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        coEvery { identityRepository.unlinkProvider(10000005, "email", "test@example.com") } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.unlinkProvider(ProviderType.EMAIL, "test@example.com")
+        advanceUntilIdle()
+
+        val updatedUser = vm.uiState.value.user!!
+        assertEquals(1, updatedUser.activeProviders.size)
+        assertFalse(updatedUser.providers.first { it.type == ProviderType.EMAIL }.active)
+        assertTrue(updatedUser.providers.first { it.type == ProviderType.GOOGLE }.active)
+        assertFalse(vm.uiState.value.isUnlinkingProvider)
+    }
+
+    @Test
+    fun `unlinkProvider - blocks when only one active provider`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId, uniqueId = 10000005)
+            .copy(providers = listOf(googleProvider))
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.unlinkProvider(ProviderType.GOOGLE, "test@gmail.com")
+        advanceUntilIdle()
+
+        // Should not call API
+        coVerify(exactly = 0) { identityRepository.unlinkProvider(any(), any(), any()) }
+        assertTrue(vm.uiState.value.error is UiText.Res)
+    }
+
+    @Test
+    fun `unlinkProvider - error shows error message`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId, uniqueId = 10000005)
+            .copy(providers = listOf(googleProvider, emailProvider))
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        coEvery { identityRepository.unlinkProvider(10000005, "email", "test@example.com") } returns Resource.Error("Failed")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.unlinkProvider(ProviderType.EMAIL, "test@example.com")
+        advanceUntilIdle()
+
+        // Providers should remain unchanged
+        assertEquals(2, vm.uiState.value.user!!.activeProviders.size)
+        assertTrue(vm.uiState.value.error is UiText.Res)
+        assertFalse(vm.uiState.value.isUnlinkingProvider)
+    }
+
+    // ===== linkProvider =====
+
+    @Test
+    fun `linkProvider calls identityRepository linkProvider`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId).copy(uniqueId = 12345L)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        coEvery { identityRepository.linkProvider(12345L, "google", "user@gmail.com") } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.linkProvider(ProviderType.GOOGLE, "user@gmail.com")
+        advanceUntilIdle()
+
+        coVerify { identityRepository.linkProvider(12345L, "google", "user@gmail.com") }
+    }
+
+    @Test
+    fun `linkProvider success adds provider to user`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId).copy(
+            uniqueId = 12345L,
+            providers = listOf(googleProvider)
+        )
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        coEvery { identityRepository.linkProvider(12345L, "email", "test@example.com") } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.user!!.activeProviders.size)
+
+        vm.linkProvider(ProviderType.EMAIL, "test@example.com")
+        advanceUntilIdle()
+
+        val updatedUser = vm.uiState.value.user!!
+        assertEquals(2, updatedUser.activeProviders.size)
+        assertTrue(updatedUser.hasProvider(ProviderType.EMAIL))
+        assertFalse(vm.uiState.value.isUnlinkingProvider)
+    }
+
+    @Test
+    fun `linkProvider error shows error message`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId).copy(uniqueId = 12345L)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        coEvery { identityRepository.linkProvider(12345L, "email", "test@example.com") } returns Resource.Error("Failed")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.linkProvider(ProviderType.EMAIL, "test@example.com")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.error is UiText.Plain)
+        assertFalse(vm.uiState.value.isUnlinkingProvider)
+    }
+
+    @Test
+    fun `linkProvider does nothing when no user`() = runTest {
+        every { authRepository.currentUserId } returns null
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.linkProvider(ProviderType.GOOGLE, "user@gmail.com")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { identityRepository.linkProvider(any(), any(), any()) }
     }
 }

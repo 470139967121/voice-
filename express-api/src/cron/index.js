@@ -12,6 +12,7 @@ const rotateLogs = require('./rotateLogs');
 const expireBans = require('./expireBans');
 const expireTempIds = require('./expireTempIds');
 const serverHealth = require('./serverHealth');
+const testDataCleanup = require('./testDataCleanup');
 const alertManager = require('../utils/alertManagerInstance');
 
 function startCronJobs() {
@@ -63,6 +64,14 @@ function startCronJobs() {
   cron.schedule('*/5 * * * *', () => {
     serverHealth(alertManager).catch(err => log.error('cron', 'serverHealth failed', { error: err.message }));
   });
+
+  // Test data cleanup — every 30 minutes (dev only)
+  if (process.env.NODE_ENV !== 'production') {
+    cron.schedule('*/30 * * * *', () => {
+      log.info('cron', 'Running testDataCleanup');
+      testDataCleanup().catch(err => log.error('cron', 'testDataCleanup failed', { error: err.message }));
+    });
+  }
 
   log.info('cron', 'Cron jobs scheduled');
 }

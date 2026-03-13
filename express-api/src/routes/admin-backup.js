@@ -13,48 +13,12 @@ const router = require('express').Router();
 const { db } = require('../utils/firebase');
 const { requireAdmin } = require('../middleware/auth');
 const r2 = require('../utils/r2');
-const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const backupFn = require('../cron/backups');
 const log = require('../utils/log');
 
-// ─── S3 client for listing with metadata (size, lastModified) ────
-
-const accountId = process.env.R2_ACCOUNT_ID;
-const bucketName = process.env.R2_BUCKET_NAME || 'shytalk-media';
-
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-  },
-});
+const listObjectsWithMeta = r2.listObjectsWithMetadata;
 
 // ─── Helpers ─────────────────────────────────────────────────────
-
-/**
- * List R2 objects under a prefix with full metadata (size, lastModified).
- */
-async function listObjectsWithMeta(prefix) {
-  const objects = [];
-  let continuationToken;
-
-  do {
-    const resp = await s3.send(new ListObjectsV2Command({
-      Bucket: bucketName,
-      Prefix: prefix,
-      MaxKeys: 1000,
-      ContinuationToken: continuationToken,
-    }));
-    for (const obj of (resp.Contents || [])) {
-      objects.push({ key: obj.Key, size: obj.Size, lastModified: obj.LastModified });
-    }
-    continuationToken = resp.IsTruncated ? resp.NextContinuationToken : undefined;
-  } while (continuationToken);
-
-  return objects;
-}
 
 /**
  * Read and parse a JSON file from R2.

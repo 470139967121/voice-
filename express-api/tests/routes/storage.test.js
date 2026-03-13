@@ -35,7 +35,7 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'user-A' };
+    req.auth = { uid: 'firebase-uid', uniqueId: 12345 };
     next();
   });
   app.use('/api', storageRouter);

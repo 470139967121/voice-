@@ -18,7 +18,7 @@ const FREE_DAILY_LIMIT = 50;
 router.post('/translate', async (req, res) => {
   try {
     const { text, targetLang, messagePath } = req.body;
-    const uid = req.auth.uid;
+    const uniqueId = req.auth.uniqueId;
 
     if (!text || !targetLang) {
       return res.status(400).json({ error: 'text and targetLang required' });
@@ -43,7 +43,7 @@ router.post('/translate', async (req, res) => {
     }
 
     // Check quota for non-SuperShy users
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     const userData = userSnap.data() || {};
     const isSuperShy = userData.isSuperShy === true;
     const today = new Date().toISOString().slice(0, 10);
@@ -90,12 +90,12 @@ router.post('/translate', async (req, res) => {
 
     // Increment daily counter (non-SuperShy only)
     if (!isSuperShy) {
-      db.doc(`users/${uid}`).update({
+      db.doc(`users/${uniqueId}`).update({
         translationsToday: userData.translationDate === today
           ? FieldValue.increment(1)
           : 1,
         translationDate: today,
-      }).catch(err => log.error('translate', 'Failed to update translation quota', { userId: uid, error: err.message }));
+      }).catch(err => log.error('translate', 'Failed to update translation quota', { userId: uniqueId, error: err.message }));
     }
 
     res.json({ translatedText, detectedSourceLang, cached: false });
@@ -108,8 +108,8 @@ router.post('/translate', async (req, res) => {
 // GET /api/translate/quota
 router.get('/translate/quota', async (req, res) => {
   try {
-    const uid = req.auth.uid;
-    const userSnap = await db.doc(`users/${uid}`).get();
+    const uniqueId = req.auth.uniqueId;
+    const userSnap = await db.doc(`users/${uniqueId}`).get();
     const userData = userSnap.data() || {};
     const isSuperShy = userData.isSuperShy === true;
     const today = new Date().toISOString().slice(0, 10);
@@ -122,7 +122,7 @@ router.get('/translate/quota', async (req, res) => {
       unlimited: isSuperShy,
     });
   } catch (err) {
-    log.error('translate', 'Failed to check translation quota', { userId: req.auth.uid, error: err.message });
+    log.error('translate', 'Failed to check translation quota', { userId: req.auth.uniqueId, error: err.message });
     res.status(500).json({ error: 'Failed to check quota' });
   }
 });

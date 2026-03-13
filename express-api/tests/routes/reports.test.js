@@ -94,7 +94,7 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'admin-1', token: { admin: true } };
+    req.auth = { uid: 'firebase-uid', uniqueId: 'admin-1', token: { admin: true } };
     next();
   });
   app.use('/api', reportsRouter);

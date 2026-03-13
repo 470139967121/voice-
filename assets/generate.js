@@ -107,6 +107,102 @@ function generateIconSvg(size) {
 </svg>`;
 }
 
+// ─── iOS APP ICON (1024x1024, square background) ─────────────────────────────────
+function generateIosIconSvg(size) {
+  const s = size;
+  const cx = s / 2;
+  const cy = s / 2;
+
+  // Safe zone: ~80% of canvas (matching Android adaptive icon safe zone)
+  const safeScale = 0.80;
+  const safeOffset = s * (1 - safeScale) / 2;
+
+  // Speech bubble dimensions (centered within safe zone)
+  const bw = s * safeScale * 0.44;
+  const bh = s * safeScale * 0.35;
+  const bx = cx - bw / 2 - s * 0.02;
+  const by = cy - bh / 2 - s * 0.04;
+  const br = s * 0.06;
+  // Bubble tail
+  const tx1 = bx + bw * 0.25;
+  const ty1 = by + bh;
+  const tx2 = bx + bw * 0.12;
+  const ty2 = by + bh + s * 0.08;
+  const tx3 = bx + bw * 0.42;
+  const ty3 = by + bh;
+
+  // Sound wave arcs (right side of bubble)
+  const waveX = bx + bw + s * 0.02;
+  const waveY = cy - s * 0.04;
+
+  // Blush circles (shy indicator)
+  const blushR = s * 0.025;
+  const blushY = by + bh * 0.58;
+  const blushLeftX = bx + bw * 0.22;
+  const blushRightX = bx + bw * 0.68;
+
+  // Three dots inside bubble (typing/chat indicator)
+  const dotR = s * 0.022;
+  const dotY = by + bh * 0.45;
+  const dotSpacing = s * 0.065;
+  const dotCenterX = bx + bw * 0.45;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7B61C4"/>
+      <stop offset="50%" stop-color="${PRIMARY}"/>
+      <stop offset="100%" stop-color="${PRIMARY_DARK}"/>
+    </linearGradient>
+    <linearGradient id="bubbleGrad" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0EAFF"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="${s*0.01}" stdDeviation="${s*0.015}" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="${s*0.008}" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Square background (iOS applies its own rounded-rect mask) -->
+  <rect width="${s}" height="${s}" fill="url(#bg)"/>
+
+  <!-- Subtle inner border -->
+  <rect x="${s*0.04}" y="${s*0.04}" width="${s*0.92}" height="${s*0.92}" rx="${s*0.02}" fill="none" stroke="${PRIMARY_LIGHT}" stroke-width="${s*0.003}" opacity="0.3"/>
+
+  <!-- Speech bubble with tail -->
+  <g filter="url(#shadow)">
+    <rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${br}" fill="url(#bubbleGrad)"/>
+    <polygon points="${tx1},${ty1} ${tx2},${ty2} ${tx3},${ty3}" fill="url(#bubbleGrad)"/>
+  </g>
+
+  <!-- Three dots (chat indicator) -->
+  <circle cx="${dotCenterX - dotSpacing}" cy="${dotY}" r="${dotR}" fill="${PRIMARY}" opacity="0.7"/>
+  <circle cx="${dotCenterX}" cy="${dotY}" r="${dotR}" fill="${PRIMARY}" opacity="0.5"/>
+  <circle cx="${dotCenterX + dotSpacing}" cy="${dotY}" r="${dotR}" fill="${PRIMARY}" opacity="0.3"/>
+
+  <!-- Blush marks (shy indicator) -->
+  <ellipse cx="${blushLeftX}" cy="${blushY}" rx="${blushR * 1.3}" ry="${blushR}" fill="#FFB3C1" opacity="0.6"/>
+  <ellipse cx="${blushRightX}" cy="${blushY}" rx="${blushR * 1.3}" ry="${blushR}" fill="#FFB3C1" opacity="0.6"/>
+
+  <!-- Sound waves -->
+  <g filter="url(#glow)">
+    <path d="M ${waveX} ${waveY - s*0.04} Q ${waveX + s*0.04} ${waveY} ${waveX} ${waveY + s*0.04}"
+          fill="none" stroke="${ON_PRIMARY}" stroke-width="${s*0.012}" stroke-linecap="round" opacity="0.9"/>
+    <path d="M ${waveX + s*0.03} ${waveY - s*0.07} Q ${waveX + s*0.08} ${waveY} ${waveX + s*0.03} ${waveY + s*0.07}"
+          fill="none" stroke="${ON_PRIMARY}" stroke-width="${s*0.010}" stroke-linecap="round" opacity="0.6"/>
+    <path d="M ${waveX + s*0.06} ${waveY - s*0.10} Q ${waveX + s*0.12} ${waveY} ${waveX + s*0.06} ${waveY + s*0.10}"
+          fill="none" stroke="${ON_PRIMARY}" stroke-width="${s*0.008}" stroke-linecap="round" opacity="0.35"/>
+  </g>
+</svg>`;
+}
+
 // ─── SCREENSHOT HELPER ──────────────────────────────────────────────────────────
 function generateScreenshotSvg(width, height, title, subtitle, featureLines, iconType) {
   const isTablet = width > 1200;
@@ -234,6 +330,23 @@ async function main() {
     .toFile(path.join(__dirname, 'icon', 'icon-1024.png'));
   console.log('   -> icon/icon-1024.png');
 
+  // 1b. iOS App Icon - 1024x1024 (square background, no circular mask)
+  console.log('\n1b. Generating iOS app icon (1024x1024, square)...');
+  const iosIconSvg = generateIosIconSvg(1024);
+  await sharp(Buffer.from(iosIconSvg))
+    .png()
+    .toFile(path.join(__dirname, 'icon', 'icon-ios-1024.png'));
+  console.log('   -> icon/icon-ios-1024.png');
+
+  // Copy iOS icon to Xcode asset catalog
+  const iosAssetDir = path.join(__dirname, '..', 'iosApp', 'iosApp', 'Assets.xcassets', 'AppIcon.appiconset');
+  const fs = require('fs');
+  fs.copyFileSync(
+    path.join(__dirname, 'icon', 'icon-ios-1024.png'),
+    path.join(iosAssetDir, 'icon-1024.png')
+  );
+  console.log('   -> iosApp/iosApp/Assets.xcassets/AppIcon.appiconset/icon-1024.png');
+
   // 2. Phone screenshots (1080 x 1920)
   const phoneW = 1080;
   const phoneH = 1920;
@@ -293,7 +406,7 @@ async function main() {
         'Block and report disruptive users',
         'Room owners control who speaks',
         'Automatic ghost user removal',
-        'Phone or Google sign-in',
+        'Google sign-in',
       ],
       icon: 'shield',
       file: 'phone-5-safety.png',
@@ -367,6 +480,7 @@ async function main() {
   console.log('\nFiles:');
   console.log('  icon/icon-512.png          - Google Play store icon (512x512)');
   console.log('  icon/icon-1024.png         - High-res icon (1024x1024)');
+  console.log('  icon/icon-ios-1024.png     - iOS app icon (1024x1024, square)');
   console.log('  screenshots/phone/*.png    - Phone screenshots (1080x1920)');
   console.log('  screenshots/tablet/*.png   - Tablet screenshots (2048x2732)');
 }

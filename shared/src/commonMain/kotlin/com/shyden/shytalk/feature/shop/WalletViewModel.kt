@@ -56,7 +56,7 @@ class WalletViewModel(
             // Load coin packages
             when (val result = economyRepository.getCoinPackages()) {
                 is Resource.Success -> _uiState.update { it.copy(coinPackages = result.data) }
-                is Resource.Error -> _uiState.update { it.copy(error = result.message?.let { msg -> UiText.plain(msg) }) }
+                is Resource.Error -> _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 is Resource.Loading -> {}
             }
 
@@ -81,7 +81,7 @@ class WalletViewModel(
                     )
                 }
             }
-            is Resource.Error -> _uiState.update { it.copy(isLoading = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+            is Resource.Error -> _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
             is Resource.Loading -> {}
         }
     }
@@ -100,7 +100,7 @@ class WalletViewModel(
                     refreshBalance()
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasing = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -128,7 +128,7 @@ class WalletViewModel(
                     refreshBalance()
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasing = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }
@@ -146,7 +146,7 @@ class WalletViewModel(
                     refreshBalance()
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasing = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }

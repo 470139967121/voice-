@@ -205,7 +205,7 @@ class GroupSetupViewModel(
                     }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isCreating = false, error = result.message?.let { msg -> UiText.plain(msg) }) }
+                    _uiState.update { it.copy(isCreating = false, error = UiText.plain(result.message)) }
                 }
                 is Resource.Loading -> {}
             }

@@ -18,6 +18,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -522,5 +523,38 @@ class GachaViewModelTest {
 
         // The flow should handle empty gracefully
         assertEquals(0, vm.uiState.value.giftCatalog.size)
+    }
+
+    // ===== Regression: Flow error handling (Cycle 1 Pass 7) =====
+
+    @Test
+    fun `config flow error does not crash ViewModel`() = runTest {
+        val errorConfigFlow = flow<EconomyConfig> {
+            throw RuntimeException("Firestore unavailable")
+        }
+        every { economyRepository.observeEconomyConfig() } returns errorConfigFlow
+        every { economyRepository.observeBalance() } returns flowOf(100)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // VM should still be alive with default state (not crashed)
+        assertNotNull(vm.uiState.value)
+        assertFalse(vm.uiState.value.configLoaded)
+    }
+
+    @Test
+    fun `balance flow error does not crash ViewModel`() = runTest {
+        val errorBalanceFlow = flow<Long> {
+            throw RuntimeException("Firestore unavailable")
+        }
+        every { economyRepository.observeBalance() } returns errorBalanceFlow
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // VM should still be alive (balance stays at default 0)
+        assertNotNull(vm.uiState.value)
+        assertEquals(0L, vm.uiState.value.coinBalance)
     }
 }

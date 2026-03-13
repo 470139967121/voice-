@@ -1,10 +1,12 @@
 package com.shyden.shytalk.fake
 
 import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.data.repository.BanStatus
 import com.shyden.shytalk.data.repository.DeviceRepository
 
 class FakeDeviceRepository : DeviceRepository {
-    private val bindings = mutableMapOf<String, String>()
+    val bindings = mutableMapOf<String, String>()
+    var banStatus: BanStatus = BanStatus()
 
     override suspend fun getDeviceBinding(deviceId: String): Resource<String?> =
         Resource.Success(bindings[deviceId])
@@ -13,4 +15,7 @@ class FakeDeviceRepository : DeviceRepository {
         bindings[deviceId] = userId
         return Resource.Success(Unit)
     }
+
+    override suspend fun checkBanStatus(deviceId: String): Resource<BanStatus> =
+        Resource.Success(banStatus)
 }

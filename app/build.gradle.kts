@@ -30,34 +30,51 @@ android {
         ndk {
             debugSymbolLevel = "SYMBOL_TABLE"
         }
+    }
 
-        buildConfigField(
-            "String",
-            "LIVEKIT_SERVER_URL",
-            "\"${System.getenv("LIVEKIT_URL") ?: ""}\""
-        )
-        buildConfigField(
-            "String",
-            "WORKER_URL",
-            "\"${System.getenv("WORKER_URL") ?: "https://api.shytalk.shyden.co.uk"}\""
-        )
-        buildConfigField(
-            "String",
-            "API_BASE_URL",
-            "\"${System.getenv("API_BASE_URL") ?: "https://api.shytalk.shyden.co.uk"}\""
-        )
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            val buildNum = System.getenv("GITHUB_RUN_NUMBER")
+                ?: providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }
+                    .standardOutput.asText.get().trim()
+            versionNameSuffix = "-b$buildNum"
+            buildConfigField("String", "API_BASE_URL", "\"https://dev-api.shytalk.shyden.co.uk\"")
+            buildConfigField("String", "WORKER_URL", "\"https://dev-api.shytalk.shyden.co.uk\"")
+            buildConfigField("String", "LIVEKIT_SERVER_URL", "\"${System.getenv("LIVEKIT_URL") ?: ""}\"")
+            buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "false")
+            buildConfigField("String", "WEB_CLIENT_ID", "\"881846974606-kv99pjv92i6me0emb2j3uacbhnqqvfj4.apps.googleusercontent.com\"")
+            buildConfigField("String", "RTDB_URL", "\"https://shytalk-dev-default-rtdb.europe-west1.firebasedatabase.app\"")
+        }
+        create("prod") {
+            dimension = "env"
+            buildConfigField("String", "API_BASE_URL", "\"https://api.shytalk.shyden.co.uk\"")
+            buildConfigField("String", "WORKER_URL", "\"https://api.shytalk.shyden.co.uk\"")
+            buildConfigField("String", "LIVEKIT_SERVER_URL", "\"${System.getenv("LIVEKIT_URL") ?: ""}\"")
+            buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "false")
+            buildConfigField("String", "WEB_CLIENT_ID", "\"517834977595-cdu78p6q7vg57utpsvtik04c195lbh8b.apps.googleusercontent.com\"")
+            buildConfigField("String", "RTDB_URL", "\"https://shytalk-7ba69-default-rtdb.asia-southeast1.firebasedatabase.app\"")
+        }
     }
 
     signingConfigs {
         create("release") {
             storeFile = rootProject.file("keystore.jks")
-            storePassword = "2gXnsQ2YVDNVlUr28kTRuW99"
+            val keystorePassword = project.findProperty("KEYSTORE_PASSWORD")?.toString()
+                ?: System.getenv("KEYSTORE_PASSWORD")
+                ?: ""
+            storePassword = keystorePassword
             keyAlias = "shytalk"
-            keyPassword = "2gXnsQ2YVDNVlUr28kTRuW99"
+            keyPassword = keystorePassword
         }
     }
 
     buildTypes {
+        debug {
+            buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "true")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -77,12 +94,18 @@ android {
         buildConfig = true
     }
     // Workaround: KMP android library plugin doesn't auto-package Compose resources as assets
+    @Suppress("DEPRECATION")
     sourceSets.getByName("main").assets.srcDir(
         File(project(":shared").layout.buildDirectory.get().asFile,
             "generated/compose/resourceGenerator/androidAssetsForApp")
     )
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.all {
+            // Restart test JVM every 40 classes to reset global state
+            // (Dispatchers.Main) and prevent cross-class contamination
+            it.forkEvery = 40
+        }
         managedDevices {
             localDevices {
                 create("pixel4a") {
@@ -120,15 +143,24 @@ val copyComposeResources = tasks.register<Copy>("copySharedComposeResourcesToAss
     val sharedBuildDir = project(":shared").layout.buildDirectory.get().asFile
     from(File(sharedBuildDir, "generated/compose/resourceGenerator/preparedResources/commonMain/composeResources"))
     into(File(sharedBuildDir, "generated/compose/resourceGenerator/androidAssetsForApp/composeResources/com.shyden.shytalk.resources"))
-    dependsOn(project(":shared").tasks.named("prepareComposeResourcesTaskForCommonMain"))
-    dependsOn(project(":shared").tasks.named("convertXmlValueResourcesForCommonMain"))
-    dependsOn(project(":shared").tasks.named("copyNonXmlValueResourcesForCommonMain"))
+}
+
+project(":shared").afterEvaluate {
+    val sharedProject = this
+    copyComposeResources.configure {
+        dependsOn(sharedProject.tasks.named("prepareComposeResourcesTaskForCommonMain"))
+        dependsOn(sharedProject.tasks.named("convertXmlValueResourcesForCommonMain"))
+        dependsOn(sharedProject.tasks.named("copyNonXmlValueResourcesForCommonMain"))
+    }
 }
 
 afterEvaluate {
-    tasks.matching { it.name.contains("mergeDebugAssets") || it.name.contains("mergeReleaseAssets") }.configureEach {
-        dependsOn(copyComposeResources)
+    listOf("mergeDevDebugAssets", "mergeDevReleaseAssets", "mergeProdDebugAssets", "mergeProdReleaseAssets").forEach { taskName ->
+        tasks.findByName(taskName)?.dependsOn(copyComposeResources)
     }
+    // Lint vital tasks also read the Compose resources assets directory
+    tasks.matching { it.name.contains("lintVital", ignoreCase = true) }
+        .configureEach { dependsOn(copyComposeResources) }
 }
 
 dependencies {

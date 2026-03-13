@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Instant
 import kotlinx.datetime.DatePeriod
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
@@ -76,7 +76,7 @@ class DailyRewardViewModel(
         // Estimate claimed days this month from the streak.
         // If the user has an N-day streak ending today (or yesterday if not claimed today),
         // work backwards from today to fill in which days in this month were claimed.
-        val currentMonth = now.monthNumber
+        val currentMonth = now.month
         val currentYear = now.year
         val streak = user.loginStreak
         val claimedDays = mutableSetOf<Int>()
@@ -90,8 +90,8 @@ class DailyRewardViewModel(
             }
             for (i in 0 until streak) {
                 val claimedDate = lastClaimedDate.minus(DatePeriod(days = i))
-                if (claimedDate.year == currentYear && claimedDate.monthNumber == currentMonth) {
-                    claimedDays.add(claimedDate.dayOfMonth)
+                if (claimedDate.year == currentYear && claimedDate.month == currentMonth) {
+                    claimedDays.add(claimedDate.day)
                 }
             }
         }
@@ -114,7 +114,7 @@ class DailyRewardViewModel(
                 is Resource.Success -> {
                     logI(TAG, "Daily reward claimed: streak=${result.data.newStreak}, coins=${result.data.coinsAwarded}")
                     val now = Instant.fromEpochMilliseconds(currentTimeMillis()).toLocalDateTime(TimeZone.UTC)
-                    val todayDay = now.dayOfMonth
+                    val todayDay = now.day
                     _uiState.update {
                         it.copy(
                             reward = result.data,

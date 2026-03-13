@@ -43,6 +43,13 @@ ShyTalk 是一款社交语音聊天应用，用户可以创建和加入实时语
 - 金币商城，可购买金币套餐
 - 广播横幅，附带动画礼物特效
 
+### 账户与身份
+- 多提供商认证——支持 Google、Apple 或邮箱（OTP）登录
+- 将多种登录方式关联到同一账户
+- 稳定的用户身份（uniqueId），跨 Firebase 项目持久化
+- 设置中的关联账户管理，支持关联/取消关联操作
+- 设备绑定——每台设备永久绑定到一个账户
+
 ### 管理与安全
 - 管理工具——作为房主可以禁言、踢出、调换座位和管理主持人
 - 用户举报系统及审核流程
@@ -66,7 +73,7 @@ ShyTalk 是一款社交语音聊天应用，用户可以创建和加入实时语
 | **UI** | Compose Multiplatform |
 | **架构** | MVVM + Repository 模式 |
 | **依赖注入** | Koin |
-| **认证** | Firebase Authentication（Google、Apple 登录） |
+| **认证** | Firebase Authentication（Google、Apple、邮箱+OTP）多提供商身份系统 |
 | **数据库** | Cloud Firestore |
 | **实时通信** | Firebase Realtime Database |
 | **存储** | Cloudflare R2（通过 Express API 代理） |

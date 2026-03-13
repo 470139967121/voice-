@@ -31,11 +31,13 @@ import com.shyden.shytalk.testutil.MainDispatcherRule
 import com.shyden.shytalk.testutil.TestData
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
@@ -130,7 +132,7 @@ class RoomViewModelTest {
             block()
         } finally {
             if (::viewModel.isInitialized) {
-                viewModel.viewModelScope.cancel()
+                viewModel.viewModelScope.coroutineContext.job.cancelAndJoin()
             }
         }
     }
@@ -3197,9 +3199,6 @@ class RoomViewModelTest {
 
         val remaining = viewModel.uiState.value.roomExpiryRemainingMs
         assertTrue("Expected remaining > 0 but was $remaining", remaining > 0)
-
-        // Advance through remaining time so loop finishes
-        advanceUntilIdle()
     }
 
     @Test
@@ -3937,5 +3936,49 @@ class RoomViewModelTest {
         advanceTimeBy(100L)
 
         assertEquals("No seats available", viewModel.uiState.value.error)
+    }
+
+    // ===== Join Room Operation Order Tests (Bug 6 fix) =====
+
+    @Test
+    fun `handleFirstJoin - non-owner calls joinRoom before recordFirstJoinTimestamp`() = roomTest {
+        viewModel = createViewModel()
+
+        // Emit room where current user is NOT in participantIds (new join)
+        val room = TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId)
+        )
+        coEvery { userRepository.getUser(ownerId) } returns Resource.Success(
+            TestData.createTestUser(uid = ownerId, displayName = "Owner")
+        )
+        // Mock checkBlockedBy to return no conflicts so joinRoom() is called
+        coEvery { userRepository.checkBlockedBy(any(), any()) } returns Resource.Success(emptySet<String>())
+        roomFlow.value = room
+        advanceUntilIdle()
+
+        coVerifyOrder {
+            roomRepository.joinRoom("room-1", currentUserId)
+            roomRepository.recordFirstJoinTimestamp("room-1", currentUserId)
+        }
+    }
+
+    @Test
+    fun `handleFirstJoin - joinRoom is called with correct roomId and userId`() = roomTest {
+        viewModel = createViewModel()
+
+        // Emit room where current user is NOT in participantIds (new join)
+        val room = TestData.createTestRoom(
+            ownerId = ownerId,
+            participantIds = setOf(ownerId)
+        )
+        coEvery { userRepository.getUser(ownerId) } returns Resource.Success(
+            TestData.createTestUser(uid = ownerId, displayName = "Owner")
+        )
+        coEvery { userRepository.checkBlockedBy(any(), any()) } returns Resource.Success(emptySet<String>())
+        roomFlow.value = room
+        advanceUntilIdle()
+
+        coVerify { roomRepository.joinRoom("room-1", currentUserId) }
     }
 }

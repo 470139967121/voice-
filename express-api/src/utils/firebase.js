@@ -12,8 +12,12 @@ const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
   || process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
 if (!admin.apps.length) {
+  if (!process.env.FIREBASE_DATABASE_URL) {
+    console.error('FIREBASE_DATABASE_URL env var is required (RTDB region differs between dev and prod)');
+    process.exit(1);
+  }
   const initOptions = {
-    databaseURL: process.env.FIREBASE_DATABASE_URL || `https://${process.env.FIREBASE_PROJECT_ID}-default-rtdb.asia-southeast1.firebasedatabase.app`,
+    databaseURL: process.env.FIREBASE_DATABASE_URL,
   };
 
   if (serviceAccountPath) {

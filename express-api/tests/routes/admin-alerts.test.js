@@ -83,9 +83,9 @@ function createApp(isAdmin = true) {
   app.use(express.json());
   app.use((req, res, next) => {
     if (isAdmin) {
-      req.auth = { uid: 'admin1', isAdmin: true, token: { admin: true } };
+      req.auth = { uid: 'admin1', uniqueId: 'admin1', isAdmin: true, token: { admin: true } };
     } else {
-      req.auth = { uid: 'user1', isAdmin: false, token: {} };
+      req.auth = { uid: 'user1', uniqueId: 'user1', isAdmin: false, token: {} };
     }
     next();
   });

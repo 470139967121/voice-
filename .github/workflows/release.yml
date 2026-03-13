@@ -1,0 +1,906 @@
+name: Release Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: release-pipeline
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Stage 1: Build, Test & Deploy to Dev
+  # ──────────────────────────────────────────────
+
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+        with:
+          cache-read-only: false
+
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_DEV_BASE64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
+          GOOGLE_SERVICES_PROD_BASE64: ${{ secrets.GOOGLE_SERVICES_PROD_BASE64 }}
+        run: |
+          mkdir -p app/src/dev app/src/prod
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/dev/google-services.json
+          echo "$GOOGLE_SERVICES_PROD_BASE64" | base64 -d > app/src/prod/google-services.json
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+
+      - name: Run unit tests and build devRelease APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+        run: |
+          ./gradlew testDevDebugUnitTest assembleDevRelease --parallel || \
+          ./gradlew testDevDebugUnitTest assembleDevRelease --parallel
+
+      - name: Publish unit test report
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
+        if: always()
+        with:
+          check_name: Unit Tests
+          files: '**/build/test-results/**/TEST-*.xml'
+
+      - name: Upload devRelease APK
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: dev-release-apk
+          path: app/build/outputs/apk/dev/release/*.apk
+
+  # iOS compilation is verified by the deploy-ios-dev job (archive step).
+  # A separate simulator build was removed to save ~10 min of redundant
+  # Kotlin/Native compilation per pipeline run.
+
+  web-tests:
+    name: Web Tests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '24'
+
+      - name: Install Playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          WEB_BASE_URL: https://dev.shytalk.shyden.co.uk
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+      - name: Publish Playwright results
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
+        if: always()
+        with:
+          check_name: Web Tests
+          files: playwright-results.xml
+
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build-and-test, web-tests]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '24'
+
+      - name: Install deploy tools
+        run: npm install -g wrangler firebase-tools
+
+      - name: Deploy Express API to London (dev)
+        env:
+          SSH_KEY: ${{ secrets.LONDON_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan 145.241.224.13 >> ~/.ssh/known_hosts
+
+          cd express-api
+          tar czf /tmp/api.tar.gz --exclude='node_modules' --exclude='.env' .
+          scp /tmp/api.tar.gz ubuntu@145.241.224.13:/tmp/
+          ssh ubuntu@145.241.224.13 "cd ~/express-api && tar xzf /tmp/api.tar.gz && npm install --omit=dev && pm2 restart shytalk-api"
+
+      - name: Verify dev API health
+        run: |
+          for i in 1 2 3 4 5; do
+            sleep 5
+            if curl -sf https://dev-api.shytalk.shyden.co.uk/api/health; then exit 0; fi
+            echo "Health check attempt $i failed, retrying..."
+          done
+          echo "Dev API health check failed after 5 attempts"
+          exit 1
+
+      - name: Deploy web to dev site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: '9315582c39b627dca58dfa83602db385'
+          DEV_FIREBASE_API_KEY: ${{ secrets.DEV_FIREBASE_API_KEY }}
+        run: |
+          sed "s|<DEV_FIREBASE_API_KEY>|$DEV_FIREBASE_API_KEY|" public/admin/config.dev.example.js > public/admin/config.js
+          wrangler pages deploy public --project-name shytalk-site-dev
+
+      - name: Deploy Firestore rules to dev
+        env:
+          FIREBASE_SERVICE_ACCOUNT_DEV: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_DEV" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          firebase deploy --only firestore:rules --project shytalk-dev --non-interactive
+          rm /tmp/firebase-sa.json
+
+      - name: Deploy RTDB rules to dev
+        env:
+          FIREBASE_SERVICE_ACCOUNT_DEV: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_DEV" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          firebase deploy --only database --project shytalk-dev --non-interactive
+          rm /tmp/firebase-sa.json
+
+      - name: Download devRelease APK
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dev-release-apk
+          path: dev-release-apk
+
+      - name: Locate APK
+        id: find-apk
+        run: |
+          APK_PATH=$(find dev-release-apk -name "*.apk" -type f | head -1)
+          echo "Found APK: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Generate dev release notes
+        id: dev-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
+          COMMITS=$(gh pr view "$PR_NUMBER" --json commits --jq '[.commits[].messageHeadline] | reverse | .[0:5] | .[]' | grep -v '^Merge ' | grep -v '^chore:')
+          NOTES="PR #${PR_NUMBER}: ${PR_TITLE}"
+          if [ -n "$COMMITS" ]; then
+            NOTES="${NOTES}
+          $(echo "$COMMITS" | while IFS= read -r msg; do echo "- $msg"; done)"
+          fi
+          # Truncate to 16384 chars (Firebase App Distribution limit)
+          NOTES=$(echo "$NOTES" | head -c 16384)
+          echo "notes<<EOFNOTES" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOFNOTES" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@bd494989dd4bec0343f78adee87fe66e48279ad6 # v1
+        with:
+          appId: "1:881846974606:android:fdcefe4da94d82718e31df"
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
+          groups: internal-testers
+          file: ${{ steps.find-apk.outputs.apk_path }}
+          releaseNotes: ${{ steps.dev-notes.outputs.notes }}
+
+  deploy-ios-dev:
+    name: Deploy iOS to TestFlight (Dev)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    needs: [build-and-test, web-tests]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+        with:
+          cache-read-only: false
+
+      - name: Install Apple API key
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$APP_STORE_CONNECT_KEY" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
+
+      - name: Decode signing certificate and provisioning profile
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo "$IOS_CERTIFICATE_BASE64" | base64 -d > "$CERTIFICATE_PATH"
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "$IOS_PROVISION_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH"
+          # Install profile with UUID as filename (Xcode requires this)
+          PROFILE_UUID=$(/usr/bin/security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
+
+      - name: Select Xcode 26
+        run: |
+          # Find the Xcode 26 app path (name may vary across runner images)
+          XCODE_26=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | head -1)
+          if [ -z "$XCODE_26" ]; then
+            echo "Available Xcode versions:"
+            ls /Applications/Xcode*.app
+            echo "::error::Xcode 26 not found on this runner"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_26/Contents/Developer"
+          echo "Selected: $(xcode-select -p)"
+          xcodebuild -version
+
+      - name: Build and archive iOS app
+        run: |
+          cd iosApp
+          xcodebuild \
+            -project iosApp.xcodeproj \
+            -scheme iosApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="ShyTalk App Store Distribution" \
+            DEVELOPMENT_TEAM=F3XX4PM3MF \
+            archive
+
+      - name: Export IPA
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          cd iosApp
+          xcodebuild \
+            -exportArchive \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/export \
+            -authenticationKeyPath ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8 \
+            -authenticationKeyID $APP_STORE_CONNECT_KEY_ID \
+            -authenticationKeyIssuerID $APP_STORE_CONNECT_ISSUER_ID
+
+      - name: Upload to TestFlight (dev build for testers)
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app \
+            -f $RUNNER_TEMP/export/*.ipa \
+            -t ios \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+
+  # ──────────────────────────────────────────────
+  # Stage 2: Approval Gate
+  # ──────────────────────────────────────────────
+
+  approve-production:
+    name: Approve Production Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 1440
+    needs: [deploy-dev, deploy-ios-dev]
+    environment: production
+    steps:
+      - run: echo "Production release approved — running E2E tests next"
+
+  # ──────────────────────────────────────────────
+  # Stage 3: E2E Tests (against dev environment)
+  # ──────────────────────────────────────────────
+
+  e2e-tests:
+    name: E2E Tests (${{ matrix.device }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: approve-production
+    strategy:
+      fail-fast: true
+      matrix:
+        device:
+          - pixel4a
+          - pixel8
+          - pixel9ProXL
+          - pixelTablet
+        include:
+          - device: pixel4a
+            api-level: 34
+            target: aosp_atd
+            profile: pixel_4a
+          - device: pixel8
+            api-level: 34
+            target: aosp_atd
+            profile: pixel_8
+          - device: pixel9ProXL
+            api-level: 34
+            target: aosp_atd
+            profile: pixel_9_pro_xl
+          - device: pixelTablet
+            api-level: 34
+            target: aosp_atd
+            profile: pixel_tablet
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+        with:
+          cache-read-only: false
+
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_DEV_BASE64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
+          GOOGLE_SERVICES_PROD_BASE64: ${{ secrets.GOOGLE_SERVICES_PROD_BASE64 }}
+        run: |
+          mkdir -p app/src/dev app/src/prod
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/dev/google-services.json
+          echo "$GOOGLE_SERVICES_PROD_BASE64" | base64 -d > app/src/prod/google-services.json
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run E2E tests on ${{ matrix.device }}
+        uses: reactivecircus/android-emulator-runner@9125fe764b516df676e33c5e6df011c6f375ef88 # v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          profile: ${{ matrix.profile }}
+          arch: x86_64
+          force-avd-creation: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./gradlew connectedDevDebugAndroidTest
+
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        if: always()
+        with:
+          name: e2e-results-${{ matrix.device }}
+          path: app/build/reports/androidTests/connected/
+
+      - name: Publish E2E test report
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2
+        if: always()
+        with:
+          check_name: E2E Tests (${{ matrix.device }})
+          files: '**/build/outputs/androidTest-results/connected/**/TEST-*.xml'
+
+  # TODO: iOS E2E tests — enable once iOS app has real screens and UI test targets
+  # ios-e2e-tests:
+  #   name: iOS E2E Tests (${{ matrix.device }})
+  #   runs-on: macos-latest
+  #   timeout-minutes: 45
+  #   needs: approve-production
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       device:
+  #         - iPhone-16
+  #         - iPhone-16-Pro-Max
+  #         - iPad-Pro-13-inch-M4
+  #       include:
+  #         - device: iPhone-16
+  #           simulator: "iPhone 16"
+  #           os: "18.0"
+  #         - device: iPhone-16-Pro-Max
+  #           simulator: "iPhone 16 Pro Max"
+  #           os: "18.0"
+  #         - device: iPad-Pro-13-inch-M4
+  #           simulator: "iPad Pro 13-inch (M4)"
+  #           os: "18.0"
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Set up JDK 17
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         java-version: '17'
+  #         distribution: 'temurin'
+  #
+  #     - name: Set up Gradle
+  #       uses: gradle/actions/setup-gradle@v4
+  #
+  #     - name: Build iOS app for simulator
+  #       run: |
+  #         cd iosApp
+  #         xcodebuild \
+  #           -project iosApp.xcodeproj \
+  #           -scheme iosApp \
+  #           -sdk iphonesimulator \
+  #           -destination 'platform=iOS Simulator,name=${{ matrix.simulator }},OS=${{ matrix.os }}' \
+  #           -configuration Debug \
+  #           CODE_SIGNING_ALLOWED=NO \
+  #           build-for-testing
+  #
+  #     - name: Run iOS UI tests on ${{ matrix.device }}
+  #       run: |
+  #         cd iosApp
+  #         xcodebuild \
+  #           -project iosApp.xcodeproj \
+  #           -scheme iosApp \
+  #           -sdk iphonesimulator \
+  #           -destination 'platform=iOS Simulator,name=${{ matrix.simulator }},OS=${{ matrix.os }}' \
+  #           -configuration Debug \
+  #           CODE_SIGNING_ALLOWED=NO \
+  #           test-without-building
+  #
+  #     - name: Upload iOS E2E test results
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: ios-e2e-results-${{ matrix.device }}
+  #         path: iosApp/build/reports/
+
+  # ──────────────────────────────────────────────
+  # Stage 4: Prepare Release (bump version + release notes)
+  # ──────────────────────────────────────────────
+
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: e2e-tests
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump version
+        run: |
+          CURRENT_CODE=$(grep 'versionCode' app/build.gradle.kts | head -1 | sed 's/[^0-9]//g')
+          NEW_CODE=$((CURRENT_CODE + 1))
+          NEW_NAME="0.${NEW_CODE}"
+
+          sed -i "s/versionCode = ${CURRENT_CODE}/versionCode = ${NEW_CODE}/" app/build.gradle.kts
+          sed -i "s/versionName = \".*\"/versionName = \"${NEW_NAME}\"/" app/build.gradle.kts
+
+          echo "Bumped version: ${CURRENT_CODE} → ${NEW_CODE} (v${NEW_NAME})"
+          echo "NEW_VERSION=${NEW_NAME}" >> "$GITHUB_ENV"
+
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
+
+          # Collect commit subjects from this PR (excluding merge commits)
+          COMMITS=$(gh pr view "$PR_NUMBER" --json commits --jq '.commits[].messageHeadline' | grep -v '^Merge ' | head -10)
+
+          # Build user-friendly release notes (max 500 chars for Google Play)
+          NOTES_FILE="app/src/main/play/release-notes/en-US/internal.txt"
+          {
+            echo "v${NEW_VERSION}"
+            echo ""
+            # Convert commit messages to user-friendly bullet points
+            echo "$COMMITS" | while IFS= read -r msg; do
+              # Skip CI/chore commits, keep feature/fix commits
+              case "$msg" in
+                ci:*|chore:*|build:*|style:*) continue ;;
+              esac
+              # Clean up conventional commit prefixes
+              clean=$(echo "$msg" | sed 's/^feat: //' | sed 's/^fix: //' | sed 's/^docs: //' | sed 's/^refactor: //')
+              echo "- ${clean}"
+            done
+          } > "$NOTES_FILE"
+
+          # If no meaningful commits were found, use PR title
+          LINE_COUNT=$(wc -l < "$NOTES_FILE")
+          if [ "$LINE_COUNT" -le 2 ]; then
+            echo "- ${PR_TITLE}" >> "$NOTES_FILE"
+          fi
+
+          # Truncate to 500 chars (Google Play limit)
+          truncated=$(head -c 500 "$NOTES_FILE")
+          echo "$truncated" > "$NOTES_FILE"
+
+          echo "=== Release notes ==="
+          cat "$NOTES_FILE"
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts app/src/main/play/release-notes/en-US/internal.txt
+          git commit -m "chore: bump version to v${NEW_VERSION} and update release notes"
+          git push
+
+  # ──────────────────────────────────────────────
+  # Stage 5: Merge PR to main
+  # ──────────────────────────────────────────────
+
+  merge-pr:
+    name: Merge PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: prepare-release
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Merge PR to main and delete branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr merge "$PR_NUMBER" --merge --delete-branch
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          TAG="v${VERSION}"
+          NOTES=$(cat app/src/main/play/release-notes/en-US/internal.txt)
+
+          gh release create "$TAG" \
+            --target main \
+            --title "$TAG" \
+            --notes "$NOTES"
+          echo "Created release $TAG"
+
+  # ──────────────────────────────────────────────
+  # Stage 6: Deploy main to Production
+  # ──────────────────────────────────────────────
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: merge-pr
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+        with:
+          cache-read-only: false
+
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_DEV_BASE64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
+          GOOGLE_SERVICES_PROD_BASE64: ${{ secrets.GOOGLE_SERVICES_PROD_BASE64 }}
+        run: |
+          mkdir -p app/src/dev app/src/prod
+          echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/dev/google-services.json
+          echo "$GOOGLE_SERVICES_PROD_BASE64" | base64 -d > app/src/prod/google-services.json
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+
+      - name: Build prodRelease
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+        run: ./gradlew assembleProdRelease bundleProdRelease
+
+      - name: Run prod smoke tests
+        run: ./gradlew testProdReleaseUnitTest
+
+      - name: Archive previous API version
+        env:
+          SSH_KEY: ${{ secrets.SINGAPORE_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan 213.35.98.160 >> ~/.ssh/known_hosts
+          ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar czf /tmp/api-previous.tar.gz --exclude='node_modules' --exclude='.env' ."
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '24'
+
+      - name: Install deploy tools
+        run: npm install -g wrangler firebase-tools
+
+      - name: Deploy Express API to Singapore (prod)
+        run: |
+          cd express-api
+          tar czf /tmp/api.tar.gz --exclude='node_modules' --exclude='.env' .
+          scp /tmp/api.tar.gz ubuntu@213.35.98.160:/tmp/
+          ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar xzf /tmp/api.tar.gz && npm install --omit=dev && pm2 restart shytalk-api"
+
+      - name: Verify prod API health
+        run: |
+          for i in 1 2 3 4 5; do
+            sleep 5
+            if curl -sf https://api.shytalk.shyden.co.uk/api/health; then exit 0; fi
+            echo "Health check attempt $i failed, retrying..."
+          done
+          echo "Prod API health check failed after 5 attempts"
+          exit 1
+
+      # Upload to internal testing track (prod build for testers)
+      - name: Upload to Play Store internal testing track
+        uses: r0adkll/upload-google-play@935ef9c68bb393a8e6116b1575626a7f5be3a7fb # v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.shyden.shytalk
+          releaseFiles: app/build/outputs/bundle/prodRelease/*.aab
+          track: internal
+          status: draft
+
+      - name: Deploy Firestore rules to prod
+        env:
+          FIREBASE_SERVICE_ACCOUNT_PROD: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_PROD" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          firebase deploy --only firestore:rules --project shytalk-7ba69 --non-interactive
+          rm /tmp/firebase-sa.json
+
+      - name: Deploy RTDB rules to prod
+        env:
+          FIREBASE_SERVICE_ACCOUNT_PROD: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_PROD" > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          firebase deploy --only database --project shytalk-7ba69 --non-interactive
+          rm /tmp/firebase-sa.json
+
+      - name: Deploy web to prod site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: '9315582c39b627dca58dfa83602db385'
+          PROD_FIREBASE_API_KEY: ${{ secrets.PROD_FIREBASE_API_KEY }}
+        run: |
+          sed "s|<PROD_FIREBASE_API_KEY>|$PROD_FIREBASE_API_KEY|" public/admin/config.example.js > public/admin/config.js
+          wrangler pages deploy public --project-name shytalk-site
+
+  deploy-ios-prod:
+    name: Deploy iOS to App Store
+    runs-on: macos-latest
+    timeout-minutes: 45
+    needs: merge-pr
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+        with:
+          cache-read-only: false
+
+      - name: Install Apple API key
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$APP_STORE_CONNECT_KEY" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
+
+      - name: Decode signing certificate and provisioning profile
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          # Import certificate to keychain
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo "$IOS_CERTIFICATE_BASE64" | base64 -d > "$CERTIFICATE_PATH"
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          # Install provisioning profile with UUID as filename (Xcode requires this)
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "$IOS_PROVISION_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH"
+          PROFILE_UUID=$(/usr/bin/security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
+
+      - name: Select Xcode 26
+        run: |
+          XCODE_26=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | head -1)
+          if [ -z "$XCODE_26" ]; then
+            echo "Available Xcode versions:"
+            ls /Applications/Xcode*.app
+            echo "::error::Xcode 26 not found on this runner"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_26/Contents/Developer"
+          echo "Selected: $(xcode-select -p)"
+          xcodebuild -version
+
+      - name: Build iOS app for release
+        run: |
+          cd iosApp
+          xcodebuild \
+            -project iosApp.xcodeproj \
+            -scheme iosApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="ShyTalk App Store Distribution" \
+            DEVELOPMENT_TEAM=F3XX4PM3MF \
+            archive
+
+      - name: Export IPA
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          cd iosApp
+          xcodebuild \
+            -exportArchive \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/export \
+            -authenticationKeyPath ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8 \
+            -authenticationKeyID $APP_STORE_CONNECT_KEY_ID \
+            -authenticationKeyIssuerID $APP_STORE_CONNECT_ISSUER_ID
+
+      - name: Upload to App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app \
+            -f $RUNNER_TEMP/export/*.ipa \
+            -t ios \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+
+  # ──────────────────────────────────────────────
+  # Stage 7 (FUTURE): Promote to Public Release
+  # ──────────────────────────────────────────────
+  # TODO: When ready, add a second approval gate + promote from
+  # internal → production on Play Store, and from TestFlight → App Store.
+  #
+  # promote-to-production:
+  #   name: Promote to Public Release
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 10
+  #   needs: [deploy-prod, deploy-ios-prod]
+  #   environment: public-release
+  #   steps:
+  #     - name: Promote internal → production on Play Store
+  #       uses: r0adkll/upload-google-play@v1
+  #       with:
+  #         serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+  #         packageName: com.shyden.shytalk
+  #         track: production
+  #         fromTrack: internal
+  #         status: completed
+
+  # ──────────────────────────────────────────────
+  # Alert (if prod deploy fails after merge — Stage 6 failure)
+  # ──────────────────────────────────────────────
+
+  alert-desync:
+    name: Alert - Prod Deploy Failed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [deploy-prod, deploy-ios-prod]
+    if: ${{ always() && (needs.deploy-prod.result == 'failure' || needs.deploy-ios-prod.result == 'failure') }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Create critical issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh issue create \
+            --title "CRITICAL: Main updated but production deploy failed" \
+            --label "critical,prod-desync" \
+            --assignee "$PR_AUTHOR" \
+            --body "## Production Deploy Failed
+
+          **PR:** #${PR_NUMBER}
+          **Branch:** ${HEAD_REF}
+          **Merged SHA:** ${HEAD_SHA}
+
+          ### What happened
+          PR was merged to main but the production deployment failed.
+          Main has new code that is not yet live in production.
+
+          ### Immediate action required
+          1. Check the deploy-prod job logs for the failure reason
+          2. Fix the issue and re-deploy manually or via a new PR
+          3. Verify production matches main
+          4. Close this issue once resolved"

@@ -58,7 +58,7 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'admin-1', token: { admin: true } };
+    req.auth = { uid: 'admin-1', uniqueId: 'admin-1', token: { admin: true } };
     next();
   });
   app.use('/api', adminEconomyRouter);
@@ -67,7 +67,7 @@ function createApp() {
 
 // ─── Tests ──────────────────────────────────────────────────────
 
-describe('POST /api/users/:uid/luck', () => {
+describe('POST /api/users/:uniqueId/luck', () => {
   let app;
 
   beforeEach(() => {
@@ -148,9 +148,9 @@ describe('POST /api/users/:uid/luck', () => {
   });
 });
 
-// ─── Task 4: POST /api/users/:uid/adjust-balance ────────────────
+// ─── Task 4: POST /api/users/:uniqueId/adjust-balance ────────────────
 
-describe('POST /api/users/:uid/adjust-balance', () => {
+describe('POST /api/users/:uniqueId/adjust-balance', () => {
   let app;
 
   beforeEach(() => {
@@ -272,9 +272,9 @@ describe('POST /api/users/:uid/adjust-balance', () => {
   });
 });
 
-// ─── Task 5: GET /api/users/:uid/transactions ────────────────────
+// ─── Task 5: GET /api/users/:uniqueId/transactions ────────────────────
 
-describe('GET /api/users/:uid/transactions', () => {
+describe('GET /api/users/:uniqueId/transactions', () => {
   let app;
 
   beforeEach(() => {
@@ -347,7 +347,7 @@ describe('GET /api/users/:uid/transactions', () => {
   });
 });
 
-// ─── Task 7: GET /api/users/:uid/backpack (admin) ────────────────
+// ─── Task 7: GET /api/users/:uniqueId/backpack (admin) ────────────────
 // Note: The backpack GET endpoint lives in economy.js with admin bypass,
 // not in admin-economy.js. Tests for it are in economy.test.js.
 // The admin-economy.js only has the POST endpoint for setting quantities.

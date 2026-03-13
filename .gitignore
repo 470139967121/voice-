@@ -17,14 +17,20 @@ local.properties
 /keystore.jks
 /play-service-account.json
 shytalk-7ba69-firebase-adminsdk-*.json
+shytalk-dev-firebase-adminsdk*.json
+
+# Firebase config (contains API keys — injected from secrets in CI)
+**/google-services.json
 worker/node_modules/
 worker/.wrangler/
 worker-api/node_modules/
 worker-api/.wrangler/
 .env
+
+# Admin panel config files (contain Firebase API keys)
+public/admin/config.js
+public/admin/config.dev.js
 /node_modules/
-/package.json
-/package-lock.json
 e2e_results/
 test_output.txt
 nul
@@ -33,8 +39,10 @@ nul
 hs_err_pid*.log
 replay_pid*.log
 
-# Playwright MCP temp files
+# Playwright
 .playwright-mcp/
+playwright-report/
+playwright-results.xml
 
 # Migration scripts (one-time use)
 scripts/migrate-*.mjs
@@ -47,3 +55,19 @@ backups/
 
 # Git worktrees
 .worktrees/
+
+# iOS / Xcode
+iosApp/iosApp.xcodeproj/xcuserdata/
+iosApp/iosApp.xcodeproj/project.xcworkspace/xcuserdata/
+iosApp/DerivedData/
+iosApp/Pods/
+*.xcarchive
+
+# Test results
+test-results/
+
+# IDE artifacts
+/.idea/artifacts/
+
+# Claude Code agents (auto-generated)
+.claude/agents/

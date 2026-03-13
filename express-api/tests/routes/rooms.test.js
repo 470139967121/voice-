@@ -51,11 +51,11 @@ beforeEach(() => {
 
 const roomsRouter = require('../../src/routes/rooms');
 
-function createApp(uid = 'user-A') {
+function createApp(uniqueId = 'user-A') {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid };
+    req.auth = { uid: 'firebase-uid', uniqueId };
     next();
   });
   // Mount at /api — same as production index.js

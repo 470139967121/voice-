@@ -68,7 +68,7 @@ class ReportReviewViewModel(
                 }
                 is Resource.Error -> {
                     _uiState.update {
-                        it.copy(isLoading = false, message = result.message?.let { msg -> UiText.plain(msg) })
+                        it.copy(isLoading = false, message = UiText.plain(result.message))
                     }
                 }
                 is Resource.Loading -> {}

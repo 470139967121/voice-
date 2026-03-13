@@ -10,6 +10,9 @@ kotlin {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
+    // JVM target exists solely to run commonTest on Windows/Linux/CI
+    jvm()
+
     androidLibrary {
         namespace = "com.shyden.shytalk.shared"
         compileSdk = 36
@@ -32,6 +35,11 @@ kotlin {
     }
 
     sourceSets {
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
+        }
+
         @Suppress("DEPRECATION")
         commonMain.dependencies {
             implementation(compose.runtime)

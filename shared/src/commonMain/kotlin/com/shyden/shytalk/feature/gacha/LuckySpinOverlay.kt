@@ -339,10 +339,10 @@ fun LuckySpinOverlay(
 
                 // Quick chase (260ms per result)
                 val chaseDuration = 260L
-                val startTime2 = currentTimeMillis()
+                val chaseStartTime = currentTimeMillis()
                 var chaseStep = 0
                 while (true) {
-                    val progress = ((currentTimeMillis() - startTime2).toFloat() / chaseDuration).coerceIn(0f, 1f)
+                    val progress = ((currentTimeMillis() - chaseStartTime).toFloat() / chaseDuration).coerceIn(0f, 1f)
                     if (progress < 0.75f) {
                         outerLitIndex = if (outerGifts.isNotEmpty()) chaseStep % outerGifts.size else -1
                         innerLitIndex = if (innerGifts.isNotEmpty()) (innerGifts.size - (chaseStep % innerGifts.size)) % innerGifts.size else -1

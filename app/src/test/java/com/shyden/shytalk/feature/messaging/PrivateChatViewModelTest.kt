@@ -32,6 +32,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -1805,5 +1806,73 @@ class PrivateChatViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { pmRepository.sendTextMessage(any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    // ===== observeMessages error handling =====
+
+    @Test
+    fun `observeMessages sets error state when flow throws exception`() = runTest {
+        // Use a flow that throws after emitting
+        val errorFlow = flow<List<PrivateMessage>> {
+            throw RuntimeException("PERMISSION_DENIED: missing or insufficient permissions")
+        }
+        every { pmRepository.getMessages(conversationId, any()) } returns errorFlow
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertNotNull("Should set error when messages flow throws", vm.uiState.value.error)
+    }
+
+    @Test
+    fun `initOneOnOneChat sets isLoading false even when conversation fetch fails`() = runTest {
+        coEvery { pmRepository.getOrCreateConversation(currentUserId, otherUserId) } returns
+                Resource.Error("Failed to get or create conversation")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse("isLoading should be false after failure", vm.uiState.value.isLoading)
+        assertNotNull("error should be set", vm.uiState.value.error)
+    }
+
+    // ===== Empty state (Bug 9: loading spinner stuck) =====
+
+    @Test
+    fun `isLoading is false after conversation loaded with no messages`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Emit empty messages from the Firestore listener
+        messagesFlow.emit(emptyList())
+        advanceUntilIdle()
+
+        assertFalse("isLoading should be false after init completes", vm.uiState.value.isLoading)
+        assertTrue("messages should be empty", vm.uiState.value.messages.isEmpty())
+        assertNull("error should be null when no error occurred", vm.uiState.value.error)
+    }
+
+    @Test
+    fun `isLoading is false after successful init completes`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse("isLoading should be false after init completes", vm.uiState.value.isLoading)
+        assertEquals("conversationId should be set", conversationId, vm.uiState.value.conversationId)
+    }
+
+    @Test
+    fun `empty messages list does not show error state`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        messagesFlow.emit(emptyList())
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertFalse("isLoading should be false", state.isLoading)
+        assertTrue("messages should be empty", state.messages.isEmpty())
+        assertNull("error should be null for empty messages (not an error)", state.error)
+        assertFalse("isBlocked should be false", state.isBlocked)
     }
 }

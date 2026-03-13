@@ -57,7 +57,7 @@ function createApp(isAdmin = true) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'admin1', token: { admin: isAdmin } };
+    req.auth = { uid: 'admin1', uniqueId: 'admin1', token: { admin: isAdmin } };
     next();
   });
   app.use('/api', adminBansRouter);
@@ -230,7 +230,7 @@ describe('DELETE /api/admin/bans/network/:banId', () => {
   });
 });
 
-describe('POST /api/admin/bans/unban-all/:userId', () => {
+describe('POST /api/admin/bans/unban-all/:uniqueId', () => {
   test('removes all bans for user (200)', async () => {
     const mockRefDelete = jest.fn().mockResolvedValue();
     mockWhereGet.mockResolvedValue({
@@ -252,7 +252,7 @@ describe('POST /api/admin/bans/unban-all/:userId', () => {
   });
 });
 
-describe('GET /api/admin/bans/user/:userId', () => {
+describe('GET /api/admin/bans/user/:uniqueId', () => {
   test('gets all bans for user (200)', async () => {
     mockWhereGet.mockResolvedValue({
       docs: [
@@ -267,6 +267,6 @@ describe('GET /api/admin/bans/user/:userId', () => {
 
     expect(res.body).toHaveProperty('deviceBans');
     expect(res.body).toHaveProperty('networkBans');
-    expect(mockWhere).toHaveBeenCalledWith('linkedUserId', '==', 'user456');
+    expect(mockWhere).toHaveBeenCalledWith('linkedUniqueId', '==', 'user456');
   });
 });

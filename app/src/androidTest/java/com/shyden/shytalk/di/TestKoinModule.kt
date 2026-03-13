@@ -8,8 +8,10 @@ import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
+import com.shyden.shytalk.data.repository.IdentityRepository
 import com.shyden.shytalk.data.repository.GiftRepository
 import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.NotificationRepository
@@ -24,8 +26,10 @@ import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.fake.FakeActiveRoomManager
 import com.shyden.shytalk.fake.FakeAppConfigService
 import com.shyden.shytalk.fake.FakeAuthRepository
+import com.shyden.shytalk.fake.FakeBannerRepository
 import com.shyden.shytalk.fake.FakeDeviceRepository
 import com.shyden.shytalk.fake.FakeEconomyRepository
+import com.shyden.shytalk.fake.FakeIdentityRepository
 import com.shyden.shytalk.fake.FakeGiftRepository
 import com.shyden.shytalk.fake.FakeMessageRepository
 import com.shyden.shytalk.fake.FakeNotificationRepository
@@ -82,6 +86,7 @@ val testModule = module {
     single { FakeSeatRequestRepository() } bind SeatRequestRepository::class
     single { FakeStorageRepository() } bind StorageRepository::class
     single { FakeDeviceRepository() } bind DeviceRepository::class
+    single { FakeIdentityRepository() } bind IdentityRepository::class
     single { FakePrivateMessageRepository() } bind PrivateMessageRepository::class
     single { FakeReportRepository() } bind ReportRepository::class
     single { FakeTypingRepository() } bind TypingRepository::class
@@ -89,6 +94,7 @@ val testModule = module {
     single { FakeGiftRepository() } bind GiftRepository::class
     single { FakeEconomyRepository() } bind EconomyRepository::class
     single { FakeTranslationRepository() } bind TranslationRepository::class
+    single { FakeBannerRepository() } bind BannerRepository::class
 
     // Fake managers
     single { FakeActiveRoomManager() } bind RoomLifecycleManager::class
@@ -97,13 +103,13 @@ val testModule = module {
     single { BillingService(get()) }
 
     // ViewModels — same wiring as production, Koin resolves fakes automatically
-    viewModel { AuthViewModel(get(), get(), get(), get(named("deviceId"))) }
-    viewModel { HomeViewModel(get(), get(), get()) }
-    viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { AuthViewModel(get(), get(), get(), get(), get(named("deviceId"))) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
+    viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }
     viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }
     viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { AppSettingsViewModel(get(), get(), get()) }
+    viewModel { AppSettingsViewModel(get(), get(), get(), get()) }
     viewModel { RoomSettingsViewModel(get(), get(), get(), get()) }
     viewModel { ConversationListViewModel(get(), get(), get()) }
     viewModel { params ->

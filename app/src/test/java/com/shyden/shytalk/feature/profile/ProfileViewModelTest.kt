@@ -6,7 +6,9 @@ import com.shyden.shytalk.core.model.RoomState
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.UiText
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.CreateUserResult
 import com.shyden.shytalk.data.repository.EconomyRepository
+import com.shyden.shytalk.data.repository.IdentityRepository
 import com.shyden.shytalk.data.repository.ReportRepository
 import com.shyden.shytalk.data.repository.RoomRepository
 import com.shyden.shytalk.data.repository.StorageRepository
@@ -19,6 +21,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
@@ -49,6 +52,7 @@ class ProfileViewModelTest {
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val reportRepository = mockk<ReportRepository>(relaxed = true)
     private val economyRepository = mockk<EconomyRepository>(relaxed = true)
+    private val identityRepository = mockk<IdentityRepository>(relaxed = true)
 
     private val currentUserId = "current-user"
     private val otherUserId = "other-user"
@@ -78,7 +82,8 @@ class ProfileViewModelTest {
             storageRepository = storageRepository,
             roomRepository = roomRepository,
             reportRepository = reportRepository,
-            economyRepository = economyRepository
+            economyRepository = economyRepository,
+            identityRepository = identityRepository
         ).also { activeViewModels.add(it) }
     }
 
@@ -262,7 +267,10 @@ class ProfileViewModelTest {
 
     @Test
     fun `saveProfile - success sets profileSaved`() = runTest {
-        coEvery { userRepository.createOrUpdateUser(any()) } returns Resource.Success(Unit)
+        every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
+        coEvery { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) } returns
+            Resource.Success(CreateUserResult(10000042))
+        coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
 
         val vm = createViewModel()
         vm.saveProfile("My Name", 946684800000L)
@@ -270,12 +278,15 @@ class ProfileViewModelTest {
 
         assertTrue(vm.uiState.value.profileSaved)
         assertEquals("My Name", vm.uiState.value.user?.displayName)
+        assertEquals(10000042L, vm.uiState.value.user?.uniqueId)
         assertFalse(vm.uiState.value.isLoading)
     }
 
     @Test
     fun `saveProfile - error sets error`() = runTest {
-        coEvery { userRepository.createOrUpdateUser(any()) } returns Resource.Error("save failed")
+        every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
+        coEvery { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) } returns
+            Resource.Error("save failed")
 
         val vm = createViewModel()
         vm.saveProfile("My Name", 946684800000L)
@@ -286,14 +297,44 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun `saveProfile - no auth user does nothing`() = runTest {
-        every { authRepository.currentUserId } returns null
+    fun `saveProfile - no provider info shows error`() = runTest {
+        every { authRepository.getProviderInfo() } returns null
 
         val vm = createViewModel()
         vm.saveProfile("My Name", 946684800000L)
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { userRepository.createOrUpdateUser(any()) }
+        assertNotNull(vm.uiState.value.error)
+        coVerify(exactly = 0) { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `saveProfile sets resolvedUniqueId on authRepository after successful creation`() = runTest {
+        every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
+        coEvery { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) } returns
+            Resource.Success(CreateUserResult(10000042))
+        coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.saveProfile("My Name", 946684800000L)
+        advanceUntilIdle()
+
+        // After profile creation, resolvedUniqueId must be set so currentUserId returns the uniqueId
+        verify { authRepository.resolvedUniqueId = "10000042" }
+    }
+
+    @Test
+    fun `saveProfile does not set resolvedUniqueId when creation fails`() = runTest {
+        every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
+        coEvery { identityRepository.createUser(any(), any(), any(), any(), any(), any(), any()) } returns
+            Resource.Error("creation failed")
+
+        val vm = createViewModel()
+        vm.saveProfile("My Name", 946684800000L)
+        advanceUntilIdle()
+
+        // resolvedUniqueId should NOT be set on failure
+        verify(exactly = 0) { authRepository.resolvedUniqueId = any() }
     }
 
     // ===== saveProfileEdits =====
@@ -385,7 +426,7 @@ class ProfileViewModelTest {
     fun `uploadProfilePhoto - success updates user`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://photo.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "profiles", any()) } returns Resource.Success("https://photo.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -432,7 +473,7 @@ class ProfileViewModelTest {
         val oldUrl = "https://firebase.storage/old-profile.jpg"
         val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = oldUrl)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://new.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "profiles", any()) } returns Resource.Success("https://new.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -450,7 +491,7 @@ class ProfileViewModelTest {
     fun `uploadProfilePhoto - no old photo skips delete`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId, profilePhotoUrl = null)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "profile_photos", any()) } returns Resource.Success("https://new.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "profiles", any()) } returns Resource.Success("https://new.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -507,7 +548,7 @@ class ProfileViewModelTest {
     fun `uploadCoverPhoto - success updates user`() = runTest {
         val user = TestData.createTestUser(uid = currentUserId)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "cover_photos", any()) } returns Resource.Success("https://cover.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "covers", any()) } returns Resource.Success("https://cover.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -527,7 +568,7 @@ class ProfileViewModelTest {
         val oldUrl = "https://firebase.storage/old-cover.jpg"
         val user = TestData.createTestUser(uid = currentUserId, coverPhotoUrl = oldUrl)
         coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
-        coEvery { storageRepository.uploadImage(currentUserId, "cover_photos", any()) } returns Resource.Success("https://new-cover.url")
+        coEvery { storageRepository.uploadImage(currentUserId, "covers", any()) } returns Resource.Success("https://new-cover.url")
         coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
 
         val vm = createViewModel()
@@ -1482,5 +1523,43 @@ class ProfileViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { reportRepository.reportUser(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    // ===== Upload folder name verification =====
+
+    @Test
+    fun `uploadProfilePhoto uses profiles folder`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val folderSlot = io.mockk.slot<String>()
+        coEvery { storageRepository.uploadImage(any(), capture(folderSlot), any()) } returns Resource.Success("https://photo.url")
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadProfilePhoto(byteArrayOf(1, 2, 3))
+        advanceUntilIdle()
+
+        assertEquals("profiles", folderSlot.captured)
+    }
+
+    @Test
+    fun `uploadCoverPhoto uses covers folder`() = runTest {
+        val user = TestData.createTestUser(uid = currentUserId)
+        coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(user)
+        val folderSlot = io.mockk.slot<String>()
+        coEvery { storageRepository.uploadImage(any(), capture(folderSlot), any()) } returns Resource.Success("https://cover.url")
+        coEvery { userRepository.updateProfile(currentUserId, any()) } returns Resource.Success(Unit)
+
+        val vm = createViewModel()
+        vm.loadProfile(null)
+        advanceUntilIdle()
+
+        vm.uploadCoverPhoto(byteArrayOf(1, 2, 3))
+        advanceUntilIdle()
+
+        assertEquals("covers", folderSlot.captured)
     }
 }

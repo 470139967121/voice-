@@ -1,0 +1,62 @@
+# ShyTalk - Claude Code Instructions
+
+## Project Overview
+Social chat app with voice rooms. Kotlin Multiplatform (Android + iOS), Firebase backend, LiveKit voice, $0 hosting cost.
+
+## Build & Test Commands
+- **Build**: `./gradlew assembleDevDebug`
+- **Unit tests**: `./gradlew test`
+- **E2E tests**: `./gradlew connectedDebugAndroidTest`
+- **Install on device**: `./gradlew installDebug`
+- **Deploy Firestore rules**: `npx firebase deploy --only firestore:rules`
+
+## Git Rules
+- Default branch: `main` (NOT `master`)
+- **NEVER commit directly to main** — always create a branch and PR
+- Before starting work, check for unfinished branches (`git branch -a`)
+- Commit AND push per task, with task name in message
+
+## Architecture
+- KMP: `shared/` module (commonMain/androidMain/iosMain) + `app/` (Android) + `iosApp/` (iOS)
+- MVVM + Koin DI + Compose Multiplatform + Navigation
+- Repository pattern: interface + impl, bound via Koin
+- Most models, repos, ViewModels, UI in `shared/src/commonMain/`
+- Android-only screens in `app/`
+
+## KMP iOS Compatibility (commonMain)
+**NEVER use JVM-only APIs in commonMain** — they compile on Android but break iOS:
+- `System.currentTimeMillis()` -> `currentTimeMillis()` from `core.util.PlatformTime`
+- `Math.PI/sin()` -> `kotlin.math.PI/sin()`
+- `String.format()` -> `padStart()` or manual formatting
+- `synchronized {}` -> remove or use `kotlinx.coroutines.sync.Mutex`
+- `@Volatile` -> `@kotlin.concurrent.Volatile`
+
+## Key Constraints
+- **$0 hosting** — never introduce paid services (no Firebase Blaze, no paid Cloudflare)
+- **Google Play release notes** max 500 chars, non-technical, in `app/src/main/play/release-notes/en-US/internal.txt`
+- **Translations** — user-facing strings must go in ALL 19 locale files (`shared/src/commonMain/composeResources/values-{locale}/strings.xml`)
+- **Low resolution support** — use proportional/relative sizing, not fixed sp/dp
+- **No rarity-colored borders** on gifts/backpack — neutral theme colors only
+
+## Testing Policy
+- Run ALL tests after every code change
+- When fixing a bug, always write tests for it
+- Fix all failures before committing
+- JVM test gotcha: `org.json.JSONObject` is stubbed — add `testImplementation("org.json:json:20231013")` if needed
+
+## Debugging
+- **Check Firestore security rules first** for read/write failures — pull logcat for `PERMISSION_DENIED`
+- Rules file: `firestore.rules` — must include rules for ALL collections AND subcollections
+- Firestore rules don't cascade into subcollections
+
+## Environments
+- **Dev**: Firebase `shytalk-dev`, API `dev-api.shytalk.shyden.co.uk` (London)
+- **Prod**: Firebase `shytalk-7ba69`, API `api.shytalk.shyden.co.uk` (Singapore)
+- Build flavors: `dev` and `prod` in `app/build.gradle.kts`
+- `google-services.json` in `app/src/dev/` and `app/src/prod/`
+
+## Express API (Oracle Cloud)
+- Source: `express-api/src/` — routes, utils, middleware
+- Stack: Express.js + Firebase Admin SDK + PM2 + Caddy
+- Dev SSH: `ssh -i ~/.ssh/shytalk-oci ubuntu@145.241.224.13`
+- Prod SSH: `ssh -i ~/.ssh/shytalk-oci ubuntu@213.35.98.160`

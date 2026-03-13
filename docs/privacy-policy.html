@@ -34,6 +34,7 @@
         <li><strong>Account information</strong> &ndash; display name, profile photo, and nationality you provide during setup.</li>
         <li><strong>Google account or Apple account</strong> &ndash; used solely for authentication via Firebase Authentication.</li>
         <li><strong>Voice audio</strong> &ndash; transmitted in real time during voice chat sessions through the LiveKit SDK. Audio is streamed peer-to-peer and is <em>not</em> recorded or stored by ShyTalk.</li>
+        <li><strong>Sign-in identities</strong> &ndash; if you link multiple sign-in methods (Google, Apple, Email) to your account, we store the associated provider identifiers (such as email addresses and Apple identifiers) in an identity map alongside your account to enable multi-provider sign-in.</li>
         <li><strong>Device identifier (Android&nbsp;ID)</strong> &ndash; a per-device identifier used to enforce a one-account-per-device policy and prevent abuse.</li>
         <li><strong>Usage data</strong> &ndash; chat room participation and seat activity, stored in Cloud Firestore to operate the service.</li>
     </ul>

@@ -41,6 +41,13 @@ ShyTalk is a social voice chat app where users can create and join real-time voi
 - Coin packages for purchasing coins
 - Broadcast banners with animated gift effects
 
+### Account & Identity
+- Multi-provider authentication -- sign in with Google, Apple, or Email (OTP)
+- Link multiple sign-in methods to a single account
+- Stable user identity (uniqueId) that persists across Firebase projects
+- Linked Accounts management in Settings with link/unlink support
+- Device binding -- each device is permanently tied to one account
+
 ### Moderation & Safety
 - Moderation tools -- mute, kick, move seats, and manage hosts as a room owner
 - User reporting system with review workflow
@@ -64,7 +71,7 @@ ShyTalk is a social voice chat app where users can create and join real-time voi
 | **UI** | Compose Multiplatform |
 | **Architecture** | MVVM + Repository Pattern |
 | **DI** | Koin |
-| **Auth** | Firebase Authentication (Google, Apple Sign-In) |
+| **Auth** | Firebase Authentication (Google, Apple, Email+OTP) with multi-provider identity system |
 | **Database** | Cloud Firestore |
 | **Real-time** | Firebase Realtime Database |
 | **Storage** | Cloudflare R2 (via Express API proxy) |

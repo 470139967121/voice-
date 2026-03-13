@@ -21,7 +21,7 @@ class DeviceRepositoryImpl(
     override suspend fun getDeviceBinding(deviceId: String): Resource<String?> = firebaseCall("Failed to check device binding") {
         val doc = firestore.document("deviceBindings/$deviceId").get().await()
         val data = doc.data ?: return@firebaseCall null
-        data["userId"] as? String
+        (data["uniqueId"] ?: data["userId"])?.toString()
     }
 
     override suspend fun bindDevice(deviceId: String, userId: String): Resource<Unit> = firebaseCall("Failed to bind device") {

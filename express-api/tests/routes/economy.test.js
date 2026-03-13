@@ -64,11 +64,11 @@ beforeEach(() => {
 const economyRouter = require('../../src/routes/economy');
 const { requireAdmin } = require('../../src/middleware/auth');
 
-function createApp(uid = 'user-A', isAdmin = true) {
+function createApp(uniqueId = 'user-A', isAdmin = true) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid, token: { admin: isAdmin } };
+    req.auth = { uid: 'firebase-uid', uniqueId, token: { admin: isAdmin } };
     next();
   });
   app.use('/api', economyRouter);
@@ -227,7 +227,7 @@ describe('GET /api/economy/balance', () => {
   });
 });
 
-describe('GET /api/users/:uid/backpack', () => {
+describe('GET /api/users/:uniqueId/backpack', () => {
   test('allows owner to read their own backpack', async () => {
     const { db } = require('../../src/utils/firebase');
     db.collection.mockReturnValueOnce({

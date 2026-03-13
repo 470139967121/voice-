@@ -5,29 +5,34 @@
  */
 
 const { execFile } = require('child_process');
+const os = require('os');
 const log = require('../utils/log');
 
 // Track last-known restart counts to only alert on NEW restarts
 const lastRestartCounts = {};
 
 async function serverHealth(alertManager) {
-  // Check memory usage
+  // Check memory usage — RSS vs system total (not V8 heap ratio, which is
+  // misleadingly high because V8 keeps heapTotal close to heapUsed)
   const mem = process.memoryUsage();
-  const heapPercent = (mem.heapUsed / mem.heapTotal) * 100;
+  const systemTotalBytes = os.totalmem();
+  const rssPercent = (mem.rss / systemTotalBytes) * 100;
+  const rssMB = Math.round(mem.rss / 1024 / 1024);
+  const systemTotalMB = Math.round(systemTotalBytes / 1024 / 1024);
 
   const config = alertManager.getConfig();
-  const memThreshold = config.serverMemoryWarningPercent || 85;
+  const memThreshold = config.serverMemoryWarningPercent || 30;
 
-  if (heapPercent > memThreshold) {
+  if (rssPercent > memThreshold) {
     await alertManager.createAlert(
       'high_memory',
       'warning',
       'High server memory usage',
-      `Heap usage at ${heapPercent.toFixed(1)}% (threshold: ${memThreshold}%)`,
+      `RSS at ${rssMB}MB / ${systemTotalMB}MB (${rssPercent.toFixed(1)}%, threshold: ${memThreshold}%)`,
       {
-        heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
-        heapTotalMB: Math.round(mem.heapTotal / 1024 / 1024),
-        heapPercent: Math.round(heapPercent * 10) / 10,
+        rssMB,
+        systemTotalMB,
+        rssPercent: Math.round(rssPercent * 10) / 10,
       }
     );
   }
@@ -72,7 +77,7 @@ async function serverHealth(alertManager) {
     }
   }
 
-  log.debug('cron', 'serverHealth: check completed', { heapPercent: Math.round(heapPercent * 10) / 10 });
+  log.debug('cron', 'serverHealth: check completed', { rssMB, rssPercent: Math.round(rssPercent * 10) / 10 });
 }
 
 module.exports = serverHealth;

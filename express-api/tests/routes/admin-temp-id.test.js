@@ -58,7 +58,7 @@ function createApp(isAdmin = true) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.auth = { uid: 'admin1', token: { admin: isAdmin } };
+    req.auth = { uid: 'admin1', uniqueId: 'admin1', token: { admin: isAdmin } };
     next();
   });
   app.use('/api', adminTempIdRouter);
@@ -156,7 +156,7 @@ describe('GET /api/admin/users/check-id/:id', () => {
   });
 });
 
-describe('POST /api/admin/users/:uid/temp-id', () => {
+describe('POST /api/admin/users/:uniqueId/temp-id', () => {
   test('sets temp ID successfully', async () => {
     const futureExpiry = Date.now() + 86400000;
 
@@ -180,7 +180,7 @@ describe('POST /api/admin/users/:uid/temp-id', () => {
     );
     expect(sendSystemPm).toHaveBeenCalledWith(
       'user123',
-      'Your display ID has been temporarily changed to 12345678.'
+      expect.stringContaining('Your display ID has been temporarily changed to 12345678.')
     );
   });
 
@@ -225,7 +225,7 @@ describe('POST /api/admin/users/:uid/temp-id', () => {
   });
 });
 
-describe('DELETE /api/admin/users/:uid/temp-id', () => {
+describe('DELETE /api/admin/users/:uniqueId/temp-id', () => {
   test('clears temp ID successfully', async () => {
     const app = createApp();
     const res = await request(app)

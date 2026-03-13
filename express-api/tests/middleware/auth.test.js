@@ -5,14 +5,23 @@ const request = require('supertest');
 
 const mockVerifyIdToken = jest.fn();
 const mockDocGet = jest.fn();
+const mockCollectionQuery = jest.fn();
 
 jest.mock('../../src/utils/firebase', () => ({
   auth: {
     verifyIdToken: (...args) => mockVerifyIdToken(...args),
   },
   db: {
-    doc: jest.fn(() => ({
-      get: mockDocGet,
+    doc: jest.fn((path) => ({
+      _path: path,
+      get: () => mockDocGet(path),
+    })),
+    collection: jest.fn(() => ({
+      where: jest.fn(() => ({
+        limit: jest.fn(() => ({
+          get: () => mockCollectionQuery(),
+        })),
+      })),
     })),
   },
 }));
@@ -23,35 +32,53 @@ jest.mock('../../src/utils/log', () => ({
   error: jest.fn(),
 }));
 
-const { authMiddleware } = require('../../src/middleware/auth');
+const { authMiddleware, clearUniqueIdCache } = require('../../src/middleware/auth');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  clearUniqueIdCache(); // Reset cache between tests
 });
 
 // ─── App setup helper ────────────────────────────────────────────
 
-/**
- * Creates a test app mounted at /api so req.path matches production behavior.
- * When Express mounts middleware at /api, req.path strips the /api prefix.
- */
 function createApp() {
   const app = express();
   app.use(express.json());
 
   const router = express.Router();
-
-  // Apply auth middleware to all routes under /api
   router.use(authMiddleware);
 
   // Dummy routes for testing
-  router.get('/users/:uid', (req, res) => res.json({ ok: true }));
-  router.post('/users/:uid/appeal', (req, res) => res.json({ ok: true }));
-  router.post('/users/:uid/lift-suspension', (req, res) => res.json({ ok: true }));
-  router.post('/users/:uid/follow', (req, res) => res.json({ ok: true }));
+  router.get('/users/:uniqueId', (req, res) => res.json({ ok: true }));
+  router.post('/users/:uniqueId/appeal', (req, res) => res.json({ ok: true }));
+  router.post('/users/:uniqueId/lift-suspension', (req, res) => res.json({ ok: true }));
+  router.post('/users/:uniqueId/follow', (req, res) => res.json({ ok: true }));
 
   app.use('/api', router);
   return app;
+}
+
+/**
+ * Helper: configure mocks for a user with known uniqueId and suspension status.
+ */
+function mockUser(uid, uniqueId, isSuspended = false) {
+  mockVerifyIdToken.mockResolvedValueOnce({ uid });
+  // uniqueId resolution query
+  if (uniqueId != null) {
+    mockCollectionQuery.mockResolvedValueOnce({
+      empty: false,
+      docs: [{ id: String(uniqueId), data: () => ({ uniqueId, firebaseUid: uid }) }],
+    });
+  } else {
+    mockCollectionQuery.mockResolvedValueOnce({ empty: true, docs: [] });
+  }
+  // suspension check
+  mockDocGet.mockImplementation((path) => {
+    if (path === `users/${uniqueId}`) {
+      return Promise.resolve({ exists: true, data: () => ({ isSuspended }) });
+    }
+    return Promise.resolve({ exists: false });
+  });
 }
 
 // ─── Tests ───────────────────────────────────────────────────────
@@ -59,13 +86,13 @@ function createApp() {
 describe('authMiddleware', () => {
   test('returns 401 when no Authorization header', async () => {
     const app = createApp();
-    await request(app).get('/api/users/user-1').expect(401);
+    await request(app).get('/api/users/10000001').expect(401);
   });
 
   test('returns 401 when Authorization header has no Bearer prefix', async () => {
     const app = createApp();
     await request(app)
-      .get('/api/users/user-1')
+      .get('/api/users/10000001')
       .set('Authorization', 'Basic abc')
       .expect(401);
   });
@@ -74,21 +101,17 @@ describe('authMiddleware', () => {
     mockVerifyIdToken.mockRejectedValueOnce(new Error('Invalid token'));
     const app = createApp();
     await request(app)
-      .get('/api/users/user-1')
+      .get('/api/users/10000001')
       .set('Authorization', 'Bearer bad-token')
       .expect(401);
   });
 
   test('sets req.auth and passes through for non-suspended user', async () => {
-    mockVerifyIdToken.mockResolvedValueOnce({ uid: 'user-1' });
-    mockDocGet.mockResolvedValueOnce({
-      exists: true,
-      data: () => ({ isSuspended: false }),
-    });
+    mockUser('user-1', 10000001, false);
 
     const app = createApp();
     const res = await request(app)
-      .get('/api/users/user-1')
+      .get('/api/users/10000001')
       .set('Authorization', 'Bearer valid-token')
       .expect(200);
 
@@ -96,37 +119,24 @@ describe('authMiddleware', () => {
   });
 
   test('returns 403 for suspended user on normal routes', async () => {
-    // Use a different uid to avoid hitting the in-memory suspension cache
-    // from the previous test (which cached user-1 as non-suspended)
-    mockVerifyIdToken.mockResolvedValueOnce({ uid: 'suspended-user-2' });
-    mockDocGet.mockResolvedValueOnce({
-      exists: true,
-      data: () => ({ isSuspended: true }),
-    });
+    mockUser('suspended-user-2', 10000002, true);
 
     const app = createApp();
     await request(app)
-      .post('/api/users/suspended-user-2/follow')
+      .post('/api/users/10000002/follow')
       .set('Authorization', 'Bearer valid-token')
-      .send({ targetUserId: 'user-2' })
+      .send({ targetUserId: '10000003' })
       .expect(403);
   });
 });
 
 describe('suspension exemption paths', () => {
-  beforeEach(() => {
-    // All tests in this block use a suspended user
-    mockVerifyIdToken.mockResolvedValue({ uid: 'suspended-user' });
-    mockDocGet.mockResolvedValue({
-      exists: true,
-      data: () => ({ isSuspended: true }),
-    });
-  });
+  test('allows suspended user to POST /users/:uniqueId/appeal', async () => {
+    mockUser('suspended-user', 10000050, true);
 
-  test('allows suspended user to POST /users/:uid/appeal', async () => {
     const app = createApp();
     const res = await request(app)
-      .post('/api/users/suspended-user/appeal')
+      .post('/api/users/10000050/appeal')
       .set('Authorization', 'Bearer valid-token')
       .send({ appealText: 'Please unban me' })
       .expect(200);
@@ -134,28 +144,34 @@ describe('suspension exemption paths', () => {
     expect(res.body.ok).toBe(true);
   });
 
-  test('allows suspended user to POST /users/:uid/lift-suspension', async () => {
+  test('allows suspended user to POST /users/:uniqueId/lift-suspension', async () => {
+    mockUser('suspended-user-ls', 10000051, true);
+
     const app = createApp();
     const res = await request(app)
-      .post('/api/users/suspended-user/lift-suspension')
+      .post('/api/users/10000051/lift-suspension')
       .set('Authorization', 'Bearer valid-token')
       .expect(200);
 
     expect(res.body.ok).toBe(true);
   });
 
-  test('blocks suspended user from GET /users/:uid', async () => {
+  test('blocks suspended user from GET /users/:uniqueId', async () => {
+    mockUser('suspended-user-get', 10000052, true);
+
     const app = createApp();
     await request(app)
-      .get('/api/users/suspended-user')
+      .get('/api/users/10000052')
       .set('Authorization', 'Bearer valid-token')
       .expect(403);
   });
 
-  test('blocks suspended user from POST /users/:uid/follow', async () => {
+  test('blocks suspended user from POST /users/:uniqueId/follow', async () => {
+    mockUser('suspended-user-follow', 10000053, true);
+
     const app = createApp();
     await request(app)
-      .post('/api/users/suspended-user/follow')
+      .post('/api/users/10000053/follow')
       .set('Authorization', 'Bearer valid-token')
       .send({ targetUserId: 'other-user' })
       .expect(403);

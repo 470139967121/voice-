@@ -1,15 +1,15 @@
 /**
  * Admin economy routes — balance adjustment, backpack, luck, transactions, gacha guarantee.
  *
- * GET    /users/:uid/economy              → Economy snapshot
- * POST   /users/:uid/adjust-balance       → Adjust coins or beans
- * POST   /users/:uid/backpack             → Set backpack item quantity
- * GET    /users/:uid/luck                 → Get luck + pity
- * POST   /users/:uid/luck                 → Update luck/pity
- * GET    /users/:uid/transactions         → Paginated transaction history
- * GET    /users/:uid/guarantee-next-pull  → Check guarantee status
- * POST   /users/:uid/guarantee-next-pull  → Set guaranteed next pull
- * DELETE /users/:uid/guarantee-next-pull  → Revoke guarantee
+ * GET    /users/:uniqueId/economy              → Economy snapshot
+ * POST   /users/:uniqueId/adjust-balance       → Adjust coins or beans
+ * POST   /users/:uniqueId/backpack             → Set backpack item quantity
+ * GET    /users/:uniqueId/luck                 → Get luck + pity
+ * POST   /users/:uniqueId/luck                 → Update luck/pity
+ * GET    /users/:uniqueId/transactions         → Paginated transaction history
+ * GET    /users/:uniqueId/guarantee-next-pull  → Check guarantee status
+ * POST   /users/:uniqueId/guarantee-next-pull  → Set guaranteed next pull
+ * DELETE /users/:uniqueId/guarantee-next-pull  → Revoke guarantee
  */
 
 const router = require('express').Router();
@@ -20,11 +20,11 @@ const { sendSystemPm } = require('../utils/system-pm');
 const log = require('../utils/log');
 
 // ── Economy snapshot ──
-router.get('/users/:uid/economy', async (req, res) => {
+router.get('/users/:uniqueId/economy', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const snap = await db.doc(`users/${req.params.uid}`).get();
+    const snap = await db.doc(`users/${req.params.uniqueId}`).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
     const user = snap.data();
 
@@ -41,13 +41,13 @@ router.get('/users/:uid/economy', async (req, res) => {
       guaranteedNextPullGiftId: user.guaranteedNextPullGiftId ?? user.guaranteed_next_pull_gift_id ?? null,
     });
   } catch (err) {
-    log.error('admin-economy', 'Error fetching economy snapshot', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error fetching economy snapshot', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Adjust balance (coins or beans) ──
-router.post('/users/:uid/adjust-balance', async (req, res) => {
+router.post('/users/:uniqueId/adjust-balance', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -67,7 +67,7 @@ router.post('/users/:uid/adjust-balance', async (req, res) => {
     }
 
     const field = currency === 'coins' ? 'shyCoins' : 'shyBeans';
-    const snap = await db.doc(`users/${req.params.uid}`).get();
+    const snap = await db.doc(`users/${req.params.uniqueId}`).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
     const user = snap.data();
 
@@ -78,11 +78,11 @@ router.post('/users/:uid/adjust-balance', async (req, res) => {
     const logId = generateId();
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update({ [field]: newBalance }),
+      db.doc(`users/${req.params.uniqueId}`).update({ [field]: newBalance }),
 
-      db.doc(`users/${req.params.uid}/transactions/${txId}`).set({
+      db.doc(`users/${req.params.uniqueId}/transactions/${txId}`).set({
         id:           txId,
-        userId:       req.params.uid,
+        userId:       req.params.uniqueId,
         type:         'ADMIN_ADJUSTMENT',
         amount:       amount,
         currency:     currency.toUpperCase(),
@@ -94,7 +94,7 @@ router.post('/users/:uid/adjust-balance', async (req, res) => {
       db.doc(`adminAuditLog/${logId}`).set({
         adminId:      req.auth.uid,
         action:       'ADJUST_BALANCE',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      `${amount > 0 ? '+' : ''}${amount} ${currency} (${reason || 'no reason'})`,
         createdAt:    timestamp,
       }),
@@ -104,17 +104,17 @@ router.post('/users/:uid/adjust-balance', async (req, res) => {
     const currencyName = currency === 'coins' ? 'Shy Coins' : 'Shy Beans';
     const absAmount = Math.abs(amount);
     const action = amount > 0 ? 'were added to' : 'were deducted from';
-    try { await sendSystemPm(req.params.uid, `${absAmount} ${currencyName} ${action} your account.`); } catch (e) { log.warn('system-pm', 'Failed to send', { uid: req.params.uid, error: e.message }); }
+    try { await sendSystemPm(req.params.uniqueId, `${absAmount} ${currencyName} ${action} your account.`); } catch (e) { log.warn('system-pm', 'Failed to send', { uid: req.params.uniqueId, error: e.message }); }
 
     res.json({ success: true, newBalance, currency });
   } catch (err) {
-    log.error('admin-economy', 'Error adjusting balance', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error adjusting balance', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Set backpack item quantity (admin) ──
-router.post('/users/:uid/backpack', async (req, res) => {
+router.post('/users/:uniqueId/backpack', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -125,7 +125,7 @@ router.post('/users/:uid/backpack', async (req, res) => {
     }
 
     const timestamp = now();
-    const backpackRef = db.doc(`users/${req.params.uid}/backpack/${body.giftId}`);
+    const backpackRef = db.doc(`users/${req.params.uniqueId}/backpack/${body.giftId}`);
 
     if (body.quantity === 0) {
       await backpackRef.delete();
@@ -140,7 +140,7 @@ router.post('/users/:uid/backpack', async (req, res) => {
     await db.doc(`adminAuditLog/${generateId()}`).set({
       adminId:      req.auth.uid,
       action:       'SET_BACKPACK',
-      targetUserId: req.params.uid,
+      targetUserId: req.params.uniqueId,
       details:      `Set ${body.giftId} quantity to ${body.quantity}`,
       createdAt:    timestamp,
     });
@@ -151,23 +151,23 @@ router.post('/users/:uid/backpack', async (req, res) => {
       const msg = body.quantity === 0
         ? `🎒 "${name}" has been removed from your backpack by the moderation team.`
         : `🎒 Your backpack has been updated: "${name}" quantity set to ${body.quantity}.`;
-      sendSystemPm(req.params.uid, msg)
-        .catch(err => log.error('admin-economy', 'Failed to send backpack PM', { uid: req.params.uid, error: err.message }));
+      sendSystemPm(req.params.uniqueId, msg)
+        .catch(err => log.error('admin-economy', 'Failed to send backpack PM', { uid: req.params.uniqueId, error: err.message }));
     }
 
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-economy', 'Error setting backpack item', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error setting backpack item', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Get luck + pity ──
-router.get('/users/:uid/luck', async (req, res) => {
+router.get('/users/:uniqueId/luck', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const snap = await db.doc(`users/${req.params.uid}`).get();
+    const snap = await db.doc(`users/${req.params.uniqueId}`).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
     const user = snap.data();
 
@@ -176,13 +176,13 @@ router.get('/users/:uid/luck', async (req, res) => {
       pityCounter: user.pityCounter ?? user.pity_counter ?? 0,
     });
   } catch (err) {
-    log.error('admin-economy', 'Error fetching luck', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error fetching luck', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Update luck/pity ──
-router.post('/users/:uid/luck', async (req, res) => {
+router.post('/users/:uniqueId/luck', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -204,12 +204,12 @@ router.post('/users/:uid/luck', async (req, res) => {
     if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No fields to update' });
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update(updates),
+      db.doc(`users/${req.params.uniqueId}`).update(updates),
 
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'SET_LUCK',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      JSON.stringify(body),
         createdAt:    now(),
       }),
@@ -217,20 +217,20 @@ router.post('/users/:uid/luck', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-economy', 'Error updating luck', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error updating luck', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Transaction history (admin view — any user) ──
-router.get('/users/:uid/transactions', async (req, res) => {
+router.get('/users/:uniqueId/transactions', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const filterType = req.query.type;
 
-    let query = db.collection(`users/${req.params.uid}/transactions`);
+    let query = db.collection(`users/${req.params.uniqueId}/transactions`);
 
     if (filterType) {
       query = query.where('type', '==', filterType);
@@ -243,17 +243,17 @@ router.get('/users/:uid/transactions', async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    log.error('admin-economy', 'Error fetching transactions', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error fetching transactions', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Gacha guarantee: check ──
-router.get('/users/:uid/guarantee-next-pull', async (req, res) => {
+router.get('/users/:uniqueId/guarantee-next-pull', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const snap = await db.doc(`users/${req.params.uid}`).get();
+    const snap = await db.doc(`users/${req.params.uniqueId}`).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
     const user = snap.data();
 
@@ -277,13 +277,13 @@ router.get('/users/:uid/guarantee-next-pull', async (req, res) => {
 
     res.json({ guaranteedGiftId, gift });
   } catch (err) {
-    log.error('admin-economy', 'Error checking guarantee status', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error checking guarantee status', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Gacha guarantee: set ──
-router.post('/users/:uid/guarantee-next-pull', async (req, res) => {
+router.post('/users/:uniqueId/guarantee-next-pull', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
@@ -296,12 +296,12 @@ router.post('/users/:uid/guarantee-next-pull', async (req, res) => {
     const gift = giftSnap.data();
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update({ guaranteedNextPullGiftId: body.giftId }),
+      db.doc(`users/${req.params.uniqueId}`).update({ guaranteedNextPullGiftId: body.giftId }),
 
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'SET_GUARANTEE',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      `Guaranteed: ${body.giftId}`,
         createdAt:    now(),
       }),
@@ -313,23 +313,23 @@ router.post('/users/:uid/guarantee-next-pull', async (req, res) => {
       coinValue: gift.coinValue ?? gift.coin_value ?? 0,
     });
   } catch (err) {
-    log.error('admin-economy', 'Error setting guarantee', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error setting guarantee', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ── Gacha guarantee: revoke ──
-router.delete('/users/:uid/guarantee-next-pull', async (req, res) => {
+router.delete('/users/:uniqueId/guarantee-next-pull', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
     await Promise.all([
-      db.doc(`users/${req.params.uid}`).update({ guaranteedNextPullGiftId: null }),
+      db.doc(`users/${req.params.uniqueId}`).update({ guaranteedNextPullGiftId: null }),
 
       db.doc(`adminAuditLog/${generateId()}`).set({
         adminId:      req.auth.uid,
         action:       'REVOKE_GUARANTEE',
-        targetUserId: req.params.uid,
+        targetUserId: req.params.uniqueId,
         details:      null,
         createdAt:    now(),
       }),
@@ -337,7 +337,7 @@ router.delete('/users/:uid/guarantee-next-pull', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    log.error('admin-economy', 'Error revoking guarantee', { uid: req.params.uid, error: err.message });
+    log.error('admin-economy', 'Error revoking guarantee', { uid: req.params.uniqueId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

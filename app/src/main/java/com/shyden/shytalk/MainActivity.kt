@@ -33,6 +33,7 @@ import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.core.room.RoomService
 import com.shyden.shytalk.data.remote.WorkerApiClient
+import com.google.firebase.auth.FirebaseAuth
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
 
     private val _navigateToRoom = mutableStateOf<String?>(null)
     private val _navigateToChat = mutableStateOf<Pair<String, Boolean>?>(null) // (id, isGroup)
+    private val _pendingEmailLink = mutableStateOf<String?>(null)
     private val _showLeaveConfirmation = mutableStateOf(false)
     private var lastSeenJob: Job? = null
 
@@ -232,10 +234,14 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            val pendingEmailLink by _pendingEmailLink
+
                             NavGraph(
                                 navController = navController,
                                 startDestination = Screen.SignIn.route,
                                 isBackendDegraded = backendDegraded,
+                                pendingEmailLink = pendingEmailLink,
+                                onEmailLinkConsumed = { _pendingEmailLink.value = null },
                                 onSignOut = {
                                     workerApiClient.clearTokenCache()
                                     authRepository.signOut()
@@ -338,6 +344,14 @@ class MainActivity : ComponentActivity() {
 
     private fun handleRoomIntent(intent: Intent?) {
         intent ?: return
+
+        // Handle email sign-in deep link
+        val data = intent.data?.toString()
+        if (data != null && FirebaseAuth.getInstance().isSignInWithEmailLink(data)) {
+            _pendingEmailLink.value = data
+            return
+        }
+
         // Handle PM notification tap (navigateTo=chat)
         val navigateTo = intent.getStringExtra("navigateTo")
         if (navigateTo == "chat") {

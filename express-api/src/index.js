@@ -88,6 +88,12 @@ app.use('/api', require('./routes/translate'));
 const { createLogsRouter } = require('./routes/logs');
 app.use('/api', createLogsRouter(logger));
 
+// Dev-only routes
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api', require('./routes/test-helpers'));
+  app.use('/api', require('./routes/admin-migrate'));
+}
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
@@ -95,7 +101,7 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  logger.log({ level: 'ERROR', source: 'server', message: 'Unhandled error', error: err.message, stack: err.stack, path: req.path, method: req.method });
   res.status(500).json({ error: 'Internal server error' });
 });
 

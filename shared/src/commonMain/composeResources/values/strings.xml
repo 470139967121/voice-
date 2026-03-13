@@ -473,7 +473,6 @@
 
     <!-- Auth -->
     <string name="sign_in">Sign In</string>
-    <string name="phone_number">Phone Number</string>
     <string name="verification_code">Verification Code</string>
     <string name="continue_with_google">Continue with Google</string>
 
@@ -486,7 +485,7 @@
     <string name="check_for_updates">Check for Updates</string>
     <string name="clear_cache_with_size">Clear Cache (%1$s)</string>
     <string name="up_to_date">Up to Date</string>
-    <string name="up_to_date_description">You\'re on the latest version.</string>
+    <string name="up_to_date_description">You&apos;re on the latest version.</string>
     <string name="update_available">Update Available</string>
     <string name="update_available_description">Version %1$s is available.</string>
     <string name="update_available_soft">A new version (%1$s) of ShyTalk is available.</string>
@@ -520,11 +519,11 @@
 
     <!-- Settings - Privacy page -->
     <string name="hide_following_list">Hide Following List</string>
-    <string name="hide_following_description">Others won\'t see who you follow. Followers are always visible.</string>
+    <string name="hide_following_description">Others won&apos;t see who you follow. Followers are always visible.</string>
     <string name="hide_online_status">Hide Online Status</string>
-    <string name="hide_online_status_description">Others won\'t see when you\'re online.</string>
+    <string name="hide_online_status_description">Others won&apos;t see when you&apos;re online.</string>
     <string name="hide_age">Hide Age</string>
-    <string name="hide_age_description">Others won\'t see your age on your profile.</string>
+    <string name="hide_age_description">Others won&apos;t see your age on your profile.</string>
     <string name="who_can_message_me">Who can message me</string>
     <string name="who_can_message_description">Control who can send you private messages.</string>
     <string name="everyone">Everyone</string>
@@ -551,10 +550,10 @@
     <string name="end">End</string>
     <string name="room_alerts">Room Alerts</string>
     <string name="self_destruct_countdown">Self-Destruct Countdown</string>
-    <string name="self_destruct_description">Play a voice announcement when a room\'s 5-minute self-destruct timer starts or stops.</string>
+    <string name="self_destruct_description">Play a voice announcement when a room&apos;s 5-minute self-destruct timer starts or stops.</string>
 
     <!-- Settings - Permissions page -->
-    <string name="notifications_permission_description">Receive alerts when you\'re in a live room in the background.</string>
+    <string name="notifications_permission_description">Receive alerts when you&apos;re in a live room in the background.</string>
     <string name="overlay_permission_description">Show a floating bubble when you leave a voice room, so you can quickly return.</string>
     <string name="microphone">Microphone</string>
     <string name="microphone_description">Required for voice chat in rooms.</string>
@@ -569,6 +568,23 @@
     <!-- Settings - Account page -->
     <string name="shytalk_id">ShyTalk ID</string>
     <string name="email">Email</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">Linked Accounts</string>
+    <string name="linked">Linked</string>
+    <string name="unlinked">Unlinked</string>
+    <string name="unlink">Unlink</string>
+    <string name="unlink_provider_confirm">Unlink %1$s?</string>
+    <string name="unlink_provider_description">You can re-link this account later, but you will need to verify it again.</string>
+    <string name="cannot_unlink_last_provider">You must have at least two linked accounts before you can unlink one.</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">Email</string>
+    <string name="no_linked_accounts">No linked accounts found</string>
+    <string name="unlinking_provider">Unlinking…</string>
+    <string name="connect_account">Connect Account</string>
+    <string name="connect">Connect</string>
+    <string name="signed_in_with">Signed in with</string>
 
     <!-- Settings - About page -->
     <string name="contact_us">Contact Us</string>
@@ -603,7 +619,12 @@
     <string name="device_locked_description">This device is already linked to another account.\nOnly one account is allowed per device.\n\nFor support, contact shytalk.help@gmail.com</string>
     <string name="contact_support_hint">If the problem persists, contact shytalk.help@gmail.com</string>
     <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_in_with_email">Sign in with Email</string>
+    <string name="email_hint">Email address</string>
+    <string name="email_link_sent">Check your email</string>
+    <string name="check_your_email_description">We sent a sign-in link to your email. Tap the link to continue.</string>
     <string name="signing_in">Signing in…</string>
+    <string name="error_disposable_email">Disposable email addresses are not allowed. Please use a permanent email address.</string>
 
     <!-- Suspension / Ban -->
     <string name="appeal">Appeal</string>

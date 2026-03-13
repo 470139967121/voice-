@@ -34,7 +34,7 @@ class RtdbPresenceService(
         private const val TAG = "RtdbPresenceService"
     }
 
-    private val db by lazy { FirebaseDatabase.getInstance("https://shytalk-7ba69-default-rtdb.asia-southeast1.firebasedatabase.app") }
+    private val db by lazy { FirebaseDatabase.getInstance(com.shyden.shytalk.BuildConfig.RTDB_URL) }
     private val scope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
 
     private var currentRoomId: String? = null
@@ -52,7 +52,7 @@ class RtdbPresenceService(
     private var lastEventTs = 0L
 
     override fun setPresence(roomId: String, userId: String) {
-        if (currentRoomId != null && currentRoomId != roomId) {
+        if (currentRoomId != null) {
             removePresence()
         }
 
@@ -78,7 +78,7 @@ class RtdbPresenceService(
                 Log.w(TAG, "Connected listener cancelled: ${error.message}")
             }
         }
-        connectedRef.addValueEventListener(connectedListener!!)
+        connectedListener?.let { connectedRef.addValueEventListener(it) }
 
         // Listen to all presence in this room
         val roomPresenceRef = db.getReference("rooms/$roomId/presence")
@@ -92,7 +92,7 @@ class RtdbPresenceService(
                 Log.w(TAG, "Presence listener cancelled: ${error.message}")
             }
         }
-        roomPresenceRef.addValueEventListener(presenceListener!!)
+        presenceListener?.let { roomPresenceRef.addValueEventListener(it) }
 
         // Listen to room events
         val eventsRef = db.getReference("rooms/$roomId/events/lastEvent")
@@ -137,7 +137,7 @@ class RtdbPresenceService(
                 Log.w(TAG, "Events listener cancelled: ${error.message}")
             }
         }
-        eventsRef.addValueEventListener(eventsListener!!)
+        eventsListener?.let { eventsRef.addValueEventListener(it) }
 
         Log.d(TAG, "Presence set for room=$roomId user=$userId")
     }

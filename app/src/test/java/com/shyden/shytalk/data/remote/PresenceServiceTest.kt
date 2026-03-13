@@ -48,4 +48,11 @@ class PresenceServiceTest {
         // Should not throw when called without setPresence
         presenceService.removePresence()
     }
+
+    @Test
+    fun `removePresence called twice is safe`() {
+        // Regression: ensure double-remove doesn't throw
+        presenceService.removePresence()
+        presenceService.removePresence()
+    }
 }

@@ -359,7 +359,7 @@ class ActiveRoomManager(
         messageObserverJob?.cancel()
         messageObserverJob = scope.launch {
             messageRepository.getMessages(roomId)
-                .catch { /* ignore */ }
+                .catch { e -> Log.w(TAG, "Message observation error", e) }
                 .collect { messages -> _messages.value = messages }
         }
     }

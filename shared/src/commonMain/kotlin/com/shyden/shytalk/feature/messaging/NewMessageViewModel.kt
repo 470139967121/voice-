@@ -181,7 +181,7 @@ class NewMessageViewModel(
                 }
                 is Resource.Error -> {
                     _uiState.update {
-                        it.copy(isSearchingAll = false, error = result.message?.let { msg -> UiText.plain(msg) })
+                        it.copy(isSearchingAll = false, error = UiText.plain(result.message))
                     }
                 }
                 is Resource.Loading -> {}
