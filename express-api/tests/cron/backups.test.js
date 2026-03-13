@@ -151,10 +151,15 @@ describe('backups cron', () => {
   test('prunes backups older than 7 days', async () => {
     mockGet.mockResolvedValue(makeSnapshot([]));
 
+    // Use dynamic dates relative to today to avoid test rot
+    const today = new Date();
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+    const recentDate = yesterday.toISOString().split('T')[0];
+
     const oldFullKey = 'backups/full/2020-01-01/users.json';
-    const recentFullKey = 'backups/full/2026-03-06/users.json';
+    const recentFullKey = `backups/full/${recentDate}/users.json`;
     const oldUsersKey = 'backups/users/2020-01-01.json';
-    const recentUsersKey = 'backups/users/2026-03-06.json';
+    const recentUsersKey = `backups/users/${recentDate}.json`;
 
     r2.listObjects.mockImplementation((prefix) => {
       if (prefix === 'backups/full/') {

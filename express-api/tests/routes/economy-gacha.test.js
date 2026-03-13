@@ -60,8 +60,8 @@ jest.mock('../../src/middleware/auth', () => ({
 jest.mock('../../src/utils/helpers', () => ({
   generateId: () => 'tx-gacha-123',
   now: () => 1709913600000,
-  todayStr: () => '2026-03-08',
-  yesterdayStr: () => '2026-03-07',
+  todayStr: () => new Date().toISOString().split('T')[0],
+  yesterdayStr: () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]; },
 }));
 
 // playStore is imported by economy.js; mock it so it doesn't require real credentials
