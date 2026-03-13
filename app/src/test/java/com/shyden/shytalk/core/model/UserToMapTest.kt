@@ -301,8 +301,8 @@ class UserToMapTest {
             luckScore = 42,
             pityCounter = 7,
             loginStreak = 5,
-            lastLoginDate = "2026-02-23",
-            lastLoginRewardDate = "2026-02-22",
+            lastLoginDate = "2020-01-15",
+            lastLoginRewardDate = "2020-01-14",
             aliases = mapOf("room-1" to "DJ Alice"),
             minGiftAnimationValue = 500,
             hasClaimedSuperShyTrial = true

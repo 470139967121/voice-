@@ -13,7 +13,7 @@ const mockAlertDocs = [
       title: 'Error spike',
       message: '10 errors in 5 min',
       status: 'unresolved',
-      createdAt: '2026-03-07T12:00:00Z',
+      createdAt: '2020-01-01T12:00:00Z',
     }),
   },
   {
@@ -24,7 +24,7 @@ const mockAlertDocs = [
       title: 'Slow endpoint',
       message: 'Response took 5000ms',
       status: 'acknowledged',
-      createdAt: '2026-03-07T12:01:00Z',
+      createdAt: '2020-01-01T12:01:00Z',
     }),
   },
 ];
