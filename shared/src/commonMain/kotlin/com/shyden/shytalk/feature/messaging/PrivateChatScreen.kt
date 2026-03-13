@@ -88,7 +88,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
@@ -910,7 +910,7 @@ private fun DateSeparator(timestampMs: Long) {
         date.toEpochDays() == today.toEpochDays() - 1 -> stringResource(Res.string.yesterday)
         else -> {
             val month = date.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
-            "$month ${date.dayOfMonth}, ${date.year}"
+            "$month ${date.day}, ${date.year}"
         }
     }
 

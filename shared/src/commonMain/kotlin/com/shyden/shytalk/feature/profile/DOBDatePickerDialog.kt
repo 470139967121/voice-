@@ -13,7 +13,7 @@ import com.shyden.shytalk.resources.*
 import org.jetbrains.compose.resources.stringResource
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.isAtLeast13
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 

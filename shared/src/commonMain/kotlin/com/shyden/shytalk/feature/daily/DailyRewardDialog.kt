@@ -55,8 +55,8 @@ import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
 import org.jetbrains.compose.resources.stringResource
 import com.shyden.shytalk.core.util.currentTimeMillis
+import kotlin.time.Instant
 import kotlinx.datetime.DayOfWeek
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -72,14 +72,14 @@ fun DailyRewardDialog(
 
     val now = Instant.fromEpochMilliseconds(currentTimeMillis()).toLocalDateTime(TimeZone.currentSystemDefault())
     val currentYear = now.year
-    val currentMonth = now.monthNumber
-    val todayDay = now.dayOfMonth
+    val currentMonth = now.month
+    val todayDay = now.day
 
     // Calculate month details
     val firstOfMonth = LocalDate(currentYear, currentMonth, 1)
     val daysInMonth = when (currentMonth) {
-        2 -> if (currentYear % 4 == 0 && (currentYear % 100 != 0 || currentYear % 400 == 0)) 29 else 28
-        4, 6, 9, 11 -> 30
+        kotlinx.datetime.Month.FEBRUARY -> if (currentYear % 4 == 0 && (currentYear % 100 != 0 || currentYear % 400 == 0)) 29 else 28
+        kotlinx.datetime.Month.APRIL, kotlinx.datetime.Month.JUNE, kotlinx.datetime.Month.SEPTEMBER, kotlinx.datetime.Month.NOVEMBER -> 30
         else -> 31
     }
     // Monday = 0, Sunday = 6 for grid alignment

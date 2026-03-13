@@ -20,7 +20,7 @@ import com.shyden.shytalk.core.model.TransactionType
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
 import org.jetbrains.compose.resources.stringResource
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
@@ -119,7 +119,7 @@ internal fun formatTimestamp(millis: Long): String {
         else -> {
             val instant = Instant.fromEpochMilliseconds(millis)
             val local = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-            "${local.dayOfMonth}/${local.monthNumber}/${local.year}"
+            "${local.day}/${local.month.ordinal + 1}/${local.year}"
         }
     }
 }
