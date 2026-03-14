@@ -129,21 +129,21 @@ jobs:
             REF="${{ needs.parse-comment.outputs.ref }}"
           fi
 
+          RUN_ANDROID=false
+          RUN_IOS=false
+          case "$PLATFORM" in
+            android) RUN_ANDROID=true ;;
+            ios)     RUN_IOS=true ;;
+            both)    RUN_ANDROID=true; RUN_IOS=true ;;
+          esac
+
           echo "platform=$PLATFORM" >> "$GITHUB_OUTPUT"
           echo "parallel=$PARALLEL" >> "$GITHUB_OUTPUT"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "run_android=$RUN_ANDROID" >> "$GITHUB_OUTPUT"
+          echo "run_ios=$RUN_IOS" >> "$GITHUB_OUTPUT"
 
-          if [ "$PLATFORM" = "android" ] || [ "$PLATFORM" = "both" ]; then
-            echo "run_android=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_android=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$PLATFORM" = "ios" ] || [ "$PLATFORM" = "both" ]; then
-            echo "run_ios=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_ios=false" >> "$GITHUB_OUTPUT"
-          fi
+          echo "Resolved: platform=$PLATFORM run_android=$RUN_ANDROID run_ios=$RUN_IOS parallel=$PARALLEL"
 
   # ── Build Android test APKs ───────────────────────────────────
   build-android:
@@ -207,7 +207,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      max-parallel: ${{ fromJson(needs.resolve-inputs.outputs.parallel && '99' || '1') }}
+      max-parallel: ${{ needs.resolve-inputs.outputs.parallel == 'true' && 99 || 1 }}
       matrix:
         api-level: [28, 30, 33, 35]
         form-factor: [phone, tablet]
@@ -391,7 +391,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      max-parallel: ${{ fromJson(needs.resolve-inputs.outputs.parallel && '99' || '1') }}
+      max-parallel: ${{ needs.resolve-inputs.outputs.parallel == 'true' && 99 || 1 }}
       matrix:
         ios-version: ['16.4', '17.5', '18.1']
         form-factor: [iphone, ipad]
