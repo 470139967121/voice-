@@ -37,8 +37,8 @@ class DailyRewardTest {
         // After claiming, the button changes to "Yay!" — click it to dismiss
         Thread.sleep(500)
         composeTestRule.mainClock.advanceTimeBy(500)
-        composeTestRule.waitForText("Yay!")
-        composeTestRule.onNodeWithText("Yay!").performClick()
+        composeTestRule.waitForText("Awesome!")
+        composeTestRule.onNodeWithText("Awesome!").performClick()
         Thread.sleep(500)
         composeTestRule.mainClock.advanceTimeBy(500)
         composeTestRule.onNodeWithTag("dailyReward_dialog").assertDoesNotExist()
