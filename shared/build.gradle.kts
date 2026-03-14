@@ -13,7 +13,7 @@ kotlin {
     // JVM target exists solely to run commonTest on Windows/Linux/CI
     jvm()
 
-    androidLibrary {
+    android {
         namespace = "com.shyden.shytalk.shared"
         compileSdk = 36
         minSdk = 28
