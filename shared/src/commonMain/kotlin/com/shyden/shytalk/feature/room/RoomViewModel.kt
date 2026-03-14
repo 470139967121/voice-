@@ -172,6 +172,10 @@ class RoomViewModel(
     private var rawPendingRequests: List<SeatRequest> = emptyList()
     private val locallyApprovedRequestIds = mutableSetOf<String>()
 
+    // Tracks sender IDs we've already fetched users for — must be declared before init
+    // because observeMessages() is called in init and may fire synchronously on Dispatchers.Main.immediate
+    private val knownSenderIds = mutableSetOf<String>()
+
     init {
         val userId = authRepository.currentUserId ?: ""
         _uiState.value = _uiState.value.copy(
@@ -722,8 +726,6 @@ class RoomViewModel(
             autoTranslateNewMessages(filtered)
         }
     }
-
-    private val knownSenderIds = mutableSetOf<String>()
 
     private fun loadMessageSenderUsers(messages: List<Message>) {
         val senderIds = messages.mapTo(mutableSetOf()) { it.senderId }
