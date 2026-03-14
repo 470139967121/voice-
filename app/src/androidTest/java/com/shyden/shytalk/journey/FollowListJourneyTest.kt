@@ -50,12 +50,12 @@ class FollowListJourneyTest {
         composeTestRule.waitForTag("followList_followersTab")
 
         composeTestRule.onNodeWithTag("followList_followingTab").performClick()
-        Thread.sleep(250)
         composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag("followList_followersTab").performClick()
-        Thread.sleep(250)
         composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.waitForIdle()
     }
 
     // ── Stalkers tab / SuperShy gating ──────────────────────────────────
@@ -102,8 +102,8 @@ class FollowListJourneyTest {
         )
         composeTestRule.waitForText("Stalkers (0)")
         composeTestRule.onNodeWithText("Stalkers", substring = true).performClick()
-        Thread.sleep(250)
         composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.waitForIdle()
 
         composeTestRule.waitForText("Super Shy Benefit")
         composeTestRule.onNodeWithText("Super Shy Benefit").assertIsDisplayed()

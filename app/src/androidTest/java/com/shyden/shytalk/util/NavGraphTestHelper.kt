@@ -20,14 +20,15 @@ fun ComposeContentTestRule.launchNavGraph(
             )
         }
     }
-    // Give ViewModel init coroutines (viewModelScope.launch on Dispatchers.Main)
-    // time to execute before the test starts asserting.
-    Thread.sleep(300)
     // Disable auto-advance globally to prevent animation deadlocks.
     // Screens with CircularProgressIndicator have infinite animations that
     // cause waitForIdle() (called internally by assertExists, performClick,
     // etc.) to loop forever when autoAdvance is true.
     mainClock.autoAdvance = false
+    // Drive the Compose clock forward so ViewModel init coroutines
+    // (viewModelScope.launch on Dispatchers.Main) run before tests assert.
+    mainClock.advanceTimeBy(500)
+    waitForIdle()
 }
 
 fun ComposeContentTestRule.launchMainScreen(

@@ -52,7 +52,10 @@ class PrivateMessagingTest {
         composeTestRule.onNodeWithText("OtherUser").performClick()
         composeTestRule.waitForTag("privateChat_backButton")
         composeTestRule.onNodeWithTag("privateChat_backButton").performClick()
-        composeTestRule.waitForTag("main_messagesTab")
+        // Allow back navigation animation to complete
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
+        composeTestRule.waitForTag("main_messagesTab", timeoutMs = 5_000)
         composeTestRule.onNodeWithTag("main_messagesTab").assertIsDisplayed()
     }
 }

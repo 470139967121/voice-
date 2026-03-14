@@ -38,13 +38,13 @@ class DailyRewardTest {
         composeTestRule.launchMainScreen()
         composeTestRule.waitForTag("dailyReward_claimButton", timeoutMs = 3_000)
         composeTestRule.onNodeWithTag("dailyReward_claimButton").performClick()
-        // After claiming, the button changes to "Yay!" — click it to dismiss
-        Thread.sleep(500)
-        composeTestRule.mainClock.advanceTimeBy(500)
+        // After claiming, the button changes to "Awesome!" — click it to dismiss
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
         composeTestRule.waitForText("Awesome!")
         composeTestRule.onNodeWithText("Awesome!").performClick()
-        Thread.sleep(500)
-        composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("dailyReward_dialog").assertDoesNotExist()
     }
 }

@@ -65,8 +65,8 @@ class SettingsNavigationTest {
         // requires reactive auth state which fakes don't support)
         composeTestRule.onNodeWithTag("settings_signOutButton").performClick()
         // Should not crash after clicking
-        Thread.sleep(500)
-        composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
     }
 
     @Test
@@ -78,7 +78,7 @@ class SettingsNavigationTest {
         composeTestRule.waitForText("Privacy Policy")
         composeTestRule.onNodeWithText("Privacy Policy").performClick()
         // Just verify the click navigated without crash
-        Thread.sleep(500)
-        composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
     }
 }
