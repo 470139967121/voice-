@@ -67,8 +67,9 @@ fun ComposeTestRule.waitForText(text: String, timeoutMs: Long = 10_000) {
         Thread.sleep(250)
         mainClock.advanceTimeBy(500)
         try {
-            onAllNodesWithText(text)[0].assertExists()
-            return
+            val nodes = onAllNodesWithText(text).fetchSemanticsNodes()
+            if (nodes.isNotEmpty()) return
+            throw AssertionError("No nodes found with text '$text'")
         } catch (e: AssertionError) {
             if (System.nanoTime() >= deadline) throw e
         }

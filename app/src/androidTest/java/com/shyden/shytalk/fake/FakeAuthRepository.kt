@@ -9,6 +9,15 @@ class FakeAuthRepository : AuthRepository {
     var _currentUserEmail: String? = "test@example.com"
     var _providerInfo: Pair<String, String>? = "google" to "test@example.com"
 
+    /** Reset to default authenticated state — call between test classes to prevent state leakage */
+    fun reset() {
+        _currentUserId = "test-user-1"
+        _isAuthenticated = true
+        _currentUserEmail = "test@example.com"
+        _providerInfo = "google" to "test@example.com"
+        resolvedUniqueId = null
+    }
+
     override var resolvedUniqueId: String? = null
     override val currentUserId: String? get() = resolvedUniqueId ?: _currentUserId
     override val currentFirebaseUid: String? get() = _currentUserId
