@@ -149,7 +149,7 @@ jobs:
   build-android:
     name: Build Android
     needs: [resolve-inputs]
-    if: needs.resolve-inputs.outputs.run_android == 'true'
+    if: always() && needs.resolve-inputs.result == 'success' && needs.resolve-inputs.outputs.run_android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -202,7 +202,7 @@ jobs:
   test-android:
     name: "Android E2E (API ${{ matrix.api-level }}, ${{ matrix.form-factor }})"
     needs: [resolve-inputs, build-android]
-    if: needs.resolve-inputs.outputs.run_android == 'true'
+    if: always() && needs.build-android.result == 'success' && needs.resolve-inputs.outputs.run_android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -319,7 +319,7 @@ jobs:
   build-ios:
     name: Build iOS
     needs: [resolve-inputs]
-    if: needs.resolve-inputs.outputs.run_ios == 'true'
+    if: always() && needs.resolve-inputs.result == 'success' && needs.resolve-inputs.outputs.run_ios == 'true'
     runs-on: macos-14
     timeout-minutes: 30
     steps:
@@ -386,7 +386,7 @@ jobs:
   test-ios:
     name: "iOS E2E (iOS ${{ matrix.ios-version }}, ${{ matrix.form-factor }})"
     needs: [resolve-inputs, build-ios]
-    if: needs.resolve-inputs.outputs.run_ios == 'true' && needs.build-ios.outputs.has_tests == 'true'
+    if: always() && needs.build-ios.result == 'success' && needs.resolve-inputs.outputs.run_ios == 'true' && needs.build-ios.outputs.has_tests == 'true'
     runs-on: macos-14
     timeout-minutes: 60
     strategy:
