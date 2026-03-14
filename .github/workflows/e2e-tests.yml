@@ -204,7 +204,7 @@ jobs:
     needs: [resolve-inputs, build-android]
     if: always() && needs.build-android.result == 'success' && needs.resolve-inputs.outputs.run_android == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: ${{ needs.resolve-inputs.outputs.parallel == 'true' && 99 || 1 }}
@@ -309,9 +309,9 @@ jobs:
             -noaudio -no-boot-anim \
             -memory ${{ matrix.ram-size }} &
 
-          # Wait for emulator to boot (up to 5 minutes)
+          # Wait for emulator to boot (up to 10 minutes — CI runners are slower)
           adb wait-for-device
-          BOOT_TIMEOUT=300
+          BOOT_TIMEOUT=600
           ELAPSED=0
           while [ "$(adb shell getprop sys.boot_completed 2>/dev/null)" != "1" ]; do
             sleep 5
