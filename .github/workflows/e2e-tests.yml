@@ -27,9 +27,8 @@ permissions:
   checks: write
   issues: read
 
-# Note: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 is NOT set here because
-# reactivecircus/android-emulator-runner only supports Node 20.
-# Re-enable once the emulator runner releases a Node 24 version.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
   group: e2e-tests-${{ github.event.inputs.platform || 'comment' }}-${{ github.ref }}
@@ -282,24 +281,53 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run E2E tests on emulator
-        uses: reactivecircus/android-emulator-runner@9125fe764b516df676e33c5e6df011c6f375ef88 # v2.36.0
-        with:
-          api-level: ${{ matrix.api-level }}
-          target: ${{ matrix.api-level >= 30 && 'google_apis' || 'default' }}
-          arch: x86_64
-          profile: ${{ matrix.profile }}
-          ram-size: ${{ matrix.ram-size }}
-          heap-size: 512
-          disk-size: 6144M
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          disable-animations: true
-          script: |
-            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
-            ./gradlew connectedDevDebugAndroidTest --no-parallel
+      - name: Install emulator system image
+        run: |
+          TARGET=${{ matrix.api-level >= 30 && 'google_apis' || 'default' }}
+          yes | sdkmanager "system-images;android-${{ matrix.api-level }};${TARGET};x86_64" "emulator" "platform-tools" || true
+
+      - name: Create and start emulator
+        run: |
+          TARGET=${{ matrix.api-level >= 30 && 'google_apis' || 'default' }}
+          echo "no" | avdmanager create avd \
+            -n test_device \
+            -k "system-images;android-${{ matrix.api-level }};${TARGET};x86_64" \
+            -d "${{ matrix.profile }}" \
+            --force
+
+          $ANDROID_HOME/emulator/emulator -avd test_device \
+            -no-snapshot-save -no-window -gpu swiftshader_indirect \
+            -noaudio -no-boot-anim \
+            -memory ${{ matrix.ram-size }} &
+
+          # Wait for emulator to boot (up to 5 minutes)
+          adb wait-for-device
+          BOOT_TIMEOUT=300
+          ELAPSED=0
+          while [ "$(adb shell getprop sys.boot_completed 2>/dev/null)" != "1" ]; do
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+            if [ $ELAPSED -ge $BOOT_TIMEOUT ]; then
+              echo "Emulator boot timed out after ${BOOT_TIMEOUT}s"
+              exit 1
+            fi
+          done
+          echo "Emulator booted in ${ELAPSED}s"
+
+          # Disable animations for stable tests
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+
+      - name: Run E2E tests
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+        run: ./gradlew connectedDevDebugAndroidTest --no-parallel
+
+      - name: Stop emulator
+        if: always()
+        run: adb emu kill || true
 
       - name: Upload test results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
