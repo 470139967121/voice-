@@ -13,6 +13,7 @@ import com.shyden.shytalk.util.launchMainScreen
 import com.shyden.shytalk.util.waitForTag
 import com.shyden.shytalk.util.waitForText
 import com.shyden.shytalk.testdata.TestData
+import com.shyden.shytalk.util.ResetFakesRule
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -24,7 +25,10 @@ import org.koin.test.inject
 @RunWith(AndroidJUnit4::class)
 class RoomBrowsingTest : KoinTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val resetFakes = ResetFakesRule()
+
+    @get:Rule(order = 1)
     val composeTestRule = createComposeRule()
 
     @Before
