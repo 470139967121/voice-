@@ -2,6 +2,7 @@ package com.shyden.shytalk.util
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -12,10 +13,10 @@ import androidx.compose.ui.test.performTextInput
  *
  * Assumes [mainClock.autoAdvance] is false (set in [launchNavGraph]).
  * Each iteration:
- *   1. [Thread.sleep] yields the instrumentation thread, letting ViewModel
- *      coroutines on Dispatchers.Main deliver StateFlow updates.
- *   2. [mainClock.advanceTimeBy] processes several frames so Compose picks
- *      up the new state and recomposes.
+ *   1. [mainClock.advanceTimeBy] drives the Compose clock so pending frames
+ *      and coroutine dispatches on Dispatchers.Main are processed.
+ *   2. [waitForIdle] flushes any remaining pending recompositions before the
+ *      semantics tree is inspected.
  *   3. [assertExists] checks the semantics tree (with autoAdvance=false,
  *      its internal [waitForIdle] returns quickly without driving animations).
  */
@@ -26,8 +27,8 @@ fun ComposeTestRule.waitForTag(
 ) {
     val deadline = System.nanoTime() + timeoutMs * 1_000_000L
     while (true) {
-        Thread.sleep(250)
         mainClock.advanceTimeBy(500)
+        waitForIdle()
         try {
             onNodeWithTag(tag, useUnmergedTree = useUnmergedTree).assertExists()
             return
@@ -56,15 +57,19 @@ fun ComposeTestRule.assertTagDoesNotExist(tag: String) {
 /**
  * Waits for a node with the given [text] to appear.
  * Uses the same strategy as [waitForTag].
+ *
+ * Uses [onAllNodesWithText] internally so that the wait succeeds even when
+ * multiple nodes share the same text (e.g. two "Unlink" buttons for two providers).
  */
 fun ComposeTestRule.waitForText(text: String, timeoutMs: Long = 10_000) {
     val deadline = System.nanoTime() + timeoutMs * 1_000_000L
     while (true) {
-        Thread.sleep(250)
         mainClock.advanceTimeBy(500)
+        waitForIdle()
         try {
-            onNodeWithText(text).assertExists()
-            return
+            val nodes = onAllNodesWithText(text).fetchSemanticsNodes()
+            if (nodes.isNotEmpty()) return
+            throw AssertionError("No nodes found with text '$text'")
         } catch (e: AssertionError) {
             if (System.nanoTime() >= deadline) throw e
         }

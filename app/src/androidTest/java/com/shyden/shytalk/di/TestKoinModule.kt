@@ -1,5 +1,6 @@
 package com.shyden.shytalk.di
 
+import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.data.local.StickerStorage
 import com.shyden.shytalk.data.remote.AppConfigService
@@ -63,6 +64,7 @@ import com.shyden.shytalk.feature.settings.AppSettingsViewModel
 import com.shyden.shytalk.feature.settings.RoomSettingsViewModel
 import com.shyden.shytalk.feature.shop.TransactionHistoryViewModel
 import com.shyden.shytalk.feature.shop.WalletViewModel
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -98,6 +100,10 @@ val testModule = module {
 
     // Fake managers
     single { FakeActiveRoomManager() } bind RoomLifecycleManager::class
+
+    // ActiveRoomManager (concrete) — required by RoomScreen which injects the concrete type directly.
+    // Constructed with fake dependencies so no real Firebase/LiveKit calls are made.
+    single { ActiveRoomManager(get(), get(), get(), get(), get(), get(), get(), androidContext()) }
 
     // BillingService (concrete class — use real instance with test context; won't connect to Play)
     single { BillingService(get()) }

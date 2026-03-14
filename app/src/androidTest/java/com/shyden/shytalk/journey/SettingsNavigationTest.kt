@@ -11,6 +11,7 @@ import com.shyden.shytalk.util.launchMainScreen
 import com.shyden.shytalk.util.launchNavGraph
 import com.shyden.shytalk.util.waitForTag
 import com.shyden.shytalk.util.waitForText
+import com.shyden.shytalk.util.ResetFakesRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,7 +19,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SettingsNavigationTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val resetFakes = ResetFakesRule()
+
+    @get:Rule(order = 1)
     val composeTestRule = createComposeRule()
 
     @Test
@@ -61,8 +65,8 @@ class SettingsNavigationTest {
         // requires reactive auth state which fakes don't support)
         composeTestRule.onNodeWithTag("settings_signOutButton").performClick()
         // Should not crash after clicking
-        Thread.sleep(500)
-        composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
     }
 
     @Test
@@ -74,7 +78,7 @@ class SettingsNavigationTest {
         composeTestRule.waitForText("Privacy Policy")
         composeTestRule.onNodeWithText("Privacy Policy").performClick()
         // Just verify the click navigated without crash
-        Thread.sleep(500)
-        composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
     }
 }

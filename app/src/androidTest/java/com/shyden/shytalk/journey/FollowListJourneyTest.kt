@@ -10,6 +10,7 @@ import com.shyden.shytalk.navigation.Screen
 import com.shyden.shytalk.util.launchNavGraph
 import com.shyden.shytalk.util.waitForTag
 import com.shyden.shytalk.util.waitForText
+import com.shyden.shytalk.util.ResetFakesRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,7 +18,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class FollowListJourneyTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val resetFakes = ResetFakesRule()
+
+    @get:Rule(order = 1)
     val composeTestRule = createComposeRule()
 
     @Test
@@ -46,12 +50,12 @@ class FollowListJourneyTest {
         composeTestRule.waitForTag("followList_followersTab")
 
         composeTestRule.onNodeWithTag("followList_followingTab").performClick()
-        Thread.sleep(250)
         composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag("followList_followersTab").performClick()
-        Thread.sleep(250)
         composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.waitForIdle()
     }
 
     // ── Stalkers tab / SuperShy gating ──────────────────────────────────
@@ -98,8 +102,8 @@ class FollowListJourneyTest {
         )
         composeTestRule.waitForText("Stalkers (0)")
         composeTestRule.onNodeWithText("Stalkers", substring = true).performClick()
-        Thread.sleep(250)
         composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.waitForIdle()
 
         composeTestRule.waitForText("Super Shy Benefit")
         composeTestRule.onNodeWithText("Super Shy Benefit").assertIsDisplayed()

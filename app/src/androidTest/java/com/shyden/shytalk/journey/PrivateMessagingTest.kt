@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.shyden.shytalk.util.launchMainScreen
 import com.shyden.shytalk.util.waitForTag
 import com.shyden.shytalk.util.waitForText
+import com.shyden.shytalk.util.ResetFakesRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,7 +17,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PrivateMessagingTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val resetFakes = ResetFakesRule()
+
+    @get:Rule(order = 1)
     val composeTestRule = createComposeRule()
 
     @Test
@@ -48,7 +52,10 @@ class PrivateMessagingTest {
         composeTestRule.onNodeWithText("OtherUser").performClick()
         composeTestRule.waitForTag("privateChat_backButton")
         composeTestRule.onNodeWithTag("privateChat_backButton").performClick()
-        composeTestRule.waitForTag("main_messagesTab")
+        // Allow back navigation animation to complete
+        composeTestRule.mainClock.advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
+        composeTestRule.waitForTag("main_messagesTab", timeoutMs = 5_000)
         composeTestRule.onNodeWithTag("main_messagesTab").assertIsDisplayed()
     }
 }

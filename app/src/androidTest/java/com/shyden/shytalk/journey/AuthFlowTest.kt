@@ -14,6 +14,7 @@ import com.shyden.shytalk.util.launchSignIn
 import com.shyden.shytalk.util.launchNavGraph
 import com.shyden.shytalk.util.waitForTag
 import com.shyden.shytalk.navigation.Screen
+import com.shyden.shytalk.util.ResetFakesRule
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -24,7 +25,10 @@ import org.koin.test.inject
 @RunWith(AndroidJUnit4::class)
 class AuthFlowTest : KoinTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val resetFakes = ResetFakesRule()
+
+    @get:Rule(order = 1)
     val composeTestRule = createComposeRule()
 
     private val authRepository: AuthRepository by inject()

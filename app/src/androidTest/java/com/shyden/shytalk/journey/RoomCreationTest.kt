@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.shyden.shytalk.util.launchMainScreen
 import com.shyden.shytalk.util.waitForTag
+import com.shyden.shytalk.util.ResetFakesRule
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -19,7 +20,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class RoomCreationTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val resetFakes = ResetFakesRule()
+
+    @get:Rule(order = 1)
     val composeTestRule = createComposeRule()
 
     @Before

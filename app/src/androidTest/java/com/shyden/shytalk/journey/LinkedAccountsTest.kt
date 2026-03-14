@@ -2,6 +2,8 @@ package com.shyden.shytalk.journey
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -15,6 +17,7 @@ import com.shyden.shytalk.fake.FakeUserRepository
 import com.shyden.shytalk.navigation.Screen
 import com.shyden.shytalk.util.launchNavGraph
 import com.shyden.shytalk.util.waitForText
+import com.shyden.shytalk.util.ResetFakesRule
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -25,7 +28,10 @@ import org.koin.test.inject
 @RunWith(AndroidJUnit4::class)
 class LinkedAccountsTest : KoinTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val resetFakes = ResetFakesRule()
+
+    @get:Rule(order = 1)
     val composeTestRule = createComposeRule()
 
     private val authRepository: AuthRepository by inject()
@@ -92,9 +98,9 @@ class LinkedAccountsTest : KoinTest {
         composeTestRule.waitForText("Linked Accounts")
         composeTestRule.onNodeWithText("Linked Accounts").performClick()
 
-        // With 2 active providers, unlink buttons should be visible
+        // With 2 active providers, unlink buttons should be visible (one per provider)
         composeTestRule.waitForText("Unlink")
-        composeTestRule.onNodeWithText("Unlink").assertExists()
+        composeTestRule.onAllNodesWithText("Unlink").onFirst().assertExists()
     }
 
     @Test
@@ -135,9 +141,9 @@ class LinkedAccountsTest : KoinTest {
         composeTestRule.waitForText("Linked Accounts")
         composeTestRule.onNodeWithText("Linked Accounts").performClick()
 
-        // Tap unlink on a provider
+        // Tap unlink on the first provider (2 "Unlink" buttons exist, one per active provider)
         composeTestRule.waitForText("Unlink")
-        composeTestRule.onNodeWithText("Unlink").performClick()
+        composeTestRule.onAllNodesWithText("Unlink").onFirst().performClick()
 
         // Should show confirmation dialog
         composeTestRule.waitForText("Cancel")
