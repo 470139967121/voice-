@@ -212,7 +212,7 @@ jobs:
         api-level: [28, 30, 33, 35]
         form-factor: [phone, tablet]
         include:
-          # Phone profiles
+          # Phone profiles (use SDK-bundled device definitions)
           - api-level: 28
             form-factor: phone
             profile: pixel_2
@@ -227,9 +227,9 @@ jobs:
             ram-size: 4096
           - api-level: 35
             form-factor: phone
-            profile: pixel_8
+            profile: pixel_6
             ram-size: 4096
-          # Tablet profiles
+          # Tablet profiles (Nexus 9 and Nexus 10 are always available)
           - api-level: 28
             form-factor: tablet
             profile: Nexus 9
@@ -240,11 +240,11 @@ jobs:
             ram-size: 2048
           - api-level: 33
             form-factor: tablet
-            profile: pixel_tablet
+            profile: Nexus 10
             ram-size: 4096
           - api-level: 35
             form-factor: tablet
-            profile: pixel_tablet
+            profile: Nexus 10
             ram-size: 4096
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
