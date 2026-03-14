@@ -27,8 +27,9 @@ permissions:
   checks: write
   issues: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+# Note: FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 is NOT set here because
+# reactivecircus/android-emulator-runner only supports Node 20.
+# Re-enable once the emulator runner releases a Node 24 version.
 
 concurrency:
   group: e2e-tests-${{ github.event.inputs.platform || 'comment' }}-${{ github.ref }}
