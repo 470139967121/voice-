@@ -13,3 +13,8 @@ Feature: Fun Fact Splash Screen
     Given I am authenticated as "test-user-1"
     And I am on the "splash" screen
     Then I should see the element with tag "splash_continueButton"
+
+  Scenario: Splash screen shows tagline or fun fact
+    Given I am authenticated as "test-user-1"
+    And I am on the "splash" screen
+    Then I should see the element with tag "splash_subtitle"

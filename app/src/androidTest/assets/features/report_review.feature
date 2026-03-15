@@ -8,3 +8,13 @@ Feature: Report Review
     And I am on the "report_review" screen
     Then I should see the element with tag "reportReview_backButton"
     And I should see the element with tag "reportReview_emptyState"
+
+  Scenario: Shows back button
+    Given I am authenticated as "test-user-1"
+    And I am on the "report_review" screen
+    Then I should see the element with tag "reportReview_backButton"
+
+  Scenario: Shows empty state when no reports
+    Given I am authenticated as "test-user-1"
+    And I am on the "report_review" screen
+    Then I should see the element with tag "reportReview_emptyState"
