@@ -310,5 +310,10 @@ service cloud.firestore {
     match /emailMetrics/{docId} {
       allow read, write: if false;
     }
+
+    // ── Purchase receipts — server-only (IAP dedup) ─────────────
+    match /purchaseReceipts/{receiptId} {
+      allow read, write: if false;
+    }
   }
 }
