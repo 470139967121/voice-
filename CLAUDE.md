@@ -51,6 +51,21 @@ Social chat app with voice rooms. Kotlin Multiplatform (Android + iOS), Firebase
 - Fix all failures before committing
 - JVM test gotcha: `org.json.JSONObject` is stubbed — add `testImplementation("org.json:json:20231013")` if needed
 
+## PR Quality Gate (Pre-Push Checklist)
+Before opening or updating a PR, run ALL applicable checks:
+- Kotlin unit tests: `./gradlew test` (if app changed)
+- Express API tests: `cd express-api && npm test` (if backend changed)
+- E2E tests: `./gradlew connectedDevDebugAndroidTest` (if app changed)
+- Playwright web tests: `npx playwright test` (if web changed)
+- Code review agent on the diff
+- Security review agent on the changes
+- i18n checker for all 19 locales (if user-facing strings changed)
+- Update CLAUDE.md if new patterns/conventions introduced
+- Re-run all tests after fixes
+- Only push when all checks pass
+- Comment `/deploy` on PR when ready for internal testers (both Android + iOS)
+- Workflow-only changes (`.github/`, `.claude/`, `*.md`) don't need app testing
+
 ## Debugging
 - **Check Firestore security rules first** for read/write failures — pull logcat for `PERMISSION_DENIED`
 - Rules file: `firestore.rules` — must include rules for ALL collections AND subcollections
