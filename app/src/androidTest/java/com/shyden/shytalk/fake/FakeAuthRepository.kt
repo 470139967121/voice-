@@ -52,6 +52,12 @@ class FakeAuthRepository : AuthRepository {
         return Resource.Success("test-user-1")
     }
 
+    override suspend fun signInWithCustomToken(token: String): Resource<String> {
+        _isAuthenticated = true
+        _currentUserId = "test-user-1"
+        return Resource.Success("test-user-1")
+    }
+
     override fun signOut() {
         resolvedUniqueId = null
         _isAuthenticated = false

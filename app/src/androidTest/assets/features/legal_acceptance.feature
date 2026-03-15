@@ -31,3 +31,17 @@ Feature: Legal Acceptance
     And I tap the text "Privacy Policy"
     And I wait 1000 milliseconds
     Then I should see the element with tag "legal_acceptButton"
+
+  Scenario: Shows all four checkboxes
+    Given I am on the "legal_acceptance" screen
+    When I wait for the element with tag "legal_acceptButton"
+    Then I should see the element with tag "legal_checkbox_PrivacyPolicy"
+    And I should see the element with tag "legal_checkbox_CommunityStandards"
+    And I should see the element with tag "legal_checkbox_TermsAndConditions"
+    And I should see the element with tag "legal_checkbox_CyberBullyingPolicy"
+
+  Scenario: Tapping a checkbox enables it
+    Given I am on the "legal_acceptance" screen
+    When I wait for the element with tag "legal_acceptButton"
+    And I tap the element with tag "legal_checkbox_PrivacyPolicy"
+    Then I should see the element with tag "legal_checkbox_PrivacyPolicy"

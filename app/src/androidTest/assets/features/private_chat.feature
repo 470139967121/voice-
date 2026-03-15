@@ -29,3 +29,18 @@ Feature: Private Chat
     And I tap the element with tag "privateChat_backButton"
     And I wait 1000 milliseconds
     Then I should see the element with tag "main_messagesTab"
+
+  Scenario: Shows message input
+    When I tap the "Messages" tab
+    And I tap the text "OtherUser"
+    Then I should see the element with tag "privateChat_messageInput"
+
+  Scenario: Shows send button
+    When I tap the "Messages" tab
+    And I tap the text "OtherUser"
+    Then I should see the element with tag "privateChat_sendButton"
+
+  Scenario: Shows back button
+    When I tap the "Messages" tab
+    And I tap the text "OtherUser"
+    Then I should see the element with tag "privateChat_backButton"

@@ -52,8 +52,8 @@ import com.shyden.shytalk.data.repository.NotificationRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.data.remote.PmSyncService
 import com.shyden.shytalk.data.remote.VoiceService
-import com.shyden.shytalk.feature.auth.EmailSignInScreen
-import com.shyden.shytalk.feature.auth.GoogleSignInScreen
+import com.shyden.shytalk.feature.auth.EmailOtpScreen
+import com.shyden.shytalk.feature.auth.SignInScreen
 import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
 import com.shyden.shytalk.feature.legal.CommunityStandardsScreen
 import com.shyden.shytalk.feature.legal.CyberBullyingPolicyScreen
@@ -175,7 +175,7 @@ fun NavGraph(
         startDestination = startDestination
     ) {
         composable(Screen.SignIn.route) {
-            GoogleSignInScreen(
+            SignInScreen(
                 pendingEmailLink = pendingEmailLink,
                 onEmailLinkConsumed = onEmailLinkConsumed,
                 onNavigateToEmail = {
@@ -204,12 +204,11 @@ fun NavGraph(
         }
 
         composable(Screen.EmailSignIn.route) {
-            val context = LocalContext.current
-            EmailSignInScreen(
+            val authViewModel: com.shyden.shytalk.feature.auth.AuthViewModel = org.koin.compose.viewmodel.koinViewModel()
+            EmailOtpScreen(
                 onNavigateBack = { navController.safePopBackStack() },
-                onStoreEmail = { email ->
-                    context.getSharedPreferences("shytalk_prefs", android.content.Context.MODE_PRIVATE)
-                        .edit().putString("email_for_sign_in_link", email).apply()
+                onAuthSuccess = { customToken ->
+                    authViewModel.signInWithCustomToken(customToken)
                 }
             )
         }

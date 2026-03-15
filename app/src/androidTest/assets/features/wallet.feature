@@ -35,3 +35,13 @@ Feature: Wallet
 
   # Skipped: transactionHistory_backButton_returnsToWallet — uses Espresso.pressBack()
   # which cannot be expressed with available step definitions.
+
+  Scenario: Shows balance
+    Given I am on the "wallet" screen
+    When I wait for the element with tag "wallet_balance"
+    Then I should see the element with tag "wallet_balance"
+
+  Scenario: Shows transactions button
+    Given I am on the "wallet" screen
+    When I wait for the element with tag "wallet_transactionsButton"
+    Then I should see the element with tag "wallet_transactionsButton"

@@ -1012,5 +1012,103 @@ async function evictSuspendedUser(uid) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// Admin Auth Management (PIN lockout, biometric keys, OTP metrics)
+// ═══════════════════════════════════════════════════════════════════
+
+// GET /user/:uniqueId/auth-status — PIN, biometric, lockout state
+router.get('/user/:uniqueId/auth-status', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+    const { uniqueId } = req.params;
+
+    const userDoc = await getDoc('users', uniqueId);
+    if (!userDoc) return res.status(404).json({ error: 'User not found' });
+
+    // Get biometric keys for this user
+    const keysSnapshot = await db.collection('biometricKeys')
+      .where('__name__', '>=', `${uniqueId}:`)
+      .where('__name__', '<', `${uniqueId}:\uf8ff`)
+      .get();
+
+    const biometricKeys = keysSnapshot.docs.map(doc => ({
+      keyId: doc.id,
+      deviceId: doc.id.split(':').slice(1).join(':'),
+      createdAt: doc.data().createdAt,
+    }));
+
+    res.json({
+      pinSet: !!userDoc.pinHash,
+      pinSetAt: userDoc.pinSetAt || null,
+      pinAttempts: userDoc.pinAttempts || 0,
+      pinLockedUntil: userDoc.pinLockedUntil || null,
+      pinLockoutCount: userDoc.pinLockoutCount || 0,
+      isLocked: userDoc.pinLockedUntil ? Date.now() < userDoc.pinLockedUntil : false,
+      biometricKeys,
+    });
+  } catch (err) {
+    log.error('Admin auth-status failed', err);
+    res.status(500).json({ error: 'Failed to get auth status' });
+  }
+});
+
+// POST /user/:uniqueId/reset-pin-lockout — Clear PIN lockout
+router.post('/user/:uniqueId/reset-pin-lockout', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+    const { uniqueId } = req.params;
+
+    await db.doc(`users/${uniqueId}`).update({
+      pinAttempts: 0,
+      pinLockedUntil: null,
+      pinLockoutCount: 0,
+    });
+
+    log.info(`Admin reset PIN lockout for user ${uniqueId}`);
+    res.json({ message: 'PIN lockout reset' });
+  } catch (err) {
+    log.error('Admin reset-pin-lockout failed', err);
+    res.status(500).json({ error: 'Failed to reset lockout' });
+  }
+});
+
+// DELETE /user/:uniqueId/biometric-keys/:deviceId — Revoke biometric key
+router.delete('/user/:uniqueId/biometric-keys/:deviceId', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+    const { uniqueId, deviceId } = req.params;
+
+    await db.doc(`biometricKeys/${uniqueId}:${deviceId}`).delete();
+
+    log.info(`Admin revoked biometric key for user ${uniqueId}, device ${deviceId}`);
+    res.json({ message: 'Biometric key revoked' });
+  } catch (err) {
+    log.error('Admin revoke-biometric-key failed', err);
+    res.status(500).json({ error: 'Failed to revoke key' });
+  }
+});
+
+// GET /metrics/otp — Daily OTP email metrics
+router.get('/metrics/otp', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+
+    const metricsDoc = await db.doc('emailMetrics/daily').get();
+    if (!metricsDoc.exists) {
+      return res.json({ count: 0, date: null, limit: 100 });
+    }
+
+    const data = metricsDoc.data();
+    res.json({
+      count: data.count || 0,
+      date: data.date || null,
+      limit: 100,
+    });
+  } catch (err) {
+    log.error('Admin OTP metrics failed', err);
+    res.status(500).json({ error: 'Failed to get OTP metrics' });
+  }
+});
+
 module.exports = router;
 module.exports.createWarning = createWarning;

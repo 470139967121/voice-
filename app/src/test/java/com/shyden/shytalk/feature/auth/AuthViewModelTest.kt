@@ -87,14 +87,15 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `init - signs out persisted session on launch`() = runTest {
+    fun `init - authenticated user without appLockRepository stays default`() = runTest {
+        // When appLockRepository is null (legacy/test), authenticated user stays on sign-in screen
         every { authRepository.isAuthenticated } returns true
 
         val vm = createViewModel()
         advanceUntilIdle()
 
-        verify { authRepository.signOut() }
-        assertFalse(vm.uiState.value.isAuthenticated)
+        // No longer signs out — the old signOut-on-init behavior is removed
+        // Without appLockRepository, the ViewModel stays in default state
         assertFalse(vm.uiState.value.isLoading)
     }
 

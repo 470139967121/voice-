@@ -20,7 +20,8 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(['shyCoins', 'shyBeans', 'isSuperShy', 'superShyExpiry', 'superShyTier',
                      'gcsLastDeductionAt', 'isSuspended', 'suspensionReason',
-                     'suspensionEndDate', 'userType', 'uniqueId', 'firebaseUid', 'providers']);
+                     'suspensionEndDate', 'userType', 'uniqueId', 'firebaseUid', 'providers',
+                     'pinHash', 'pinSetAt', 'pinAttempts', 'pinLockedUntil', 'pinLockoutCount']);
 
       // Backpack — read own, write only via API
       match /backpack/{giftId} {
@@ -293,6 +294,21 @@ service cloud.firestore {
     match /alertConfig/{docId} {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow write: if false;
+    }
+
+    // ── OTP codes — server-only (Admin SDK bypasses rules) ──────
+    match /otpCodes/{email} {
+      allow read, write: if false;
+    }
+
+    // ── Biometric keys — server-only ────────────────────────────
+    match /biometricKeys/{keyId} {
+      allow read, write: if false;
+    }
+
+    // ── Email metrics — server-only ─────────────────────────────
+    match /emailMetrics/{docId} {
+      allow read, write: if false;
     }
   }
 }

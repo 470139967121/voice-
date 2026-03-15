@@ -66,6 +66,21 @@ class WorkerApiClient(
         return JSONObject(bodyStr)
     }
 
+    /** POST without authentication — for public auth endpoints (OTP, PIN verify). */
+    suspend fun postPublic(path: String, body: JSONObject = JSONObject()): JSONObject {
+        val url = "$baseUrl$path"
+        val request = Request.Builder().url(url)
+            .header("x-session-trace-id", TraceManager.sessionTraceId)
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE)).build()
+        val response = httpClient.newCall(request).executeAsync()
+        val bodyStr = response.use { it.body?.string() ?: "{}" }
+        if (!response.isSuccessful) {
+            val error = try { JSONObject(bodyStr).optString("error", "Request failed") } catch (_: Exception) { "HTTP ${response.code}" }
+            throw ApiException(response.code, error)
+        }
+        return JSONObject(bodyStr)
+    }
+
     suspend fun getArray(path: String): JSONArray =
         executeArrayWithRetry(path) { url, token ->
             Request.Builder().url(url).header("Authorization", "Bearer $token").get().build()

@@ -62,6 +62,10 @@ import org.jetbrains.compose.resources.stringResource
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
 import org.koin.android.ext.android.inject
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
+import com.shyden.shytalk.data.repository.AppLockRepository
 
 class MainActivity : ComponentActivity() {
 
@@ -70,6 +74,8 @@ class MainActivity : ComponentActivity() {
     private val workerApiClient: WorkerApiClient by inject()
     private val activeRoomManager: RoomLifecycleManager by inject()
     private val appConfigService: AppConfigService by inject()
+    private val biometricAuth: com.shyden.shytalk.core.util.BiometricAuth by inject()
+    private val appLockRepository: AppLockRepository by inject()
 
     private val _navigateToRoom = mutableStateOf<String?>(null)
     private val _navigateToChat = mutableStateOf<Pair<String, Boolean>?>(null) // (id, isGroup)
@@ -87,7 +93,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        biometricAuth.setActivity(this as androidx.fragment.app.FragmentActivity)
         enableEdgeToEdge()
+
+        // Track app background/foreground for lock timeout
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) {
+                // App went to background — record timestamp
+                appLockRepository.updateLastActiveTimestamp()
+            }
+        })
 
         setContent {
             ShyTalkTheme(darkTheme = true) {
