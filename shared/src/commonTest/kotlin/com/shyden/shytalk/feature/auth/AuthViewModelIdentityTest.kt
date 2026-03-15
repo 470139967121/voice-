@@ -64,6 +64,7 @@ class AuthViewModelIdentityTest {
         override suspend fun signInWithAppleViaProvider(activity: Any): Resource<String> = signInResult
         override suspend fun sendSignInLink(email: String): Resource<Unit> = Resource.Success(Unit)
         override suspend fun signInWithEmailLink(email: String, link: String): Resource<String> = signInResult
+        override suspend fun signInWithCustomToken(token: String): Resource<String> = signInResult
         override fun signOut() { signedOut = true; resolvedUniqueId = null; firebaseUid = null }
     }
 

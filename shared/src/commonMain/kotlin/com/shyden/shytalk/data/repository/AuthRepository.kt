@@ -37,5 +37,6 @@ interface AuthRepository {
     suspend fun signInWithAppleViaProvider(activity: Any): Resource<String>
     suspend fun sendSignInLink(email: String): Resource<Unit>
     suspend fun signInWithEmailLink(email: String, link: String): Resource<String>
+    suspend fun signInWithCustomToken(token: String): Resource<String>
     fun signOut()
 }

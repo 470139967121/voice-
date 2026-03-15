@@ -106,6 +106,11 @@ class AuthRepositoryImpl(
         result.user?.uid ?: throw Exception("Sign in failed: no user returned")
     }
 
+    override suspend fun signInWithCustomToken(token: String): Resource<String> = firebaseCall("Custom token sign-in failed") {
+        val result = auth.signInWithCustomToken(token).await()
+        result.user?.uid ?: throw Exception("Sign in failed: no user returned")
+    }
+
     override fun signOut() {
         resolvedUniqueId = null
         auth.signOut()

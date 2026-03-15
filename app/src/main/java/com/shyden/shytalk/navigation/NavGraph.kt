@@ -204,14 +204,11 @@ fun NavGraph(
         }
 
         composable(Screen.EmailSignIn.route) {
+            val authViewModel: com.shyden.shytalk.feature.auth.AuthViewModel = org.koin.compose.viewmodel.koinViewModel()
             EmailOtpScreen(
                 onNavigateBack = { navController.safePopBackStack() },
                 onAuthSuccess = { customToken ->
-                    // TODO: Sign in with custom token and proceed through identity resolution
-                    // For now, navigate to sign-in to trigger normal flow
-                    navController.navigate(Screen.SignIn.route) {
-                        popUpTo(Screen.EmailSignIn.route) { inclusive = true }
-                    }
+                    authViewModel.signInWithCustomToken(customToken)
                 }
             )
         }

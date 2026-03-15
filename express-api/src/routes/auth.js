@@ -173,6 +173,15 @@ router.post('/auth/otp/verify', sensitiveLimiter, async (req, res) => {
     let firebaseUid;
     try {
       const userRecord = await auth.getUserByEmail(emailLower);
+      // Prevent OTP bypass for Google/Apple accounts — they must use their provider
+      const providers = (userRecord.providerData || []).map(p => p.providerId);
+      const hasPasswordOrEmail = providers.includes('password') || providers.length === 0;
+      const isOtpOnlyOrNew = hasPasswordOrEmail || providers.includes('email');
+      if (!isOtpOnlyOrNew && (providers.includes('google.com') || providers.includes('apple.com'))) {
+        return res.status(403).json({
+          error: 'This email is linked to a Google or Apple account. Please sign in with that provider.',
+        });
+      }
       firebaseUid = userRecord.uid;
     } catch (err) {
       if (err.code === 'auth/user-not-found') {
@@ -447,13 +456,28 @@ router.post('/auth/biometric/verify', sensitiveLimiter, async (req, res) => {
       return res.status(404).json({ error: 'No biometric key registered' });
     }
 
-    const { publicKey } = keyDoc.data();
+    const { publicKey: storedKey } = keyDoc.data();
 
-    // Verify signature
-    const crypto = require('crypto');
+    // Convert stored Base64 SPKI DER to a KeyObject for verification
+    let keyObject;
+    try {
+      // Try as PEM first (if client sent PEM-encoded key)
+      if (storedKey.startsWith('-----')) {
+        keyObject = crypto.createPublicKey(storedKey);
+      } else {
+        // Assume Base64-encoded SPKI DER (from Android Keystore)
+        const derBuffer = Buffer.from(storedKey, 'base64');
+        keyObject = crypto.createPublicKey({ key: derBuffer, format: 'der', type: 'spki' });
+      }
+    } catch (keyErr) {
+      log.error('Invalid public key format', keyErr);
+      return res.status(500).json({ error: 'Invalid biometric key' });
+    }
+
+    // Verify ECDSA signature
     const verify = crypto.createVerify('SHA256');
     verify.update(challenge.nonce);
-    const isValid = verify.verify(publicKey, Buffer.from(signature, 'base64'));
+    const isValid = verify.verify(keyObject, Buffer.from(signature, 'base64'));
 
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid signature' });

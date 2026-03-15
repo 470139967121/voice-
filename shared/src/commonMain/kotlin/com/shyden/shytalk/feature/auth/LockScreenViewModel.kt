@@ -71,8 +71,12 @@ class LockScreenViewModel(
             return
         }
 
-        val uniqueId = appLockRepository.storedUniqueId ?: return
-        val deviceId = appLockRepository.storedDeviceId ?: return
+        val uniqueId = appLockRepository.storedUniqueId
+        val deviceId = appLockRepository.storedDeviceId
+        if (uniqueId == null || deviceId == null) {
+            _state.update { it.copy(error = "Session expired. Please sign in again.", requiresReauth = true) }
+            return
+        }
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -123,8 +127,12 @@ class LockScreenViewModel(
 
             when (val bioResult = biometricAuth.authenticate("Unlock ShyTalk", "Use your fingerprint or face to unlock")) {
                 is BiometricResult.Success -> {
-                    val uniqueId = appLockRepository.storedUniqueId ?: return@launch
-                    val deviceId = appLockRepository.storedDeviceId ?: return@launch
+                    val uniqueId = appLockRepository.storedUniqueId
+                    val deviceId = appLockRepository.storedDeviceId
+                    if (uniqueId == null || deviceId == null) {
+                        _state.update { it.copy(isLoading = false, error = "Session expired. Please sign in again.", requiresReauth = true) }
+                        return@launch
+                    }
 
                     val challengeResult = biometricRepository.getChallenge(uniqueId, deviceId)
                     challengeResult.onSuccess { nonce ->
@@ -139,10 +147,10 @@ class LockScreenViewModel(
                             checkBiometricGracePeriod()
                             _state.update { it.copy(isLoading = false, unlocked = true) }
                         }.onFailure { e ->
-                            _state.update { it.copy(isLoading = false, error = e.message) }
+                            _state.update { it.copy(isLoading = false, error = e.message ?: "Biometric verification failed") }
                         }
                     }.onFailure { e ->
-                        _state.update { it.copy(isLoading = false, error = e.message) }
+                        _state.update { it.copy(isLoading = false, error = e.message ?: "Could not start biometric verification") }
                     }
                 }
                 is BiometricResult.Fallback -> {

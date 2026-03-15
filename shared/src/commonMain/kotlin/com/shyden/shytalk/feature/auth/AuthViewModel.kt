@@ -464,6 +464,32 @@ class AuthViewModel(
         _uiState.update { it.copy(awaitingEmailLink = false, emailForLink = null) }
     }
 
+    fun signInWithCustomToken(customToken: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            when (val result = authRepository.signInWithCustomToken(customToken)) {
+                is Resource.Success -> {
+                    val providerInfo = authRepository.getProviderInfo()
+                    if (providerInfo != null) {
+                        resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
+                    } else {
+                        // Email OTP user — use "email" provider with email address
+                        val email = authRepository.currentUserEmail
+                        if (email != null) {
+                            resolveIdentityAndProceed("email", email)
+                        } else {
+                            _uiState.update { it.copy(isLoading = false, error = UiText.plain("Could not resolve identity")) }
+                        }
+                    }
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
     fun signOut() {
         logI(TAG, "User signed out")
         viewModelScope.launch {

@@ -35,12 +35,12 @@ class PinRepositoryImpl(
                     Result.success(PinVerifyResult(attemptsRemaining = remaining))
                 }
                 423 -> {
-                    // Locked out
+                    // Locked out — default requiresReauth to true (fail-secure)
                     val body = try { JSONObject(e.message ?: "{}") } catch (_: Exception) { JSONObject() }
                     Result.success(PinVerifyResult(
                         locked = true,
                         lockedUntil = body.optLong("lockedUntil", 0),
-                        requiresReauth = body.optBoolean("requiresReauth", false),
+                        requiresReauth = body.optBoolean("requiresReauth", true),
                         attemptsRemaining = 0,
                     ))
                 }

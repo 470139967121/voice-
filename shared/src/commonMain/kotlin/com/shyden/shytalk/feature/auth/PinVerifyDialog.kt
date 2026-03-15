@@ -42,8 +42,13 @@ fun PinVerifyDialog(
     var isLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    val uniqueId = appLockRepository.storedUniqueId ?: return
-    val deviceId = appLockRepository.storedDeviceId ?: return
+    val uniqueId = appLockRepository.storedUniqueId
+    val deviceId = appLockRepository.storedDeviceId
+    if (uniqueId == null || deviceId == null) {
+        // Session corrupt — dismiss dialog and let caller handle
+        onDismiss()
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
