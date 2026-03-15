@@ -2,8 +2,10 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/web',
-  timeout: 30_000,
+  testIgnore: ['**/auth.setup.ts'],
+  timeout: 60_000,
   retries: 1,
+  workers: 1, // Serial — Firebase Auth rate-limits concurrent logins
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
     ['junit', { outputFile: 'playwright-results.xml' }],
