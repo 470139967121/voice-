@@ -11,7 +11,9 @@ import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.*
+import com.shyden.shytalk.data.repository.AppLockRepository
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.BiometricRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
 import com.shyden.shytalk.data.repository.IdentityRepository
 import com.shyden.shytalk.data.repository.SignInResult
@@ -42,7 +44,10 @@ data class AuthUiState(
     val banReason: String? = null,
     val banExpiresAt: String? = null,
     val awaitingEmailLink: Boolean = false,
-    val emailForLink: String? = null
+    val emailForLink: String? = null,
+    val needsPinSetup: Boolean = false,
+    val hasStoredCredential: Boolean = false,
+    val needsLockScreen: Boolean = false,
 )
 
 class AuthViewModel(
@@ -51,7 +56,9 @@ class AuthViewModel(
     private val deviceRepository: DeviceRepository,
     private val identityRepository: IdentityRepository,
     private val deviceId: String,
-    private val bypassDeviceChecks: Boolean = false
+    private val bypassDeviceChecks: Boolean = false,
+    private val appLockRepository: AppLockRepository? = null,
+    private val biometricRepository: BiometricRepository? = null,
 ) : ViewModel() {
 
     companion object {
@@ -65,12 +72,40 @@ class AuthViewModel(
     private var resolvedUniqueId: String? = null
 
     init {
-        // Sign out any persisted Firebase session so the user always
-        // sees the sign-in screen on launch.
-        if (authRepository.isAuthenticated) {
-            logI(TAG, "Clearing persisted Firebase session on launch")
-            authRepository.signOut()
+        val lockRepo = appLockRepository
+        if (lockRepo != null && lockRepo.hasCredential) {
+            // Returning user with stored credential
+            if (lockRepo.isAppLockEnabled && lockRepo.isLockRequired()) {
+                logI(TAG, "Lock screen required (timeout expired)")
+                _uiState.update { it.copy(hasStoredCredential = true, needsLockScreen = true) }
+            } else {
+                // Silent restore — Firebase SDK persists session across app restarts
+                logI(TAG, "Restoring session silently (credential exists, lock not required)")
+                val uniqueId = lockRepo.storedUniqueId
+                if (uniqueId != null && authRepository.isAuthenticated) {
+                    resolvedUniqueId = uniqueId
+                    authRepository.resolvedUniqueId = uniqueId
+                    _uiState.update {
+                        it.copy(hasStoredCredential = true, isAuthenticated = true, hasProfile = true, hasDOB = true)
+                    }
+                } else {
+                    // Credential exists but Firebase session expired — need lock screen
+                    logI(TAG, "Firebase session expired — showing lock screen")
+                    _uiState.update { it.copy(hasStoredCredential = true, needsLockScreen = true) }
+                }
+            }
+        } else if (lockRepo != null && !lockRepo.hasCredential && authRepository.isAuthenticated) {
+            // First launch after update: user has Firebase session but no PIN
+            // Route through identity resolution → PIN setup (migration path)
+            logI(TAG, "Migration: authenticated user without PIN — will route to PIN setup")
+            viewModelScope.launch {
+                val providerInfo = authRepository.getProviderInfo()
+                if (providerInfo != null) {
+                    resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
+                }
+            }
         }
+        // else: no credential AND no Firebase session → sign-in screen (default state)
     }
 
     fun signInWithGoogle(idToken: String) {
@@ -299,13 +334,16 @@ class AuthViewModel(
                             if (!needsLegal) {
                                 LanguagePreference.setAcceptedLegalVersion(CURRENT_LEGAL_VERSION)
                             }
+                            // Check if user needs PIN setup (migration or new device)
+                            val needsPin = appLockRepository != null && !appLockRepository!!.hasCredential
                             _uiState.update {
                                 it.copy(
                                     isLoading = false,
                                     isAuthenticated = true,
                                     hasProfile = true,
                                     hasDOB = user.dateOfBirth != null,
-                                    needsLegalAcceptance = needsLegal
+                                    needsLegalAcceptance = needsLegal,
+                                    needsPinSetup = needsPin,
                                 )
                             }
                         }
@@ -428,6 +466,12 @@ class AuthViewModel(
 
     fun signOut() {
         logI(TAG, "User signed out")
+        viewModelScope.launch {
+            // Revoke biometric key for this device on server
+            biometricRepository?.revoke(deviceId)
+        }
+        // Clear local credentials
+        appLockRepository?.clearCredential()
         resolvedUniqueId = null
         authRepository.signOut()
         _uiState.value = AuthUiState()

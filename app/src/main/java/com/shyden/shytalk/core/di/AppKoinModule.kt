@@ -163,7 +163,7 @@ val appModule = module {
     single<RoomLifecycleManager> { get<ActiveRoomManager>() }
 
     // ViewModels
-    viewModel { AuthViewModel(get(), get(), get(), get(), get(named("deviceId")), get(named("bypassDeviceChecks"))) }
+    viewModel { AuthViewModel(get(), get(), get(), get(), get(named("deviceId")), get(named("bypassDeviceChecks")), get(), get()) }
     viewModel { LockScreenViewModel(get(), get(), get(), get(), get()) }
     viewModel { PinSetupViewModel(get(), get()) }
     viewModel { EmailOtpViewModel(get()) }
