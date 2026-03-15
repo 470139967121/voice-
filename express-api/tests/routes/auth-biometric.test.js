@@ -46,6 +46,12 @@ jest.mock('../../src/middleware/auth', () => ({
   updateUniqueIdCache: jest.fn(),
 }));
 
+jest.mock('../../src/middleware/rateLimit', () => ({
+  generalLimiter: (req, res, next) => next(),
+  writeLimiter: (req, res, next) => next(),
+  sensitiveLimiter: (req, res, next) => next(),
+}));
+
 const { auth } = require('../../src/utils/firebase');
 
 function buildApp(authUser) {

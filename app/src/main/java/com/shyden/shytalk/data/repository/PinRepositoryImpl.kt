@@ -8,10 +8,11 @@ class PinRepositoryImpl(
     private val apiClient: WorkerApiClient
 ) : PinRepository {
 
-    override suspend fun setupPin(pin: String): Result<Unit> = runCatching {
-        apiClient.post("/api/auth/pin/setup", JSONObject().apply {
+    override suspend fun setupPin(pin: String): Result<String> = runCatching {
+        val response = apiClient.post("/api/auth/pin/setup", JSONObject().apply {
             put("pin", pin)
         })
+        response.getString("pinHash")
     }
 
     override suspend fun verifyPin(uniqueId: String, deviceId: String, pin: String): Result<PinVerifyResult> {

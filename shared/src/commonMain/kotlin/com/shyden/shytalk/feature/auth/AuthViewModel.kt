@@ -467,13 +467,17 @@ class AuthViewModel(
     fun signOut() {
         logI(TAG, "User signed out")
         viewModelScope.launch {
-            // Revoke biometric key for this device on server
-            biometricRepository?.revoke(deviceId)
+            // Revoke biometric key BEFORE clearing Firebase session (needs auth token)
+            try {
+                biometricRepository?.revoke(deviceId)
+            } catch (e: Exception) {
+                logW(TAG, "Failed to revoke biometric key: ${e.message}")
+            }
+            // Clear local credentials and Firebase session after revoke completes
+            appLockRepository?.clearCredential()
+            resolvedUniqueId = null
+            authRepository.signOut()
+            _uiState.value = AuthUiState()
         }
-        // Clear local credentials
-        appLockRepository?.clearCredential()
-        resolvedUniqueId = null
-        authRepository.signOut()
-        _uiState.value = AuthUiState()
     }
 }

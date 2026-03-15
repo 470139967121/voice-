@@ -20,7 +20,8 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(['shyCoins', 'shyBeans', 'isSuperShy', 'superShyExpiry', 'superShyTier',
                      'gcsLastDeductionAt', 'isSuspended', 'suspensionReason',
-                     'suspensionEndDate', 'userType', 'uniqueId', 'firebaseUid', 'providers']);
+                     'suspensionEndDate', 'userType', 'uniqueId', 'firebaseUid', 'providers',
+                     'pinHash', 'pinSetAt', 'pinAttempts', 'pinLockedUntil', 'pinLockoutCount']);
 
       // Backpack — read own, write only via API
       match /backpack/{giftId} {

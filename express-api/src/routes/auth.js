@@ -13,12 +13,14 @@
  */
 
 const router = require('express').Router();
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { db, auth } = require('../utils/firebase');
 const { sendEmail } = require('../utils/email');
 const { buildOtpEmail, buildLockoutEmail, buildResetEmail } = require('../utils/email-templates');
 const log = require('../utils/log');
 const { authMiddleware } = require('../middleware/auth');
+const { sensitiveLimiter } = require('../middleware/rateLimit');
 
 const BCRYPT_ROUNDS = 10;
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
@@ -36,7 +38,7 @@ const PIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return crypto.randomInt(100000, 999999).toString();
 }
 
 function today() {
@@ -48,7 +50,7 @@ function today() {
 // ═══════════════════════════════════════════════════════════════════
 
 // POST /api/auth/otp/send
-router.post('/auth/otp/send', async (req, res) => {
+router.post('/auth/otp/send', sensitiveLimiter, async (req, res) => {
   try {
     const { email } = req.body || {};
     if (!email || !EMAIL_RE.test(email)) {
@@ -130,7 +132,7 @@ router.post('/auth/otp/send', async (req, res) => {
 });
 
 // POST /api/auth/otp/verify
-router.post('/auth/otp/verify', async (req, res) => {
+router.post('/auth/otp/verify', sensitiveLimiter, async (req, res) => {
   try {
     const { email, code } = req.body || {};
     if (!email) return res.status(400).json({ error: 'email required' });
@@ -218,7 +220,7 @@ router.post('/auth/pin/setup', authMiddleware, async (req, res) => {
       pinLockoutCount: 0,
     });
 
-    res.json({ message: 'PIN set' });
+    res.json({ message: 'PIN set', pinHash });
   } catch (err) {
     log.error('PIN setup failed', err);
     res.status(500).json({ error: 'Failed to set PIN' });
@@ -226,7 +228,7 @@ router.post('/auth/pin/setup', authMiddleware, async (req, res) => {
 });
 
 // POST /api/auth/pin/verify
-router.post('/auth/pin/verify', async (req, res) => {
+router.post('/auth/pin/verify', sensitiveLimiter, async (req, res) => {
   try {
     const { uniqueId, deviceId, pin } = req.body || {};
     if (!uniqueId || !deviceId || !pin) {
@@ -386,7 +388,7 @@ router.post('/auth/biometric/register', authMiddleware, async (req, res) => {
 });
 
 // GET /api/auth/biometric/challenge
-router.get('/auth/biometric/challenge', async (req, res) => {
+router.get('/auth/biometric/challenge', sensitiveLimiter, async (req, res) => {
   try {
     const { uniqueId, deviceId } = req.query;
     if (!uniqueId || !deviceId) {
@@ -419,7 +421,7 @@ router.get('/auth/biometric/challenge', async (req, res) => {
 });
 
 // POST /api/auth/biometric/verify
-router.post('/auth/biometric/verify', async (req, res) => {
+router.post('/auth/biometric/verify', sensitiveLimiter, async (req, res) => {
   try {
     const { uniqueId, deviceId, signature } = req.body || {};
     if (!uniqueId || !deviceId || !signature) {

@@ -193,10 +193,10 @@ class PinSetupViewModelTest {
         var lastSetupPin: String? = null
         var setupShouldFail = false
 
-        override suspend fun setupPin(pin: String): Result<Unit> {
+        override suspend fun setupPin(pin: String): Result<String> {
             if (setupShouldFail) return Result.failure(Exception("Setup failed"))
             lastSetupPin = pin
-            return Result.success(Unit)
+            return Result.success("\$2b\$10\$fakebcrypthashfortest")
         }
 
         override suspend fun verifyPin(uniqueId: String, deviceId: String, pin: String) =

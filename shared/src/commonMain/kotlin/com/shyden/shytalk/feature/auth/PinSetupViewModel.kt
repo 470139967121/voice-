@@ -84,13 +84,12 @@ class PinSetupViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            pinRepository.setupPin(pin).onSuccess {
-                // Store local hash for offline fallback
-                // (In production, we'd bcrypt locally too — for now store the PIN length indicator)
+            pinRepository.setupPin(pin).onSuccess { pinHash ->
+                // Store bcrypt hash locally for offline PIN verification
                 val uniqueId = appLockRepository.storedUniqueId ?: ""
                 val deviceId = appLockRepository.storedDeviceId ?: ""
                 if (uniqueId.isNotEmpty() && deviceId.isNotEmpty()) {
-                    appLockRepository.setCredential(uniqueId, deviceId, "pin-set")
+                    appLockRepository.setCredential(uniqueId, deviceId, pinHash)
                 }
                 _state.update { it.copy(isLoading = false, showBiometricOffer = true) }
             }.onFailure { e ->

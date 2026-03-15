@@ -9,8 +9,8 @@ data class PinVerifyResult(
 )
 
 interface PinRepository {
-    /** Create or replace PIN for the authenticated user. */
-    suspend fun setupPin(pin: String): Result<Unit>
+    /** Create or replace PIN for the authenticated user. Returns the bcrypt hash for local storage. */
+    suspend fun setupPin(pin: String): Result<String>
 
     /** Verify PIN. Returns PinVerifyResult with custom token or lockout info. */
     suspend fun verifyPin(uniqueId: String, deviceId: String, pin: String): Result<PinVerifyResult>
