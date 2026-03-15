@@ -9,6 +9,10 @@ module.exports = cors({
     // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow Cloudflare Pages preview deployments
+    if (origin.endsWith('.shytalk-site-dev.pages.dev') || origin.endsWith('.shytalk-site.pages.dev')) {
+      return callback(null, true);
+    }
     callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
