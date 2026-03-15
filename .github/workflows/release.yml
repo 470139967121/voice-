@@ -4,27 +4,139 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
   pull-requests: write
   issues: write
   checks: write
+  actions: read          # cross-run artifact download for /deploy
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: release-pipeline
+  group: ${{ github.event_name == 'issue_comment' && format('deploy-{0}', github.event.issue.number) || format('release-{0}', github.event.pull_request.number) }}
   cancel-in-progress: true
 
 jobs:
+  # ──────────────────────────────────────────────
+  # Detect which paths changed (PR events only)
+  # ──────────────────────────────────────────────
+
+  detect-changes:
+    name: Detect Changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      app_changed: ${{ steps.changes.outputs.app_changed }}
+      backend_changed: ${{ steps.changes.outputs.backend_changed }}
+      web_changed: ${{ steps.changes.outputs.web_changed }}
+      workflow_only: ${{ steps.changes.outputs.workflow_only }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
+          APP=false BACKEND=false WEB=false OTHER=false
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              public/*.md) WEB=true ;;
+              public/*) WEB=true ;;
+              app/*|shared/*|iosApp/*|gradle/*|*.gradle.kts|gradle.properties|gradlew|gradlew.bat) APP=true ;;
+              express-api/*|firestore.rules|database.rules.json) BACKEND=true ;;
+              .github/*|.claude/*|.project/*|*.md|.gitignore|.gitattributes) ;; # workflow/config — no-op
+              *) OTHER=true ;;
+            esac
+          done <<< "$CHANGED"
+          WORKFLOW_ONLY=false
+          if [ "$APP" = "false" ] && [ "$BACKEND" = "false" ] && [ "$WEB" = "false" ] && [ "$OTHER" = "false" ]; then
+            WORKFLOW_ONLY=true
+          fi
+          for v in app_changed=$APP backend_changed=$BACKEND web_changed=$WEB workflow_only=$WORKFLOW_ONLY; do
+            echo "$v" >> "$GITHUB_OUTPUT"
+          done
+          echo "Detection results: app=$APP backend=$BACKEND web=$WEB workflow_only=$WORKFLOW_ONLY"
+
+  # ──────────────────────────────────────────────
+  # Parse /deploy comment (issue_comment events only)
+  # ──────────────────────────────────────────────
+
+  parse-deploy-comment:
+    name: Parse Deploy Comment
+    if: github.event_name == 'issue_comment'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      should_deploy: ${{ steps.parse.outputs.should_deploy }}
+      pr_number: ${{ steps.parse.outputs.pr_number }}
+      ref: ${{ steps.parse.outputs.ref }}
+    steps:
+      - name: Parse /deploy comment
+        id: parse
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const comment = context.payload.comment.body.trim();
+            const issue = context.payload.issue;
+
+            // Only react to /deploy commands on PRs
+            if (!issue.pull_request) {
+              core.setOutput('should_deploy', 'false');
+              return;
+            }
+
+            if (!/^\/deploy$/i.test(comment)) {
+              core.setOutput('should_deploy', 'false');
+              return;
+            }
+
+            // Check if commenter has write access
+            const { data: permLevel } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.payload.comment.user.login,
+            });
+            if (!['admin', 'write'].includes(permLevel.permission)) {
+              core.setOutput('should_deploy', 'false');
+              return;
+            }
+
+            // Get PR head ref
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: issue.number,
+            });
+
+            core.setOutput('should_deploy', 'true');
+            core.setOutput('pr_number', String(issue.number));
+            core.setOutput('ref', pr.head.sha);
+
+            // React to the comment with a rocket emoji
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket',
+            });
+
   # ──────────────────────────────────────────────
   # Stage 1: Build, Test & Deploy to Dev
   # ──────────────────────────────────────────────
 
   build-and-test:
     name: Build & Test
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.app_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -76,12 +188,30 @@ jobs:
           name: dev-release-apk
           path: app/build/outputs/apk/dev/release/*.apk
 
-  # iOS compilation is verified by the deploy-ios-dev job (archive step).
-  # A separate simulator build was removed to save ~10 min of redundant
-  # Kotlin/Native compilation per pipeline run.
+  # iOS compilation is verified by the distribute-ios job (archive step)
+  # triggered via /deploy comment. No automatic iOS dev deploy on PR push.
+
+  test-backend:
+    name: Test Backend
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.backend_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '24'
+
+      - name: Run Express API tests
+        run: cd express-api && npm ci && npm test
 
   web-tests:
     name: Web Tests (Playwright)
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.web_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -116,11 +246,15 @@ jobs:
           check_name: Web Tests
           files: playwright-results.xml
 
-  deploy-dev:
-    name: Deploy to Dev
+  deploy-backend-dev:
+    name: Deploy Backend to Dev
+    needs: [detect-changes, test-backend]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.backend_changed == 'true' &&
+      needs.test-backend.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build-and-test, web-tests]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -130,7 +264,7 @@ jobs:
           node-version: '24'
 
       - name: Install deploy tools
-        run: npm install -g wrangler firebase-tools
+        run: npm install -g firebase-tools
 
       - name: Deploy Express API to London (dev)
         env:
@@ -156,15 +290,6 @@ jobs:
           echo "Dev API health check failed after 5 attempts"
           exit 1
 
-      - name: Deploy web to dev site
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: '9315582c39b627dca58dfa83602db385'
-          DEV_FIREBASE_API_KEY: ${{ secrets.DEV_FIREBASE_API_KEY }}
-        run: |
-          sed "s|<DEV_FIREBASE_API_KEY>|$DEV_FIREBASE_API_KEY|" public/admin/config.dev.example.js > public/admin/config.js
-          wrangler pages deploy public --project-name shytalk-site-dev
-
       - name: Deploy Firestore rules to dev
         env:
           FIREBASE_SERVICE_ACCOUNT_DEV: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
@@ -183,24 +308,114 @@ jobs:
           firebase deploy --only database --project shytalk-dev --non-interactive
           rm /tmp/firebase-sa.json
 
-      - name: Download devRelease APK
+  deploy-web-dev:
+    name: Deploy Web to Dev
+    needs: [detect-changes, web-tests]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.web_changed == 'true' &&
+      needs.web-tests.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '24'
+
+      - name: Install deploy tools
+        run: npm install -g wrangler
+
+      - name: Deploy web to dev site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: '9315582c39b627dca58dfa83602db385'
+          DEV_FIREBASE_API_KEY: ${{ secrets.DEV_FIREBASE_API_KEY }}
+        run: |
+          sed "s|<DEV_FIREBASE_API_KEY>|$DEV_FIREBASE_API_KEY|" public/admin/config.dev.example.js > public/admin/config.js
+          wrangler pages deploy public --project-name shytalk-site-dev
+
+  # ──────────────────────────────────────────────
+  # /deploy comment: Distribute to testers
+  # ──────────────────────────────────────────────
+
+  distribute-android:
+    name: Distribute Android to Testers
+    needs: [parse-deploy-comment]
+    if: needs.parse-deploy-comment.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.parse-deploy-comment.outputs.ref }}
+
+      - name: Find latest successful build run
+        id: find-run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.parse-deploy-comment.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.parse-deploy-comment.outputs.ref }}
+        run: |
+          # Find the latest successful "Release Pipeline" run for this PR's head SHA
+          RUN_ID=$(gh api "repos/${{ github.repository }}/actions/workflows/release.yml/runs?head_sha=${HEAD_SHA}&status=success&per_page=5" \
+            --jq '.workflow_runs[0].id // empty')
+
+          if [ -z "$RUN_ID" ]; then
+            # Fallback: find any run for this PR (may be in-progress or completed)
+            RUN_ID=$(gh api "repos/${{ github.repository }}/actions/workflows/release.yml/runs?head_sha=${HEAD_SHA}&per_page=5" \
+              --jq '[.workflow_runs[] | select(.conclusion == "success" or .conclusion == null)] | .[0].id // empty')
+          fi
+
+          if [ -z "$RUN_ID" ]; then
+            echo "has_artifact=false" >> "$GITHUB_OUTPUT"
+            echo "No successful build run found for SHA ${HEAD_SHA}"
+          else
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+            echo "has_artifact=true" >> "$GITHUB_OUTPUT"
+            echo "Found build run: $RUN_ID"
+          fi
+
+      - name: Download APK artifact
+        if: steps.find-run.outputs.has_artifact == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: dev-release-apk
           path: dev-release-apk
+          run-id: ${{ steps.find-run.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+        id: download-apk
+
+      - name: Post comment if no artifact
+        if: steps.find-run.outputs.has_artifact == 'false' || steps.download-apk.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.parse-deploy-comment.outputs.pr_number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "No app build found for this PR. The APK may not have been built yet (no app changes, or build still in progress). Push an app change and wait for the build to complete before running \`/deploy\`."
 
       - name: Locate APK
+        if: steps.download-apk.outcome == 'success'
         id: find-apk
         run: |
           APK_PATH=$(find dev-release-apk -name "*.apk" -type f | head -1)
-          echo "Found APK: $APK_PATH"
-          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+          if [ -z "$APK_PATH" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+            echo "Found APK: $APK_PATH"
+          fi
 
-      - name: Generate dev release notes
+      - name: Generate release notes
+        if: steps.find-apk.outputs.found == 'true'
         id: dev-notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ needs.parse-deploy-comment.outputs.pr_number }}
         run: |
           PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
           COMMITS=$(gh pr view "$PR_NUMBER" --json commits --jq '[.commits[].messageHeadline] | reverse | .[0:5] | .[]' | grep -v '^Merge ' | grep -v '^chore:')
@@ -216,6 +431,7 @@ jobs:
           echo "EOFNOTES" >> "$GITHUB_OUTPUT"
 
       - name: Upload to Firebase App Distribution
+        if: steps.find-apk.outputs.found == 'true'
         uses: wzieba/Firebase-Distribution-Github-Action@bd494989dd4bec0343f78adee87fe66e48279ad6 # v1
         with:
           appId: "1:881846974606:android:fdcefe4da94d82718e31df"
@@ -224,26 +440,63 @@ jobs:
           file: ${{ steps.find-apk.outputs.apk_path }}
           releaseNotes: ${{ steps.dev-notes.outputs.notes }}
 
-  deploy-ios-dev:
-    name: Deploy iOS to TestFlight (Dev)
+      - name: Post distribution comment
+        if: steps.find-apk.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.parse-deploy-comment.outputs.pr_number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "APK distributed to internal testers via Firebase App Distribution."
+
+  distribute-ios:
+    name: Distribute iOS to TestFlight (Dev)
+    needs: [parse-deploy-comment]
+    if: needs.parse-deploy-comment.outputs.should_deploy == 'true'
     runs-on: macos-latest
     timeout-minutes: 45
-    needs: [build-and-test, web-tests]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.parse-deploy-comment.outputs.ref }}
+          fetch-depth: 0
+
+      - name: Check if app changed
+        id: check-app
+        run: |
+          # Check if any app-related files changed vs main
+          CHANGED=$(git diff --name-only origin/main...${{ needs.parse-deploy-comment.outputs.ref }} -- \
+            app/ shared/ iosApp/ gradle/ '*.gradle.kts' gradle.properties gradlew gradlew.bat 2>/dev/null || echo "")
+          if [ -z "$CHANGED" ]; then
+            echo "app_changed=false" >> "$GITHUB_OUTPUT"
+            echo "No app changes detected — skipping iOS build"
+          else
+            echo "app_changed=true" >> "$GITHUB_OUTPUT"
+            echo "App changes detected, building iOS"
+          fi
+
+      - name: Post skip comment
+        if: steps.check-app.outputs.app_changed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.parse-deploy-comment.outputs.pr_number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "No app changes detected — skipping iOS TestFlight build."
 
       - name: Set up JDK 17
+        if: steps.check-app.outputs.app_changed == 'true'
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Gradle
+        if: steps.check-app.outputs.app_changed == 'true'
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
         with:
           cache-read-only: false
 
       - name: Install Apple API key
+        if: steps.check-app.outputs.app_changed == 'true'
         env:
           APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -253,6 +506,7 @@ jobs:
           echo "$APP_STORE_CONNECT_KEY" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
 
       - name: Decode signing certificate and provisioning profile
+        if: steps.check-app.outputs.app_changed == 'true'
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -276,6 +530,7 @@ jobs:
           cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
 
       - name: Select Xcode 26
+        if: steps.check-app.outputs.app_changed == 'true'
         run: |
           # Find the Xcode 26 app path (name may vary across runner images)
           XCODE_26=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | head -1)
@@ -290,6 +545,7 @@ jobs:
           xcodebuild -version
 
       - name: Build and archive iOS app
+        if: steps.check-app.outputs.app_changed == 'true'
         run: |
           cd iosApp
           xcodebuild \
@@ -305,6 +561,7 @@ jobs:
             archive
 
       - name: Export IPA
+        if: steps.check-app.outputs.app_changed == 'true'
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -320,6 +577,7 @@ jobs:
             -authenticationKeyIssuerID $APP_STORE_CONNECT_ISSUER_ID
 
       - name: Upload to TestFlight (dev build for testers)
+        if: steps.check-app.outputs.app_changed == 'true'
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -329,6 +587,14 @@ jobs:
             -t ios \
             --apiKey "$APP_STORE_CONNECT_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Post iOS distribution comment
+        if: steps.check-app.outputs.app_changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.parse-deploy-comment.outputs.pr_number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "iOS build uploaded to TestFlight (dev)."
 
       - name: Clean up keychain
         if: always()
@@ -342,10 +608,20 @@ jobs:
     name: Approve Production Release
     runs-on: ubuntu-latest
     timeout-minutes: 1440
-    needs: [deploy-dev, deploy-ios-dev]
+    needs: [detect-changes, build-and-test, test-backend, web-tests, deploy-backend-dev, deploy-web-dev]
+    if: |
+      always() &&
+      github.event_name == 'pull_request' &&
+      needs.detect-changes.outputs.workflow_only != 'true' &&
+      needs.detect-changes.result == 'success' &&
+      (needs.build-and-test.result == 'success' || needs.build-and-test.result == 'skipped') &&
+      (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped') &&
+      (needs.web-tests.result == 'success' || needs.web-tests.result == 'skipped') &&
+      (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped') &&
+      (needs.deploy-web-dev.result == 'success' || needs.deploy-web-dev.result == 'skipped')
     environment: production
     steps:
-      - run: echo "Production release approved — running E2E tests next"
+      - run: echo "Production release approved — proceeding with deployment"
 
   # ──────────────────────────────────────────────
   # Stage 3: E2E Tests (against dev environment)
@@ -355,7 +631,8 @@ jobs:
     name: E2E Tests (${{ matrix.device }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: approve-production
+    needs: [detect-changes, approve-production]
+    if: needs.detect-changes.outputs.app_changed == 'true'
     strategy:
       fail-fast: true
       matrix:
@@ -441,7 +718,8 @@ jobs:
   #   name: iOS E2E Tests (${{ matrix.device }})
   #   runs-on: macos-latest
   #   timeout-minutes: 45
-  #   needs: approve-production
+  #   needs: [detect-changes, approve-production]
+  #   if: needs.detect-changes.outputs.app_changed == 'true'
   #   strategy:
   #     fail-fast: true
   #     matrix:
@@ -510,7 +788,11 @@ jobs:
     name: Prepare Release
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: e2e-tests
+    needs: [detect-changes, e2e-tests]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.app_changed == 'true' &&
+      needs.e2e-tests.result == 'success'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -585,7 +867,12 @@ jobs:
     name: Merge PR
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: prepare-release
+    needs: [detect-changes, approve-production, e2e-tests, prepare-release]
+    if: |
+      always() &&
+      needs.approve-production.result == 'success' &&
+      (needs.e2e-tests.result == 'success' || needs.e2e-tests.result == 'skipped') &&
+      (needs.prepare-release.result == 'success' || needs.prepare-release.result == 'skipped')
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -596,6 +883,7 @@ jobs:
         run: gh pr merge "$PR_NUMBER" --merge --delete-branch
 
       - name: Create GitHub release
+        if: needs.detect-changes.outputs.app_changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -617,25 +905,30 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: merge-pr
+    needs: [detect-changes, merge-pr]
+    if: needs.merge-pr.result == 'success'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: main
           fetch-depth: 0
 
+      # ── App: Build + Play Store ──────────────────
       - name: Set up JDK 17
+        if: needs.detect-changes.outputs.app_changed == 'true'
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Gradle
+        if: needs.detect-changes.outputs.app_changed == 'true'
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
         with:
           cache-read-only: false
 
       - name: Decode google-services.json
+        if: needs.detect-changes.outputs.app_changed == 'true'
         env:
           GOOGLE_SERVICES_DEV_BASE64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
           GOOGLE_SERVICES_PROD_BASE64: ${{ secrets.GOOGLE_SERVICES_PROD_BASE64 }}
@@ -645,20 +938,35 @@ jobs:
           echo "$GOOGLE_SERVICES_PROD_BASE64" | base64 -d > app/src/prod/google-services.json
 
       - name: Decode keystore
+        if: needs.detect-changes.outputs.app_changed == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
 
       - name: Build prodRelease
+        if: needs.detect-changes.outputs.app_changed == 'true'
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
         run: ./gradlew assembleProdRelease bundleProdRelease
 
       - name: Run prod smoke tests
+        if: needs.detect-changes.outputs.app_changed == 'true'
         run: ./gradlew testProdReleaseUnitTest
 
-      - name: Archive previous API version
+      - name: Upload to Play Store internal testing track
+        if: needs.detect-changes.outputs.app_changed == 'true'
+        uses: r0adkll/upload-google-play@935ef9c68bb393a8e6116b1575626a7f5be3a7fb # v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.shyden.shytalk
+          releaseFiles: app/build/outputs/bundle/prodRelease/*.aab
+          track: internal
+          status: draft
+
+      # ── Backend: Express API + Firebase rules ────
+      - name: Set up SSH for backend deploy
+        if: needs.detect-changes.outputs.backend_changed == 'true'
         env:
           SSH_KEY: ${{ secrets.SINGAPORE_SSH_KEY }}
         run: |
@@ -666,17 +974,23 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan 213.35.98.160 >> ~/.ssh/known_hosts
-          ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar czf /tmp/api-previous.tar.gz --exclude='node_modules' --exclude='.env' ."
+
+      - name: Archive previous API version
+        if: needs.detect-changes.outputs.backend_changed == 'true'
+        run: ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar czf /tmp/api-previous.tar.gz --exclude='node_modules' --exclude='.env' ."
 
       - name: Set up Node
+        if: needs.detect-changes.outputs.backend_changed == 'true' || needs.detect-changes.outputs.web_changed == 'true'
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: '24'
 
       - name: Install deploy tools
+        if: needs.detect-changes.outputs.backend_changed == 'true' || needs.detect-changes.outputs.web_changed == 'true'
         run: npm install -g wrangler firebase-tools
 
       - name: Deploy Express API to Singapore (prod)
+        if: needs.detect-changes.outputs.backend_changed == 'true'
         run: |
           cd express-api
           tar czf /tmp/api.tar.gz --exclude='node_modules' --exclude='.env' .
@@ -684,6 +998,7 @@ jobs:
           ssh ubuntu@213.35.98.160 "cd ~/shytalk-api && tar xzf /tmp/api.tar.gz && npm install --omit=dev && pm2 restart shytalk-api"
 
       - name: Verify prod API health
+        if: needs.detect-changes.outputs.backend_changed == 'true'
         run: |
           for i in 1 2 3 4 5; do
             sleep 5
@@ -693,17 +1008,8 @@ jobs:
           echo "Prod API health check failed after 5 attempts"
           exit 1
 
-      # Upload to internal testing track (prod build for testers)
-      - name: Upload to Play Store internal testing track
-        uses: r0adkll/upload-google-play@935ef9c68bb393a8e6116b1575626a7f5be3a7fb # v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.shyden.shytalk
-          releaseFiles: app/build/outputs/bundle/prodRelease/*.aab
-          track: internal
-          status: draft
-
       - name: Deploy Firestore rules to prod
+        if: needs.detect-changes.outputs.backend_changed == 'true'
         env:
           FIREBASE_SERVICE_ACCOUNT_PROD: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
         run: |
@@ -713,6 +1019,7 @@ jobs:
           rm /tmp/firebase-sa.json
 
       - name: Deploy RTDB rules to prod
+        if: needs.detect-changes.outputs.backend_changed == 'true'
         env:
           FIREBASE_SERVICE_ACCOUNT_PROD: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
         run: |
@@ -721,7 +1028,9 @@ jobs:
           firebase deploy --only database --project shytalk-7ba69 --non-interactive
           rm /tmp/firebase-sa.json
 
+      # ── Web: Cloudflare Pages ────────────────────
       - name: Deploy web to prod site
+        if: needs.detect-changes.outputs.web_changed == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: '9315582c39b627dca58dfa83602db385'
@@ -734,7 +1043,10 @@ jobs:
     name: Deploy iOS to App Store
     runs-on: macos-latest
     timeout-minutes: 45
-    needs: merge-pr
+    needs: [detect-changes, merge-pr]
+    if: |
+      needs.merge-pr.result == 'success' &&
+      needs.detect-changes.outputs.app_changed == 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -865,15 +1177,18 @@ jobs:
   #         status: completed
 
   # ──────────────────────────────────────────────
-  # Alert (if prod deploy fails after merge — Stage 6 failure)
+  # Alert (if prod deploy fails after merge)
   # ──────────────────────────────────────────────
 
   alert-desync:
     name: Alert - Prod Deploy Failed
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [deploy-prod, deploy-ios-prod]
-    if: ${{ always() && (needs.deploy-prod.result == 'failure' || needs.deploy-ios-prod.result == 'failure') }}
+    needs: [detect-changes, deploy-prod, deploy-ios-prod]
+    if: |
+      always() &&
+      (needs.deploy-prod.result == 'failure' ||
+       (needs.detect-changes.outputs.app_changed == 'true' && needs.deploy-ios-prod.result == 'failure'))
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
