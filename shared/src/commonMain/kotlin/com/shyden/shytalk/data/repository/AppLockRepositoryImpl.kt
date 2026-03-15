@@ -66,7 +66,14 @@ class AppLockRepositoryImpl(
     }
 
     override fun clearCredential() {
-        storage.clear()
+        storage.remove(KEY_UNIQUE_ID)
+        storage.remove(KEY_DEVICE_ID)
+        storage.remove(KEY_LOCAL_PIN_HASH)
+        storage.remove(KEY_CREDENTIAL_VERSION)
+        storage.remove(KEY_APP_LOCK_ENABLED)
+        storage.remove(KEY_BIOMETRIC_ENABLED)
+        storage.remove(KEY_LOCK_TIMEOUT)
+        storage.remove(KEY_LAST_ACTIVE)
     }
 
     companion object {

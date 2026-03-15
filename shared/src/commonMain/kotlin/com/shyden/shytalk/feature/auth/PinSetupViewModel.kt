@@ -86,11 +86,13 @@ class PinSetupViewModel(
 
             pinRepository.setupPin(pin).onSuccess { pinHash ->
                 // Store bcrypt hash locally for offline PIN verification
-                val uniqueId = appLockRepository.storedUniqueId ?: ""
-                val deviceId = appLockRepository.storedDeviceId ?: ""
-                if (uniqueId.isNotEmpty() && deviceId.isNotEmpty()) {
-                    appLockRepository.setCredential(uniqueId, deviceId, pinHash)
+                val uniqueId = appLockRepository.storedUniqueId
+                val deviceId = appLockRepository.storedDeviceId
+                if (uniqueId.isNullOrEmpty() || deviceId.isNullOrEmpty()) {
+                    _state.update { it.copy(isLoading = false, error = "Device not registered. Please sign in again.") }
+                    return@onSuccess
                 }
+                appLockRepository.setCredential(uniqueId, deviceId, pinHash)
                 _state.update { it.copy(isLoading = false, showBiometricOffer = true) }
             }.onFailure { e ->
                 _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to set PIN") }

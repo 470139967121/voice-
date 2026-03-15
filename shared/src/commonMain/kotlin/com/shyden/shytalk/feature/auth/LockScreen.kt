@@ -23,6 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shyden.shytalk.feature.auth.components.PinDots
 import com.shyden.shytalk.feature.auth.components.PinKeypad
+import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.*
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -34,7 +37,7 @@ fun LockScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(state.biometricAvailable) {
         if (state.biometricAvailable) {
             viewModel.authenticateWithBiometric()
         }
@@ -58,7 +61,7 @@ fun LockScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = if (state.isLocked) "Account Locked" else "Enter your PIN",
+            text = if (state.isLocked) stringResource(Res.string.account_locked) else stringResource(Res.string.enter_pin),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -74,7 +77,7 @@ fun LockScreen(
             )
         } else if (state.isLocked) {
             Text(
-                text = "Too many failed attempts. Try again later.",
+                text = stringResource(Res.string.pin_locked_reauth),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
@@ -109,7 +112,7 @@ fun LockScreen(
                 onClick = { viewModel.submitPin() },
                 enabled = state.pinInput.length >= 4,
             ) {
-                Text("Unlock")
+                Text(stringResource(Res.string.unlock))
             }
         }
     }

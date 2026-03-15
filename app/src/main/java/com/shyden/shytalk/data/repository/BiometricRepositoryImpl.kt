@@ -2,6 +2,7 @@ package com.shyden.shytalk.data.repository
 
 import com.shyden.shytalk.data.remote.WorkerApiClient
 import org.json.JSONObject
+import java.net.URLEncoder
 
 class BiometricRepositoryImpl(
     private val apiClient: WorkerApiClient
@@ -15,7 +16,9 @@ class BiometricRepositoryImpl(
     }
 
     override suspend fun getChallenge(uniqueId: String, deviceId: String): Result<String> = runCatching {
-        val response = apiClient.getPublic("/api/auth/biometric/challenge?uniqueId=$uniqueId&deviceId=$deviceId")
+        val uid = URLEncoder.encode(uniqueId, "UTF-8")
+        val did = URLEncoder.encode(deviceId, "UTF-8")
+        val response = apiClient.getPublic("/api/auth/biometric/challenge?uniqueId=$uid&deviceId=$did")
         response.getString("challenge")
     }
 
