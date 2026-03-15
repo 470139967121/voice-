@@ -61,6 +61,8 @@ kotlin {
             implementation(libs.firebase.common)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.lottie.compose)
+            implementation(libs.androidx.security.crypto)
+            implementation(libs.androidx.biometric)
         }
 
         iosMain.dependencies {
