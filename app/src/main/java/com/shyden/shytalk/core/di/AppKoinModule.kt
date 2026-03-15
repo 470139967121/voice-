@@ -118,7 +118,7 @@ val appModule = module {
     single { BillingService(androidContext()) }
 
     // Repositories
-    singleOf(::AuthRepositoryImpl) bind AuthRepository::class
+    single<AuthRepository> { AuthRepositoryImpl(get(), BuildConfig.APPLICATION_ID, BuildConfig.EMAIL_LINK_DOMAIN) }
     singleOf(::UserRepositoryImpl) bind UserRepository::class
     singleOf(::RoomRepositoryImpl) bind RoomRepository::class
     singleOf(::MessageRepositoryImpl) bind MessageRepository::class
