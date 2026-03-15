@@ -74,3 +74,4 @@ allure-report/
 # Claude Code agents (auto-generated)
 .claude/agents/
 .superpowers/
+tests/web/.auth/
