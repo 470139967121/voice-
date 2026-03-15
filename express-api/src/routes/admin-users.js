@@ -1022,7 +1022,7 @@ router.get('/user/:uniqueId/auth-status', async (req, res) => {
     if (requireAdmin(req, res)) return;
     const { uniqueId } = req.params;
 
-    const userDoc = await getDoc('users', uniqueId);
+    const userDoc = await getDoc(`users/${uniqueId}`);
     if (!userDoc) return res.status(404).json({ error: 'User not found' });
 
     // Get biometric keys for this user
