@@ -47,6 +47,20 @@ import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.BannerRepositoryImpl
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.EconomyRepositoryImpl
+import com.shyden.shytalk.data.repository.OtpRepository
+import com.shyden.shytalk.data.repository.OtpRepositoryImpl
+import com.shyden.shytalk.data.repository.PinRepository
+import com.shyden.shytalk.data.repository.PinRepositoryImpl
+import com.shyden.shytalk.data.repository.BiometricRepository
+import com.shyden.shytalk.data.repository.BiometricRepositoryImpl
+import com.shyden.shytalk.data.repository.AppLockRepository
+import com.shyden.shytalk.data.repository.AppLockRepositoryImpl
+import com.shyden.shytalk.core.util.SecureStorage
+import com.shyden.shytalk.core.util.BiometricAuth
+import com.shyden.shytalk.core.util.CryptoKeyPair
+import com.shyden.shytalk.feature.auth.LockScreenViewModel
+import com.shyden.shytalk.feature.auth.PinSetupViewModel
+import com.shyden.shytalk.feature.auth.EmailOtpViewModel
 import com.shyden.shytalk.data.repository.FunFactRepository
 import com.shyden.shytalk.data.repository.FunFactRepositoryImpl
 import com.shyden.shytalk.data.repository.IdentityRepository
@@ -136,6 +150,13 @@ val appModule = module {
     single<FunFactRepository> { FunFactRepositoryImpl(get(), androidContext()) }
     singleOf(::TranslationRepositoryImpl) bind TranslationRepository::class
     single { StickerStorage(androidContext()) }
+    singleOf(::OtpRepositoryImpl) bind OtpRepository::class
+    singleOf(::PinRepositoryImpl) bind PinRepository::class
+    singleOf(::BiometricRepositoryImpl) bind BiometricRepository::class
+    single { SecureStorage(androidContext()) }
+    single<AppLockRepository> { AppLockRepositoryImpl(get()) }
+    single { BiometricAuth(androidContext()) }
+    single { CryptoKeyPair() }
 
     // ActiveRoomManager
     single { ActiveRoomManager(get(), get(), get(), get(), get(), get(), get(), androidContext()) }
@@ -143,6 +164,9 @@ val appModule = module {
 
     // ViewModels
     viewModel { AuthViewModel(get(), get(), get(), get(), get(named("deviceId")), get(named("bypassDeviceChecks"))) }
+    viewModel { LockScreenViewModel(get(), get(), get(), get(), get()) }
+    viewModel { PinSetupViewModel(get(), get()) }
+    viewModel { EmailOtpViewModel(get()) }
     viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { RequiredDOBViewModel(get(), get()) }

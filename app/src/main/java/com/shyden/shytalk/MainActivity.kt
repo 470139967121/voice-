@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
     private val workerApiClient: WorkerApiClient by inject()
     private val activeRoomManager: RoomLifecycleManager by inject()
     private val appConfigService: AppConfigService by inject()
+    private val biometricAuth: com.shyden.shytalk.core.util.BiometricAuth by inject()
 
     private val _navigateToRoom = mutableStateOf<String?>(null)
     private val _navigateToChat = mutableStateOf<Pair<String, Boolean>?>(null) // (id, isGroup)
@@ -87,6 +88,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        biometricAuth.setActivity(this as androidx.fragment.app.FragmentActivity)
         enableEdgeToEdge()
 
         setContent {

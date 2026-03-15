@@ -1,5 +1,6 @@
 package com.shyden.shytalk.core.util
 
+import android.content.Context
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
@@ -7,19 +8,23 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.lang.ref.WeakReference
 import kotlin.coroutines.resume
 
-actual class BiometricAuth(activity: FragmentActivity) {
-    private val activityRef = WeakReference(activity)
+actual class BiometricAuth(private val appContext: Context) {
+    private var activityRef: WeakReference<FragmentActivity>? = null
+
+    /** Must be called from the Activity before authenticate() works. */
+    fun setActivity(activity: FragmentActivity) {
+        activityRef = WeakReference(activity)
+    }
 
     actual fun isAvailable(): Boolean {
-        val activity = activityRef.get() ?: return false
-        val manager = BiometricManager.from(activity)
+        val manager = BiometricManager.from(appContext)
         return manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
             BiometricManager.BIOMETRIC_SUCCESS
     }
 
     actual suspend fun authenticate(title: String, subtitle: String): BiometricResult =
         suspendCancellableCoroutine { continuation ->
-            val activity = activityRef.get()
+            val activity = activityRef?.get()
             if (activity == null) {
                 continuation.resume(BiometricResult.Error("Activity not available"))
                 return@suspendCancellableCoroutine
@@ -49,7 +54,7 @@ actual class BiometricAuth(activity: FragmentActivity) {
                 }
 
                 override fun onAuthenticationFailed() {
-                    // Individual attempt failed but prompt stays open — do nothing
+                    // Individual attempt failed but prompt stays open
                 }
             }
 
