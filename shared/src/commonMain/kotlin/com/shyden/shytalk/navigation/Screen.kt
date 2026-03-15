@@ -42,4 +42,7 @@ sealed class Screen(val route: String) {
         fun createRoute(encodedUrl: String) = "browser/$encodedUrl"
     }
     data object EmailSignIn : Screen("email_sign_in")
+    data object Lock : Screen("lock")
+    data object PinSetup : Screen("pin_setup")
+    data object SecuritySettings : Screen("security_settings")
 }

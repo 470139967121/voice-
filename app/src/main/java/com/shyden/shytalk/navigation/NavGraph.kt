@@ -53,7 +53,7 @@ import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.data.remote.PmSyncService
 import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.feature.auth.EmailSignInScreen
-import com.shyden.shytalk.feature.auth.GoogleSignInScreen
+import com.shyden.shytalk.feature.auth.SignInScreen
 import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
 import com.shyden.shytalk.feature.legal.CommunityStandardsScreen
 import com.shyden.shytalk.feature.legal.CyberBullyingPolicyScreen
@@ -175,7 +175,7 @@ fun NavGraph(
         startDestination = startDestination
     ) {
         composable(Screen.SignIn.route) {
-            GoogleSignInScreen(
+            SignInScreen(
                 pendingEmailLink = pendingEmailLink,
                 onEmailLinkConsumed = onEmailLinkConsumed,
                 onNavigateToEmail = {

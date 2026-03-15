@@ -56,7 +56,7 @@ private const val PREFS_NAME = "shytalk_prefs"
 private const val KEY_EMAIL_FOR_LINK = "email_for_sign_in_link"
 
 @Composable
-fun GoogleSignInScreen(
+fun SignInScreen(
     pendingEmailLink: String? = null,
     onEmailLinkConsumed: () -> Unit = {},
     onNavigateToEmail: () -> Unit = {},
