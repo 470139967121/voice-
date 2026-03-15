@@ -39,6 +39,13 @@ jest.mock('../../src/utils/log', () => ({
   error: jest.fn(),
 }));
 
+jest.mock('../../src/middleware/auth', () => ({
+  authMiddleware: (req, res, next) => next(),
+  clearSuspensionCache: jest.fn(),
+  clearUniqueIdCache: jest.fn(),
+  updateUniqueIdCache: jest.fn(),
+}));
+
 const { auth } = require('../../src/utils/firebase');
 
 function buildApp(authUser) {

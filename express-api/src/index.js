@@ -34,9 +34,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
 });
 
-// Auth middleware for all /api routes (except health)
+// Auth routes (mounted BEFORE auth middleware — these handle their own auth)
+app.use('/api', require('./routes/auth'));
+
+// Auth middleware for all /api routes (except health, log-config, and auth)
 app.use('/api', (req, res, next) => {
-  if (req.path === '/health' || req.path === '/log-config') return next();
+  if (req.path === '/health' || req.path === '/log-config' || req.path.startsWith('/auth/')) return next();
   authMiddleware(req, res, next);
 });
 

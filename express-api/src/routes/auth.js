@@ -18,6 +18,7 @@ const { db, auth } = require('../utils/firebase');
 const { sendEmail } = require('../utils/email');
 const { buildOtpEmail, buildLockoutEmail, buildResetEmail } = require('../utils/email-templates');
 const log = require('../utils/log');
+const { authMiddleware } = require('../middleware/auth');
 
 const BCRYPT_ROUNDS = 10;
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
@@ -193,8 +194,8 @@ router.post('/auth/otp/verify', async (req, res) => {
 // PIN Routes
 // ═══════════════════════════════════════════════════════════════════
 
-// POST /api/auth/pin/setup (auth required — handled by caller middleware)
-router.post('/auth/pin/setup', async (req, res) => {
+// POST /api/auth/pin/setup (auth required)
+router.post('/auth/pin/setup', authMiddleware, async (req, res) => {
   try {
     const { pin } = req.body || {};
     const uniqueId = req.auth?.uniqueId;
@@ -317,7 +318,7 @@ router.post('/auth/pin/verify', async (req, res) => {
 });
 
 // POST /api/auth/pin/reset (auth required)
-router.post('/auth/pin/reset', async (req, res) => {
+router.post('/auth/pin/reset', authMiddleware, async (req, res) => {
   try {
     const { pin } = req.body || {};
     const uniqueId = req.auth?.uniqueId;
@@ -362,7 +363,7 @@ function cleanExpiredChallenges() {
 }
 
 // POST /api/auth/biometric/register (auth required)
-router.post('/auth/biometric/register', async (req, res) => {
+router.post('/auth/biometric/register', authMiddleware, async (req, res) => {
   try {
     const { publicKey, deviceId } = req.body || {};
     const uniqueId = req.auth?.uniqueId;
@@ -476,7 +477,7 @@ router.post('/auth/biometric/verify', async (req, res) => {
 });
 
 // DELETE /api/auth/biometric/:deviceId (auth required)
-router.delete('/auth/biometric/:deviceId', async (req, res) => {
+router.delete('/auth/biometric/:deviceId', authMiddleware, async (req, res) => {
   try {
     const uniqueId = req.auth?.uniqueId;
     if (!uniqueId) return res.status(401).json({ error: 'Authentication required' });

@@ -294,5 +294,20 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow write: if false;
     }
+
+    // ── OTP codes — server-only (Admin SDK bypasses rules) ──────
+    match /otpCodes/{email} {
+      allow read, write: if false;
+    }
+
+    // ── Biometric keys — server-only ────────────────────────────
+    match /biometricKeys/{keyId} {
+      allow read, write: if false;
+    }
+
+    // ── Email metrics — server-only ─────────────────────────────
+    match /emailMetrics/{docId} {
+      allow read, write: if false;
+    }
   }
 }

@@ -33,6 +33,14 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
+// Mock authMiddleware used by authenticated routes in auth.js
+jest.mock('../../src/middleware/auth', () => ({
+  authMiddleware: (req, res, next) => next(),
+  clearSuspensionCache: jest.fn(),
+  clearUniqueIdCache: jest.fn(),
+  updateUniqueIdCache: jest.fn(),
+}));
+
 const bcrypt = require('bcrypt');
 const { auth } = require('../../src/utils/firebase');
 

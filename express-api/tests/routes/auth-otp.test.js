@@ -41,6 +41,13 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
+jest.mock('../../src/middleware/auth', () => ({
+  authMiddleware: (req, res, next) => next(),
+  clearSuspensionCache: jest.fn(),
+  clearUniqueIdCache: jest.fn(),
+  updateUniqueIdCache: jest.fn(),
+}));
+
 const bcrypt = require('bcrypt');
 const { sendEmail } = require('../../src/utils/email');
 const { auth } = require('../../src/utils/firebase');
