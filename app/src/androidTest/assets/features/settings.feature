@@ -43,3 +43,13 @@ Feature: Settings
     And I tap the text "Privacy Policy"
     And I wait 1000 milliseconds
     Then I should see the element with tag "settings_signOutButton"
+
+  Scenario: Shows sign-out button
+    Given I am on the "settings" screen
+    When I wait for the element with tag "settings_signOutButton"
+    Then I should see the element with tag "settings_signOutButton"
+
+  Scenario: Shows back button
+    Given I am on the "settings" screen
+    When I wait for the element with tag "settings_backButton"
+    Then I should see the element with tag "settings_backButton"

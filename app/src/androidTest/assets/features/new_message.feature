@@ -31,3 +31,13 @@ Feature: New Message
     Given I am on the "group_setup/test-user-2" screen
     When I wait for the element with tag "groupSetup_createButton"
     Then I should see the element with tag "groupSetup_createButton"
+
+  Scenario: Shows search field
+    Given I am on the "new_message" screen
+    When I wait for the element with tag "newMessage_searchField"
+    Then I should see the element with tag "newMessage_searchField"
+
+  Scenario: Shows create group button
+    Given I am on the "new_message" screen
+    When I wait for the element with tag "newMessage_createGroupButton"
+    Then I should see the element with tag "newMessage_createGroupButton"

@@ -15,3 +15,19 @@ Feature: Profile Setup
     And I am on the "profile_setup" screen
     When I type "MyDisplayName" into the field with tag "profileSetup_displayNameField"
     Then I should see the element with tag "profileSetup_continueButton"
+
+  Scenario: Shows display name field
+    Given I am authenticated as "test-user-1"
+    And I am on the "profile_setup" screen
+    Then I should see the element with tag "profileSetup_displayNameField"
+
+  Scenario: Continue disabled when display name is empty
+    Given I am authenticated as "test-user-1"
+    And I am on the "profile_setup" screen
+    Then I should see the element with tag "profileSetup_continueButton"
+    And I should see the element with tag "profileSetup_displayNameField"
+
+  Scenario: Shows DOB picker
+    Given I am authenticated as "test-user-1"
+    And I am on the "profile_setup" screen
+    Then I should see the element with tag "profileSetup_dobButton"

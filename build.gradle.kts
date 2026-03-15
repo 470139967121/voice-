@@ -7,4 +7,13 @@ plugins {
     alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.play.publisher) apply false
+    id("org.sonarqube") version "7.2.3.7755"
+}
+
+
+sonar {
+    properties {
+        property("sonar.projectKey", "ShydenMcM_ShyTalk")
+        property("sonar.organization", "shydenmcm")
+    }
 }
