@@ -1,0 +1,115 @@
+package com.shyden.shytalk.feature.auth
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.data.repository.AppLockRepository
+import com.shyden.shytalk.data.repository.PinRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+enum class PinSetupStep { ChooseLength, Enter, Confirm }
+
+data class PinSetupState(
+    val step: PinSetupStep = PinSetupStep.ChooseLength,
+    val pinLength: Int = 4,
+    val pinInput: String = "",
+    val firstPin: String = "",
+    val error: String? = null,
+    val isLoading: Boolean = false,
+    val completed: Boolean = false,
+    val showBiometricOffer: Boolean = false,
+)
+
+class PinSetupViewModel(
+    private val pinRepository: PinRepository,
+    private val appLockRepository: AppLockRepository,
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(PinSetupState())
+    val state: StateFlow<PinSetupState> = _state.asStateFlow()
+
+    fun selectPinLength(length: Int) {
+        if (length < 4 || length > 8) return
+        _state.update { it.copy(pinLength = length, step = PinSetupStep.Enter, error = null) }
+    }
+
+    fun onDigit(digit: Char) {
+        val current = _state.value
+        if (current.pinInput.length >= current.pinLength) return
+        _state.update { it.copy(pinInput = it.pinInput + digit, error = null) }
+    }
+
+    fun onBackspace() {
+        _state.update {
+            if (it.pinInput.isNotEmpty()) it.copy(pinInput = it.pinInput.dropLast(1))
+            else it
+        }
+    }
+
+    fun submit() {
+        val current = _state.value
+        val pin = current.pinInput
+
+        if (pin.length != current.pinLength) {
+            _state.update { it.copy(error = "Enter ${current.pinLength} digits") }
+            return
+        }
+
+        when (current.step) {
+            PinSetupStep.ChooseLength -> {} // shouldn't happen
+            PinSetupStep.Enter -> {
+                _state.update { it.copy(step = PinSetupStep.Confirm, firstPin = pin, pinInput = "", error = null) }
+            }
+            PinSetupStep.Confirm -> {
+                if (pin != current.firstPin) {
+                    _state.update {
+                        it.copy(
+                            step = PinSetupStep.Enter,
+                            pinInput = "",
+                            firstPin = "",
+                            error = "PINs don't match. Try again.",
+                        )
+                    }
+                    return
+                }
+                savePinToServer(pin)
+            }
+        }
+    }
+
+    private fun savePinToServer(pin: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+
+            pinRepository.setupPin(pin).onSuccess {
+                // Store local hash for offline fallback
+                // (In production, we'd bcrypt locally too — for now store the PIN length indicator)
+                val uniqueId = appLockRepository.storedUniqueId ?: ""
+                val deviceId = appLockRepository.storedDeviceId ?: ""
+                if (uniqueId.isNotEmpty() && deviceId.isNotEmpty()) {
+                    appLockRepository.setCredential(uniqueId, deviceId, "pin-set")
+                }
+                _state.update { it.copy(isLoading = false, showBiometricOffer = true) }
+            }.onFailure { e ->
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to set PIN") }
+            }
+        }
+    }
+
+    fun onBiometricAccepted() {
+        appLockRepository.setBiometricEnabled(true)
+        _state.update { it.copy(showBiometricOffer = false, completed = true) }
+    }
+
+    fun onBiometricDeclined() {
+        appLockRepository.setBiometricEnabled(false)
+        _state.update { it.copy(showBiometricOffer = false, completed = true) }
+    }
+
+    fun reset() {
+        _state.update { PinSetupState() }
+    }
+}
