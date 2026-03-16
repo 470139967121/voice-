@@ -1,29 +1,31 @@
 package com.shyden.shytalk.core.util
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import platform.Foundation.NSError
 import platform.LocalAuthentication.LAContext
 import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthenticationWithBiometrics
-import platform.Foundation.NSError
 import kotlin.coroutines.resume
 
 actual class BiometricAuth {
-
     actual fun isAvailable(): Boolean {
         val context = LAContext()
         return context.canEvaluatePolicy(
             LAPolicyDeviceOwnerAuthenticationWithBiometrics,
-            error = null
+            error = null,
         )
     }
 
-    actual suspend fun authenticate(title: String, subtitle: String): BiometricResult =
+    actual suspend fun authenticate(
+        title: String,
+        subtitle: String,
+    ): BiometricResult =
         suspendCancellableCoroutine { continuation ->
             val context = LAContext()
             context.localizedFallbackTitle = "Use PIN"
 
             context.evaluatePolicy(
                 LAPolicyDeviceOwnerAuthenticationWithBiometrics,
-                localizedReason = subtitle
+                localizedReason = subtitle,
             ) { success, error ->
                 if (!continuation.isActive) return@evaluatePolicy
                 if (success) {
@@ -36,7 +38,7 @@ actual class BiometricAuth {
                         continuation.resume(BiometricResult.Fallback)
                     } else {
                         continuation.resume(
-                            BiometricResult.Error(nsError?.localizedDescription ?: "Biometric failed")
+                            BiometricResult.Error(nsError?.localizedDescription ?: "Biometric failed"),
                         )
                     }
                 }
