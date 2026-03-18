@@ -35,20 +35,60 @@ router.post('/test/setup', async (req, res) => {
     const spec = req.body || {};
 
     // Create test users
+    let userIndex = 0;
     for (const userSpec of spec.users || []) {
+      userIndex++;
       const uid = `${testRunId}_user_${generateId()}`;
+
+      // Allocate real uniqueId via atomic counter transaction
+      const counterRef = db.doc('counters/uniqueId');
+      const uniqueId = await db.runTransaction(async (t) => {
+        const counterDoc = await t.get(counterRef);
+        const current = counterDoc.exists ? counterDoc.data().value : 10000000;
+        const next = current + 1;
+        t.set(counterRef, { value: next }, { merge: true });
+        return next;
+      });
+
       const userData = {
         uid,
-        displayName: `[TEST] ${userSpec.name || 'User'}`,
+        firebaseUid: uid,
+        uniqueId,
+        displayName: userSpec.name || `Test User ${userIndex}`,
         userType: userSpec.role || 'MEMBER',
-        coins: userSpec.coins ?? 1000,
-        beans: userSpec.beans ?? 0,
-        gcs: 100,
+        shyCoins: userSpec.shyCoins ?? 0,
+        shyBeans: userSpec.shyBeans ?? 0,
+        gcsScore: 100,
+        warningCount: 0,
+        hasActiveWarning: false,
+        luckScore: 0,
+        pityCounter: 0,
+        isSuspended: false,
         createdAt: now,
         _testRun: testRunId,
       };
-      await db.doc(`users/${uid}`).set(userData);
-      created.users.push(userData);
+      await db.doc(`users/${uniqueId}`).set(userData);
+
+      // Create device binding if deviceInfo is provided
+      if (userSpec.deviceInfo) {
+        const { deviceId, manufacturer, model, lastIp, isp } = userSpec.deviceInfo;
+        await db.doc(`deviceBindings/${deviceId}`).set({
+          deviceId,
+          uniqueId, // number — must match user doc type for Firestore queries
+          manufacturer: manufacturer || 'Unknown',
+          model: model || 'Unknown',
+          lastIp: lastIp || null,
+          isp: isp || null,
+          boundAt: Date.now(),
+          _testRun: testRunId,
+        });
+        // Also set lastIp on user doc for ban tests
+        if (lastIp) {
+          await db.doc(`users/${uniqueId}`).update({ lastIp });
+        }
+      }
+
+      created.users.push({ ...userData });
     }
 
     // Create test rooms
@@ -154,33 +194,98 @@ router.post('/test/reset', async (req, res) => {
   }
 });
 
+/** Delete all docs in known subcollections, then the parent doc */
+async function deleteDocWithSubcollections(docRef) {
+  const subcollections = ['warnings', 'transactions', 'backpack'];
+  for (const sub of subcollections) {
+    const snap = await docRef.collection(sub).get();
+    const batch = db.batch();
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    if (snap.size > 0) await batch.commit();
+  }
+  await docRef.delete();
+}
+
 /**
  * Delete test data. If testRunId is null, deletes ALL test data.
  */
 async function deleteTestData(testRunId) {
-  const collections = ['users', 'rooms', 'gifts', 'conversations', 'banners', 'funFacts'];
-  let totalDeleted = 0;
+  let deleted = 0;
 
-  for (const colName of collections) {
+  // 1. Find all test users and delete docs + subcollections
+  let userQuery;
+  if (testRunId) {
+    userQuery = db.collection('users').where('_testRun', '==', testRunId);
+  } else {
+    userQuery = db.collection('users').where('_testRun', '>=', TEST_PREFIX);
+  }
+  const userSnap = await userQuery.get();
+  const userUniqueIds = [];
+  for (const doc of userSnap.docs) {
+    userUniqueIds.push(doc.data().uniqueId || doc.id);
+    await deleteDocWithSubcollections(doc.ref);
+    deleted++;
+  }
+
+  // 2. Delete device bindings tagged with this testRun
+  let bindingQuery;
+  if (testRunId) {
+    bindingQuery = db.collection('deviceBindings').where('_testRun', '==', testRunId);
+  } else {
+    bindingQuery = db.collection('deviceBindings').where('_testRun', '>=', TEST_PREFIX);
+  }
+  const bindingSnap = await bindingQuery.get();
+  const batch1 = db.batch();
+  for (const doc of bindingSnap.docs) {
+    batch1.delete(doc.ref);
+    deleted++;
+  }
+  if (bindingSnap.size > 0) await batch1.commit();
+
+  // 3. Delete device and network bans linked to test users
+  // Query both number and string variants (Firestore equality is type-strict)
+  for (const uid of userUniqueIds) {
+    for (const uidVariant of [uid, String(uid)]) {
+      const deviceBanSnap = await db
+        .collection('deviceBans')
+        .where('linkedUniqueId', '==', uidVariant)
+        .get();
+      for (const doc of deviceBanSnap.docs) {
+        await doc.ref.delete();
+        deleted++;
+      }
+
+      const networkBanSnap = await db
+        .collection('networkBans')
+        .where('linkedUniqueId', '==', uidVariant)
+        .get();
+      for (const doc of networkBanSnap.docs) {
+        await doc.ref.delete();
+        deleted++;
+      }
+    }
+  }
+
+  // 4. Delete other top-level test docs (gifts, rooms, banners, funFacts, conversations)
+  // Note: system PMs created by admin actions won't have _testRun set — accepted trade-off
+  const otherCollections = ['gifts', 'rooms', 'banners', 'funFacts', 'conversations'];
+  for (const col of otherCollections) {
     let query;
     if (testRunId) {
-      query = db.collection(colName).where('_testRun', '==', testRunId);
+      query = db.collection(col).where('_testRun', '==', testRunId);
     } else {
-      query = db.collection(colName).where('_testRun', '>=', TEST_PREFIX);
+      query = db.collection(col).where('_testRun', '>=', TEST_PREFIX);
     }
-
-    const snap = await query.limit(500).get();
-    if (snap.empty) continue;
-
+    const snap = await query.get();
     const batch = db.batch();
     for (const doc of snap.docs) {
       batch.delete(doc.ref);
+      deleted++;
     }
-    await batch.commit();
-    totalDeleted += snap.size;
+    if (snap.size > 0) await batch.commit();
   }
 
-  return totalDeleted;
+  return deleted;
 }
 
 module.exports = router;
