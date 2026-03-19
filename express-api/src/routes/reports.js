@@ -111,7 +111,7 @@ router.post('/reports', async (req, res) => {
     // Fire-and-forget: FCM push notification to admin tokens
     (async () => {
       try {
-        const adminUsers = await queryDocs(db.collection('users').where('userType', '==', 'admin'));
+        const adminUsers = await queryDocs(db.collection('users').where('userType', '==', 'ADMIN'));
         const tokens = [];
         for (const u of adminUsers) {
           if (Array.isArray(u.fcmTokens)) tokens.push(...u.fcmTokens);
@@ -454,7 +454,12 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
       sendSystemPm(
         reporterId,
         'Your report has been reviewed. Thank you for helping keep ShyTalk safe.',
-      ).catch(() => {});
+      ).catch((err) =>
+        log.error('reports', 'Failed to send reporter PM (resolve-all)', {
+          reporterId,
+          error: err.message,
+        }),
+      );
     }
 
     res.json({ success: true, resolved: reports.length });
@@ -885,6 +890,12 @@ router.patch('/appeals/:id', async (req, res) => {
       status: status,
       reviewedBy: req.auth.uid,
       reviewedAt: timestamp,
+    });
+
+    // Update user's appeal status on the user document
+    await db.doc(`users/${userId}`).update({
+      suspensionAppealStatus: status, // 'approved' or 'denied'
+      ...(status === 'denied' ? { suspensionCanAppeal: false } : {}),
     });
 
     // If approved, unsuspend the user

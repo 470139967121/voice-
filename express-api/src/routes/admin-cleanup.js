@@ -832,7 +832,10 @@ router.post('/cleanup/device-binding/:uniqueId', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const uniqueId = req.params.uniqueId;
+    const rawId = req.params.uniqueId;
+    const numId = Number(rawId);
+    // Query both string and number variants — Firestore equality is type-strict
+    const uniqueId = isNaN(numId) ? rawId : numId;
     log.info('admin-cleanup', 'Deleting device binding for user', {
       adminId: req.auth.uniqueId,
       targetUniqueId: uniqueId,
@@ -1095,6 +1098,36 @@ router.post('/cleanup/all-stalkers', async (req, res) => {
     res.json({ success: true, stalkersDeleted: totalDeleted, usersReset });
   } catch (err) {
     log.error('admin-cleanup', 'Stalker cleanup failed', { error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/cleanup/user-coins/:uniqueId — reset coins for a single user
+router.post('/cleanup/user-coins/:uniqueId', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+    await db.doc(`users/${req.params.uniqueId}`).update({ shyCoins: 0 });
+    res.json({ success: true });
+  } catch (err) {
+    log.error('admin-cleanup', 'User coin reset failed', {
+      uniqueId: req.params.uniqueId,
+      error: err.message,
+    });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/cleanup/user-beans/:uniqueId — reset beans for a single user
+router.post('/cleanup/user-beans/:uniqueId', async (req, res) => {
+  try {
+    if (requireAdmin(req, res)) return;
+    await db.doc(`users/${req.params.uniqueId}`).update({ shyBeans: 0 });
+    res.json({ success: true });
+  } catch (err) {
+    log.error('admin-cleanup', 'User bean reset failed', {
+      uniqueId: req.params.uniqueId,
+      error: err.message,
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

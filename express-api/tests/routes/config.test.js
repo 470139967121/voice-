@@ -119,6 +119,17 @@ describe('GET /api/config/:key', () => {
 });
 
 describe('PUT /api/config/:key', () => {
+  test('returns 403 for non-admin', async () => {
+    const { requireAdmin } = require('../../src/middleware/auth');
+    requireAdmin.mockImplementationOnce((req, res) => {
+      res.status(403).json({ error: 'Admin access required' });
+      return true;
+    });
+    const app = createApp();
+    const res = await request(app).put('/api/config/app').send({ minVersionCode: 2 });
+    expect(res.status).toBe(403);
+  });
+
   test('route is reachable (no double /api prefix)', async () => {
     const app = createApp();
     const res = await request(app).put('/api/config/app').send({ minVersionCode: 2 });
@@ -255,6 +266,17 @@ describe('GET /api/gift-rankings/:giftId', () => {
 });
 
 describe('PUT /api/config/economy', () => {
+  test('returns 403 for non-admin', async () => {
+    const { requireAdmin } = require('../../src/middleware/auth');
+    requireAdmin.mockImplementationOnce((req, res) => {
+      res.status(403).json({ error: 'Admin access required' });
+      return true;
+    });
+    const app = createApp();
+    const res = await request(app).put('/api/config/economy').send({ dailyBase: 100 });
+    expect(res.status).toBe(403);
+  });
+
   test('route is reachable (no double /api prefix)', async () => {
     mockDocGet.mockResolvedValue({
       exists: true,
@@ -292,5 +314,24 @@ describe('PUT /api/config/economy', () => {
     expect(res.body.dailyBase).toBe(75);
     expect(res.body.beanConversionRate).toBe(0.8);
     expect(res.body.hackerField).toBeUndefined();
+  });
+
+  test('accepts wheelInnerThreshold, maxRoomDurationMinutes, superShyRoomDurationMinutes', async () => {
+    mockDocGet.mockResolvedValue({
+      exists: true,
+      data: () => ({}),
+    });
+
+    const app = createApp();
+    const res = await request(app).put('/api/config/economy').send({
+      wheelInnerThreshold: 0.3,
+      maxRoomDurationMinutes: 120,
+      superShyRoomDurationMinutes: 30,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.wheelInnerThreshold).toBe(0.3);
+    expect(res.body.maxRoomDurationMinutes).toBe(120);
+    expect(res.body.superShyRoomDurationMinutes).toBe(30);
   });
 });

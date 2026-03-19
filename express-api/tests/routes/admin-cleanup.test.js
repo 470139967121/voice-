@@ -13,9 +13,6 @@ const makeBatch = () => ({
   commit: mockBatchCommit,
 });
 
-// Each db.doc() call returns a ref with a delete() method
-const _mockDocRef = { delete: jest.fn().mockResolvedValue(), ref: { path: 'mock/ref' } };
-
 // Flexible collection chain — tests override mockCollectionSnap
 let mockCollectionSnap = { empty: true, docs: [] };
 
@@ -166,6 +163,8 @@ const cleanupEndpoints = [
   ['GET', '/api/storage/audit'],
   ['POST', '/api/cleanup/orphaned-storage'],
   ['POST', '/api/cleanup/all-stalkers'],
+  ['POST', '/api/cleanup/user-coins/some-unique-id'],
+  ['POST', '/api/cleanup/user-beans/some-unique-id'],
 ];
 
 describe('Admin guard: all cleanup endpoints return 403 for non-admin users', () => {
@@ -370,5 +369,141 @@ describe('POST /api/cleanup/destroyed-users', () => {
 
     expect(res.status).toBe(500);
     expect(res.body.error).toBeDefined();
+  });
+});
+
+// ── POST /cleanup/user-coins/:uniqueId ───────────────────────────
+
+describe('POST /api/cleanup/user-coins/:uniqueId', () => {
+  test('requires admin — returns 403 for non-admin', async () => {
+    const app = createApp(false);
+    const res = await request(app).post('/api/cleanup/user-coins/test-user-1');
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test('resets shyCoins to 0 for the specified user and returns success', async () => {
+    const app = createApp(true);
+    const res = await request(app).post('/api/cleanup/user-coins/test-user-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(mockDoc).toHaveBeenCalledWith('users/test-user-1');
+    const docRef = mockDoc.mock.results[0].value;
+    expect(docRef.update).toHaveBeenCalledWith({ shyCoins: 0 });
+  });
+
+  test('returns 500 when Firestore update fails', async () => {
+    mockDoc.mockImplementationOnce(() => ({
+      update: jest.fn().mockRejectedValue(new Error('Firestore error')),
+    }));
+
+    const app = createApp(true);
+    const res = await request(app).post('/api/cleanup/user-coins/test-user-1');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBeDefined();
+  });
+});
+
+// ── POST /cleanup/user-beans/:uniqueId ───────────────────────────
+
+describe('POST /api/cleanup/user-beans/:uniqueId', () => {
+  test('requires admin — returns 403 for non-admin', async () => {
+    const app = createApp(false);
+    const res = await request(app).post('/api/cleanup/user-beans/test-user-1');
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test('resets shyBeans to 0 for the specified user and returns success', async () => {
+    const app = createApp(true);
+    const res = await request(app).post('/api/cleanup/user-beans/test-user-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(mockDoc).toHaveBeenCalledWith('users/test-user-1');
+    const docRef = mockDoc.mock.results[0].value;
+    expect(docRef.update).toHaveBeenCalledWith({ shyBeans: 0 });
+  });
+
+  test('returns 500 when Firestore update fails', async () => {
+    mockDoc.mockImplementationOnce(() => ({
+      update: jest.fn().mockRejectedValue(new Error('Firestore error')),
+    }));
+
+    const app = createApp(true);
+    const res = await request(app).post('/api/cleanup/user-beans/test-user-1');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBeDefined();
+  });
+});
+
+// ── POST /cleanup/device-binding/:uniqueId ──────────────────────
+
+describe('POST /api/cleanup/device-binding/:uniqueId', () => {
+  test('requires admin — returns 403 for non-admin', async () => {
+    const app = createApp(false);
+    const res = await request(app).post('/api/cleanup/device-binding/10000001');
+    expect(res.status).toBe(403);
+  });
+
+  test('parses numeric uniqueId string to number for Firestore query', async () => {
+    const mockDeleteFn = jest.fn().mockResolvedValue();
+    mockCollectionSnap = {
+      empty: false,
+      docs: [{ ref: { delete: mockDeleteFn }, id: 'device-1' }],
+    };
+
+    const app = createApp(true);
+    const res = await request(app).post('/api/cleanup/device-binding/10000001');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.deleted).toBe(1);
+  });
+
+  test('keeps non-numeric uniqueId as string', async () => {
+    mockCollectionSnap = {
+      empty: true,
+      docs: [],
+    };
+
+    const app = createApp(true);
+    const res = await request(app).post('/api/cleanup/device-binding/abc123');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.deleted).toBe(0);
+    expect(res.body.message).toContain('No device bindings');
+  });
+
+  test('returns deleted count when bindings exist', async () => {
+    const mockDeleteFn = jest.fn().mockResolvedValue();
+    mockCollectionSnap = {
+      empty: false,
+      docs: [
+        { ref: { delete: mockDeleteFn }, id: 'device-1' },
+        { ref: { delete: mockDeleteFn }, id: 'device-2' },
+      ],
+    };
+
+    const app = createApp(true);
+    const res = await request(app).post('/api/cleanup/device-binding/10000001');
+
+    expect(res.status).toBe(200);
+    expect(res.body.deleted).toBe(2);
+  });
+
+  test('returns deleted 0 with message when no bindings found', async () => {
+    mockCollectionSnap = { empty: true, docs: [] };
+
+    const app = createApp(true);
+    const res = await request(app).post('/api/cleanup/device-binding/99999999');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.deleted).toBe(0);
   });
 });

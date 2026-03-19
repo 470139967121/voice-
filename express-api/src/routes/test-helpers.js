@@ -15,6 +15,10 @@ const log = require('../utils/log');
 const TEST_PREFIX = 'test_';
 
 function requireTestApiKey(req, res) {
+  if (!process.env.TEST_API_KEY) {
+    res.status(500).json({ error: 'TEST_API_KEY not configured on server' });
+    return true;
+  }
   const key = req.headers['x-test-api-key'];
   if (!key || key !== process.env.TEST_API_KEY) {
     res.status(403).json({ error: 'Invalid test API key' });
@@ -30,7 +34,19 @@ router.post('/test/setup', async (req, res) => {
 
     const testRunId = `${TEST_PREFIX}${generateId()}`;
     const now = Date.now();
-    const created = { testRunId, users: [], rooms: [], gifts: [], conversations: [] };
+    const created = {
+      testRunId,
+      users: [],
+      rooms: [],
+      gifts: [],
+      banners: [],
+      funFacts: [],
+      reports: [],
+      appeals: [],
+      alerts: [],
+      conversations: [],
+      economyConfig: {},
+    };
 
     const spec = req.body || {};
 
@@ -127,6 +143,151 @@ router.post('/test/setup', async (req, res) => {
       created.gifts.push(giftData);
     }
 
+    // Create test banners
+    for (const bannerSpec of spec.banners || []) {
+      const bannerId = `${testRunId}_banner_${generateId()}`;
+      const bannerData = {
+        id: bannerId,
+        title: bannerSpec.title || 'Test Banner',
+        imageUrl: bannerSpec.imageUrl || '',
+        actionType: bannerSpec.actionType || 'NONE',
+        actionValue: bannerSpec.actionValue || '',
+        isActive: bannerSpec.isActive ?? true,
+        sortOrder: bannerSpec.sortOrder ?? 0,
+        createdAt: now,
+        _testRun: testRunId,
+      };
+      await db.doc(`banners/${bannerId}`).set(bannerData);
+      created.banners.push(bannerData);
+    }
+
+    // Create test fun facts
+    for (const factSpec of spec.funFacts || []) {
+      const factId = `${testRunId}_fact_${generateId()}`;
+      const factData = {
+        id: factId,
+        text: factSpec.text || 'Test fact',
+        category: factSpec.category || 'trivia',
+        emoji: factSpec.emoji || '📝',
+        sourceLanguage: factSpec.sourceLanguage || 'English',
+        isActive: factSpec.isActive ?? true,
+        createdAt: now,
+        _testRun: testRunId,
+      };
+      await db.doc(`funFacts/${factId}`).set(factData);
+      created.funFacts.push(factData);
+    }
+
+    // Create test conversations with messages subcollection
+    // (seeded BEFORE reports so reports can reference conversationIndex)
+    for (const convSpec of spec.conversations || []) {
+      const convId = `${testRunId}_conv_${generateId()}`;
+      const participants = convSpec.participants || [];
+      const convData = {
+        id: convId,
+        participants,
+        createdAt: now,
+        _testRun: testRunId,
+      };
+      await db.doc(`conversations/${convId}`).set(convData);
+      for (const msg of convSpec.messages || []) {
+        const msgId = `${testRunId}_msg_${generateId()}`;
+        await db.doc(`conversations/${convId}/messages/${msgId}`).set({
+          text: msg.text || '',
+          senderId: msg.senderId || '',
+          createdAt: now,
+        });
+      }
+      created.conversations.push(convData);
+    }
+
+    // Create test reports (index-based user references)
+    for (const reportSpec of spec.reports || []) {
+      const reportId = `${testRunId}_report_${generateId()}`;
+      const reportedUser = created.users[reportSpec.reportedUserIndex || 0];
+      const reporterUser = created.users[reportSpec.reporterUserIndex || 1];
+      if (!reportedUser || !reporterUser) throw new Error('Report seed requires at least 2 users');
+      // Link to a seeded conversation if conversationIndex is provided
+      const linkedConv =
+        reportSpec.conversationIndex !== undefined && reportSpec.conversationIndex !== null
+          ? created.conversations[reportSpec.conversationIndex]
+          : null;
+      const reportData = {
+        id: reportId,
+        reportedUserId: reportedUser.uid,
+        reportedUserUniqueId: reportedUser.uniqueId,
+        reportedUserName: reportedUser.displayName,
+        reporterId: reporterUser.uid,
+        reporterName: reporterUser.displayName,
+        reason: reportSpec.reason || 'Spam',
+        status: reportSpec.status || 'pending',
+        ...(linkedConv ? { conversationId: linkedConv.id } : {}),
+        createdAt: now,
+        _testRun: testRunId,
+      };
+      await db.doc(`reports/${reportId}`).set(reportData);
+      created.reports.push(reportData);
+    }
+
+    // Create test suspension appeals
+    // NOTE: Does NOT set user as suspended — appeal tests manage suspension state themselves
+    // to avoid cross-file fragility (other tests depend on user not being suspended)
+    for (const appealSpec of spec.appeals || []) {
+      const appealId = `${testRunId}_appeal_${generateId()}`;
+      const appealUser = created.users[appealSpec.userIndex || 0];
+      if (!appealUser) throw new Error('Appeal seed requires users to be seeded first');
+      const appealData = {
+        id: appealId,
+        userId: appealUser.uniqueId,
+        appealText: appealSpec.appealText || 'I did not do this',
+        status: appealSpec.status || 'pending',
+        createdAt: now,
+        _testRun: testRunId,
+      };
+      await db.doc(`suspensionAppeals/${appealId}`).set(appealData);
+      created.appeals.push(appealData);
+    }
+
+    // Create test alerts
+    for (const alertSpec of spec.alerts || []) {
+      const alertId = `${testRunId}_alert_${generateId()}`;
+      const alertData = {
+        id: alertId,
+        type: alertSpec.type || 'error_rate',
+        severity: alertSpec.severity || 'medium',
+        message: alertSpec.message || 'Test alert',
+        status: alertSpec.status || 'new',
+        createdAt: now,
+        _testRun: testRunId,
+      };
+      await db.doc(`alerts/${alertId}`).set(alertData);
+      created.alerts.push(alertData);
+    }
+
+    // Read current economy config for backup/restore
+    // If the doc doesn't exist, use production defaults so restore always has valid data
+    const ECONOMY_DEFAULTS = {
+      beanConversionRate: 0.6,
+      beanRedeemBonusThreshold: 2000,
+      beanRedeemBonusMultiplier: 1.1,
+      pullCosts: { 1: 10, 10: 100, 100: 1000 },
+      broadcastSendThreshold: 0,
+      broadcastWinThreshold: 5000,
+      dropRateExponent: 1.5,
+      pitySoftStart: 80,
+      pityHardLimit: 120,
+      pitySoftMaxShift: 0.15,
+      pityHighValueThreshold: 5000,
+      dailyBase: 50,
+      milestoneRewards: { 7: 100, 14: 200, 30: 500, 60: 1000, 90: 2000 },
+    };
+    try {
+      const ecoDoc = await db.doc('config/economy').get();
+      created.economyConfig = ecoDoc.exists ? ecoDoc.data() : ECONOMY_DEFAULTS;
+    } catch (_err) {
+      created.economyConfig = ECONOMY_DEFAULTS;
+    }
+
     log.info('test-helpers', 'Test setup complete', {
       testRunId,
       users: created.users.length,
@@ -145,7 +306,17 @@ router.get('/test/verify/:collection/:id', async (req, res) => {
     if (requireTestApiKey(req, res)) return;
 
     const { collection, id } = req.params;
-    const ALLOWED_COLLECTIONS = ['users', 'rooms', 'gifts', 'conversations', 'banners', 'funFacts'];
+    const ALLOWED_COLLECTIONS = [
+      'users',
+      'rooms',
+      'gifts',
+      'conversations',
+      'banners',
+      'funFacts',
+      'reports',
+      'suspensionAppeals',
+      'alerts',
+    ];
     if (!ALLOWED_COLLECTIONS.includes(collection)) {
       return res.status(400).json({ error: 'Collection not allowed' });
     }
@@ -196,7 +367,7 @@ router.post('/test/reset', async (req, res) => {
 
 /** Delete all docs in known subcollections, then the parent doc */
 async function deleteDocWithSubcollections(docRef) {
-  const subcollections = ['warnings', 'transactions', 'backpack'];
+  const subcollections = ['warnings', 'transactions', 'backpack', 'stalkers', 'giftWall'];
   for (const sub of subcollections) {
     const snap = await docRef.collection(sub).get();
     const batch = db.batch();
@@ -268,7 +439,16 @@ async function deleteTestData(testRunId) {
 
   // 4. Delete other top-level test docs (gifts, rooms, banners, funFacts, conversations)
   // Note: system PMs created by admin actions won't have _testRun set — accepted trade-off
-  const otherCollections = ['gifts', 'rooms', 'banners', 'funFacts', 'conversations'];
+  const otherCollections = [
+    'gifts',
+    'rooms',
+    'banners',
+    'funFacts',
+    'conversations',
+    'reports',
+    'suspensionAppeals',
+    'alerts',
+  ];
   for (const col of otherCollections) {
     let query;
     if (testRunId) {
@@ -277,12 +457,17 @@ async function deleteTestData(testRunId) {
       query = db.collection(col).where('_testRun', '>=', TEST_PREFIX);
     }
     const snap = await query.get();
-    const batch = db.batch();
     for (const doc of snap.docs) {
-      batch.delete(doc.ref);
+      if (col === 'conversations') {
+        // Conversations have messages subcollection — delete those first
+        const msgSnap = await doc.ref.collection('messages').get();
+        const msgBatch = db.batch();
+        msgSnap.docs.forEach((m) => msgBatch.delete(m.ref));
+        if (msgSnap.size > 0) await msgBatch.commit();
+      }
+      await doc.ref.delete();
       deleted++;
     }
-    if (snap.size > 0) await batch.commit();
   }
 
   return deleted;
