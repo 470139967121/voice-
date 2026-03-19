@@ -1,7 +1,7 @@
-v0.55.1
+v0.55.2
 
-iOS CryptoKeyPair type mismatch — CFErrorRef instead of Any (#179)
-- iOS CryptoKeyPair type mismatch — use CFErrorRef instead of Any
-- SecKeyCreateRandomKey, SecKeyCopyExternalRepresentation, and
-- SecKeyCreateSignature expect CPointer<CFErrorRef?>, not CPointer<Any?>.
+iOS CryptoKeyPair — use CPointerVar<CFError> for Security API (#185)
+- iOS CryptoKeyPair — use CPointerVar<CFError> for Security API error params
+- Security framework functions expect CValuesRef<CPointerVarOf<CPointer<__CFError>>>,
+- which is CPointerVar<CFError>, not ObjCObjectVar.
 - Claude Opus 4.6 (1M context) <noreply@anthropic.com>
