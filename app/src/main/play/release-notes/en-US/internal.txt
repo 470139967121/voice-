@@ -1,8 +1,7 @@
-v0.55.0
+v0.55.1
 
-pipeline redesign — split monolith into 6 focused workflows (#174)
-- update versionName to semver, remove hardcoded NODE_ENV from ecosystem.config
+iOS CryptoKeyPair type mismatch — CFErrorRef instead of Any (#179)
+- iOS CryptoKeyPair type mismatch — use CFErrorRef instead of Any
+- SecKeyCreateRandomKey, SecKeyCopyExternalRepresentation, and
+- SecKeyCreateSignature expect CPointer<CFErrorRef?>, not CPointer<Any?>.
 - Claude Opus 4.6 (1M context) <noreply@anthropic.com>
-- strip leading whitespace from Allure environment.properties heredocs
-- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
-- delete e2e-trigger.yml, update force-cancel for new workflow names
