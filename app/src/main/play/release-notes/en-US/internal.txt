@@ -1,7 +1,8 @@
-v0.54 — Security & Stability
+v0.55.0
 
-- Improved security across the app
-- Added privacy policy and terms of service
-- Better translation coverage for all supported languages
-- Various bug fixes and performance improvements
-- Behind-the-scenes improvements for a smoother experience
+pipeline redesign — split monolith into 6 focused workflows (#174)
+- update versionName to semver, remove hardcoded NODE_ENV from ecosystem.config
+- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+- strip leading whitespace from Allure environment.properties heredocs
+- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+- delete e2e-trigger.yml, update force-cancel for new workflow names
