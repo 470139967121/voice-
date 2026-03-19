@@ -1,7 +1,7 @@
-v0.55.2
+v0.55.3
 
-iOS CryptoKeyPair — use CPointerVar<CFError> for Security API (#185)
-- iOS CryptoKeyPair — use CPointerVar<CFError> for Security API error params
-- Security framework functions expect CValuesRef<CPointerVarOf<CPointer<__CFError>>>,
-- which is CPointerVar<CFError>, not ObjCObjectVar.
+iOS CryptoKeyPair — use __CFError cinterop type (#187)
+- iOS CryptoKeyPair — use __CFError (correct cinterop type name)
+- Kotlin/Native maps CFError to __CFError in the cinterop layer.
+- CPointerVar<__CFError> matches the expected CValuesRef<CPointerVarOf<CPointer<__CFError>>>.
 - Claude Opus 4.6 (1M context) <noreply@anthropic.com>
