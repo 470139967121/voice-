@@ -1,8 +1,8 @@
-v0.55.5
+v0.55.6
 
-iOS compilation errors — BiometricAuth opt-in, CryptoKeyPair types (#194)
-- iOS compilation errors + Play Store release notes
-- iOS fixes:
-- add @ExperimentalForeignApi file-level opt-in
-- replace NSString cast with encodeToByteArray()
-- use CFTypeRefVar for SecItemCopyMatching
+CRITICAL — MainActivity crash on launch (ClassCastException) (#196)
+- MainActivity extended ComponentActivity but biometricAuth.setActivity()
+- cast it to FragmentActivity, causing an immediate crash on every launch.
+- extend AppCompatActivity (which IS a FragmentActivity) instead of
+- ComponentActivity. Removes the unsafe cast.
+- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
