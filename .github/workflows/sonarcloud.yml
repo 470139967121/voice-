@@ -61,7 +61,14 @@ jobs:
         run: ./gradlew :shared:jvmTest || true
 
       - name: Run SonarCloud analysis
+        if: env.SONAR_TOKEN != ''
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew sonar -Dsonar.token=$SONAR_TOKEN -x :app:sonar
+
+      - name: Skip SonarCloud (no token)
+        if: env.SONAR_TOKEN == ''
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: echo "::warning::SonarCloud skipped — SONAR_TOKEN unavailable (Dependabot PR on public repo)"
