@@ -1,8 +1,8 @@
-v0.55.8
+v0.55.9
 
-bump eslint from 10.0.3 to 10.1.0 in /express-api (#204)
-- Bumps [eslint](https://github.com/eslint/eslint) from 10.0.3 to 10.1.0.
-- - [Release notes](https://github.com/eslint/eslint/releases)
-- - [Commits](https://github.com/eslint/eslint/compare/v10.0.3...v10.1.0)
-- ---
-- updated-dependencies:
+bump koin from 4.1.1 to 4.2.0 (#208)
+- Bumps `koin` from 4.1.1 to 4.2.0.
+- Updates `io.insert-koin:koin-core` from 4.1.1 to 4.2.0
+- - [Release notes](https://github.com/InsertKoinIO/koin/releases)
+- - [Commits](https://github.com/InsertKoinIO/koin/compare/4.1.1...4.2.0)
+- Updates `io.insert-koin:koin-android` from 4.1.1 to 4.2.0
