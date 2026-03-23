@@ -35,7 +35,7 @@ jobs:
           if [ "$UPDATE_TYPE" = "version-update:semver-patch" ] || [ "$UPDATE_TYPE" = "version-update:semver-minor" ]; then
             echo "merge=true" >> "$GITHUB_OUTPUT"
           # Auto-merge: GitHub Actions updates (SHA-pinned, so "major" is just a tag bump)
-          elif [ "$PACKAGE_ECOSYSTEM" = "github-actions" ]; then
+          elif [ "$PACKAGE_ECOSYSTEM" = "github_actions" ] || [ "$PACKAGE_ECOSYSTEM" = "github-actions" ]; then
             echo "merge=true" >> "$GITHUB_OUTPUT"
           else
             echo "merge=false" >> "$GITHUB_OUTPUT"
