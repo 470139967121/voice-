@@ -24,19 +24,32 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Auto-approve patch and minor updates
-        if: |
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+      - name: Determine if auto-mergeable
+        id: check
+        run: |
+          UPDATE_TYPE="${{ steps.metadata.outputs.update-type }}"
+          DEP_TYPE="${{ steps.metadata.outputs.dependency-type }}"
+          PACKAGE_ECOSYSTEM="${{ steps.metadata.outputs.package-ecosystem }}"
+
+          # Auto-merge: patch and minor for all ecosystems
+          if [ "$UPDATE_TYPE" = "version-update:semver-patch" ] || [ "$UPDATE_TYPE" = "version-update:semver-minor" ]; then
+            echo "merge=true" >> "$GITHUB_OUTPUT"
+          # Auto-merge: GitHub Actions updates (SHA-pinned, so "major" is just a tag bump)
+          elif [ "$PACKAGE_ECOSYSTEM" = "github-actions" ]; then
+            echo "merge=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "merge=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Auto-approve
+        if: steps.check.outputs.merge == 'true'
         run: gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Auto-merge patch and minor updates
-        if: |
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+      - name: Auto-merge
+        if: steps.check.outputs.merge == 'true'
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
