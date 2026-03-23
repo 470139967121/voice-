@@ -110,7 +110,7 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
           else
-            keytool -genkey -v -keystore keystore.jks -alias debug -keyalg RSA -keysize 2048 -validity 1 -storepass android -keypass android -dname "CN=Debug"
+            keytool -genkey -v -keystore keystore.jks -alias shytalk -keyalg RSA -keysize 2048 -validity 1 -storepass android -keypass android -dname "CN=Debug"
             echo "::warning::Using debug keystore (secrets unavailable — Dependabot PR)"
           fi
 
