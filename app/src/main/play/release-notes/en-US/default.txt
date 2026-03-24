@@ -1,8 +1,8 @@
-v0.55.11
+v0.56.0
 
-bump org.jlleitschuh.gradle.ktlint from 12.3.0 to 14.2.0 (#211)
-- Bumps org.jlleitschuh.gradle.ktlint from 12.3.0 to 14.2.0.
-- ---
-- updated-dependencies:
-- org.jlleitschuh.gradle.ktlint
-- 14.2.0
+Starting Screens — configurable launch screens with admin panel, 10-cycle audit
+- ## Summary
+- - Configurable starting screens shown on app launch (blocking or dismissable)
+- - Full admin panel CRUD with live device preview, image upload, scheduling
+- GET/PUT/DELETE endpoints with ETag caching, allowlists
+- composable, file-based cache, MainActivity integration, 19 locales
