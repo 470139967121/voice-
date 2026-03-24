@@ -12,31 +12,60 @@ const { db } = require('../utils/firebase');
 const r2 = require('../utils/r2');
 const log = require('../utils/log');
 
-// Top-level collections to back up
-const TOP_LEVEL_COLLECTIONS = [
+// Top-level collections to back up (must match actual Firestore collections)
+const ALL_TOP_LEVEL_COLLECTIONS = [
   'users',
   'rooms',
   'conversations',
+  'config',
+  'identityMap',
+  'counters',
   'deviceBindings',
   'gifts',
-  'giftCatalog',
-  'economyConfig',
+  'giftRankings',
+  'broadcasts',
+  'coinPackages',
   'funFacts',
   'banners',
   'reports',
-  'appeals',
-  'subscriptions',
+  'reportsArchive',
+  'reportLocks',
+  'suspensionAppeals',
+  'alerts',
+  'alertConfig',
+  'adminAuditLog',
+  'otpCodes',
+  'biometricKeys',
+  'emailMetrics',
+  'purchaseReceipts',
   'logConfig',
   'deviceBans',
   'networkBans',
 ];
 
+// Dev only needs essential data — skip the other 24 collections and all subcollections
+// to save 1,000-3,000 Firestore reads/day
+const DEV_TOP_LEVEL_COLLECTIONS = ['users', 'config', 'counters'];
+
+const TOP_LEVEL_COLLECTIONS =
+  process.env.NODE_ENV === 'production' ? ALL_TOP_LEVEL_COLLECTIONS : DEV_TOP_LEVEL_COLLECTIONS;
+
 // Subcollections: [parentCollection, subcollectionName]
-const SUBCOLLECTIONS = [
+const ALL_SUBCOLLECTIONS = [
   ['rooms', 'messages'],
   ['rooms', 'seatRequests'],
   ['conversations', 'messages'],
+  ['conversations', 'userSettings'],
+  ['conversations', 'mutes'],
+  ['users', 'backpack'],
+  ['users', 'warnings'],
+  ['users', 'giftWall'],
+  ['users', 'transactions'],
+  ['users', 'stalkers'],
+  ['conversations', 'settings'],
 ];
+
+const SUBCOLLECTIONS = process.env.NODE_ENV === 'production' ? ALL_SUBCOLLECTIONS : [];
 
 /**
  * Back up a single top-level collection.
@@ -193,4 +222,7 @@ async function pruneOldBackups(prefix) {
 
 module.exports = backups;
 module.exports.TOP_LEVEL_COLLECTIONS = TOP_LEVEL_COLLECTIONS;
+module.exports.ALL_TOP_LEVEL_COLLECTIONS = ALL_TOP_LEVEL_COLLECTIONS;
+module.exports.DEV_TOP_LEVEL_COLLECTIONS = DEV_TOP_LEVEL_COLLECTIONS;
 module.exports.SUBCOLLECTIONS = SUBCOLLECTIONS;
+module.exports.ALL_SUBCOLLECTIONS = ALL_SUBCOLLECTIONS;

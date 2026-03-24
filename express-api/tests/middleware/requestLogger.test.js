@@ -7,6 +7,7 @@ const EventEmitter = require('events');
 function mockReq(overrides = {}) {
   return {
     method: 'GET',
+    path: '/api/test',
     url: '/api/test',
     originalUrl: '/api/test',
     headers: {},
@@ -34,6 +35,34 @@ function mockLogger() {
 }
 
 describe('requestLogger middleware', () => {
+  test('skips logging for /api/health', () => {
+    const logger = mockLogger();
+    const middleware = createRequestLogger(logger);
+    const req = mockReq({ path: '/api/health', url: '/api/health' });
+    const res = mockRes();
+    const next = jest.fn();
+
+    middleware(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    // Should not set up response logging
+    res.emit('finish');
+    expect(logger.log).not.toHaveBeenCalled();
+  });
+
+  test('does not skip logging for non-health paths', () => {
+    const logger = mockLogger();
+    const middleware = createRequestLogger(logger);
+    const req = mockReq({ path: '/api/users', url: '/api/users' });
+    const res = mockRes();
+    const next = jest.fn();
+
+    middleware(req, res, next);
+    res.emit('finish');
+
+    expect(logger.log).toHaveBeenCalledTimes(1);
+  });
+
   test('calls next() immediately', () => {
     const logger = mockLogger();
     const middleware = createRequestLogger(logger);
@@ -232,5 +261,51 @@ describe('sanitizeBody', () => {
   test('strips sensitive keys case-insensitively', () => {
     const result = sanitizeBody({ Password: 'x', TOKEN: 'y', name: 'z' });
     expect(result).toEqual({ name: 'z' });
+  });
+
+  test('strips pin from request body', () => {
+    const result = sanitizeBody({ pin: '1234', uniqueId: '10000001' });
+    expect(result).not.toHaveProperty('pin');
+    expect(result.uniqueId).toBe('10000001');
+  });
+
+  test('strips code from request body', () => {
+    const result = sanitizeBody({ code: '482715', email: 'user@example.com' });
+    expect(result).not.toHaveProperty('code');
+    expect(result.email).toBe('user@example.com');
+  });
+
+  test('strips Pin and Code case-insensitively', () => {
+    const result = sanitizeBody({ PIN: '5678', CODE: '999999', name: 'test' });
+    expect(result).not.toHaveProperty('PIN');
+    expect(result).not.toHaveProperty('CODE');
+    expect(result.name).toBe('test');
+  });
+});
+
+describe('requestLogger middleware — pin/code redaction end-to-end', () => {
+  test('pin and code fields in request body are not present in logged output', () => {
+    const logger = mockLogger();
+    const middleware = createRequestLogger(logger);
+    const req = mockReq({
+      method: 'POST',
+      originalUrl: '/api/auth/pin/verify',
+      body: {
+        pin: '1234',
+        code: '482715',
+        email: 'user@example.com',
+        uniqueId: '10000001',
+      },
+    });
+    const res = mockRes();
+
+    middleware(req, res, jest.fn());
+    res.emit('finish');
+
+    const loggedBody = logger.log.mock.calls[0][0].context.requestBody;
+    expect(loggedBody).not.toHaveProperty('pin');
+    expect(loggedBody).not.toHaveProperty('code');
+    expect(loggedBody.email).toBe('user@example.com');
+    expect(loggedBody.uniqueId).toBe('10000001');
   });
 });

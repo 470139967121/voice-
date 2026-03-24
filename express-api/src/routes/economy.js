@@ -608,7 +608,7 @@ router.post('/economy/gift', async (req, res) => {
     const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const { recipientId, giftId } = body || {};
-    const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity) || 1));
+    const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity, 10) || 1));
 
     if (!recipientId || !giftId)
       return res.status(400).json({ error: 'recipientId and giftId required' });
@@ -633,6 +633,20 @@ router.post('/economy/gift', async (req, res) => {
     if (!bpItem || (bpItem.quantity || 0) < quantity)
       return res.status(402).json({ error: 'Insufficient items in backpack' });
     if (!recipient) return res.status(404).json({ error: 'Recipient not found' });
+
+    // Check block relationship — UK OSA requires blocking prevents ALL contact
+    const senderBlocked = (sender?.blockedUserIds || []).map(String);
+    const recipientBlocked = (recipient?.blockedUserIds || []).map(String);
+    if (
+      senderBlocked.includes(String(recipientId)) ||
+      recipientBlocked.includes(String(uniqueId))
+    ) {
+      log.warn('economy', 'Gift blocked: sender/recipient blocked', {
+        senderUniqueId: uniqueId,
+        recipientUniqueId: recipientId,
+      });
+      return res.status(403).json({ error: 'Cannot send gifts to or from blocked users' });
+    }
 
     const config = await loadEconomyConfig();
     const coinValue = gift.coinValue || gift.coin_value || 0;
@@ -751,7 +765,7 @@ router.post('/economy/gift-direct', async (req, res) => {
     const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const { recipientId, giftId } = body || {};
-    const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity) || 1));
+    const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity, 10) || 1));
 
     if (!recipientId || !giftId)
       return res.status(400).json({ error: 'recipientId and giftId required' });
@@ -770,6 +784,20 @@ router.post('/economy/gift-direct', async (req, res) => {
 
     if (!gift) return res.status(404).json({ error: 'Gift not found' });
     if (!recipient) return res.status(404).json({ error: 'Recipient not found' });
+
+    // Check block relationship — UK OSA requires blocking prevents ALL contact
+    const senderBlocked = (sender?.blockedUserIds || []).map(String);
+    const recipientBlocked = (recipient?.blockedUserIds || []).map(String);
+    if (
+      senderBlocked.includes(String(recipientId)) ||
+      recipientBlocked.includes(String(uniqueId))
+    ) {
+      log.warn('economy', 'Gift blocked: sender/recipient blocked', {
+        senderUniqueId: uniqueId,
+        recipientUniqueId: recipientId,
+      });
+      return res.status(403).json({ error: 'Cannot send gifts to or from blocked users' });
+    }
 
     const coinValue = gift.coinValue || gift.coin_value || 0;
     const totalCost = coinValue * quantity;
@@ -865,7 +893,7 @@ router.post('/economy/gift-batch', async (req, res) => {
     const uniqueId = req.auth.uniqueId;
     const body = req.body;
     const { recipientIds, giftId, fromBackpack } = body || {};
-    const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity) || 1));
+    const quantity = Math.max(1, Math.min(9999, parseInt(body?.quantity, 10) || 1));
 
     if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0 || !giftId) {
       return res.status(400).json({ error: 'recipientIds array and giftId required' });
@@ -912,6 +940,21 @@ router.post('/economy/gift-batch', async (req, res) => {
     const recipientSnaps = await Promise.all(recipientIds.map((id) => db.doc(`users/${id}`).get()));
     const validRecipients = recipientIds.filter((_, i) => recipientSnaps[i].exists);
     if (validRecipients.length === 0) return res.status(404).json({ error: 'No valid recipients' });
+
+    // Check block relationships — UK OSA requires blocking prevents ALL contact
+    const senderBlocked = (sender?.blockedUserIds || []).map(String);
+    for (let i = 0; i < recipientIds.length; i++) {
+      if (!recipientSnaps[i].exists) continue;
+      const rid = String(recipientIds[i]);
+      const recipientBlocked = (recipientSnaps[i].data()?.blockedUserIds || []).map(String);
+      if (senderBlocked.includes(rid) || recipientBlocked.includes(String(uniqueId))) {
+        log.warn('economy', 'Gift blocked: sender/recipient blocked', {
+          senderUniqueId: uniqueId,
+          recipientUniqueId: recipientIds[i],
+        });
+        return res.status(403).json({ error: 'Cannot send gifts to or from blocked users' });
+      }
+    }
 
     // Atomic debit via transaction
     await db.runTransaction(async (t) => {
@@ -1033,6 +1076,20 @@ router.post('/economy/backpack-send', async (req, res) => {
     const recipient = recipientSnap.exists ? recipientSnap.data() : null;
     if (!sender) return res.status(404).json({ error: 'Sender not found' });
     if (!recipient) return res.status(404).json({ error: 'Recipient not found' });
+
+    // Check block relationship — UK OSA requires blocking prevents ALL contact
+    const senderBlocked = (sender?.blockedUserIds || []).map(String);
+    const recipientBlocked = (recipient?.blockedUserIds || []).map(String);
+    if (
+      senderBlocked.includes(String(recipientId)) ||
+      recipientBlocked.includes(String(uniqueId))
+    ) {
+      log.warn('economy', 'Gift blocked: sender/recipient blocked', {
+        senderUniqueId: uniqueId,
+        recipientUniqueId: recipientId,
+      });
+      return res.status(403).json({ error: 'Cannot send gifts to or from blocked users' });
+    }
 
     // Get backpack items (excluding trial items)
     const backpackSnap = await db.collection(`users/${uniqueId}/backpack`).get();
@@ -1462,7 +1519,7 @@ router.get('/economy/balance', async (req, res) => {
 router.get('/economy/transactions', async (req, res) => {
   try {
     const uniqueId = req.auth.uniqueId;
-    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
     const filterType = req.query.type;
 
     let query = db.collection(`users/${uniqueId}/transactions`);

@@ -18,9 +18,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.shyden.shytalk.core.util.SecureScreenEffect
 import com.shyden.shytalk.feature.auth.components.PinDots
 import com.shyden.shytalk.feature.auth.components.PinKeypad
 import com.shyden.shytalk.resources.*
@@ -35,6 +39,8 @@ fun LockScreen(
     viewModel: LockScreenViewModel = koinViewModel(),
     modifier: Modifier = Modifier,
 ) {
+    SecureScreenEffect()
+
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.biometricAvailable) {
@@ -71,10 +77,11 @@ fun LockScreen(
 
         if (state.error != null) {
             Text(
-                text = state.error!!,
+                text = state.error!!.resolve(),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
         } else if (state.isLocked) {
             Text(
@@ -82,6 +89,7 @@ fun LockScreen(
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
 

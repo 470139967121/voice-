@@ -20,7 +20,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.shyden.shytalk.resources.*
+import com.shyden.shytalk.resources.Res
+import org.jetbrains.compose.resources.stringResource
+
+private val KEYPAD_ROWS =
+    listOf(
+        listOf('1', '2', '3'),
+        listOf('4', '5', '6'),
+        listOf('7', '8', '9'),
+    )
 
 @Composable
 fun PinDots(
@@ -28,8 +41,12 @@ fun PinDots(
     maxLength: Int,
     modifier: Modifier = Modifier,
 ) {
+    val dotsState = stringResource(Res.string.pin_dots_state, length, maxLength)
     Row(
-        modifier = modifier,
+        modifier =
+            modifier.semantics {
+                stateDescription = dotsState
+            },
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         repeat(maxLength.coerceAtMost(8)) { i ->
@@ -57,19 +74,12 @@ fun PinKeypad(
     onBiometric: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    val rows =
-        listOf(
-            listOf('1', '2', '3'),
-            listOf('4', '5', '6'),
-            listOf('7', '8', '9'),
-        )
-
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        rows.forEach { row ->
+        KEYPAD_ROWS.forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 row.forEach { digit ->
                     KeypadButton(text = digit.toString(), onClick = { onDigit(digit) })
@@ -86,7 +96,7 @@ fun PinKeypad(
                 ) {
                     Icon(
                         Icons.Default.Fingerprint,
-                        contentDescription = "Use biometric",
+                        contentDescription = stringResource(Res.string.pin_use_biometric),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
@@ -103,7 +113,7 @@ fun PinKeypad(
             ) {
                 Icon(
                     Icons.Default.Backspace,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(Res.string.pin_delete),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
@@ -124,7 +134,8 @@ private fun KeypadButton(
                 .size(64.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable(onClick = onClick),
+                .clickable(onClick = onClick)
+                .semantics { contentDescription = text },
         contentAlignment = Alignment.Center,
     ) {
         Text(

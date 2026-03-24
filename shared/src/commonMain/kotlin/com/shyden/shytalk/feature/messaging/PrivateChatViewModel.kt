@@ -135,7 +135,9 @@ class PrivateChatViewModel(
     private var wsEventsJob: Job? = null
     private val olderMessages = mutableListOf<PrivateMessage>()
     private val pendingMessages = mutableMapOf<String, PrivateMessage>()
-    private val httpClient by lazy { HttpClient() }
+    private var lazyHttpClient: HttpClient? = null
+    private val httpClient: HttpClient
+        get() = lazyHttpClient ?: HttpClient().also { lazyHttpClient = it }
 
     init {
         if (currentUserId.isNotEmpty()) {
@@ -646,7 +648,7 @@ class PrivateChatViewModel(
         super.onCleared()
         clearTyping()
         conversationWs?.disconnect()
-        httpClient.close()
+        lazyHttpClient?.close()
     }
 
     fun reportMessage(
@@ -1165,7 +1167,7 @@ class PrivateChatViewModel(
         viewModelScope.launch {
             when (val result = pmRepository.getGroupMutes(conversationId)) {
                 is Resource.Success -> {
-                    val myMute = result.data.find { it.odId == currentUserId && it.isActive }
+                    val myMute = result.data.find { it.mutedUserId == currentUserId && it.isActive }
                     if (myMute != null) {
                         // Check if expired
                         val now = currentTimeMillis()

@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.google.com https://recaptcha.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.shytalk.shyden.co.uk https://recaptcha.net; frame-ancestors 'none';">
     <meta name="theme-color" content="#0f1117">
     <title>ShyTalk Admin</title>
     <style>
@@ -2308,6 +2310,33 @@
         /* --- Devices Panel --- */
         #devices-panel { display: none; }
         #devices-panel.visible { display: block; }
+        #starting-screens-panel { display: none; }
+        #starting-screens-panel.visible { display: block; }
+        .screen-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 16px 0; display: grid; grid-template-columns: 1fr auto; gap: 24px; }
+        .screen-card-form { display: flex; flex-direction: column; gap: 12px; }
+        .screen-card-preview-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .preview-device-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+        .preview-device-toggle button { padding: 4px 12px; border: none; background: var(--surface2); color: var(--text2); cursor: pointer; font-size: 12px; font-weight: 600; }
+        .preview-device-toggle button.active { background: var(--accent); color: #fff; }
+        .screen-card-preview { border: 2px solid var(--border); border-radius: 24px; width: 260px; height: 520px; overflow: hidden; position: relative; background: var(--bg); transition: width 0.2s, height 0.2s; }
+        .screen-card-preview.tablet { width: 380px; height: 580px; border-radius: 18px; }
+        .preview-content { padding: 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; height: 100%; overflow-y: auto; }
+        .frequency-toggle-wrapper { display: flex; align-items: center; gap: 10px; }
+        .frequency-toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+        .frequency-toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .frequency-toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #ccc; border-radius: 24px; transition: background 0.2s; }
+        .frequency-toggle-slider::before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+        .frequency-toggle-switch input:checked + .frequency-toggle-slider { background: var(--accent); }
+        .frequency-toggle-switch input:checked + .frequency-toggle-slider::before { transform: translateX(20px); }
+        .upload-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; border-radius: 6px; z-index: 2; }
+        .upload-spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .char-counter { font-size: 12px; color: var(--text2); }
+        .char-counter.over-limit { color: #e74c3c; font-weight: bold; }
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .status-active { background: #27ae60; color: white; }
+        .status-scheduled { background: #f39c12; color: white; }
+        .status-expired { background: #95a5a6; color: white; }
         .devices-search { display:flex;gap:10px;margin-bottom:16px; }
         .devices-search input { flex:1;padding:10px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px; }
         .devices-search button { padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px; }
@@ -2903,6 +2932,7 @@
             <button class="tab-btn" id="tab-backups">Backups</button>
             <button class="tab-btn" id="tab-logs">Logs</button>
             <button class="tab-btn" id="tab-devices">Devices</button>
+            <button class="tab-btn" id="tab-starting-screens">Starting Screens</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
             <button class="alert-bell" id="alert-bell" title="Alerts" aria-label="Alerts">&#128276;<span class="alert-bell-badge" id="alert-bell-badge" style="display:none;">0</span></button>
@@ -4302,6 +4332,24 @@
             </div>
         </div>
 
+        <!-- Starting Screens Panel -->
+        <div id="starting-screens-panel">
+            <h2 style="margin:0 0 4px 0;font-size:20px;">Starting Screens</h2>
+            <p style="margin:0 0 16px 0;color:var(--text2);font-size:14px;">Manage screens shown to users on app launch</p>
+            <button id="add-screen-btn" style="background:var(--accent);color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:14px;">+ Add Screen</button>
+            <div id="starting-screens-list"></div>
+            <div id="starting-screens-empty" style="text-align:center;padding:32px;color:var(--text2);font-size:14px;">
+                No starting screens configured. Click "+ Add Screen" to create one.
+            </div>
+            <div id="deleted-screens-section" style="margin-top:24px;display:none;">
+                <div id="deleted-screens-header" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:12px 0;border-top:1px solid var(--border);user-select:none;">
+                    <span id="deleted-screens-arrow" style="font-size:12px;transition:transform 0.2s;">&#9654;</span>
+                    <span id="deleted-screens-title" style="font-size:14px;font-weight:600;color:var(--text2);">Deleted Screens (0)</span>
+                </div>
+                <div id="deleted-screens-list" style="display:none;"></div>
+            </div>
+        </div>
+
         <!-- Fun Fact Add/Edit Dialog -->
         <div id="funfact-dialog-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
             <div style="background:var(--card);border-radius:12px;padding:24px;max-width:520px;width:90%;max-height:90vh;overflow-y:auto;">
@@ -4502,7 +4550,7 @@
         // Restore saved tab and report filter
         try {
           const savedTab = sessionStorage.getItem("admin_tab");
-          if (savedTab && ["users", "appeals", "reports", "gifts", "economy", "maintenance", "monitor", "banners", "funfacts", "backups", "logs"].includes(savedTab)) {
+          if (savedTab && ["users", "appeals", "reports", "gifts", "economy", "maintenance", "monitor", "banners", "funfacts", "backups", "logs", "devices", "starting-screens"].includes(savedTab)) {
             switchTab(savedTab);
           }
           const savedUserSearch = sessionStorage.getItem("admin_user_search");
@@ -5263,6 +5311,8 @@
     const tabLogs = $("#tab-logs");
     const devicesPanel = $("#devices-panel");
     const tabDevices = $("#tab-devices");
+    const startingScreensPanel = $("#starting-screens-panel");
+    const tabStartingScreens = $("#tab-starting-screens");
     let currentTab = "users";
 
     function switchTab(tab) {
@@ -5280,6 +5330,7 @@
       tabBackups.classList.toggle("active", tab === "backups");
       tabLogs.classList.toggle("active", tab === "logs");
       tabDevices.classList.toggle("active", tab === "devices");
+      tabStartingScreens.classList.toggle("active", tab === "starting-screens");
       $(".search-bar").style.display = tab === "users" ? "" : "none";
       userForm.style.display = tab === "users" ? "" : "none";
       appealsPanel.classList.toggle("visible", tab === "appeals");
@@ -5293,6 +5344,7 @@
       backupsPanel.classList.toggle("visible", tab === "backups");
       logsPanel.classList.toggle("visible", tab === "logs");
       devicesPanel.classList.toggle("visible", tab === "devices");
+      startingScreensPanel.classList.toggle("visible", tab === "starting-screens");
 
       if (tab === "devices") loadDevices();
       if (tab === "backups") loadBackups();
@@ -5313,6 +5365,7 @@
       }
       if (tab === "banners") loadBanners();
       if (tab === "funfacts") loadFunFacts();
+      if (tab === "starting-screens") loadStartingScreens();
     }
 
     tabUsers.addEventListener("click", () => switchTab("users"));
@@ -5327,6 +5380,483 @@
     tabBackups.addEventListener("click", () => switchTab("backups"));
     tabLogs.addEventListener("click", () => switchTab("logs"));
     tabDevices.addEventListener("click", () => switchTab("devices"));
+    tabStartingScreens.addEventListener("click", () => switchTab("starting-screens"));
+
+    // --- Starting Screens ---
+    const startingScreensList = $("#starting-screens-list");
+    const startingScreensEmpty = $("#starting-screens-empty");
+
+    let hasUnsavedScreenChanges = false;
+
+    window.addEventListener("beforeunload", (e) => {
+      if (hasUnsavedScreenChanges) { e.preventDefault(); e.returnValue = ""; }
+    });
+
+    function getStatusBadge(screen) {
+      if (!screen.enabled) {
+        return '<span class="status-badge status-expired">Disabled</span>';
+      }
+      const now = Date.now();
+      if (screen.startDate && new Date(screen.startDate).getTime() > now) {
+        return '<span class="status-badge status-scheduled">Scheduled</span>';
+      }
+      if (screen.endDate && new Date(screen.endDate).getTime() <= now) {
+        return '<span class="status-badge status-expired">Expired</span>';
+      }
+      return '<span class="status-badge status-active">Active</span>';
+    }
+
+    function setupCharCounter(input, min, max, counterEl) {
+      const update = () => {
+        const len = input.value.length;
+        counterEl.textContent = len + "/" + max;
+        counterEl.className = (len < min || len > max) ? "char-counter over-limit" : "char-counter";
+      };
+      input.addEventListener("input", update);
+      update();
+    }
+
+    function getTemplateIconSvg(template, size) {
+      size = size || 80;
+      var half = size / 2;
+      var icons = {
+        warning: '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><circle cx="' + half + '" cy="' + half + '" r="' + half + '" fill="#e74c3c"/><text x="' + half + '" y="' + (half + 10) + '" text-anchor="middle" font-size="' + Math.round(size * 0.5) + '" font-weight="bold" fill="#fff">!</text></svg>',
+        promotional: '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><circle cx="' + half + '" cy="' + half + '" r="' + half + '" fill="#9b59b6"/><polygon points="' + half + ',' + Math.round(size * 0.15) + ' ' + Math.round(size * 0.62) + ',' + Math.round(size * 0.38) + ' ' + Math.round(size * 0.82) + ',' + Math.round(size * 0.38) + ' ' + Math.round(size * 0.68) + ',' + Math.round(size * 0.55) + ' ' + Math.round(size * 0.75) + ',' + Math.round(size * 0.82) + ' ' + half + ',' + Math.round(size * 0.65) + ' ' + Math.round(size * 0.25) + ',' + Math.round(size * 0.82) + ' ' + Math.round(size * 0.32) + ',' + Math.round(size * 0.55) + ' ' + Math.round(size * 0.18) + ',' + Math.round(size * 0.38) + ' ' + Math.round(size * 0.38) + ',' + Math.round(size * 0.38) + '" fill="#fff"/></svg>',
+        announcement: '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><circle cx="' + half + '" cy="' + half + '" r="' + half + '" fill="#3498db"/><path d="M' + Math.round(size * 0.28) + ' ' + Math.round(size * 0.35) + 'L' + Math.round(size * 0.7) + ' ' + Math.round(size * 0.2) + 'V' + Math.round(size * 0.7) + 'L' + Math.round(size * 0.28) + ' ' + Math.round(size * 0.55) + 'Z" fill="#fff"/><rect x="' + Math.round(size * 0.2) + '" y="' + Math.round(size * 0.35) + '" width="' + Math.round(size * 0.1) + '" height="' + Math.round(size * 0.2) + '" rx="2" fill="#fff"/></svg>',
+        info: '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '"><circle cx="' + half + '" cy="' + half + '" r="' + half + '" fill="#2ecc71"/><text x="' + half + '" y="' + (half + 10) + '" text-anchor="middle" font-size="' + Math.round(size * 0.5) + '" font-weight="bold" font-style="italic" fill="#fff">i</text></svg>'
+      };
+      return icons[template] || icons.info;
+    }
+
+    function updatePreview(card) {
+      const preview = card.querySelector(".screen-card-preview");
+      const template = card.querySelector(".template-select").value;
+      const title = card.querySelector(".title-input").value;
+      const message = card.querySelector(".message-input").value;
+      const dismissable = card.querySelector(".dismissable-toggle").checked;
+      const imageType = card.querySelector(".image-type-select").value;
+      const bgImageUrl = card.querySelector(".bg-image-key") ? card.querySelector(".bg-image-key").value : "";
+      const bgFitSelect = card.querySelector(".bg-image-fit-select");
+      const bgFit = bgFitSelect ? bgFitSelect.value : "cover";
+
+      const templateColors = {
+        warning: "#e74c3c",
+        promotional: "#9b59b6",
+        announcement: "#3498db",
+        info: "#2ecc71"
+      };
+      const color = templateColors[template] || "#888";
+
+      var iconHtml;
+      if (imageType === "police_duck") {
+        iconHtml = '<img src="assets/police_duck.png" width="120" height="120" style="border-radius:16px;object-fit:contain;" alt="Police Duck" />';
+      } else {
+        iconHtml = getTemplateIconSvg(template, 80);
+      }
+
+      preview.innerHTML =
+        '<div class="preview-content" style="' + (bgImageUrl ? "background-image:url(" + encodeURI(bgImageUrl) + ");background-size:" + bgFit + ";background-position:center;background-repeat:no-repeat;" : "") + '">' +
+          (bgImageUrl ? '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>' : "") +
+          '<div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;width:100%;">' +
+            '<img src="assets/app-icon.webp" width="48" height="48" style="border-radius:12px;" alt="ShyTalk" />' +
+            '<div style="font-size:18px;font-weight:bold;color:' + (bgImageUrl ? "#fff" : "var(--text)") + ';">ShyTalk</div>' +
+            iconHtml +
+            '<div style="font-size:14px;font-weight:600;text-align:center;color:' + (bgImageUrl ? "#fff" : color) + ';">' + escapeHtml(title || "Title") + '</div>' +
+            '<div style="font-size:12px;color:' + (bgImageUrl ? "#ccc" : "var(--text2)") + ';text-align:center;white-space:pre-wrap;word-break:break-word;">' + escapeHtml(message || "Message") + '</div>' +
+            (dismissable ? '<button style="margin-top:12px;padding:8px 24px;border-radius:8px;background:#007AFF;color:white;border:none;font-size:13px;">Continue</button>' : "") +
+          '</div>' +
+        '</div>';
+    }
+
+    async function uploadBackgroundImage(card, file) {
+      // Show upload overlay and disable inputs
+      var formArea = card.querySelector(".screen-card-form");
+      var inputs = formArea.querySelectorAll("input, select, textarea, button");
+      for (var i = 0; i < inputs.length; i++) inputs[i].disabled = true;
+      var overlay = document.createElement("div");
+      overlay.className = "upload-overlay";
+      overlay.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;"><div class="upload-spinner"></div><div style="color:#fff;font-size:13px;font-weight:600;">Uploading...</div></div>';
+      formArea.style.position = "relative";
+      formArea.appendChild(overlay);
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("path", "starting-screens");
+        const result = await apiCall("POST", "/api/storage/upload", formData);
+        card.querySelector(".bg-image-key").value = result.url;
+        const info = card.querySelector(".compression-info");
+        if (info && result.compressedSize && result.originalSize) {
+          info.textContent = (result.compressedSize / 1024).toFixed(0) + "KB (from " + (result.originalSize / 1024).toFixed(0) + "KB)";
+        }
+        updatePreview(card);
+        hasUnsavedScreenChanges = true;
+      } catch (err) {
+        showToast("Image upload failed: " + err.message, "error");
+      } finally {
+        // Remove overlay and re-enable inputs
+        if (overlay.parentElement) overlay.remove();
+        for (var j = 0; j < inputs.length; j++) inputs[j].disabled = false;
+      }
+    }
+
+    // Bug 11: Device/network allowlist pickers
+    function setupDeviceSearchPicker(card) {
+      var searchInput = card.querySelector(".device-search-input");
+      var searchBtn = card.querySelector(".device-search-btn");
+      var resultsDiv = card.querySelector(".device-search-results");
+      if (!searchInput || !searchBtn) return;
+      async function doSearch() {
+        var q = searchInput.value.trim();
+        if (!q || q.length < 2) { showToast("Enter at least 2 characters to search", "error"); return; }
+        resultsDiv.style.display = "block";
+        resultsDiv.innerHTML = '<div style="padding:10px;color:var(--text2);font-size:13px;">Searching...</div>';
+        try {
+          var result = await apiCall("GET", "/api/admin/devices?q=" + encodeURIComponent(q));
+          var devList = Array.isArray(result) ? result : (result && result.devices ? result.devices : []);
+          if (devList.length === 0) { resultsDiv.innerHTML = '<div style="padding:10px;color:var(--text2);font-size:13px;">No devices found</div>'; return; }
+          var existingIds = getDeviceIdsFromChips(card);
+          resultsDiv.innerHTML = "";
+          devList.forEach(function(dev) {
+            var alreadyAdded = existingIds.includes(dev.id);
+            var row = document.createElement("div");
+            row.style.cssText = "padding:8px 10px;border-bottom:1px solid var(--border);cursor:" + (alreadyAdded ? "default" : "pointer") + ";display:flex;justify-content:space-between;align-items:center;font-size:13px;" + (alreadyAdded ? "opacity:0.5;" : "");
+            row.innerHTML = '<div><strong>' + escapeHtml(dev.id ? dev.id.slice(0, 20) + '...' : '?') + '</strong>' + (dev.uniqueId ? ' <span style="color:var(--text2);">ID: ' + escapeHtml(String(dev.uniqueId)) + '</span>' : '') + (dev.model ? ' <span style="color:var(--text2);">' + escapeHtml(dev.model) + '</span>' : '') + (dev.lastIp ? ' <span style="color:var(--text2);font-size:11px;">IP: ' + escapeHtml(dev.lastIp) + '</span>' : '') + '</div>' + (alreadyAdded ? '<span style="font-size:11px;color:var(--text2);">Added</span>' : '<span style="color:var(--accent);font-weight:600;">+ Add</span>');
+            if (!alreadyAdded) { row.addEventListener("click", function() { addDeviceChip(card, dev.id); syncChipsToTextarea(card, "device"); row.style.opacity = "0.5"; row.style.cursor = "default"; hasUnsavedScreenChanges = true; }); }
+            resultsDiv.appendChild(row);
+          });
+        } catch (err) { resultsDiv.innerHTML = '<div style="padding:10px;color:#e74c3c;font-size:13px;">Search failed</div>'; }
+      }
+      searchBtn.addEventListener("click", doSearch);
+      searchInput.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); doSearch(); } });
+    }
+
+    function setupNetworkPicker(card) {
+      var addInput = card.querySelector(".network-add-input");
+      var addBtn = card.querySelector(".network-add-btn");
+      if (!addInput || !addBtn) return;
+      function doAdd() {
+        var val = addInput.value.trim();
+        if (!val) return;
+        if (!/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(val)) { showToast("Invalid IP or CIDR format", "error"); return; }
+        addNetworkChip(card, val); syncChipsToTextarea(card, "network"); addInput.value = ""; hasUnsavedScreenChanges = true;
+      }
+      addBtn.addEventListener("click", doAdd);
+      addInput.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); doAdd(); } });
+    }
+
+    function getDeviceIdsFromChips(card) { var chips = card.querySelectorAll(".allowlist-device-chips .allowlist-chip"); var ids = []; chips.forEach(function(c) { ids.push(c.getAttribute("data-value")); }); return ids; }
+
+    function addDeviceChip(card, deviceId) {
+      var container = card.querySelector(".allowlist-device-chips"); if (!container) return;
+      var existing = container.querySelectorAll(".allowlist-chip"); for (var i = 0; i < existing.length; i++) { if (existing[i].getAttribute("data-value") === deviceId) return; }
+      var chip = document.createElement("span"); chip.className = "allowlist-chip"; chip.setAttribute("data-value", deviceId);
+      chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:12px;font-family:monospace;color:var(--text);";
+      chip.innerHTML = escapeHtml(deviceId.length > 24 ? deviceId.slice(0, 24) + '...' : deviceId) + '<button type="button" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:0 2px;line-height:1;" title="Remove">&times;</button>';
+      chip.querySelector("button").addEventListener("click", function() { chip.remove(); syncChipsToTextarea(card, "device"); hasUnsavedScreenChanges = true; });
+      container.appendChild(chip);
+    }
+
+    function addNetworkChip(card, network) {
+      var container = card.querySelector(".allowlist-network-chips"); if (!container) return;
+      var existing = container.querySelectorAll(".allowlist-chip"); for (var i = 0; i < existing.length; i++) { if (existing[i].getAttribute("data-value") === network) return; }
+      var chip = document.createElement("span"); chip.className = "allowlist-chip"; chip.setAttribute("data-value", network);
+      chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:12px;font-family:monospace;color:var(--text);";
+      chip.innerHTML = escapeHtml(network) + '<button type="button" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:0 2px;line-height:1;" title="Remove">&times;</button>';
+      chip.querySelector("button").addEventListener("click", function() { chip.remove(); syncChipsToTextarea(card, "network"); hasUnsavedScreenChanges = true; });
+      container.appendChild(chip);
+    }
+
+    function syncChipsToTextarea(card, type) {
+      if (type === "device") { var c = card.querySelectorAll(".allowlist-device-chips .allowlist-chip"); var v = []; c.forEach(function(x) { v.push(x.getAttribute("data-value")); }); card.querySelector(".allowlist-devices").value = v.join("\n"); }
+      else { var c = card.querySelectorAll(".allowlist-network-chips .allowlist-chip"); var v = []; c.forEach(function(x) { v.push(x.getAttribute("data-value")); }); card.querySelector(".allowlist-networks").value = v.join("\n"); }
+    }
+
+    function renderAllowlistChips(card) {
+      var dt = card.querySelector(".allowlist-devices"); var nt = card.querySelector(".allowlist-networks");
+      if (dt && dt.value.trim()) { dt.value.split("\n").map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(id) { addDeviceChip(card, id); }); }
+      if (nt && nt.value.trim()) { nt.value.split("\n").map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(net) { addNetworkChip(card, net); }); }
+    }
+
+    function renderScreenCard(screenId, screen, enabledNonDismissableIds, isLocal) {
+        const card = document.createElement("div");
+        card.className = "screen-card";
+        card.setAttribute("data-screen-id", screenId);
+        if (isLocal) card.setAttribute("data-local", "true");
+        const startDateLocal = screen.startDate ? new Date(screen.startDate).toISOString().slice(0, 16) : "";
+        const endDateLocal = screen.endDate ? new Date(screen.endDate).toISOString().slice(0, 16) : "";
+        const lastModifiedBy = screen.lastModifiedBy || "unknown";
+        const lastModifiedAt = screen.lastModifiedAt ? new Date(screen.lastModifiedAt).toLocaleString() : "unknown";
+        const bgFit = screen.backgroundImageFit || "cover";
+        const otherNonDismissable = enabledNonDismissableIds.filter(function(id) { return id !== screenId; });
+        const dismissableDisabled = otherNonDismissable.length > 0 && screen.enabled;
+        const dismissableTooltip = dismissableDisabled ? "Another enabled screen is already non-dismissable" : "";
+        const statusBadge = getStatusBadge(screen);
+        const inputStyle = "width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;font-family:inherit;";
+        const labelStyle = "display:block;margin-bottom:4px;font-size:13px;color:var(--text2);";
+        const checkboxLabelStyle = "display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text);cursor:pointer;";
+        var frequencyOnce = screen.frequency === "once";
+        card.innerHTML =
+          '<div class="screen-card-form">' +
+            '<div>' + statusBadge + '</div>' +
+            '<div><label style="' + checkboxLabelStyle + '"><input type="checkbox" class="enabled-toggle" ' + (screen.enabled ? 'checked' : '') + ' />Enabled</label></div>' +
+            '<div><label style="' + checkboxLabelStyle + '" ' + (dismissableTooltip ? 'title="' + escapeHtml(dismissableTooltip) + '"' : '') + '><input type="checkbox" class="dismissable-toggle" ' + (screen.dismissable ? 'checked' : '') + (dismissableDisabled ? ' disabled' : '') + ' />Dismissable' + (dismissableDisabled ? ' <span style="font-size:11px;color:var(--text2);">(locked)</span>' : '') + '</label></div>' +
+            '<div><div class="frequency-toggle-wrapper"><label class="frequency-toggle-switch"><input type="checkbox" class="frequency-select" ' + (frequencyOnce ? 'checked' : '') + ' /><span class="frequency-toggle-slider"></span></label><span style="font-size:14px;color:var(--text);">Show only once</span></div></div>' +
+            '<div><label style="' + labelStyle + '">Template</label><select class="template-select" style="' + inputStyle + '"><option value="warning"' + (screen.template === 'warning' ? ' selected' : '') + '>Warning</option><option value="promotional"' + (screen.template === 'promotional' ? ' selected' : '') + '>Promotional</option><option value="announcement"' + (screen.template === 'announcement' ? ' selected' : '') + '>Announcement</option><option value="info"' + (screen.template === 'info' ? ' selected' : '') + '>Info</option></select></div>' +
+            '<div><label style="' + labelStyle + '">Title</label><input type="text" class="title-input" value="' + escapeHtml(screen.title || '') + '" placeholder="Screen title (3-100 chars)" maxlength="100" style="' + inputStyle + '" /><span class="title-counter char-counter"></span></div>' +
+            '<div><label style="' + labelStyle + '">Message</label><textarea class="message-input" placeholder="Screen message (10-500 chars)" maxlength="500" rows="4" style="' + inputStyle + 'resize:vertical;">' + escapeHtml(screen.message || '') + '</textarea><span class="message-counter char-counter"></span></div>' +
+            '<div><label style="' + labelStyle + '">Image Type</label><select class="image-type-select" style="' + inputStyle + '"><option value="none"' + (!screen.imageType || screen.imageType === 'none' ? ' selected' : '') + '>None</option><option value="police_duck"' + (screen.imageType === 'police_duck' ? ' selected' : '') + '>Police Duck</option></select></div>' +
+            '<div><label style="' + labelStyle + '">Background Image</label><input type="hidden" class="bg-image-key" value="' + escapeHtml(screen.backgroundImage || '') + '" /><div style="display:flex;gap:8px;align-items:center;"><input type="file" class="bg-image-file" accept="image/*" style="font-size:13px;color:var(--text);" />' + (screen.backgroundImage ? '<button type="button" class="remove-bg-btn" style="padding:4px 10px;background:var(--danger,#e74c3c);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Remove</button>' : '') + '</div><span class="compression-info" style="font-size:11px;color:var(--text2);margin-top:4px;display:block;"></span>' + (screen.backgroundImage ? '<img src="' + escapeHtml(screen.backgroundImage) + '" style="max-width:120px;max-height:80px;border-radius:6px;margin-top:6px;border:1px solid var(--border);" />' : '') + '</div>' +
+            '<div><label style="' + labelStyle + '">Background Display Mode</label><select class="bg-image-fit-select" style="' + inputStyle + '"><option value="cover"' + (bgFit === 'cover' ? ' selected' : '') + '>Cover (fill, crop)</option><option value="contain"' + (bgFit === 'contain' ? ' selected' : '') + '>Contain (fit, letterbox)</option><option value="100% 100%"' + (bgFit === '100% 100%' ? ' selected' : '') + '>Stretch (fill, distort)</option></select></div>' +
+            '<div><label style="' + labelStyle + '">Start Date</label><input type="datetime-local" class="start-date" value="' + startDateLocal + '" style="' + inputStyle + '" /></div>' +
+            '<div><label style="' + labelStyle + '">End Date</label><input type="datetime-local" class="end-date" value="' + endDateLocal + '" style="' + inputStyle + '" /></div>' +
+            '<div style="border:1px solid var(--border);border-radius:8px;padding:12px;">' +
+              '<label style="' + labelStyle + 'font-weight:600;font-size:14px;margin-bottom:8px;">Testing Allowlist</label>' +
+              '<p style="font-size:12px;color:var(--text2);margin:0 0 10px 0;">Restrict to specific devices or networks for testing. Leave empty to show to all users.</p>' +
+              '<div><label style="' + labelStyle + '">Device IDs <span style="font-size:11px;color:var(--text2);">(search by user ID or device)</span></label>' +
+                '<div style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="device-search-input" placeholder="Search by uniqueId, username, or device model..." style="' + inputStyle + 'flex:1;" /><button type="button" class="device-search-btn" style="padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;">Search</button></div>' +
+                '<div class="device-search-results" style="display:none;max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;background:var(--surface2);"></div>' +
+                '<div class="allowlist-device-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>' +
+                '<textarea class="allowlist-devices" rows="2" style="' + inputStyle + 'resize:vertical;font-family:monospace;font-size:12px;display:none;">' + escapeHtml(screen.allowlist && screen.allowlist.deviceIds ? screen.allowlist.deviceIds.join('\n') : '') + '</textarea>' +
+              '</div>' +
+              '<div style="margin-top:10px;"><label style="' + labelStyle + '">Networks <span style="font-size:11px;color:var(--text2);">(IP addresses or CIDR ranges, e.g. 192.168.1.0/24)</span></label>' +
+                '<div class="allowlist-network-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>' +
+                '<div style="display:flex;gap:6px;"><input type="text" class="network-add-input" placeholder="Enter IP or CIDR (e.g. 10.0.0.1 or 10.0.0.0/8)" style="' + inputStyle + 'flex:1;" /><button type="button" class="network-add-btn" style="padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;">Add</button></div>' +
+                '<textarea class="allowlist-networks" rows="2" style="' + inputStyle + 'resize:vertical;font-family:monospace;font-size:12px;display:none;">' + escapeHtml(screen.allowlist && screen.allowlist.networks ? screen.allowlist.networks.join('\n') : '') + '</textarea>' +
+              '</div>' +
+            '</div>' +
+            '<div style="font-size:12px;color:var(--text2);padding:8px 0;border-top:1px solid var(--border);">Last modified by <strong>' + escapeHtml(lastModifiedBy) + '</strong> at ' + escapeHtml(lastModifiedAt) + '</div>' +
+            '<div style="display:flex;gap:8px;"><button type="button" class="save-screen-btn" style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">Save</button><button type="button" class="delete-screen-btn" style="padding:8px 20px;background:var(--danger,#e74c3c);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">Delete</button></div>' +
+          '</div>' +
+          '<div class="screen-card-preview-wrapper">' +
+            '<div class="preview-device-toggle"><button type="button" class="preview-phone-btn active">Phone</button><button type="button" class="preview-tablet-btn">Tablet</button></div>' +
+            '<div class="screen-card-preview"></div>' +
+          '</div>';
+
+        startingScreensList.appendChild(card);
+        var phoneBtn = card.querySelector(".preview-phone-btn");
+        var tabletBtn = card.querySelector(".preview-tablet-btn");
+        var previewEl = card.querySelector(".screen-card-preview");
+        phoneBtn.addEventListener("click", function() { previewEl.classList.remove("tablet"); phoneBtn.classList.add("active"); tabletBtn.classList.remove("active"); });
+        tabletBtn.addEventListener("click", function() { previewEl.classList.add("tablet"); tabletBtn.classList.add("active"); phoneBtn.classList.remove("active"); });
+        setupCharCounter(card.querySelector(".title-input"), 3, 100, card.querySelector(".title-counter"));
+        setupCharCounter(card.querySelector(".message-input"), 10, 500, card.querySelector(".message-counter"));
+        var previewInputs = card.querySelectorAll(".title-input, .message-input, .template-select, .image-type-select, .dismissable-toggle, .enabled-toggle, .bg-image-fit-select");
+        for (var i = 0; i < previewInputs.length; i++) {
+          previewInputs[i].addEventListener("input", (function(c) { return function() { updatePreview(c); hasUnsavedScreenChanges = true; }; })(card));
+          previewInputs[i].addEventListener("change", (function(c) { return function() { updatePreview(c); hasUnsavedScreenChanges = true; }; })(card));
+        }
+        var otherInputs = card.querySelectorAll(".frequency-select, .start-date, .end-date, .allowlist-devices, .allowlist-networks");
+        for (var j = 0; j < otherInputs.length; j++) {
+          otherInputs[j].addEventListener("input", function() { hasUnsavedScreenChanges = true; });
+          otherInputs[j].addEventListener("change", function() { hasUnsavedScreenChanges = true; });
+        }
+        card.querySelector(".bg-image-file").addEventListener("change", (function(c) { return function(e) { if (e.target.files && e.target.files[0]) uploadBackgroundImage(c, e.target.files[0]); }; })(card));
+        var removeBgBtn = card.querySelector(".remove-bg-btn");
+        if (removeBgBtn) { removeBgBtn.addEventListener("click", (function(c) { return function() { c.querySelector(".bg-image-key").value = ""; var info = c.querySelector(".compression-info"); if (info) info.textContent = ""; updatePreview(c); hasUnsavedScreenChanges = true; var imgP = c.querySelector(".bg-image-file").parentElement.parentElement.querySelector("img"); if (imgP) imgP.remove(); this.remove(); }; })(card)); }
+        setupDeviceSearchPicker(card);
+        setupNetworkPicker(card);
+        renderAllowlistChips(card);
+        card.querySelector(".save-screen-btn").addEventListener("click", (function(id) { return function() { saveScreen(id); }; })(screenId));
+        card.querySelector(".delete-screen-btn").addEventListener("click", (function(id) { return function() { deleteScreen(id); }; })(screenId));
+        updatePreview(card);
+        return card;
+    }
+
+    function renderDeletedScreenCard(screenId, screen) {
+      var card = document.createElement("div");
+      card.className = "screen-card deleted-screen-card";
+      card.setAttribute("data-screen-id", screenId);
+      card.setAttribute("data-deleted", "true");
+      var deletedAt = screen.deletedAt ? new Date(screen.deletedAt).toLocaleString() : "unknown";
+      var deletedBy = screen.deletedBy || "unknown";
+      card.style.cssText = "opacity:0.55;filter:grayscale(0.6);pointer-events:auto;";
+      card.innerHTML =
+        '<div style="padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+            '<div>' +
+              '<div style="font-size:15px;font-weight:600;color:var(--text);text-decoration:line-through;">' + escapeHtml(screen.title || "(no title)") + '</div>' +
+              '<div style="font-size:12px;color:var(--text2);margin-top:4px;">ID: <code>' + escapeHtml(screenId) + '</code></div>' +
+              '<div style="font-size:12px;color:var(--text2);">Template: ' + escapeHtml(screen.template || "unknown") + '</div>' +
+              '<div style="font-size:12px;color:var(--text2);">Deleted by <strong>' + escapeHtml(deletedBy) + '</strong> at ' + escapeHtml(deletedAt) + '</div>' +
+            '</div>' +
+            '<span class="status-badge status-expired">Deleted</span>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;">' +
+            '<button type="button" class="restore-screen-btn" style="padding:6px 16px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Restore</button>' +
+            '<button type="button" class="permanent-delete-btn" style="padding:6px 16px;background:var(--danger,#e74c3c);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Permanently Delete</button>' +
+          '</div>' +
+        '</div>';
+      var restoreBtn = card.querySelector(".restore-screen-btn");
+      restoreBtn.addEventListener("click", async function() {
+        restoreBtn.disabled = true;
+        try {
+          await apiCall("POST", "/api/config/startingScreens/" + encodeURIComponent(screenId) + "/restore");
+          showToast("Screen restored");
+          loadStartingScreens();
+        } catch (err) {
+          showToast("Failed to restore: " + err.message, "error");
+        }
+        restoreBtn.disabled = false;
+      });
+      var permDeleteBtn = card.querySelector(".permanent-delete-btn");
+      permDeleteBtn.addEventListener("click", async function() {
+        if (!confirm("Permanently delete screen \"" + screenId + "\"? This cannot be undone.")) return;
+        permDeleteBtn.disabled = true;
+        try {
+          await apiCall("DELETE", "/api/config/startingScreens/" + encodeURIComponent(screenId) + "?permanent=true");
+          showToast("Screen permanently deleted");
+          loadStartingScreens();
+        } catch (err) {
+          showToast("Failed to permanently delete: " + err.message, "error");
+        }
+        permDeleteBtn.disabled = false;
+      });
+      return card;
+    }
+
+    function renderScreenCards(data) {
+      startingScreensList.innerHTML = "";
+      var deletedScreensList = document.getElementById("deleted-screens-list");
+      var deletedScreensSection = document.getElementById("deleted-screens-section");
+      var deletedScreensTitle = document.getElementById("deleted-screens-title");
+      deletedScreensList.innerHTML = "";
+      var activeScreens = {};
+      var deletedScreens = {};
+      for (var id in data) {
+        if (data[id].deleted) { deletedScreens[id] = data[id]; }
+        else { activeScreens[id] = data[id]; }
+      }
+      var enabledNonDismissableIds = [];
+      for (var aid in activeScreens) { if (activeScreens[aid].enabled && !activeScreens[aid].dismissable) enabledNonDismissableIds.push(aid); }
+      for (var sid in activeScreens) { renderScreenCard(sid, activeScreens[sid], enabledNonDismissableIds, false); }
+      var deletedCount = Object.keys(deletedScreens).length;
+      if (deletedCount > 0) {
+        deletedScreensSection.style.display = "block";
+        deletedScreensTitle.textContent = "Deleted Screens (" + deletedCount + ")";
+        for (var did in deletedScreens) { deletedScreensList.appendChild(renderDeletedScreenCard(did, deletedScreens[did])); }
+      } else {
+        deletedScreensSection.style.display = "none";
+      }
+    }
+
+    async function saveScreen(screenId) {
+      const card = document.querySelector('[data-screen-id="' + screenId + '"]');
+      if (!card) return;
+
+      const title = card.querySelector(".title-input").value;
+      const message = card.querySelector(".message-input").value;
+
+      if (title.length < 3 || title.length > 100) {
+        showToast("Title must be 3-100 characters", "error");
+        return;
+      }
+      if (message.length < 10 || message.length > 500) {
+        showToast("Message must be 10-500 characters", "error");
+        return;
+      }
+
+      const startDateRaw = card.querySelector(".start-date").value;
+      const endDateRaw = card.querySelector(".end-date").value;
+
+      const screenData = {
+        enabled: card.querySelector(".enabled-toggle").checked,
+        dismissable: card.querySelector(".dismissable-toggle").checked,
+        frequency: card.querySelector(".frequency-select").checked ? "once" : "every_launch",
+        template: card.querySelector(".template-select").value,
+        title: title,
+        message: message,
+        imageType: card.querySelector(".image-type-select").value === "none" ? null : (card.querySelector(".image-type-select").value || null),
+        backgroundImage: card.querySelector(".bg-image-key").value || null,
+        startDate: startDateRaw ? new Date(startDateRaw).toISOString() : null,
+        endDate: endDateRaw ? new Date(endDateRaw).toISOString() : null,
+        backgroundImageFit: card.querySelector(".bg-image-fit-select") ? card.querySelector(".bg-image-fit-select").value : "cover",
+        allowlist: {
+          deviceIds: card.querySelector(".allowlist-devices").value.split("\n").map(function(s) { return s.trim(); }).filter(Boolean),
+          networks: card.querySelector(".allowlist-networks").value.split("\n").map(function(s) { return s.trim(); }).filter(Boolean),
+        },
+      };
+
+      const body = {};
+      body[screenId] = screenData;
+
+      const saveBtn = card.querySelector(".save-screen-btn");
+      if (saveBtn) saveBtn.disabled = true;
+      try {
+        await apiCall("PUT", "/api/config/startingScreens", body);
+        showToast("Screen saved");
+        hasUnsavedScreenChanges = false;
+        loadStartingScreens();
+      } catch (err) {
+        showToast(err.message || "Failed to save", "error");
+      } finally {
+        if (saveBtn) saveBtn.disabled = false;
+      }
+    }
+
+    function addScreen() {
+      var screenId = "screen-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
+      var localScreen = {
+        enabled: false, dismissable: true, frequency: "every_launch", template: "info",
+        title: "", message: "", imageType: null, backgroundImage: null, backgroundImageFit: "cover",
+        startDate: null, endDate: null, allowlist: { deviceIds: [], networks: [] },
+        lastModifiedBy: "you", lastModifiedAt: new Date().toISOString(),
+      };
+      var enabledNonDismissableIds = [];
+      startingScreensList.querySelectorAll("[data-screen-id]").forEach(function(c) {
+        var et = c.querySelector(".enabled-toggle"); var dt = c.querySelector(".dismissable-toggle");
+        if (et && et.checked && dt && !dt.checked) enabledNonDismissableIds.push(c.getAttribute("data-screen-id"));
+      });
+      renderScreenCard(screenId, localScreen, enabledNonDismissableIds, true);
+      startingScreensEmpty.style.display = "none";
+      hasUnsavedScreenChanges = true;
+      showToast("New screen added. Fill in the details and click Save.", "info");
+    }
+
+    async function deleteScreen(screenId) {
+      if (!confirm("Delete screen \"" + screenId + "\"? It will be moved to Deleted Screens.")) return;
+
+      const card = document.querySelector('[data-screen-id="' + screenId + '"]');
+      const deleteBtn = card ? card.querySelector(".delete-screen-btn") : null;
+      if (deleteBtn) deleteBtn.disabled = true;
+      try {
+        await apiCall("DELETE", "/api/config/startingScreens/" + encodeURIComponent(screenId));
+        showToast("Screen moved to deleted");
+        hasUnsavedScreenChanges = false;
+        loadStartingScreens();
+      } catch (err) {
+        showToast("Failed to delete screen: " + err.message, "error");
+      } finally {
+        if (deleteBtn) deleteBtn.disabled = false;
+      }
+    }
+
+    // Wire up add screen button
+    document.getElementById("add-screen-btn").addEventListener("click", addScreen);
+
+    // Wire up deleted screens collapsible toggle
+    document.getElementById("deleted-screens-header").addEventListener("click", function() {
+      var list = document.getElementById("deleted-screens-list");
+      var arrow = document.getElementById("deleted-screens-arrow");
+      if (list.style.display === "none") {
+        list.style.display = "block";
+        arrow.style.transform = "rotate(90deg)";
+      } else {
+        list.style.display = "none";
+        arrow.style.transform = "rotate(0deg)";
+      }
+    });
+
+    async function loadStartingScreens() {
+      try {
+        const data = await apiCall("GET", "/api/config/startingScreens/admin");
+        var activeCount = Object.keys(data).filter(function(id) { return !data[id].deleted; }).length;
+        startingScreensEmpty.style.display = activeCount === 0 ? "block" : "none";
+        renderScreenCards(data);
+      } catch (err) {
+        showToast("Failed to load starting screens: " + err.message, "error");
+      }
+    }
 
     // --- Suspension section ---
     const suspensionSection = $("#suspension-section");
@@ -5588,13 +6118,13 @@
             <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">Submitted: ${date}</div>
             ${status === "pending" ? `
             <div class="appeal-actions">
-              <input type="text" placeholder="Admin note (optional)" data-note-for="${appeal.id}">
-              <button class="btn-approve" data-resolve="${appeal.id}" data-status="approved">Approve</button>
-              <button class="btn-deny" data-resolve="${appeal.id}" data-status="denied">Deny</button>
+              <input type="text" placeholder="Admin note (optional)" data-note-for="${escapeHtml(appeal.id)}">
+              <button class="btn-approve" data-resolve="${escapeHtml(appeal.id)}" data-status="approved">Approve</button>
+              <button class="btn-deny" data-resolve="${escapeHtml(appeal.id)}" data-status="denied">Deny</button>
             </div>` : `
             <div style="font-size:12px;color:var(--text2);">
               ${appeal.adminNote ? `Note: ${escapeHtml(appeal.adminNote)}` : ""}
-              ${appeal.reviewedAt ? `Reviewed: ${new Date(appeal.reviewedAt).toLocaleString()}` : ""}
+              ${appeal.reviewedAt ? `Reviewed: ${escapeHtml(new Date(appeal.reviewedAt).toLocaleString())}` : ""}
             </div>`}
             ${reportsHtml}
           `;
@@ -5640,8 +6170,9 @@
     }
 
     function escapeHtml(str) {
+      if (str == null) return '';
       const div = document.createElement("div");
-      div.textContent = str;
+      div.textContent = String(str);
       return div.innerHTML;
     }
 
@@ -5726,7 +6257,7 @@
             <strong>${escapeHtml(r.reason || "Unknown")}</strong> — ${escapeHtml(r.resolvedAction || "?")}
             ${r.severity ? `(Severity: ${r.severity})` : ""}
             <br><span style="color:var(--text2)">${r.adminNote ? escapeHtml(r.adminNote) : ""}</span>
-            <br><span style="color:var(--text2);font-size:11px">${r.resolvedAt ? new Date(r.resolvedAt).toLocaleString() : ""}</span>
+            <br><span style="color:var(--text2);font-size:11px">${r.resolvedAt ? escapeHtml(new Date(r.resolvedAt).toLocaleString()) : ""}</span>
           `;
           reportHistoryList.appendChild(div);
         }
@@ -5971,7 +6502,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
               <div>
                 <strong>Device:</strong> ${escapeHtml(k.deviceId)}<br>
-                <small style="color:var(--text2)">Registered: ${new Date(k.createdAt).toLocaleString()}</small>
+                <small style="color:var(--text2)">Registered: ${escapeHtml(new Date(k.createdAt).toLocaleString())}</small>
               </div>
               <button class="btn btn-danger btn-sm" onclick="revokeBiometricKey('${escapeHtml(uid)}','${escapeHtml(k.deviceId)}')">Revoke</button>
             </div>
@@ -6239,7 +6770,7 @@
           const canTakeover = lockAge > 2 * 60 * 1000;
           headerHtml += `<span class="review-lock-badge">\u{1F512} ${escapeHtml(user.lock.displayName)}`;
           if (canTakeover) {
-            headerHtml += ` <button class="takeover-btn" data-takeover-uid="${userId}">Take Over</button>`;
+            headerHtml += ` <button class="takeover-btn" data-takeover-uid="${escapeHtml(userId)}">Take Over</button>`;
           }
           headerHtml += `</span>`;
         }
@@ -6257,58 +6788,59 @@
             reportsHtml += `<div class="report-item">
               <div class="report-item-header">
                 <span class="report-item-reporter">${reporterDisplay}</span>
-                <span class="report-item-date">${r.timestamp ? new Date(r.timestamp).toLocaleString() : ""}</span>
+                <span class="report-item-date">${r.timestamp ? escapeHtml(new Date(r.timestamp).toLocaleString()) : ""}</span>
               </div>
               <div class="report-item-type">${escapeHtml(r.reason || "Unknown")}</div>
               ${r.description ? `<div class="report-item-text">${escapeHtml(r.description)}</div>` : ""}
               ${r.messageText ? `<div class="report-item-context">\u{1F4AC} ${escapeHtml(r.messageText)}</div>` : ""}
               ${renderEvidence(r.evidenceUrls)}
               ${r.conversationId ? `<div class="console-links">
-                <a href="#" class="view-conversation-btn" data-conv-id="${r.conversationId}" data-highlight-msg="${r.messageId || ""}">View Conversation</a>
+                <a href="#" class="view-conversation-btn" data-conv-id="${escapeHtml(r.conversationId)}" data-highlight-msg="${escapeHtml(r.messageId || "")}">View Conversation</a>
               </div>` : ""}
             </div>`;
           }
           if (reports.length > maxShow) {
-            reportsHtml += `<button class="show-all-btn" data-show-all="${userId}">Show all ${reports.length} reports</button>`;
+            reportsHtml += `<button class="show-all-btn" data-show-all="${escapeHtml(userId)}">Show all ${reports.length} reports</button>`;
           }
           reportsHtml += '</div>';
 
           // Action form (only for pending)
           let actionHtml = "";
           if (currentReportFilter === "pending") {
-            actionHtml = `<div class="report-action-form" data-form-uid="${userId}">
+            const safeUid = escapeHtml(userId);
+            actionHtml = `<div class="report-action-form" data-form-uid="${safeUid}">
               <div class="action-row">
                 <label>Action</label>
-                <select data-action-select="${userId}">
+                <select data-action-select="${safeUid}">
                   <option value="warn">Warn <span class="shortcut-hint">[W]</span></option>
                   <option value="suspend">Suspend <span class="shortcut-hint">[S]</span></option>
                   <option value="dismiss">Dismiss <span class="shortcut-hint">[D]</span></option>
                 </select>
               </div>
-              <div class="action-row" data-severity-row="${userId}">
+              <div class="action-row" data-severity-row="${safeUid}">
                 <label>Severity</label>
                 <div class="severity-radio">
-                  ${[1,2,3,4,5].map((n) => `<input type="radio" name="sev-${userId}" id="sev-${userId}-${n}" value="${n}" ${n===1?"checked":""}><label for="sev-${userId}-${n}">${n} (-${n*5})</label>`).join("")}
+                  ${[1,2,3,4,5].map((n) => `<input type="radio" name="sev-${safeUid}" id="sev-${safeUid}-${n}" value="${n}" ${n===1?"checked":""}><label for="sev-${safeUid}-${n}">${n} (-${n*5})</label>`).join("")}
                 </div>
               </div>
-              <div class="suspension-fields" data-suspension-fields="${userId}">
+              <div class="suspension-fields" data-suspension-fields="${safeUid}">
                 <label>Duration</label>
-                <select data-suspension-days="${userId}">
+                <select data-suspension-days="${safeUid}">
                   <option value="1">1 Day</option>
                   <option value="3">3 Days</option>
                   <option value="7" selected>7 Days</option>
                   <option value="30">30 Days</option>
                   <option value="0">Permanent</option>
                 </select>
-                <label style="min-width:auto;"><input type="checkbox" data-can-appeal="${userId}"> Can Appeal</label>
+                <label style="min-width:auto;"><input type="checkbox" data-can-appeal="${safeUid}"> Can Appeal</label>
               </div>
               <div class="action-row">
                 <label>Note</label>
-                <textarea data-admin-note="${userId}" placeholder="Admin note (optional)"></textarea>
+                <textarea data-admin-note="${safeUid}" placeholder="Admin note (optional)"></textarea>
               </div>
               <div class="resolve-buttons">
-                <button class="btn-resolve" data-resolve-first="${userId}">Resolve Latest</button>
-                <button class="btn-resolve-all" data-resolve-all="${userId}">Resolve All (${user.reportCount})</button>
+                <button class="btn-resolve" data-resolve-first="${safeUid}">Resolve Latest</button>
+                <button class="btn-resolve-all" data-resolve-all="${safeUid}">Resolve All (${user.reportCount})</button>
               </div>
             </div>`;
           }
@@ -6437,7 +6969,7 @@
             for (const m of msgs) {
               const isHighlighted = m.messageId === highlightMsgId;
               const highlightClass = isHighlighted ? " highlighted" : "";
-              const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : "";
+              const time = m.timestamp ? escapeHtml(new Date(m.timestamp).toLocaleString()) : "";
               let contentHtml = "";
               if (m.type === "IMAGE" && m.imageUrls && m.imageUrls.length > 0) {
                 contentHtml = m.imageUrls.map(url => `<img class="conv-msg-image" src="${escapeHtml(url)}" alt="Message image" onclick="window.open(this.src,'_blank')">`).join("");
@@ -7238,7 +7770,7 @@
           txList.innerHTML = '<p style="color:var(--text2)">No transactions found</p>';
         } else {
           txList.innerHTML = txs.map(tx => {
-            const date = tx.timestamp ? new Date(tx.timestamp).toLocaleString() : "—";
+            const date = tx.timestamp ? escapeHtml(new Date(tx.timestamp).toLocaleString()) : "—";
             const details = tx.details || tx.giftName || "";
             return `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
               <div style="display:flex;justify-content:space-between">

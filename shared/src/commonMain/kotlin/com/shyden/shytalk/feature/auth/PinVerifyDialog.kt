@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,12 +16,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.shyden.shytalk.core.util.SecureScreenEffect
 import com.shyden.shytalk.data.repository.AppLockRepository
 import com.shyden.shytalk.data.repository.PinRepository
 import com.shyden.shytalk.feature.auth.components.PinDots
 import com.shyden.shytalk.feature.auth.components.PinKeypad
+import com.shyden.shytalk.resources.*
+import com.shyden.shytalk.resources.Res
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Reusable PIN verification dialog for sensitive actions.
@@ -33,9 +42,11 @@ fun PinVerifyDialog(
     appLockRepository: AppLockRepository,
     onVerified: () -> Unit,
     onDismiss: () -> Unit,
-    title: String = "Verify your identity",
-    subtitle: String = "Enter your PIN to continue",
+    title: String = stringResource(Res.string.pin_verify_title),
+    subtitle: String = stringResource(Res.string.pin_verify_subtitle),
 ) {
+    SecureScreenEffect()
+
     var pinInput by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -45,9 +56,14 @@ fun PinVerifyDialog(
     val deviceId = appLockRepository.storedDeviceId
     if (uniqueId == null || deviceId == null) {
         // Session corrupt — dismiss dialog and let caller handle
-        onDismiss()
+        LaunchedEffect(Unit) { onDismiss() }
         return
     }
+
+    // Pre-resolve strings for use inside coroutine lambdas (non-composable scope)
+    val pinTooShortText = stringResource(Res.string.pin_too_short)
+    val accountLockedText = stringResource(Res.string.pin_account_locked)
+    val verifyFailedText = stringResource(Res.string.pin_verify_failed)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -71,6 +87,7 @@ fun PinVerifyDialog(
                         text = error!!,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -93,7 +110,7 @@ fun PinVerifyDialog(
             TextButton(
                 onClick = {
                     if (pinInput.length < 4) {
-                        error = "PIN too short"
+                        error = pinTooShortText
                         return@TextButton
                     }
                     isLoading = true
@@ -105,27 +122,27 @@ fun PinVerifyDialog(
                                 if (result.customToken != null) {
                                     onVerified()
                                 } else if (result.locked) {
-                                    error = "Account locked"
+                                    error = accountLockedText
                                     pinInput = ""
                                 } else {
-                                    error = "Wrong PIN. ${result.attemptsRemaining} attempts remaining."
+                                    error = getString(Res.string.pin_wrong_attempts, result.attemptsRemaining)
                                     pinInput = ""
                                 }
                             }.onFailure {
                                 isLoading = false
-                                error = "Verification failed"
+                                error = verifyFailedText
                                 pinInput = ""
                             }
                     }
                 },
                 enabled = !isLoading && pinInput.length >= 4,
             ) {
-                Text(if (isLoading) "Verifying..." else "Confirm")
+                Text(if (isLoading) stringResource(Res.string.pin_verifying) else stringResource(Res.string.pin_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.cancel))
             }
         },
     )

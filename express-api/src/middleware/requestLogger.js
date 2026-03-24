@@ -17,6 +17,8 @@ const SENSITIVE_BODY_KEYS = new Set([
   'refreshtoken',
   'secret',
   'credential',
+  'pin',
+  'code',
 ]);
 
 /**
@@ -40,6 +42,11 @@ function sanitizeBody(body) {
  */
 function createRequestLogger(logger) {
   return function requestLoggerMiddleware(req, res, next) {
+    // Skip logging for health checks — they add ~1,440 writes/day for no value
+    if (req.path === '/api/health') {
+      return next();
+    }
+
     const startTime = Date.now();
 
     // Generate request trace ID

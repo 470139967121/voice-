@@ -18,6 +18,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -38,12 +39,13 @@ app.get('/api/health', (req, res) => {
 // Auth routes (mounted BEFORE auth middleware — these handle their own auth)
 app.use('/api', require('./routes/auth'));
 
-// Auth middleware for all /api routes (except health, log-config, and auth)
+// Auth middleware for all /api routes (except health, log-config, auth, and pre-auth endpoints)
 app.use('/api', (req, res, next) => {
   if (
     req.path === '/health' ||
     req.path === '/log-config' ||
     req.path.startsWith('/auth/') ||
+    (req.method === 'GET' && req.path === '/config/startingScreens') ||
     (req.path.startsWith('/test/') && process.env.NODE_ENV !== 'production')
   )
     return next();

@@ -28,7 +28,7 @@ function parseExpiry(duration) {
   const units = { h: 3600000, d: 86400000 };
   const match = duration.match(/^(\d+)([hd])$/);
   if (!match) return null;
-  return new Date(Date.now() + parseInt(match[1]) * units[match[2]]).toISOString();
+  return new Date(Date.now() + parseInt(match[1], 10) * units[match[2]]).toISOString();
 }
 
 // ─── List all active bans ────────────────────────────────────────
@@ -231,13 +231,27 @@ router.post('/admin/bans/unban-all/:uniqueId', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const uniqueId = req.params.uniqueId;
+    const numericId = Number(uniqueId);
+    const stringId = String(uniqueId);
 
-    const [deviceSnap, networkSnap] = await Promise.all([
-      db.collection('deviceBans').where('linkedUniqueId', '==', uniqueId).get(),
-      db.collection('networkBans').where('linkedUniqueId', '==', uniqueId).get(),
+    const [deviceSnapStr, deviceSnapNum, networkSnapStr, networkSnapNum] = await Promise.all([
+      db.collection('deviceBans').where('linkedUniqueId', '==', stringId).get(),
+      db.collection('deviceBans').where('linkedUniqueId', '==', numericId).get(),
+      db.collection('networkBans').where('linkedUniqueId', '==', stringId).get(),
+      db.collection('networkBans').where('linkedUniqueId', '==', numericId).get(),
     ]);
 
-    const allDocs = [...deviceSnap.docs, ...networkSnap.docs];
+    // Deduplicate by doc id in case both queries match the same doc
+    const seen = new Set();
+    const allDocs = [];
+    for (const snap of [deviceSnapStr, deviceSnapNum, networkSnapStr, networkSnapNum]) {
+      for (const d of snap.docs) {
+        if (!seen.has(d.id)) {
+          seen.add(d.id);
+          allDocs.push(d);
+        }
+      }
+    }
 
     await Promise.all(allDocs.map((d) => d.ref.delete()));
 
@@ -273,14 +287,38 @@ router.get('/admin/bans/user/:uniqueId', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const uniqueId = req.params.uniqueId;
+    const numericId = Number(uniqueId);
+    const stringId = String(uniqueId);
 
-    const [deviceSnap, networkSnap] = await Promise.all([
-      db.collection('deviceBans').where('linkedUniqueId', '==', uniqueId).get(),
-      db.collection('networkBans').where('linkedUniqueId', '==', uniqueId).get(),
+    const [deviceSnapStr, deviceSnapNum, networkSnapStr, networkSnapNum] = await Promise.all([
+      db.collection('deviceBans').where('linkedUniqueId', '==', stringId).get(),
+      db.collection('deviceBans').where('linkedUniqueId', '==', numericId).get(),
+      db.collection('networkBans').where('linkedUniqueId', '==', stringId).get(),
+      db.collection('networkBans').where('linkedUniqueId', '==', numericId).get(),
     ]);
 
-    const deviceBans = deviceSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    const networkBans = networkSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Deduplicate by doc id in case both queries match the same doc
+    const seenDevice = new Set();
+    const deviceBans = [];
+    for (const snap of [deviceSnapStr, deviceSnapNum]) {
+      for (const d of snap.docs) {
+        if (!seenDevice.has(d.id)) {
+          seenDevice.add(d.id);
+          deviceBans.push({ id: d.id, ...d.data() });
+        }
+      }
+    }
+
+    const seenNetwork = new Set();
+    const networkBans = [];
+    for (const snap of [networkSnapStr, networkSnapNum]) {
+      for (const d of snap.docs) {
+        if (!seenNetwork.has(d.id)) {
+          seenNetwork.add(d.id);
+          networkBans.push({ id: d.id, ...d.data() });
+        }
+      }
+    }
 
     res.json({ deviceBans, networkBans });
   } catch (err) {

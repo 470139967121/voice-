@@ -57,7 +57,7 @@ async function getFirebaseAuthInfo(uid) {
 /**
  * Normalize snake_case fields and compute GCS display score.
  */
-function enrichUser(user) {
+function normalizeUser(user) {
   user.displayName = user.displayName ?? user.display_name ?? null;
   user.profilePhotoUrl = user.profilePhotoUrl ?? user.profile_photo_url ?? null;
   user.coverPhotoUrl = user.coverPhotoUrl ?? user.cover_photo_url ?? null;
@@ -122,7 +122,7 @@ router.get('/user/:uniqueId', async (req, res) => {
 
     const snap = await db.doc(`users/${req.params.uniqueId}`).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
-    const user = enrichUser({ id: snap.id, ...snap.data() });
+    const user = normalizeUser({ id: snap.id, ...snap.data() });
     await backfillAuthInfo(user, req.params.uniqueId, user.uid || snap.id);
 
     res.json(user);
@@ -309,7 +309,7 @@ router.post('/user/:uniqueId/notify-changes', async (req, res) => {
     ]);
     const relevant = fields.filter((f) => NOTIFIABLE.has(f));
     if (relevant.length === 0) {
-      return res.json({ ok: true, notified: false, reason: 'No notifiable fields' });
+      return res.json({ success: true, notified: false, reason: 'No notifiable fields' });
     }
 
     const friendlyNames = {
@@ -331,7 +331,7 @@ router.post('/user/:uniqueId/notify-changes', async (req, res) => {
       fields: relevant,
     });
 
-    res.json({ ok: true, notified: true, fields: relevant });
+    res.json({ success: true, notified: true, fields: relevant });
   } catch (err) {
     log.error('admin-users', 'notify-changes failed', {
       uniqueId: req.params.uniqueId,
@@ -445,7 +445,7 @@ router.post('/user/:uniqueId/warn', async (req, res) => {
     const body = req.body;
     if (!body?.reason) return res.status(400).json({ error: 'reason is required' });
 
-    const severity = parseInt(body.severity) || 3;
+    const severity = parseInt(body.severity, 10) || 3;
     if (severity < 1 || severity > 5)
       return res.status(400).json({ error: 'severity must be 1-5' });
 
@@ -491,8 +491,8 @@ router.get('/user/:uniqueId/warnings', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-    const startAfter = req.query.startAfter ? parseInt(req.query.startAfter) : null;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const startAfter = req.query.startAfter ? parseInt(req.query.startAfter, 10) : null;
 
     let query = db.collection(`users/${req.params.uniqueId}/warnings`).orderBy('createdAt', 'desc');
 
@@ -629,7 +629,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const messageLimit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const messageLimit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
 
     const snapshot = await db
       .collection(`conversations/${req.params.id}/messages`)
@@ -659,7 +659,7 @@ router.get('/search/uniqueId/:id', async (req, res) => {
   try {
     if (requireAdmin(req, res)) return;
 
-    const uniqueId = parseInt(req.params.id);
+    const uniqueId = parseInt(req.params.id, 10);
     const snapshot = await db.collection('users').where('uniqueId', '==', uniqueId).limit(1).get();
 
     if (snapshot.empty) {
@@ -671,13 +671,13 @@ router.get('/search/uniqueId/:id', async (req, res) => {
         .get();
       if (tempSnap.empty) return res.status(404).json({ error: 'User not found' });
       const doc = tempSnap.docs[0];
-      const user = enrichUser({ id: doc.id, ...doc.data() });
+      const user = normalizeUser({ id: doc.id, ...doc.data() });
       await backfillAuthInfo(user, doc.id, user.uid || doc.id);
       return res.json(user);
     }
 
     const doc = snapshot.docs[0];
-    const user = enrichUser({ id: doc.id, ...doc.data() });
+    const user = normalizeUser({ id: doc.id, ...doc.data() });
     await backfillAuthInfo(user, doc.id, user.uid || doc.id);
 
     res.json(user);
@@ -933,7 +933,7 @@ router.post('/user/:uniqueId/unsuspend', async (req, res) => {
       log.warn('system-pm', 'Failed to send', { uniqueId: req.params.uniqueId, error: e.message });
     }
 
-    clearSuspensionCache(req.params.uniqueId);
+    clearSuspensionCache(Number(req.params.uniqueId));
     res.json({ success: true });
   } catch (err) {
     log.error('admin-users', 'Unsuspend user failed', {
@@ -1014,12 +1014,13 @@ async function autoApplyBans(uniqueId, endDate) {
     .get();
 
   let lastIp = null;
+  const batch = db.batch();
 
   for (const doc of bindingsSnap.docs) {
     const binding = doc.data();
 
     // Create a device ban for each bound device
-    await db.doc(`deviceBans/${doc.id}`).set({
+    batch.set(db.doc(`deviceBans/${doc.id}`), {
       deviceId: doc.id,
       reason: 'Auto-applied: user suspended',
       duration,
@@ -1038,7 +1039,7 @@ async function autoApplyBans(uniqueId, endDate) {
 
   // Create a network ban for the last known IP
   if (lastIp) {
-    await db.doc(`networkBans/${generateId()}`).set({
+    batch.set(db.doc(`networkBans/${generateId()}`), {
       type: 'ip',
       value: lastIp,
       reason: 'Auto-applied: user suspended',
@@ -1050,6 +1051,8 @@ async function autoApplyBans(uniqueId, endDate) {
       createdBy: 'system',
     });
   }
+
+  await batch.commit();
 
   const deviceCount = bindingsSnap.docs.length;
   const networkCount = lastIp ? 1 : 0;
@@ -1070,20 +1073,43 @@ async function autoApplyBans(uniqueId, endDate) {
  * Manually-applied bans are left untouched.
  */
 async function liftAutoAppliedBans(uniqueId, adminUid) {
-  const [deviceSnap, networkSnap] = await Promise.all([
+  const numericId = Number(uniqueId);
+  const stringId = String(uniqueId);
+
+  const [deviceSnapStr, deviceSnapNum, networkSnapStr, networkSnapNum] = await Promise.all([
     db
       .collection('deviceBans')
-      .where('linkedUniqueId', '==', uniqueId)
+      .where('linkedUniqueId', '==', stringId)
+      .where('autoApplied', '==', true)
+      .get(),
+    db
+      .collection('deviceBans')
+      .where('linkedUniqueId', '==', numericId)
       .where('autoApplied', '==', true)
       .get(),
     db
       .collection('networkBans')
-      .where('linkedUniqueId', '==', uniqueId)
+      .where('linkedUniqueId', '==', stringId)
+      .where('autoApplied', '==', true)
+      .get(),
+    db
+      .collection('networkBans')
+      .where('linkedUniqueId', '==', numericId)
       .where('autoApplied', '==', true)
       .get(),
   ]);
 
-  const allDocs = [...deviceSnap.docs, ...networkSnap.docs];
+  // Deduplicate by doc id in case both queries match the same doc
+  const seen = new Set();
+  const allDocs = [];
+  for (const snap of [deviceSnapStr, deviceSnapNum, networkSnapStr, networkSnapNum]) {
+    for (const d of snap.docs) {
+      if (!seen.has(d.id)) {
+        seen.add(d.id);
+        allDocs.push(d);
+      }
+    }
+  }
   if (allDocs.length === 0) return;
 
   await Promise.all(allDocs.map((d) => d.ref.delete()));
@@ -1134,7 +1160,7 @@ async function evictSuspendedUser(uid) {
     for (const [index, seat] of Object.entries(seats)) {
       if (seat && (seat.userId === uid || seat.user_id === uid)) {
         seats[index] = {
-          index: parseInt(index),
+          index: parseInt(index, 10),
           status: 'EMPTY',
           userId: null,
           isMuted: false,

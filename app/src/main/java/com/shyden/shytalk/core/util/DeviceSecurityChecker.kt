@@ -4,57 +4,71 @@ import android.os.Build
 import java.io.File
 
 object DeviceSecurityChecker {
-
-    fun isRooted(): Boolean =
-        hasSuBinary() || hasRootManagementApps() || hasTestKeys() || isSystemWritable()
+    fun isRooted(): Boolean = hasSuBinary() || hasRootManagementApps() || hasTestKeys() || isSystemWritable()
 
     fun isEmulator(): Boolean =
-        checkBuildFingerprint() || checkBuildModel() || checkBuildHardware() ||
-            checkBuildProduct() || checkManufacturer() || hasEmulatorFiles()
+        checkBuildFingerprint() ||
+            checkBuildModel() ||
+            checkBuildHardware() ||
+            checkBuildProduct() ||
+            checkManufacturer() ||
+            hasEmulatorFiles()
 
     fun isUnsafe(): Boolean = isRooted() || isEmulator()
 
     // --- Root checks ---
 
     private fun hasSuBinary(): Boolean {
-        val paths = arrayOf(
-            "/system/bin/su",
-            "/system/xbin/su",
-            "/sbin/su",
-            "/vendor/bin/su",
-        )
+        val paths =
+            arrayOf(
+                "/system/bin/su",
+                "/system/xbin/su",
+                "/sbin/su",
+                "/vendor/bin/su",
+            )
         return paths.any { File(it).exists() }
     }
 
     private fun hasRootManagementApps(): Boolean {
-        val packages = arrayOf(
-            "com.topjohnwu.magisk",
-            "eu.chainfire.supersu",
-            "com.kingroot.kinguser",
-        )
+        val packages =
+            arrayOf(
+                "com.topjohnwu.magisk",
+                "eu.chainfire.supersu",
+                "com.kingroot.kinguser",
+            )
         return try {
             val runtime = Runtime.getRuntime()
             packages.any { pkg ->
-                runtime.exec(arrayOf("pm", "path", pkg)).inputStream.bufferedReader().readLine() != null
+                val process = runtime.exec(arrayOf("pm", "path", pkg))
+                try {
+                    process.inputStream.bufferedReader().use { it.readLine() != null }
+                } finally {
+                    process.waitFor()
+                    process.destroy()
+                }
             }
         } catch (_: Exception) {
             false
         }
     }
 
-    private fun hasTestKeys(): Boolean =
-        Build.TAGS?.contains("test-keys") == true
+    private fun hasTestKeys(): Boolean = Build.TAGS?.contains("test-keys") == true
 
-    private fun isSystemWritable(): Boolean = try {
-        val mount = Runtime.getRuntime().exec("mount")
-        val output = mount.inputStream.bufferedReader().readText()
-        mount.waitFor()
-        output.lines().any { line ->
-            line.contains(" /system") && line.contains("rw")
+    private fun isSystemWritable(): Boolean =
+        try {
+            val mount = Runtime.getRuntime().exec("mount")
+            try {
+                val output = mount.inputStream.bufferedReader().use { it.readText() }
+                mount.waitFor()
+                output.lines().any { line ->
+                    line.contains(" /system") && line.contains("rw")
+                }
+            } finally {
+                mount.destroy()
+            }
+        } catch (_: Exception) {
+            false
         }
-    } catch (_: Exception) {
-        false
-    }
 
     // --- Emulator checks ---
 
@@ -65,7 +79,8 @@ object DeviceSecurityChecker {
 
     private fun checkBuildModel(): Boolean {
         val model = Build.MODEL?.lowercase() ?: return false
-        return model.contains("emulator") || model.contains("android sdk") ||
+        return model.contains("emulator") ||
+            model.contains("android sdk") ||
             model.contains("google_sdk")
     }
 
@@ -79,9 +94,7 @@ object DeviceSecurityChecker {
         return product.contains("sdk") || product.contains("vbox") || product.contains("emulator")
     }
 
-    private fun checkManufacturer(): Boolean =
-        Build.MANUFACTURER?.equals("Genymotion", ignoreCase = true) == true
+    private fun checkManufacturer(): Boolean = Build.MANUFACTURER?.equals("Genymotion", ignoreCase = true) == true
 
-    private fun hasEmulatorFiles(): Boolean =
-        File("/dev/qemu_pipe").exists() || File("/dev/goldfish_pipe").exists()
+    private fun hasEmulatorFiles(): Boolean = File("/dev/qemu_pipe").exists() || File("/dev/goldfish_pipe").exists()
 }

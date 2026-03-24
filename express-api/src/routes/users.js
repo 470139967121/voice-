@@ -54,6 +54,22 @@ router.post('/users', async (req, res) => {
         .json({ error: `Invalid provider. Must be one of: ${VALID_PROVIDERS.join(', ')}` });
     }
 
+    // Server-side age validation — UK OSA + COPPA require minimum age 13
+    if (!dateOfBirth) {
+      return res.status(400).json({ error: 'Date of birth is required' });
+    }
+    const dob = new Date(dateOfBirth);
+    if (isNaN(dob.getTime())) {
+      return res.status(400).json({ error: 'Invalid date of birth format' });
+    }
+    const ageDiff = Date.now() - dob.getTime();
+    const ageDate = new Date(ageDiff);
+    const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+    if (age < 13) {
+      log.warn('users', 'Age validation rejected', { dateOfBirth });
+      return res.status(403).json({ error: 'Must be at least 13 years old' });
+    }
+
     const identityDocId = `${provider}:${identifier}`;
     const counterRef = db.doc('counters/uniqueId');
     const identityRef = db.doc(`identityMap/${identityDocId}`);
@@ -204,6 +220,16 @@ router.get('/users/:uniqueId', async (req, res) => {
     delete user.warningIssuedAt;
     delete user.hasNewWarning;
 
+    // Strip sensitive / PII fields
+    delete user.pinHash;
+    delete user.fcmTokens;
+    delete user.firebaseUid;
+    delete user.email;
+    delete user.dateOfBirth;
+    if (Array.isArray(user.providers)) {
+      user.providers = user.providers.map(({ identifier: _identifier, ...rest }) => rest);
+    }
+
     res.json(user);
   } catch (err) {
     log.error('users', 'GET /users/:uniqueId failed', {
@@ -335,6 +361,11 @@ router.patch('/users/:uniqueId', async (req, res) => {
       }
     }
 
+    // GDPR consent audit trail — store acceptance timestamp
+    if (updates.acceptedLegalVersion !== undefined) {
+      updates.legalAcceptedAt = Date.now();
+    }
+
     log.info('users', 'Updating profile', {
       uniqueId: req.params.uniqueId,
       fields: Object.keys(updates),
@@ -406,7 +437,11 @@ router.post('/users/:uniqueId/link-provider', async (req, res) => {
 
         await db.doc(`users/${uniqueId}`).update({ providers });
 
-        log.info('users', 'Provider re-linked', { uniqueId, provider, identifier });
+        log.info('users', 'Provider re-linked', {
+          uniqueId,
+          provider,
+          identifier: identifier.includes('@') ? `***@${identifier.split('@')[1]}` : '***',
+        });
         return res.json({ success: true, relinked: true });
       }
       // Already active — no-op
@@ -440,7 +475,11 @@ router.post('/users/:uniqueId/link-provider', async (req, res) => {
     ];
     await db.doc(`users/${uniqueId}`).update({ providers });
 
-    log.info('users', 'Provider linked', { uniqueId, provider, identifier });
+    log.info('users', 'Provider linked', {
+      uniqueId,
+      provider,
+      identifier: identifier.includes('@') ? `***@${identifier.split('@')[1]}` : '***',
+    });
     res.json({ success: true });
   } catch (err) {
     log.error('users', 'Link provider failed', {
@@ -504,7 +543,11 @@ router.delete('/users/:uniqueId/link-provider', async (req, res) => {
     );
     await db.doc(`users/${uniqueId}`).update({ providers });
 
-    log.info('users', 'Provider unlinked', { uniqueId, provider, identifier });
+    log.info('users', 'Provider unlinked', {
+      uniqueId,
+      provider,
+      identifier: identifier.includes('@') ? `***@${identifier.split('@')[1]}` : '***',
+    });
     res.json({ success: true });
   } catch (err) {
     log.error('users', 'Unlink provider failed', {
@@ -612,16 +655,16 @@ router.post('/users/:uniqueId/follow', async (req, res) => {
     const targetId = body?.targetUserId;
     if (!targetId) return res.status(400).json({ error: 'targetUserId required' });
     if (requireOwner(req, res)) return;
-    if (req.params.uniqueId === targetId)
+    if (String(req.params.uniqueId) === String(targetId))
       return res.status(400).json({ error: 'Cannot follow yourself' });
 
     const uniqueId = req.params.uniqueId;
     const batch = db.batch();
     batch.update(db.doc(`users/${uniqueId}`), {
-      followingIds: FieldValue.arrayUnion(targetId),
+      followingIds: FieldValue.arrayUnion(Number(targetId)),
     });
     batch.update(db.doc(`users/${targetId}`), {
-      followerIds: FieldValue.arrayUnion(uniqueId),
+      followerIds: FieldValue.arrayUnion(Number(uniqueId)),
     });
     await batch.commit();
     log.info('users', 'User followed', { uniqueId, targetUserId: targetId });
@@ -651,10 +694,10 @@ router.post('/users/:uniqueId/unfollow', async (req, res) => {
     const uniqueId = req.params.uniqueId;
     const batch = db.batch();
     batch.update(db.doc(`users/${uniqueId}`), {
-      followingIds: FieldValue.arrayRemove(targetId),
+      followingIds: FieldValue.arrayRemove(Number(targetId)),
     });
     batch.update(db.doc(`users/${targetId}`), {
-      followerIds: FieldValue.arrayRemove(uniqueId),
+      followerIds: FieldValue.arrayRemove(Number(uniqueId)),
     });
     await batch.commit();
     log.info('users', 'User unfollowed', { uniqueId, targetUserId: targetId });
@@ -684,10 +727,10 @@ router.post('/users/:uniqueId/remove-follower', async (req, res) => {
     const uniqueId = req.params.uniqueId;
     const batch = db.batch();
     batch.update(db.doc(`users/${uniqueId}`), {
-      followerIds: FieldValue.arrayRemove(followerId),
+      followerIds: FieldValue.arrayRemove(Number(followerId)),
     });
     batch.update(db.doc(`users/${followerId}`), {
-      followingIds: FieldValue.arrayRemove(uniqueId),
+      followingIds: FieldValue.arrayRemove(Number(uniqueId)),
     });
     await batch.commit();
     log.info('users', 'Follower removed', { uniqueId, followerUserId: followerId });
