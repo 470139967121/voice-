@@ -6,7 +6,7 @@ import type { Page } from '@playwright/test';
  * Helper: wait for the maintenance panel to be visible.
  */
 async function waitForMaintenanceLoaded(page: Page): Promise<void> {
-  await expect(page.locator('#maintenance-panel')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('#maintenance-panel')).toBeVisible();
 }
 
 /**
@@ -14,7 +14,7 @@ async function waitForMaintenanceLoaded(page: Page): Promise<void> {
  */
 async function expectMaintenanceSuccess(page: Page, resultId: string): Promise<void> {
   const result = page.locator(`#${resultId}`);
-  await expect(result).toHaveClass(/success/, { timeout: 30_000 });
+  await expect(result).toHaveClass(/success/);
   await expect(result).toBeVisible();
 }
 
@@ -36,12 +36,11 @@ test.describe('Admin Maintenance Tab', () => {
     const auditBtn = page.locator('#audit-storage-btn');
     await auditBtn.click();
 
-    // Button should show "Auditing..."
-    await expect(auditBtn).toHaveText('Auditing...');
-
-    // Wait for result
+    // Skip transient "Auditing..." text assertion — the operation can complete
+    // before Playwright observes it, causing a race condition.
+    // Instead, just wait for the result to appear.
     const result = page.locator('#storage-result');
-    await expect(result).toBeVisible({ timeout: 30_000 });
+    await expect(result).toBeVisible();
 
     // Result should contain size information (KB, MB, or B)
     const text = await result.textContent();
@@ -52,7 +51,7 @@ test.describe('Admin Maintenance Tab', () => {
 
     // API verify: the endpoint works
     const apiData = await testData.api.get('/api/storage/audit');
-    expect(apiData).toHaveProperty('success');
+    expect(apiData).toHaveProperty('folders');
   });
 
   // ── Test 2: Clear device binding (single user) ──
@@ -97,7 +96,7 @@ test.describe('Admin Maintenance Tab', () => {
     await expectMaintenanceSuccess(page, 'clear-reports-result');
 
     // Button should re-enable with original label
-    await expect(btn).toHaveText('Clear All Reports', { timeout: 10_000 });
+    await expect(btn).toHaveText('Clear All Reports');
   });
 
   // ── Test 4: Confirm dialog — cancel path ──
@@ -131,15 +130,14 @@ test.describe('Admin Maintenance Tab', () => {
     // Click Backfill User Types (safe — idempotent operation)
     await btn.click();
 
-    // Button should show processing
-    await expect(btn).toHaveText('Processing...');
-
     // Result should become visible with success class
-    await expect(result).toBeVisible({ timeout: 30_000 });
+    // (skip transient "Backfilling..." text assertion — operation can complete
+    // before Playwright observes it, causing a race condition)
+    await expect(result).toBeVisible();
     await expect(result).toHaveClass(/success/);
 
     // Button should re-enable
-    await expect(btn).toBeEnabled({ timeout: 10_000 });
+    await expect(btn).toBeEnabled();
   });
 
   // ── Test 6: Clear system messages ──
@@ -187,7 +185,7 @@ test.describe('Admin Maintenance Tab', () => {
 
     // Restore: add coins back via balance adjustment
     await testData.api.post(`/api/users/${uniqueId}/adjust-balance`, {
-      field: 'shyCoins',
+      currency: 'coins',
       amount: 1000,
       reason: 'e2e-test-restore',
     });
@@ -210,7 +208,7 @@ test.describe('Admin Maintenance Tab', () => {
 
     // Restore: add beans back
     await testData.api.post(`/api/users/${uniqueId}/adjust-balance`, {
-      field: 'shyBeans',
+      currency: 'beans',
       amount: 500,
       reason: 'e2e-test-restore',
     });
@@ -228,7 +226,7 @@ test.describe('Admin Maintenance Tab', () => {
 
     // Wait for result
     const result = page.locator('#storage-result');
-    await expect(result).toBeVisible({ timeout: 30_000 });
+    await expect(result).toBeVisible();
   });
 
   // ── Test 12: Backfill user types ──

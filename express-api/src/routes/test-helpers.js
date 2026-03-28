@@ -3,6 +3,7 @@
  *
  * POST /api/test/setup       → Create test scenario, return testRunId + created IDs
  * GET  /api/test/verify/:col/:id → Read Firestore doc for assertion
+ * POST /api/test/write/:col   → Write a document to an allowed collection
  * POST /api/test/teardown     → Delete all data for a testRunId
  * POST /api/test/reset        → Wipe all test data, restore fixtures
  */
@@ -81,6 +82,7 @@ router.post('/test/setup', async (req, res) => {
         pityCounter: 0,
         isSuspended: false,
         createdAt: now,
+        lastSeenAt: now,
         _testRun: testRunId,
       };
       await db.doc(`users/${uniqueId}`).set(userData);
@@ -327,6 +329,46 @@ router.get('/test/verify/:collection/:id', async (req, res) => {
     }
 
     res.json({ id: doc.id, ...doc.data() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/test/write/:collection — write a document to an allowed collection
+router.post('/test/write/:collection', async (req, res) => {
+  try {
+    if (requireTestApiKey(req, res)) return;
+
+    const { collection } = req.params;
+    const ALLOWED_COLLECTIONS = [
+      'users',
+      'rooms',
+      'gifts',
+      'conversations',
+      'banners',
+      'funFacts',
+      'reports',
+      'suspensionAppeals',
+      'alerts',
+    ];
+    if (!ALLOWED_COLLECTIONS.includes(collection)) {
+      return res.status(400).json({ error: 'Collection not allowed' });
+    }
+
+    const data = req.body;
+    if (!data || typeof data !== 'object') {
+      return res.status(400).json({ error: 'Request body must be a JSON object' });
+    }
+
+    const docId = data.id || generateId();
+    const writeData = { ...data, id: docId };
+    // Propagate _testRun so teardown can clean up documents created via this endpoint
+    if (data._testRun) {
+      writeData._testRun = data._testRun;
+    }
+    await db.doc(`${collection}/${docId}`).set(writeData, { merge: true });
+
+    res.json({ success: true, id: docId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

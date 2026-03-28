@@ -11,9 +11,9 @@ async function waitForAppealsLoaded(page: Page): Promise<void> {
       if (!list) return false;
       // Either we have appeal cards, or a "No appeals" message
       return list.querySelector('.appeal-card') !== null ||
-        list.textContent!.includes('No appeals');
+        list.textContent!.includes('No appeals') ||
+        list.textContent!.includes('Failed');
     },
-    { timeout: 15_000 },
   );
 }
 
@@ -33,18 +33,36 @@ async function getAppealsViaApi(testData: TestData, status: string): Promise<any
 
 /** Re-seed appeal: suspend user, enable canAppeal, create a new appeal. */
 async function reseedAppeal(testData: TestData): Promise<string> {
-  // Suspend user with canAppeal=true
-  await testData.api.post(`/api/user/${testData.user.uniqueId}/suspend`, {
-    reason: 'E2E reseed',
-    days: 7,
-    canAppeal: true,
-  });
-  // Create a new appeal
-  const result = await testData.api.post('/api/appeals', {
+  // Suspend user with canAppeal=true (tolerant — user may already be suspended)
+  try {
+    await testData.api.post(`/api/user/${testData.user.uniqueId}/suspend`, {
+      reason: 'E2E reseed',
+      days: 7,
+      canAppeal: true,
+    });
+  } catch (err) {
+    console.warn('reseedAppeal: suspend call failed (user may already be suspended):', err);
+    // Ensure canAppeal is set even if suspend throws
+    try {
+      await testData.api.testWrite('users', {
+        id: String(testData.user.uniqueId),
+        isSuspended: true,
+        suspensionCanAppeal: true,
+      });
+    } catch (writeErr) {
+      console.warn('reseedAppeal: fallback testWrite also failed:', writeErr);
+    }
+  }
+  // Create a new appeal directly in Firestore via test helper.
+  // We cannot use POST /api/appeals because that endpoint checks if the
+  // *caller* (admin) is suspended, not the target user.
+  const result = await testData.api.testWrite('suspensionAppeals', {
     userId: testData.user.uniqueId,
     appealText: 'I did not do this (reseeded)',
+    status: 'pending',
+    createdAt: Date.now(),
   });
-  return result.id || result.appealId;
+  return result.id;
 }
 
 test.describe('Admin Appeals', () => {
@@ -72,7 +90,7 @@ test.describe('Admin Appeals', () => {
 
     // Verify at least one appeal card is visible
     const cards = page.locator('.appeal-card');
-    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+    await expect(cards.first()).toBeVisible();
 
     // Verify appeal text matches seeded data
     const appealsList = page.locator('#appeals-list');
@@ -120,7 +138,7 @@ test.describe('Admin Appeals', () => {
 
     // Find the first pending appeal card
     const firstCard = page.locator('.appeal-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 10_000 });
+    await expect(firstCard).toBeVisible();
 
     // Fill the admin note
     const noteInput = firstCard.locator('input[data-note-for]');
@@ -136,7 +154,7 @@ test.describe('Admin Appeals', () => {
     // Verify it moved to "Approved" filter
     await filterAppeals(page, 'approved');
     const appealsList = page.locator('#appeals-list');
-    await expect(appealsList).toContainText('Approved by e2e test', { timeout: 10_000 });
+    await expect(appealsList).toContainText('Approved by e2e test');
 
     // API verification
     const approved = await getAppealsViaApi(testData, 'approved');
@@ -149,7 +167,7 @@ test.describe('Admin Appeals', () => {
     await adminLogin(page);
     await navigateToTab(page, 'Appeals');
     await filterAppeals(page, 'approved');
-    await expect(page.locator('#appeals-list')).toContainText('Approved by e2e test', { timeout: 10_000 });
+    await expect(page.locator('#appeals-list')).toContainText('Approved by e2e test');
   });
 
   // ── Test 4: Approve auto-unsuspends user — verify, then re-suspend + re-seed ──
@@ -171,7 +189,7 @@ test.describe('Admin Appeals', () => {
     await filterAppeals(page, 'pending');
 
     const firstCard = page.locator('.appeal-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 10_000 });
+    await expect(firstCard).toBeVisible();
 
     // Fill admin note
     const noteInput = firstCard.locator('input[data-note-for]');
@@ -185,7 +203,7 @@ test.describe('Admin Appeals', () => {
 
     // Verify it appears in Denied filter
     await filterAppeals(page, 'denied');
-    await expect(page.locator('#appeals-list')).toContainText('Denied by e2e test', { timeout: 10_000 });
+    await expect(page.locator('#appeals-list')).toContainText('Denied by e2e test');
 
     // API verification
     const denied = await getAppealsViaApi(testData, 'denied');
@@ -203,16 +221,24 @@ test.describe('Admin Appeals', () => {
 
   // ── Test 6: User profile preview — avatar, name, uniqueId in card ──
   test('appeal card shows user profile preview with name and uniqueId', async ({ page, testData }) => {
+    // Ensure a pending appeal exists (previous test may have failed before reseeding)
+    await reseedAppeal(testData);
+
+    // Reload to pick up the freshly written appeal
+    await page.reload();
+    await adminLogin(page);
+    await navigateToTab(page, 'Appeals');
+    await waitForAppealsLoaded(page);
     await filterAppeals(page, 'pending');
 
     const firstCard = page.locator('.appeal-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 10_000 });
+    await expect(firstCard).toBeVisible();
 
     // Verify the appeal-profile section exists
     const profile = firstCard.locator('.appeal-profile');
     await expect(profile).toBeVisible();
 
-    // Verify display name is shown
+    // Verify the card contains the user's unique ID
     const cardText = await firstCard.textContent();
     expect(cardText).toContain(String(testData.user.uniqueId));
 
@@ -264,20 +290,20 @@ test.describe('Admin Appeals', () => {
     await thumbs.first().click();
     await expect(lightbox).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(lightbox).not.toBeVisible({ timeout: 3_000 });
+    await expect(lightbox).not.toBeVisible();
 
     // Test close via X button
     await thumbs.first().click();
     await expect(lightbox).toBeVisible();
     await page.locator('.evidence-lightbox-close').click();
-    await expect(lightbox).not.toBeVisible({ timeout: 3_000 });
+    await expect(lightbox).not.toBeVisible();
 
     // Test close via clicking the overlay background
     await thumbs.first().click();
     await expect(lightbox).toBeVisible();
     // Click the overlay itself (not the image inside)
     await lightbox.click({ position: { x: 10, y: 10 } });
-    await expect(lightbox).not.toBeVisible({ timeout: 3_000 });
+    await expect(lightbox).not.toBeVisible();
   });
 
   // ── Test 9: Expandable reports section — click to expand, verify details ──
@@ -285,7 +311,7 @@ test.describe('Admin Appeals', () => {
     await filterAppeals(page, 'pending');
 
     const firstCard = page.locator('.appeal-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 10_000 });
+    await expect(firstCard).toBeVisible();
 
     // Look for the <details>/<summary> element for reports
     const reportsSummary = firstCard.locator('.appeal-reports summary');

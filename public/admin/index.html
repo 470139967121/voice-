@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <meta http-equiv="X-Frame-Options" content="DENY">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.google.com https://recaptcha.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.shytalk.shyden.co.uk https://recaptcha.net http://localhost:*; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.google.com https://recaptcha.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: http://localhost:*; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://*.shytalk.shyden.co.uk wss://*.shytalk.shyden.co.uk https://recaptcha.net http://localhost:* ws://localhost:*; frame-ancestors 'none';">
     <meta name="theme-color" content="#0f1117">
     <title>ShyTalk Admin</title>
     <style>
@@ -1296,11 +1296,11 @@
           color: var(--text2);
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          padding: 8px 0;
+          padding: 14px 8px;
           user-select: none;
-          list-style: none;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
         }
-        .spin-history-summary::-webkit-details-marker { display: none; }
         .spin-history-summary::before {
           content: "\25B6";
           display: inline-block;
@@ -1308,7 +1308,7 @@
           font-size: 10px;
           transition: transform 0.2s;
         }
-        .spin-history-toggle[open] > .spin-history-summary::before {
+        .spin-history-toggle.open > .spin-history-summary::before {
           transform: rotate(90deg);
         }
         .spin-history-count {
@@ -2794,6 +2794,16 @@
           .logs-table .col-source, .logs-table .col-user { display: none; }
           .logs-table th:nth-child(3), .logs-table td:nth-child(3),
           .logs-table th:nth-child(4), .logs-table td:nth-child(4) { display: none; }
+          /* Stack screen-card form and preview vertically on narrow viewports */
+          .screen-card { grid-template-columns: 1fr; }
+          .screen-card-preview { width: 100%; max-width: 260px; margin: 0 auto; }
+          .screen-card-preview.tablet { width: 100%; max-width: 380px; }
+          /* Allow alerts table to scroll horizontally */
+          #logs-alerts-section .logs-section-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .alerts-table { min-width: 500px; }
+          /* Allow devices table to scroll horizontally */
+          #devices-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .devices-table { min-width: 700px; }
         }
 
         @media (max-width: 480px) {
@@ -2803,6 +2813,8 @@
           .gifts-table .gift-url-input { width: 60px; font-size: 11px; }
           .gifts-table .gift-order-input { width: 40px; }
           .gift-actions button { padding: 3px 6px; font-size: 11px; }
+          /* Ensure toast fits on narrow screens */
+          .toast { right: 12px; left: 12px; max-width: none; }
         }
 
         /* Profile Preview Panel — side-by-side */
@@ -3932,7 +3944,7 @@
         <!-- Spin Monitor Panel -->
         <div id="monitor-panel">
             <div class="monitor-search">
-                <input type="number" id="monitor-uid-input" placeholder="Enter ShyTalk User ID"
+                <input type="text" inputmode="numeric" pattern="[0-9]*" id="monitor-uid-input" placeholder="Enter ShyTalk User ID"
                        aria-label="User ID to monitor">
                 <button id="monitor-start-btn">Start Monitoring</button>
                 <button id="monitor-stop-btn" class="btn-stop" style="display:none;">Stop</button>
@@ -3995,12 +4007,12 @@
                 </div>
             </div>
 
-            <details class="spin-history-toggle" id="spin-history-toggle">
-                <summary class="spin-history-summary">History <span class="spin-history-count" id="spin-history-count"></span></summary>
-                <div class="spin-feed" id="spin-feed">
+            <div class="spin-history-toggle" id="spin-history-toggle">
+                <div class="spin-history-summary" id="spin-history-summary" role="button" tabindex="0" aria-expanded="false">History <span class="spin-history-count" id="spin-history-count"></span></div>
+                <div class="spin-feed" id="spin-feed" style="display:none;">
                     <div class="spin-feed-empty">Enter a user ID and click "Start Monitoring" to watch spins live.</div>
                 </div>
-            </details>
+            </div>
         </div>
 
         <!-- Banners Panel -->
@@ -4401,7 +4413,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, connectAuthEmulator }
       from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-    import { getFirestore as getClientFirestore, collection, query, where, onSnapshot, getDocs, orderBy, limit, doc, Timestamp }
+    import { getFirestore as getClientFirestore, connectFirestoreEmulator, collection, query, where, onSnapshot, getDocs, orderBy, limit, doc, Timestamp }
       from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
     // --- Config (loaded from config.js) ---
@@ -4415,6 +4427,7 @@
     // Connect to Firebase emulators when running locally or in CI
     if (window.SHYTALK_CONFIG.USE_EMULATORS) {
       connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+      connectFirestoreEmulator(clientDb, "localhost", 8080);
     }
 
     // --- Number input sanitization (global) ---
@@ -4614,6 +4627,7 @@
       stopMonitoring();
       if (logsQuotaInterval) { clearInterval(logsQuotaInterval); logsQuotaInterval = null; }
       if (alertBellInterval) { clearInterval(alertBellInterval); alertBellInterval = null; }
+      if (reportsPollInterval) { clearInterval(reportsPollInterval); reportsPollInterval = null; }
       sessionStorage.clear();
       await signOut(auth);
       userForm.classList.remove("visible");
@@ -4623,11 +4637,20 @@
     });
 
     // --- API helper ---
-    async function apiCall(method, path, body) {
+    // tabAbortController is aborted on each tab switch so that stale
+    // fetch requests from the previous tab are cancelled immediately.
+    let tabAbortController = new AbortController();
+
+    async function apiCall(method, path, body, { signal, skipTabAbort } = {}) {
       const token = await currentUser.getIdToken();
       const opts = {
         method,
         headers: { "Authorization": `Bearer ${token}` },
+        // Use the tab-level AbortController by default so that stale
+        // requests are cancelled when the user switches tabs.  Callers
+        // that must survive tab switches (e.g. user search, save
+        // operations) can pass skipTabAbort: true.
+        signal: signal || (skipTabAbort ? undefined : tabAbortController.signal),
       };
       if (body && !(body instanceof FormData)) {
         opts.headers["Content-Type"] = "application/json";
@@ -4699,6 +4722,29 @@
       return $(`#${map[field]}`);
     }
 
+    const _listSavePending = {};
+    async function autoSaveListField(field) {
+      if (!currentUid) return;
+      _listSavePending[field] = true;
+      if (_listSavePending[field + '_busy']) return;
+      _listSavePending[field + '_busy'] = true;
+      try {
+        while (_listSavePending[field]) {
+          _listSavePending[field] = false;
+          const items = (listWidgetData[field] || [])
+            .map((s) => s.replace(/\s*\(.*\)$/, "").trim())
+            .filter(Boolean)
+            .map(Number)
+            .filter((n) => !isNaN(n));
+          await apiCall("PATCH", `/api/user/${currentUid}`, { [field]: items }, { skipTabAbort: true });
+        }
+      } catch (err) {
+        showToast(`Failed to save ${field}: ${err.message}`, "error");
+      } finally {
+        _listSavePending[field + '_busy'] = false;
+      }
+    }
+
     function renderListWidget(field) {
       const widget = getListWidget(field);
       if (!widget) return;
@@ -4718,6 +4764,7 @@
         btn.addEventListener("click", () => {
           listWidgetData[field].splice(i, 1);
           renderListWidget(field);
+          autoSaveListField(field);
         });
         div.appendChild(btn);
         container.appendChild(div);
@@ -4741,6 +4788,7 @@
         listWidgetData[field].push(val);
         addInput.value = "";
         renderListWidget(field);
+        autoSaveListField(field);
       };
 
       addBtn.addEventListener("click", doAdd);
@@ -5024,6 +5072,14 @@
       const current = getFieldValue(field);
       const original = getOriginalValue(field);
 
+      // Reject empty required fields
+      if (field === "displayName" && (typeof current !== "string" || current.trim().length === 0)) {
+        fieldEl.classList.add("field-save-failed");
+        showFieldFeedback(fieldEl, "failed");
+        showToast("Display name cannot be empty", "error");
+        return;
+      }
+
       // Check if actually changed
       if (TIMESTAMP_FIELDS.includes(field)) {
         const toMinuteEpoch = (v) => {
@@ -5041,13 +5097,14 @@
       showFieldFeedback(fieldEl, "saving");
 
       try {
-        await apiCall("PATCH", "/api/user/" + currentUid + "?silent=true", { [field]: current });
+        await apiCall("PATCH", "/api/user/" + currentUid + "?silent=true", { [field]: current }, { skipTabAbort: true });
         fieldEl.classList.remove("field-saving");
         fieldEl.classList.remove("field-save-failed");
         loadedData[field] = current;
         showFieldFeedback(fieldEl, "saved", previousValue);
         queueNotifyField(field);
       } catch (err) {
+        if (err.name === "AbortError") return;
         fieldEl.classList.remove("field-saving");
         fieldEl.classList.add("field-save-failed");
         showFieldFeedback(fieldEl, "failed");
@@ -5069,7 +5126,7 @@
       showFieldFeedback(el, "saving");
 
       try {
-        await apiCall("PATCH", "/api/user/" + currentUid + "?silent=true", { [fieldName]: value });
+        await apiCall("PATCH", "/api/user/" + currentUid + "?silent=true", { [fieldName]: value }, { skipTabAbort: true });
         el.classList.remove("field-saving");
         el.classList.remove("field-save-failed");
         loadedData[fieldName] = value;
@@ -5097,7 +5154,7 @@
       showFieldFeedback(fieldEl, "saving");
 
       try {
-        await apiCall("PATCH", "/api/user/" + currentUid + "?silent=true", { [fieldName]: previousValue });
+        await apiCall("PATCH", "/api/user/" + currentUid + "?silent=true", { [fieldName]: previousValue }, { skipTabAbort: true });
         fieldEl.classList.remove("field-saving");
         loadedData[fieldName] = previousValue;
 
@@ -5158,7 +5215,7 @@
       const fields = [...autoSaveState.pendingNotifyFields];
       autoSaveState.pendingNotifyFields = [];
       try {
-        await apiCall("POST", "/api/user/" + currentUid + "/notify-changes", { fields: fields });
+        await apiCall("POST", "/api/user/" + currentUid + "/notify-changes", { fields: fields }, { skipTabAbort: true });
       } catch (err) {
         console.warn("Failed to send change notification PM:", err);
       }
@@ -5266,29 +5323,7 @@
     }
 
     // --- Search ---
-    searchBtn.addEventListener("click", doSearch);
-    searchUid.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
-
-    async function doSearch() {
-      const query = searchUid.value.trim();
-      if (!query) return;
-
-      searchBtn.disabled = true;
-      searchBtn.textContent = "Searching...";
-      userForm.classList.remove("visible");
-      document.getElementById("user-subtabs").style.display = "none";
-      document.getElementById("profile-preview").style.display = "none";
-
-      try {
-        const data = await apiCall("GET", `/api/search/uniqueId/${query}`);
-        populateForm(data);
-      } catch (err) {
-        showToast(err.message, "error");
-      }
-
-      searchBtn.disabled = false;
-      searchBtn.textContent = "Search";
-    }
+    // NOTE: The authoritative search handler is doSearchFinal (registered below).
 
     // Save handler removed — replaced by per-field auto-save
 
@@ -5321,6 +5356,9 @@
     let currentTab = "users";
 
     function switchTab(tab) {
+      // Abort in-flight tab-specific API requests from the previous tab
+      tabAbortController.abort();
+      tabAbortController = new AbortController();
       currentTab = tab;
       sessionStorage.setItem("admin_tab", tab);
       tabUsers.classList.toggle("active", tab === "users");
@@ -5415,7 +5453,11 @@
       const update = () => {
         const len = input.value.length;
         counterEl.textContent = len + "/" + max;
-        counterEl.className = (len < min || len > max) ? "char-counter over-limit" : "char-counter";
+        if (len < min || len > max) {
+          counterEl.classList.add("over-limit");
+        } else {
+          counterEl.classList.remove("over-limit");
+        }
       };
       input.addEventListener("input", update);
       update();
@@ -5739,6 +5781,9 @@
       if (deletedCount > 0) {
         deletedScreensSection.style.display = "block";
         deletedScreensTitle.textContent = "Deleted Screens (" + deletedCount + ")";
+        deletedScreensList.style.display = "block";
+        var arrow = document.getElementById("deleted-screens-arrow");
+        if (arrow) arrow.style.transform = "rotate(90deg)";
         for (var did in deletedScreens) { deletedScreensList.appendChild(renderDeletedScreenCard(did, deletedScreens[did])); }
       } else {
         deletedScreensSection.style.display = "none";
@@ -5996,34 +6041,7 @@
       await _originalPopulateForm(data);
       populateSuspensionSection(data);
     }
-    // Re-bind search to use new populate
-    searchBtn.removeEventListener("click", doSearch);
-    searchUid.removeEventListener("keydown", doSearch);
-
-    async function doSearchUpdated() {
-      const query = searchUid.value.trim();
-      if (!query) return;
-
-      searchBtn.disabled = true;
-      searchBtn.textContent = "Searching...";
-      userForm.classList.remove("visible");
-      document.getElementById("user-subtabs").style.display = "none";
-      document.getElementById("profile-preview").style.display = "none";
-
-      try {
-        const data = await apiCall("GET", `/api/search/uniqueId/${query}`);
-        await populateFormWithSuspension(data);
-      } catch (err) {
-        showToast(err.message, "error");
-      }
-
-      searchBtn.disabled = false;
-      searchBtn.textContent = "Search";
-    }
-
-    searchBtn.addEventListener("click", doSearchUpdated);
-    function _keydownUpdated(e) { if (e.key === "Enter") doSearchUpdated(); }
-    searchUid.addEventListener("keydown", _keydownUpdated);
+    // (doSearch / doSearchUpdated removed — doSearchFinal is the authoritative handler)
 
     // --- Appeals ---
     const appealsList = $("#appeals-list");
@@ -6553,10 +6571,6 @@
       btn.addEventListener("click", () => switchUserSubtab(btn.dataset.subtab));
     });
 
-    // Re-bind search again
-    searchBtn.removeEventListener("click", doSearchUpdated);
-    if (typeof _keydownUpdated === 'function') searchUid.removeEventListener("keydown", _keydownUpdated);
-
     async function doSearchFinal() {
       const q = searchUid.value.trim();
       if (!q) return;
@@ -6568,10 +6582,11 @@
       document.getElementById("user-subtabs").style.display = "none";
       document.getElementById("profile-preview").style.display = "none";
       try {
-        const data = await apiCall("GET", `/api/search/uniqueId/${q}`);
+        const data = await apiCall("GET", `/api/search/uniqueId/${q}`, null, { skipTabAbort: true });
         await populateFormFull(data);
         sessionStorage.setItem("admin_user_search", q);
       } catch (err) {
+        if (err.name === "AbortError") return; // Tab switch — silently bail
         showToast(err.message, "error");
         sessionStorage.removeItem("admin_user_search");
       }
@@ -6589,7 +6604,9 @@
     let reportCards = []; // For keyboard navigation
     let selectedCardIndex = -1;
     let reportsUnsubscribe = null; // Firestore listener
+    let reportsPollInterval = null; // Polling fallback for WebKit where onSnapshot is unreliable
     let currentLockedUid = null; // UID we currently hold a review lock on
+    let resolveInProgress = false; // true while a resolve operation is active (prevents snapshot reloads)
     let allReportUsers = []; // All users from API (for infinite scroll)
     let renderedCount = 0;
     const CARDS_PER_PAGE = 20;
@@ -6650,6 +6667,7 @@
         if (!badge) {
           badge = document.createElement("span");
           badge.className = "tab-badge";
+          badge.setAttribute("aria-hidden", "true");
           tabReports.appendChild(badge);
         }
         badge.textContent = count > 99 ? "99+" : count;
@@ -6669,6 +6687,17 @@
           renderReportsFromSnapshot(snapshot);
         }
       });
+
+      // Polling fallback: on WebKit, the Firestore WebChannel transport
+      // may not deliver onSnapshot updates reliably.  Poll the reports
+      // API every 5 seconds while the Reports tab is active so new
+      // reports always appear within a reasonable window.
+      if (reportsPollInterval) clearInterval(reportsPollInterval);
+      reportsPollInterval = setInterval(async () => {
+        if (currentTab !== "reports") return;
+        if (resolveInProgress) return;
+        try { await loadReports(); } catch (_) {}
+      }, 15000);
     }
 
     // --- Review Lock Functions ---
@@ -6691,7 +6720,7 @@
 
     async function releaseLock() {
       if (!currentLockedUid) return;
-      try { await apiCall("DELETE", `/api/report-locks/${currentLockedUid}`); } catch (_) {}
+      try { await apiCall("DELETE", `/api/report-locks/${currentLockedUid}`, null, { skipTabAbort: true }); } catch (_) {}
       currentLockedUid = null;
     }
 
@@ -6707,13 +6736,22 @@
     });
 
     function renderReportsFromSnapshot(snapshot) {
+      // Skip auto-refresh while a resolve operation is in progress to avoid
+      // wiping the DOM (and the action form) mid-flow.
+      if (resolveInProgress) return;
       // This just triggers a reload via API for full data
       loadReports();
     }
 
     async function loadReports() {
       await releaseLock(); // Release any held lock on reload
-      reportsList.innerHTML = '<div style="color:var(--text2);font-size:13px;">Loading...</div>';
+      // Only show the loading indicator when the list is empty — preserve
+      // existing cards during a refresh so that the UI doesn't flash blank
+      // while the API responds.  This also prevents the card count from
+      // momentarily dropping to 0 (which confuses realtime-update checks).
+      if (!reportsList.querySelector('.report-card')) {
+        reportsList.innerHTML = '<div style="color:var(--text2);font-size:13px;">Loading...</div>';
+      }
       try {
         let url = `/api/reports?status=${currentReportFilter}`;
         if (reportSearchQuery) url += `&search=${encodeURIComponent(reportSearchQuery)}`;
@@ -6736,6 +6774,7 @@
         renderMoreCards();
 
       } catch (err) {
+        if (err.name === "AbortError") return; // Tab switch — silently bail
         reportsList.innerHTML = `<div style="color:var(--danger);font-size:13px;">${escapeHtml(err.message)}</div>`;
       }
     }
@@ -6918,14 +6957,20 @@
         btn.dataset.wired = "1";
         btn.addEventListener("click", async () => {
           const uid = btn.dataset.resolveFirst;
-          if (await acquireLock(uid)) resolveReport(uid, false);
+          resolveInProgress = true;
+          try {
+            if (await acquireLock(uid)) await resolveReport(uid, false);
+          } finally { resolveInProgress = false; }
         });
       }
       for (const btn of reportsList.querySelectorAll("[data-resolve-all]:not([data-wired])")) {
         btn.dataset.wired = "1";
         btn.addEventListener("click", async () => {
           const uid = btn.dataset.resolveAll;
-          if (await acquireLock(uid)) resolveReport(uid, true);
+          resolveInProgress = true;
+          try {
+            if (await acquireLock(uid)) await resolveReport(uid, true);
+          } finally { resolveInProgress = false; }
         });
       }
 
@@ -7056,25 +7101,23 @@
       if (!confirmed) return;
 
       try {
+        // Fetch pending reports to get the correct Firebase Auth UID and report IDs
+        const reportsData = await apiCall("GET", `/api/reports?status=pending`);
+        const userReports = reportsData.users.find((u) => String(u.uniqueId || u.uid) === String(reportedUserId));
+        if (!userReports || userReports.reports.length === 0) {
+          showToast("No pending reports found", "error");
+          return;
+        }
+
         let result;
         if (resolveAll) {
-          result = await apiCall("POST", `/api/reports/resolve-all/${reportedUserId}`, {
+          // resolve-all endpoint expects the Firebase Auth UID (reportedUserId), not the uniqueId
+          result = await apiCall("POST", `/api/reports/resolve-all/${userReports.reportedUserId}`, {
             action, severity: action !== "dismiss" ? severity : undefined, adminNote,
             suspensionDays, canAppeal,
           });
         } else {
-          // Find the first pending report for this user
-          const card = reportsList.querySelector(`[data-uid="${reportedUserId}"]`);
-          // Get reportId from data (stored in reports array)
-          const reportItem = card?.querySelector(".report-item");
-          // Need to get the report ID - let's fetch from API
-          const reportsData = await apiCall("GET", `/api/reports?status=pending`);
-          const userReports = reportsData.users.find((u) => String(u.uniqueId || u.uid) === String(reportedUserId));
-          if (!userReports || userReports.reports.length === 0) {
-            showToast("No pending reports found", "error");
-            return;
-          }
-          const reportId = userReports.reports[0].reportId;
+          const reportId = userReports.reports[0].id;
           result = await apiCall("POST", `/api/reports/${reportId}/resolve`, {
             action, severity: action !== "dismiss" ? severity : undefined, adminNote,
             suspensionDays, canAppeal,
@@ -7195,6 +7238,7 @@
         } catch (_) {}
       } else {
         if (reportsUnsubscribe) { reportsUnsubscribe(); reportsUnsubscribe = null; }
+        if (reportsPollInterval) { clearInterval(reportsPollInterval); reportsPollInterval = null; }
       }
     });
 
@@ -7430,8 +7474,9 @@
     populateFormFull = async function(data) {
       await _origPopulateFull(data);
       populateEconomySection(data);
-      loadBackpack(String(data.uniqueId || data.uid));
-      populateGiftSelect();
+      // Load gift catalog first so backpack rendering has category/name data
+      await populateGiftSelect();
+      await loadBackpack(String(data.uniqueId || data.uid));
     };
 
     // Economy getModifiedFields override removed — economy fields now auto-save individually
@@ -7628,7 +7673,7 @@
       const select = document.getElementById("backpack-gift-select");
       if (!select) return;
       try {
-        const raw = await apiCall("GET", "/api/gifts");
+        const raw = await apiCall("GET", "/api/gifts/all");
         _giftCatalog = Array.isArray(raw) ? raw : (raw.gifts || []);
         while (select.options.length > 1) select.remove(1);
         _giftCatalog.forEach(function(g) {
@@ -7800,7 +7845,7 @@
 
     async function loadGifts() {
       try {
-        const raw = await apiCall("GET", "/api/gifts");
+        const raw = await apiCall("GET", "/api/gifts/all");
         giftsCache = Array.isArray(raw) ? raw : (raw.gifts || []);
         clearPendingState();
         renderGiftsTable();
@@ -8136,6 +8181,14 @@
 
     async function loadEconomyConfig() {
       try {
+        // Always refresh gift catalog so milestone gift dropdowns have options
+        try {
+          const raw = await apiCall("GET", "/api/gifts/all");
+          giftsCache = Array.isArray(raw) ? raw : (raw.gifts || []);
+        } catch (giftErr) {
+          console.warn("Failed to load gift catalog for milestones:", giftErr.message);
+        }
+
         const token = await auth.currentUser.getIdToken();
         const resp = await fetch(`${API_BASE}/api/config/economy`, {
           headers: { "Authorization": `Bearer ${token}` },
@@ -8356,7 +8409,8 @@
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || "Save failed");
 
-        info.textContent = `Saved: ${data.updatedFields.join(", ")}`;
+        const fields = Array.isArray(data.updatedFields) ? data.updatedFields : Object.keys(updates);
+        info.textContent = `Saved: ${fields.join(", ")}`;
         info.style.color = "var(--success)";
         showToast("Economy config saved", "success");
       } catch (err) {
@@ -9537,6 +9591,7 @@
     let monitorUid = null;
     let monitorUserUnsub = null;
     let monitorTxUnsub = null;
+    let monitorPollInterval = null; // Polling fallback for WebKit where onSnapshot is unreliable
     let monitorGiftCatalog = {};
     let monitorSeenTxIds = new Set();
     let monitorSession = { spins: 0, spent: 0, bestGift: null, bestValue: 0 };
@@ -9558,7 +9613,35 @@
     const monitorTotalsWrap = $("#monitor-totals-wrap");
     const spinHistoryToggle = $("#spin-history-toggle");
     const spinHistoryCount = $("#spin-history-count");
+    const spinHistorySummary = $("#spin-history-summary");
     let spinEntryCount = 0;
+
+    // Define a custom .open property on the div-based collapsible so that
+    // existing code (and Playwright tests) can read/write it the same way
+    // they would on a native <details> element.
+    {
+      let _histOpen = false;
+      Object.defineProperty(spinHistoryToggle, "open", {
+        get() { return _histOpen; },
+        set(val) {
+          _histOpen = !!val;
+          spinFeed.style.display = _histOpen ? "" : "none";
+          spinHistoryToggle.classList.toggle("open", _histOpen);
+          spinHistorySummary.setAttribute("aria-expanded", String(_histOpen));
+        },
+        configurable: true,
+      });
+      // Click handler — no browser quirks since this is a plain div
+      spinHistorySummary.addEventListener("click", () => {
+        spinHistoryToggle.open = !spinHistoryToggle.open;
+      });
+      spinHistorySummary.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          spinHistoryToggle.open = !spinHistoryToggle.open;
+        }
+      });
+    }
 
     function flashCard(el) {
       el.classList.add("flash");
@@ -9635,7 +9718,7 @@
       const giftCounts = {};
       for (const name of giftNames) {
         if (!giftCounts[name]) {
-          const info = monitorGiftCatalog[name];
+          const info = monitorGiftCatalogByName[name];
           giftCounts[name] = {
             count: 0,
             coinValue: info ? info.coinValue : 0,
@@ -9727,13 +9810,22 @@
 
     }
 
+    // monitorGiftCatalog: keyed by gift document ID
+    // monitorGiftCatalogByName: keyed by gift display name (for spin history lookups)
+    const monitorGiftCatalogByName = {};
     async function loadGiftCatalog() {
       if (Object.keys(monitorGiftCatalog).length > 0) return;
       try {
         const snapshot = await getDocs(collection(clientDb, "gifts"));
         snapshot.forEach(d => {
           const data = d.data();
-          monitorGiftCatalog[data.name] = {
+          monitorGiftCatalog[d.id] = {
+            name: data.name,
+            coinValue: data.coinValue || 0,
+            iconUrl: data.iconUrl || ""
+          };
+          monitorGiftCatalogByName[data.name] = {
+            id: d.id,
             coinValue: data.coinValue || 0,
             iconUrl: data.iconUrl || ""
           };
@@ -9761,17 +9853,14 @@
       monitorStartBtn.textContent = "Connecting...";
 
       try {
-        // Resolve uniqueId to user data
+        // Resolve uniqueId to user data via API (fast HTTP calls)
         const searchResult = await apiCall("GET", `/api/search/uniqueId/${uniqueId}`);
         const resolvedUniqueId = String(searchResult.uniqueId || uniqueId);
         if (!resolvedUniqueId) throw new Error("User not found");
 
-        // Get initial user data
+        // Get initial user data via API (fast HTTP call)
         const userData = await apiCall("GET", `/api/user/${resolvedUniqueId}`);
         monitorUid = resolvedUniqueId;
-
-        // Load gift catalog
-        await loadGiftCatalog();
 
         // Reset session and all-time totals
         monitorSession = { spins: 0, spent: 0, bestGift: null, bestValue: 0 };
@@ -9782,7 +9871,8 @@
         spinHistoryCount.textContent = "";
         spinHistoryToggle.open = false;
 
-        // Show UI
+        // Show UI immediately after API data loads — do NOT wait for
+        // Firestore connections (WebChannel can take 6-7s on WebKit first use)
         monitorStatusEl.style.display = "";
         monitorStats.style.display = "";
         monitorTotalsWrap.style.display = "";
@@ -9801,44 +9891,71 @@
 
         updateMonitorStats(userData);
         updateSessionTotals();
+        updateAllTimeTotals(); // Show "0" initially; background load will update
 
-        // Load all-time stats from full transaction history
-        try {
-          const allTxQuery = query(
-            collection(clientDb, "users", resolvedUniqueId, "transactions"),
-            where("type", "==", "GACHA_PULL"),
-            orderBy("timestamp", "desc")
-          );
-          const allTxSnapshot = await getDocs(allTxQuery);
-          allTxSnapshot.forEach(txDoc => {
-            const tx = txDoc.data();
-            const pulls = tx.pullCount || 1;
-            const spent = Math.abs(tx.amount || 0);
-            monitorAllTime.spins += pulls;
-            monitorAllTime.spent += spent;
+        // Re-enable button immediately (UI is already shown)
+        monitorStartBtn.disabled = false;
+        monitorStartBtn.textContent = "Start Monitoring";
 
-            const names = (tx.details || "").split(",").map(s => s.trim()).filter(Boolean);
-            for (const name of names) {
-              const info = monitorGiftCatalog[name];
-              if (info) {
-                if (info.coinValue > monitorAllTime.bestValue) {
-                  monitorAllTime.bestValue = info.coinValue;
-                  monitorAllTime.bestGift = name;
+        // --- Background Firestore work (non-blocking) ---
+        // Load gift catalog first (needed for all-time stats name→value lookups),
+        // then compute all-time stats. Set up listeners concurrently.
+        // These use Firestore's WebChannel which can be slow on WebKit first use,
+        // but the monitor status UI is already visible above.
+
+        // Load gift catalog, then compute all-time stats (depends on catalog)
+        (async () => {
+          await loadGiftCatalog().catch(err => console.warn("Gift catalog load failed:", err));
+          try {
+            const allTxQuery = query(
+              collection(clientDb, "users", resolvedUniqueId, "transactions"),
+              where("type", "==", "GACHA_PULL"),
+              orderBy("timestamp", "desc")
+            );
+            const allTxSnapshot = await getDocs(allTxQuery);
+            allTxSnapshot.forEach(txDoc => {
+              const tx = txDoc.data();
+              const pulls = tx.pullCount || 1;
+              const spent = Math.abs(tx.amount || 0);
+              monitorAllTime.spins += pulls;
+              monitorAllTime.spent += spent;
+
+              const names = (tx.details || "").split(",").map(s => s.trim()).filter(Boolean);
+              for (const name of names) {
+                const info = monitorGiftCatalogByName[name];
+                if (info) {
+                  if (info.coinValue > monitorAllTime.bestValue) {
+                    monitorAllTime.bestValue = info.coinValue;
+                    monitorAllTime.bestGift = name;
+                  }
                 }
               }
-            }
-          });
-          updateAllTimeTotals();
-        } catch (err) {
-          console.warn("Failed to load all-time stats:", err);
-          $("#alltime-spins").textContent = "?";
-          $("#alltime-spent").textContent = "?";
-        }
+            });
+            updateAllTimeTotals();
+          } catch (err) {
+            console.warn("Failed to load all-time stats:", err);
+            $("#alltime-spins").textContent = "?";
+            $("#alltime-spent").textContent = "?";
+          }
+        })();
 
         // Set up real-time user doc listener
         monitorUserUnsub = onSnapshot(doc(clientDb, "users", resolvedUniqueId), (snap) => {
           if (snap.exists()) updateMonitorStats(snap.data());
         });
+
+        // Polling fallback: on WebKit, the Firestore WebChannel transport
+        // can be extremely slow or fail to deliver onSnapshot updates.
+        // Poll the API every 10 seconds to keep the UI fresh regardless.
+        if (monitorPollInterval) clearInterval(monitorPollInterval);
+        monitorPollInterval = setInterval(async () => {
+          if (!monitorUid) return;
+          if (currentTab !== "monitor") return;
+          try {
+            const freshData = await apiCall("GET", `/api/user/${monitorUid}`, null, { skipTabAbort: true });
+            if (freshData) updateMonitorStats(freshData);
+          } catch (_) { /* API may intermittently fail — ignore */ }
+        }, 10000);
 
         // Set up real-time transactions listener
         const txQuery = query(
@@ -9864,15 +9981,15 @@
         showToast(`Monitor error: ${err.message}`, "error");
         monitorStartBtn.style.display = "";
         monitorStopBtn.style.display = "none";
+        monitorStartBtn.disabled = false;
+        monitorStartBtn.textContent = "Start Monitoring";
       }
-
-      monitorStartBtn.disabled = false;
-      monitorStartBtn.textContent = "Start Monitoring";
     }
 
     function stopMonitoring() {
       if (monitorUserUnsub) { monitorUserUnsub(); monitorUserUnsub = null; }
       if (monitorTxUnsub) { monitorTxUnsub(); monitorTxUnsub = null; }
+      if (monitorPollInterval) { clearInterval(monitorPollInterval); monitorPollInterval = null; }
       monitorUid = null;
       sessionStorage.removeItem("admin_monitor_uid");
 
@@ -9887,6 +10004,12 @@
       if (liveDot) liveDot.remove();
     }
 
+    // Strip non-digit characters from monitor UID input (type="text" for cross-browser compat)
+    monitorUidInput.addEventListener("input", () => {
+      const cleaned = monitorUidInput.value.replace(/\D/g, "");
+      if (cleaned !== monitorUidInput.value) monitorUidInput.value = cleaned;
+    });
+
     // Wire up monitor buttons
     monitorStartBtn.addEventListener("click", () => {
       const uid = monitorUidInput.value.trim();
@@ -9896,10 +10019,28 @@
 
     monitorStopBtn.addEventListener("click", stopMonitoring);
 
-    // Enter key on monitor search
-    monitorUidInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") monitorStartBtn.click();
-    });
+    // Enter key on monitor search — listen to both keydown and keypress for
+    // maximum cross-browser compatibility (WebKit can be unreliable with
+    // keydown on inputmode="numeric" inputs). Guard against double-fire.
+    let monitorEnterHandled = false;
+    function handleMonitorEnter(e) {
+      if (e.key === "Enter" && !monitorEnterHandled) {
+        e.preventDefault();
+        monitorEnterHandled = true;
+        setTimeout(() => { monitorEnterHandled = false; }, 200);
+        const uid = monitorUidInput.value.trim();
+        if (uid) {
+          sessionStorage.setItem("admin_monitor_uid", uid);
+          startMonitoring(uid);
+        }
+      }
+    }
+    monitorUidInput.addEventListener("keydown", handleMonitorEnter);
+    monitorUidInput.addEventListener("keypress", handleMonitorEnter);
+    monitorUidInput.addEventListener("keyup", handleMonitorEnter);
+
+    // No <details>/<summary> workaround needed — the spin history toggle
+    // is now a plain div with a custom .open property (defined above).
 
     // --- Guarantee Next Prize ---
     const guaranteeGiftSelect = $("#guarantee-gift-select");
@@ -9917,30 +10058,11 @@
       // Build sorted list by coin value
       const gifts = Object.entries(monitorGiftCatalog)
         .sort((a, b) => a[1].coinValue - b[1].coinValue);
-      for (const [name, info] of gifts) {
+      for (const [giftId, info] of gifts) {
         const opt = document.createElement("option");
-        // We need the gift ID, not name. Load from Firestore gifts collection
-        opt.value = name; // temporary — we'll look up ID below
-        opt.textContent = `${name} (${info.coinValue.toLocaleString()} coins)`;
+        opt.value = giftId;
+        opt.textContent = `${info.name} (${info.coinValue.toLocaleString()} coins)`;
         guaranteeGiftSelect.appendChild(opt);
-      }
-      // Now fetch actual gift IDs to map name -> id
-      try {
-        const giftsData = await apiCall("GET", "/api/gifts");
-        const giftList = Array.isArray(giftsData) ? giftsData : (giftsData.gifts || []);
-        // Rebuild options with proper IDs
-        while (guaranteeGiftSelect.options.length > 1) {
-          guaranteeGiftSelect.remove(1);
-        }
-        const sorted = giftList.sort((a, b) => (a.coinValue || 0) - (b.coinValue || 0));
-        for (const g of sorted) {
-          const opt = document.createElement("option");
-          opt.value = g.id;
-          opt.textContent = `${g.name} (${(g.coinValue || 0).toLocaleString()} coins)`;
-          guaranteeGiftSelect.appendChild(opt);
-        }
-      } catch (err) {
-        console.warn("Failed to load gifts for guarantee dropdown:", err);
       }
     }
 
@@ -10588,7 +10710,7 @@
           restoreMissingBtn.textContent = 'Restore Missing';
           restoreMissingBtn.title = 'Only fill in fields that are currently null/missing';
           restoreMissingBtn.style.cssText = 'padding:6px 14px;background:#f59e0b;color:#000;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;';
-          restoreMissingBtn.addEventListener('click', () => restoreBackup(b.date, 'missing'));
+          restoreMissingBtn.addEventListener('click', () => restoreBackup(b.date, 'missing-only'));
 
           const fullRestoreBtn = document.createElement('button');
           fullRestoreBtn.textContent = 'Full Restore';
@@ -10627,7 +10749,7 @@
     }
 
     async function restoreBackup(date, mode) {
-      const label = mode === 'full' ? 'FULL RESTORE (overwrites all fields)' : 'Restore missing fields only';
+      const label = mode === 'full' ? 'FULL RESTORE (overwrites all fields)' : mode === 'collection' ? 'Restore collection' : 'Restore missing fields only';
       if (!confirm(label + ' from backup ' + date + '?\n\nThis will update user profiles in Firestore.')) return;
       if (mode === 'full' && !confirm('Are you SURE? Full restore will overwrite current data with backup data.')) return;
       try {
@@ -11416,7 +11538,7 @@
         btn.addEventListener("click", () => {
           const uid = btn.dataset.viewLogsUser;
           if (!uid) return;
-          const logsUserFilter = $("#logs-filter-userId");
+          const logsUserFilter = $("#log-filter-userId");
           if (logsUserFilter) logsUserFilter.value = uid;
           switchTab("logs");
         });
@@ -11799,7 +11921,7 @@
 
     $("#bans-view-logs").addEventListener("click", () => {
       if (!currentUid) return;
-      const logsUserFilter = $("#logs-filter-userId");
+      const logsUserFilter = $("#log-filter-userId");
       if (logsUserFilter) logsUserFilter.value = currentUid;
       switchTab("logs");
     });

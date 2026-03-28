@@ -1,6 +1,12 @@
 import { Page } from '@playwright/test';
 
-const API_BASE = process.env.API_BASE_URL || 'https://dev-api.shytalk.shyden.co.uk';
+if (!process.env.API_BASE_URL) {
+  throw new Error(
+    'API_BASE_URL must be explicitly set for Playwright tests. ' +
+    'Use http://localhost:3000 for local or set it in CI workflows.',
+  );
+}
+const API_BASE = process.env.API_BASE_URL;
 const TEST_API_KEY = process.env.TEST_API_KEY || '';
 
 export interface SetupUserPayload {
@@ -170,6 +176,15 @@ export class AdminApi {
       data: { testRunId },
     });
     if (!res.ok()) throw new Error(`test/teardown → ${res.status()}: ${await res.text()}`);
+  }
+
+  async testWrite(collection: string, data: Record<string, any>): Promise<{ id: string }> {
+    const res = await this.page.request.post(`${API_BASE}/api/test/write/${collection}`, {
+      headers: { 'X-Test-API-Key': TEST_API_KEY, 'Content-Type': 'application/json' },
+      data,
+    });
+    if (!res.ok()) throw new Error(`test/write/${collection} → ${res.status()}: ${await res.text()}`);
+    return res.json();
   }
 
   async testVerify(collection: string, docId: string): Promise<any> {

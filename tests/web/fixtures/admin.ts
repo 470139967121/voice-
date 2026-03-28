@@ -64,7 +64,7 @@ export const test = base.extend<{}, { adminContext: BrowserContext; testData: Te
       const result: SetupResult = await api.testSetup({
         users: [
           {
-            name: `e2e-${prefix}-user`,
+            name: `e2e-${prefix}-u`.slice(0, 20),
             shyCoins: 1000,
             shyBeans: 500,
             deviceInfo: {
@@ -76,12 +76,12 @@ export const test = base.extend<{}, { adminContext: BrowserContext; testData: Te
             },
           },
           {
-            name: `e2e-${prefix}-user2`,
+            name: `e2e-${prefix}-u2`.slice(0, 20),
             shyCoins: 500,
             shyBeans: 250,
           },
         ],
-        banners: [{ title: `e2e-${prefix}-banner` }],
+        banners: [{ title: `e2e-${prefix}-banner`, imageUrl: 'https://placehold.co/600x200/png' }],
         funFacts: [{ text: `e2e-${prefix}-fact`, category: 'Science', emoji: '🔬' }],
         conversations: [{
           participants: ['placeholder'],

@@ -177,26 +177,51 @@ router.get('/reports', async (req, res) => {
       : userFiltered;
 
     // Collect all unique user IDs for enrichment
+    // User documents are keyed by uniqueId (numeric), NOT Firebase Auth UID.
+    // Build a mapping from reportedUserId → reportedUserUniqueId from report data,
+    // then use uniqueId to fetch user documents.
+    const reportedUniqueIdMap = {}; // reportedUserId → reportedUserUniqueId
+    for (const r of filtered) {
+      if (
+        r.reportedUserId &&
+        r.reportedUserUniqueId !== null &&
+        r.reportedUserUniqueId !== undefined
+      ) {
+        reportedUniqueIdMap[r.reportedUserId] = r.reportedUserUniqueId;
+      }
+    }
     const reportedUserIds = [...new Set(filtered.map((r) => r.reportedUserId).filter(Boolean))];
+    const reportedUniqueIds = [
+      ...new Set(
+        reportedUserIds
+          .map((uid) => reportedUniqueIdMap[uid])
+          .filter((id) => id !== null && id !== undefined),
+      ),
+    ];
     const reporterIds = [...new Set(filtered.map((r) => r.reporterId).filter(Boolean))];
 
     // Parallel-fetch user enrichment data and report locks
     const [reportedUserDocs, reporterDocs, locks] = await Promise.all([
-      Promise.all(reportedUserIds.map((uid) => getDoc(`users/${uid}`))),
+      Promise.all(reportedUniqueIds.map((uid) => getDoc(`users/${uid}`))),
       Promise.all(reporterIds.map((uid) => getDoc(`users/${uid}`))),
       queryDocs(db.collection('reportLocks')),
     ]);
 
-    // Build lookup maps
+    // Build lookup maps — index by reportedUserId for enrichment
     const userMap = {};
-    for (let i = 0; i < reportedUserIds.length; i++) {
+    for (let i = 0; i < reportedUniqueIds.length; i++) {
       const reportedUser = reportedUserDocs[i];
       if (reportedUser) {
         const gcsScore = reportedUser.gcsScore ?? reportedUser.gcs_score ?? 100;
         const gcsLastDeduction =
           reportedUser.gcsLastDeductionAt ?? reportedUser.gcs_last_deduction_at ?? null;
         reportedUser.gcsDisplayScore = computeDisplayScore(gcsScore, gcsLastDeduction);
-        userMap[reportedUserIds[i]] = reportedUser;
+        // Find the reportedUserId(s) that map to this uniqueId and index by them
+        for (const [ruid, uniqueId] of Object.entries(reportedUniqueIdMap)) {
+          if (String(uniqueId) === String(reportedUniqueIds[i])) {
+            userMap[ruid] = reportedUser;
+          }
+        }
       }
     }
 
@@ -232,7 +257,11 @@ router.get('/reports', async (req, res) => {
             displayName: r.reportedUser?.displayName ?? r.reportedUser?.display_name ?? null,
             profilePhotoUrl:
               r.reportedUser?.profilePhotoUrl ?? r.reportedUser?.profile_photo_url ?? null,
-            uniqueId: r.reportedUser?.uniqueId ?? r.reportedUser?.unique_id ?? null,
+            uniqueId:
+              r.reportedUser?.uniqueId ??
+              r.reportedUser?.unique_id ??
+              r.reportedUserUniqueId ??
+              null,
             warningCount: r.reportedUser?.warningCount ?? r.reportedUser?.warning_count ?? 0,
             isSuspended: r.reportedUser?.isSuspended ?? r.reportedUser?.is_suspended ?? false,
             gcsDisplayScore: r.reportedUser?.gcsDisplayScore ?? 100,
@@ -247,12 +276,42 @@ router.get('/reports', async (req, res) => {
       return res.json({ users: Object.values(grouped) });
     }
 
-    res.json({ users: enriched });
+    // Resolved/archived: also group by reported user for consistent structure
+    const grouped = {};
+    for (const r of enriched) {
+      const key = r.reportedUserId;
+      if (!grouped[key]) {
+        grouped[key] = {
+          reportedUserId: key,
+          displayName: r.reportedUser?.displayName ?? r.reportedUser?.display_name ?? null,
+          profilePhotoUrl:
+            r.reportedUser?.profilePhotoUrl ?? r.reportedUser?.profile_photo_url ?? null,
+          uniqueId:
+            r.reportedUser?.uniqueId ?? r.reportedUser?.unique_id ?? r.reportedUserUniqueId ?? null,
+          warningCount: r.reportedUser?.warningCount ?? r.reportedUser?.warning_count ?? 0,
+          isSuspended: r.reportedUser?.isSuspended ?? r.reportedUser?.is_suspended ?? false,
+          gcsDisplayScore: r.reportedUser?.gcsDisplayScore ?? 100,
+          lock: r.lock,
+          reports: [],
+          reportCount: 0,
+        };
+      }
+      grouped[key].reports.push(r);
+      grouped[key].reportCount = grouped[key].reports.length;
+    }
+    res.json({ users: Object.values(grouped) });
   } catch (err) {
     log.error('reports', 'GET /api/reports failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Normalise short action names sent by the admin panel to the canonical stored values.
+// The admin panel sends 'warn' / 'suspend' / 'dismiss'; the backend stores 'warned' / 'suspended' / 'dismissed'.
+const ACTION_ALIASES = { warn: 'warned', suspend: 'suspended', dismiss: 'dismissed' };
+function normaliseAction(raw) {
+  return ACTION_ALIASES[raw] || raw || 'dismissed';
+}
 
 // ── Resolve report (admin — full logic) ──
 router.post('/reports/:id/resolve', async (req, res) => {
@@ -260,7 +319,7 @@ router.post('/reports/:id/resolve', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const body = req.body;
-    const action = body?.action || 'dismissed';
+    const action = normaliseAction(body?.action);
     const timestamp = now();
 
     // Fetch the report
@@ -289,14 +348,16 @@ router.post('/reports/:id/resolve', async (req, res) => {
 
     // Warning actions: create warning doc (which deducts GCS)
     if (action === 'warned' || action === 'warned_severe') {
-      const severity = action === 'warned_severe' ? 4 : 2;
+      const severity = body?.severity || (action === 'warned_severe' ? 4 : 2);
       const warningReason = body?.reason || report.reason;
+      // createWarning expects uniqueId (user doc key), not Firebase Auth UID
+      const warnUniqueId = report.reportedUserUniqueId ?? report.reportedUserId;
 
       try {
-        await createWarning(report.reportedUserId, {
+        await createWarning(warnUniqueId, {
           reason: warningReason,
           severity,
-          adminNote: null,
+          adminNote: body?.adminNote || null,
           source: 'report',
           linkedReportId: req.params.id,
           adminUid: req.auth.uid,
@@ -317,6 +378,58 @@ router.post('/reports/:id/resolve', async (req, res) => {
         log.error('reports', 'Failed to create warning from report', {
           reportId: req.params.id,
           error: warnErr.message,
+        });
+      }
+    }
+
+    // Suspension action: suspend the reported user
+    if (action === 'suspended') {
+      const suspensionDays = body?.suspensionDays ? Number(body.suspensionDays) : 0;
+      const canAppeal = body?.canAppeal ?? false;
+      const endTimestamp = suspensionDays > 0 ? Date.now() + suspensionDays * 86400000 : null;
+
+      // User documents are keyed by uniqueId, not Firebase Auth UID
+      const reportedUniqueId = report.reportedUserUniqueId ?? report.reportedUserId;
+      const reportedUser = await getDoc(`users/${reportedUniqueId}`);
+
+      try {
+        await db.doc(`users/${reportedUniqueId}`).update({
+          isSuspended: true,
+          suspensionReason: report.reason || 'Moderation action',
+          suspensionStartDate: timestamp,
+          suspensionEndDate: endTimestamp,
+          suspensionCanAppeal: canAppeal,
+          suspendedBy: req.auth.uid,
+          preSuspensionDisplayName: reportedUser?.displayName ?? reportedUser?.display_name ?? null,
+          preSuspensionProfilePhotoUrl:
+            reportedUser?.profilePhotoUrl ?? reportedUser?.profile_photo_url ?? null,
+          preSuspensionCoverPhotoUrl:
+            reportedUser?.coverPhotoUrl ?? reportedUser?.cover_photo_url ?? null,
+          displayName: 'Suspended Account',
+          profilePhotoUrl: null,
+          coverPhotoUrl: null,
+          avatarUrl: null,
+          description: null,
+          currentRoomId: null,
+        });
+
+        // Evict from rooms (fire-and-forget)
+        evictSuspendedUser(reportedUniqueId).catch((err) =>
+          log.error('reports', 'Failed to evict suspended user from resolve', {
+            userId: reportedUniqueId,
+            error: err.message,
+          }),
+        );
+
+        // Send suspension PM (fire-and-forget)
+        sendSystemPm(
+          report.reportedUserId,
+          `Your account has been suspended.\n\nReason: ${report.reason || 'Moderation action'}${canAppeal ? '\n\nYou may submit an appeal.' : ''}`,
+        ).catch(() => {});
+      } catch (susErr) {
+        log.error('reports', 'Failed to suspend user from resolve', {
+          reportId: req.params.id,
+          error: susErr.message,
         });
       }
     }
@@ -363,7 +476,7 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const body = req.body;
-    const action = body?.action || 'dismissed';
+    const action = normaliseAction(body?.action);
     const timestamp = now();
 
     // Fetch all pending reports for this user
@@ -389,14 +502,16 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
 
     // Apply warning if applicable (uses createWarning to write warning doc + update user)
     if (action === 'warned' || action === 'warned_severe') {
-      const severity = action === 'warned_severe' ? 4 : 2;
+      const severity = body?.severity || (action === 'warned_severe' ? 4 : 2);
       const warningReason = body?.reason || 'Multiple reports';
+      // createWarning expects uniqueId (user doc key), not Firebase Auth UID
+      const warnUniqueId = reports[0]?.reportedUserUniqueId ?? req.params.userId;
 
       try {
-        await createWarning(req.params.userId, {
+        await createWarning(warnUniqueId, {
           reason: warningReason,
           severity,
-          adminNote: null,
+          adminNote: body?.adminNote || null,
           source: 'report',
           linkedReportId: null,
           adminUid: req.auth.uid,
@@ -417,6 +532,81 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
         log.error('reports', 'Failed to create warning from bulk resolve', {
           userId: req.params.userId,
           error: warnErr.message,
+        });
+      }
+    }
+
+    // Suspension action: suspend the reported user
+    if (action === 'suspended') {
+      const suspensionDays = body?.suspensionDays ? Number(body.suspensionDays) : 0;
+      const canAppeal = body?.canAppeal ?? false;
+      const endTimestamp = suspensionDays > 0 ? Date.now() + suspensionDays * 86400000 : null;
+
+      // User docs are keyed by uniqueId; get it from the report data
+      const reportedUniqueId = reports[0]?.reportedUserUniqueId ?? req.params.userId;
+      const reportedUser = await getDoc(`users/${reportedUniqueId}`);
+
+      try {
+        await db.doc(`users/${reportedUniqueId}`).update({
+          isSuspended: true,
+          suspensionReason: 'Multiple reports',
+          suspensionStartDate: timestamp,
+          suspensionEndDate: endTimestamp,
+          suspensionCanAppeal: canAppeal,
+          suspendedBy: req.auth.uid,
+          preSuspensionDisplayName: reportedUser?.displayName ?? reportedUser?.display_name ?? null,
+          preSuspensionProfilePhotoUrl:
+            reportedUser?.profilePhotoUrl ?? reportedUser?.profile_photo_url ?? null,
+          preSuspensionCoverPhotoUrl:
+            reportedUser?.coverPhotoUrl ?? reportedUser?.cover_photo_url ?? null,
+          displayName: 'Suspended Account',
+          profilePhotoUrl: null,
+          coverPhotoUrl: null,
+          avatarUrl: null,
+          description: null,
+          currentRoomId: null,
+        });
+
+        evictSuspendedUser(reportedUniqueId).catch((err) =>
+          log.error('reports', 'Failed to evict suspended user from bulk resolve', {
+            userId: reportedUniqueId,
+            error: err.message,
+          }),
+        );
+
+        // Send suspension PM (fire-and-forget)
+        sendSystemPm(
+          reports[0]?.reportedUserId ?? req.params.userId,
+          `Your account has been suspended.\n\nReason: Multiple reports${canAppeal ? '\n\nYou may submit an appeal.' : ''}`,
+        ).catch((err) =>
+          log.error('reports', 'Failed to send suspension PM from bulk resolve', {
+            userId: req.params.userId,
+            error: err.message,
+          }),
+        );
+
+        // Audit log for suspension action
+        db.doc(`adminAuditLog/${generateId()}`)
+          .set(
+            {
+              adminId: req.auth.uid,
+              action: 'SUSPEND',
+              targetUserId: reportedUniqueId,
+              details: `Suspended via bulk resolve (${reports.length} reports)`,
+              createdAt: timestamp,
+            },
+            { merge: true },
+          )
+          .catch((err) =>
+            log.error('reports', 'Failed to write suspension audit log from bulk resolve', {
+              userId: reportedUniqueId,
+              error: err.message,
+            }),
+          );
+      } catch (susErr) {
+        log.error('reports', 'Failed to suspend user from bulk resolve', {
+          userId: req.params.userId,
+          error: susErr.message,
         });
       }
     }
@@ -841,19 +1031,32 @@ router.get('/appeals', async (req, res) => {
     if (statusFilter) {
       query = query.where('status', '==', statusFilter);
     }
-    query = query.orderBy('createdAt', 'desc').limit(100);
+    query = query.limit(100);
 
     const appeals = await queryDocs(query);
+    appeals.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
     // Enrich with user data (display name, uniqueId, suspension info)
     const enriched = await Promise.all(
       appeals.map(async (a) => {
         const uid = a.userId ?? a.user_id;
         const userData = uid ? await getDoc(`users/${uid}`) : null;
+        const userUniqueId = userData?.uniqueId ?? userData?.unique_id ?? null;
         return {
           ...a,
+          userUniqueId,
+          uniqueId: userUniqueId,
+          userDisplayName: userData?.displayName ?? userData?.display_name ?? null,
           displayName: userData?.displayName ?? userData?.display_name ?? null,
-          uniqueId: userData?.uniqueId ?? userData?.unique_id ?? null,
+          userInfo: {
+            uniqueId: userUniqueId,
+            displayName: userData?.displayName ?? userData?.display_name ?? null,
+            profilePhotoUrl: userData?.profilePhotoUrl ?? userData?.profile_photo_url ?? null,
+            suspensionReason: userData?.suspensionReason ?? userData?.suspension_reason ?? null,
+            suspensionStartDate:
+              userData?.suspensionStartDate ?? userData?.suspension_start_date ?? null,
+            suspensionEndDate: userData?.suspensionEndDate ?? userData?.suspension_end_date ?? null,
+          },
           suspensionReason: userData?.suspensionReason ?? userData?.suspension_reason ?? null,
           suspensionEndDate: userData?.suspensionEndDate ?? userData?.suspension_end_date ?? null,
         };
@@ -885,11 +1088,13 @@ router.patch('/appeals/:id', async (req, res) => {
     const userId = appeal.userId ?? appeal.user_id;
 
     // Update the appeal document
-    await db.doc(`suspensionAppeals/${req.params.id}`).update({
+    const appealUpdate = {
       status: status,
       reviewedBy: req.auth.uid,
       reviewedAt: timestamp,
-    });
+    };
+    if (body.adminNote !== undefined) appealUpdate.adminNote = body.adminNote;
+    await db.doc(`suspensionAppeals/${req.params.id}`).update(appealUpdate);
 
     // Update user's appeal status on the user document
     await db.doc(`users/${userId}`).update({

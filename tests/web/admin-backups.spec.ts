@@ -9,7 +9,7 @@ import type { Page } from '@playwright/test';
 async function waitForBackupsLoaded(page: Page): Promise<void> {
   // Wait for the "Loading..." text to disappear
   const list = page.locator('#backups-list');
-  await expect(list).not.toHaveText('Loading...', { timeout: 30_000 });
+  await expect(list).not.toHaveText('Loading...');
 }
 
 /**
@@ -67,11 +67,11 @@ test.describe('Admin Backups Tab', () => {
     await expect(triggerBtn).toHaveText('Backing up...');
 
     // Wait for the button to return to normal (backup complete)
-    await expect(triggerBtn).toHaveText('Backup Now', { timeout: 60_000 });
+    await expect(triggerBtn).toHaveText('Backup Now');
 
     // Verify toast appeared with success message
     const toast = page.locator('#toast');
-    await expect(toast).toContainText('Backup complete', { timeout: 10_000 });
+    await expect(toast).toContainText('Backup complete');
 
     // Wait for list to refresh
     await waitForBackupsLoaded(page);
@@ -109,7 +109,7 @@ test.describe('Admin Backups Tab', () => {
     if (backups.length === 0) {
       // Trigger one first
       await page.locator('#backup-trigger-btn').click();
-      await expect(page.locator('#backup-trigger-btn')).toHaveText('Backup Now', { timeout: 60_000 });
+      await expect(page.locator('#backup-trigger-btn')).toHaveText('Backup Now');
       await waitForBackupsLoaded(page);
     }
 
@@ -144,7 +144,7 @@ test.describe('Admin Backups Tab', () => {
     const firstBackupDate = backups[0].date;
 
     // Set up download listener before clicking
-    const downloadPromise = page.waitForEvent('download', { timeout: 30_000 }).catch(() => null);
+    const downloadPromise = page.waitForEvent('download').catch(() => null);
 
     // Click Download on the first backup
     const firstRow = backupRows(page).first();
@@ -160,7 +160,7 @@ test.describe('Admin Backups Tab', () => {
     } else {
       // If no download event, check for toast
       const toast = page.locator('#toast');
-      await expect(toast).toContainText('Download', { timeout: 10_000 });
+      await expect(toast).toContainText('Download');
     }
 
     // API verify: the endpoint returns data
@@ -187,24 +187,26 @@ test.describe('Admin Backups Tab', () => {
 
     // Verify toast shows success
     const toast = page.locator('#toast');
-    await expect(toast).toContainText('Restored', { timeout: 30_000 });
+    await expect(toast).toContainText('Restored');
   });
 
   // ── Test 7: Recover photos ──
   test('recover photos from R2 shows success toast', async ({ page }) => {
+    // Accept the confirm dialog
+    page.on('dialog', (dialog) => dialog.accept());
+
     // Click Recover Photos from R2
     const recoverBtn = page.locator('#backup-recover-photos-btn');
     await recoverBtn.click();
 
-    // Button should show processing state
-    await expect(recoverBtn).toBeDisabled();
-
-    // Wait for completion and verify toast
+    // Wait for the toast to appear (success or error) — the API call may
+    // resolve/reject almost instantly in emulator mode, so checking the
+    // intermediate disabled state is racy.
     const toast = page.locator('#toast');
-    await expect(toast).toBeVisible({ timeout: 30_000 });
+    await expect(toast).toBeVisible();
 
-    // Button should re-enable
-    await expect(recoverBtn).toBeEnabled({ timeout: 30_000 });
+    // Button should re-enable after the operation completes
+    await expect(recoverBtn).toBeEnabled();
   });
 
   // ── Test 8: Empty state display ──

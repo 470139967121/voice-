@@ -6,7 +6,7 @@ import type { Page } from '@playwright/test';
  * Helper: wait for the gifts table to finish loading (tbody has at least one row).
  */
 async function waitForGiftsTable(page: Page): Promise<void> {
-  await expect(page.locator('#gifts-tbody tr')).not.toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator('#gifts-tbody tr')).not.toHaveCount(0);
 }
 
 /**
@@ -43,11 +43,12 @@ async function applyAndConfirm(page: Page): Promise<void> {
   await expect(overlay).toHaveClass(/visible/);
 
   const submitBtn = page.locator('#gift-confirm-submit');
-  // If submit is disabled (wheel count !== 16), the test caller must handle that
+  // Fail fast with a clear message if the button is disabled (wheel count !== 16)
+  await expect(submitBtn).toBeEnabled();
   await submitBtn.click();
 
   // Wait for the overlay to close (changes applied and table refreshed)
-  await expect(overlay).not.toHaveClass(/visible/, { timeout: 30_000 });
+  await expect(overlay).not.toHaveClass(/visible/);
 }
 
 /**
@@ -111,6 +112,10 @@ test.describe('Admin Gifts Tab', () => {
     // Fill fields
     await fillAndTrigger(page, newRow.locator('[data-field="name"]'), giftName);
     await fillAndTrigger(page, newRow.locator('[data-field="coinValue"]'), giftValue);
+
+    // Uncheck showOnWheel so the wheel count stays at 16 (required for Apply)
+    const wheelCheckbox = newRow.locator('[data-field="showOnWheel"]');
+    if (await wheelCheckbox.isChecked()) await wheelCheckbox.uncheck();
 
     // Apply button should show badge with count >= 1
     const badge = page.locator('#gift-apply-btn .badge');
@@ -180,7 +185,7 @@ test.describe('Admin Gifts Tab', () => {
     await waitForGiftsTable(page);
 
     const reloadedRow = page.locator(`#gifts-tbody tr[data-gift-id="${giftId}"]`);
-    await expect(reloadedRow.locator('[data-field="name"]')).toHaveValue(newName, { timeout: 10_000 });
+    await expect(reloadedRow.locator('[data-field="name"]')).toHaveValue(newName);
     await expect(reloadedRow.locator('[data-field="coinValue"]')).toHaveValue(newValue);
 
     // Restore original values
@@ -197,6 +202,9 @@ test.describe('Admin Gifts Tab', () => {
     const newRow = page.locator('#gifts-tbody tr.gift-new').last();
     await fillAndTrigger(page, newRow.locator('[data-field="name"]'), tempName);
     await fillAndTrigger(page, newRow.locator('[data-field="coinValue"]'), '1');
+    // Uncheck showOnWheel so the wheel count stays at 16
+    const wheelCb = newRow.locator('[data-field="showOnWheel"]');
+    if (await wheelCb.isChecked()) await wheelCb.uncheck();
     await applyAndConfirm(page);
 
     // Reload to get the persisted gift row with its server-assigned ID
@@ -343,7 +351,28 @@ test.describe('Admin Gifts Tab', () => {
     const giftId = await row.getAttribute('data-gift-id');
     const originalWheel = await row.locator('[data-field="showOnWheel"]').isChecked();
 
-    // Toggle showOnWheel checkbox (leave showInStore true so the gift stays visible)
+    // Find a compensating gift row with the opposite showOnWheel state.
+    // Toggling both keeps the wheel count at exactly 16 (required for Apply).
+    const allRows = page.locator('#gifts-tbody tr[data-gift-id]');
+    const rowCount = await allRows.count();
+    let compensateRow: ReturnType<Page['locator']> | null = null;
+    let compensateId = '';
+    let compensateOriginal = false;
+    for (let i = 0; i < rowCount; i++) {
+      const r = allRows.nth(i);
+      const rId = await r.getAttribute('data-gift-id');
+      if (rId === giftId) continue;
+      const rWheel = await r.locator('[data-field="showOnWheel"]').isChecked();
+      if (rWheel !== originalWheel) {
+        compensateRow = r;
+        compensateId = rId || '';
+        compensateOriginal = rWheel;
+        break;
+      }
+    }
+    expect(compensateRow).not.toBeNull();
+
+    // Toggle showOnWheel on the primary gift
     const wheelCheckbox = row.locator('[data-field="showOnWheel"]');
     if (originalWheel) {
       await wheelCheckbox.uncheck();
@@ -352,8 +381,18 @@ test.describe('Admin Gifts Tab', () => {
     }
     await wheelCheckbox.dispatchEvent('change');
 
-    // Row should be marked as modified
+    // Toggle the compensating gift in the opposite direction to maintain wheel count = 16
+    const compCheckbox = compensateRow!.locator('[data-field="showOnWheel"]');
+    if (compensateOriginal) {
+      await compCheckbox.uncheck();
+    } else {
+      await compCheckbox.check();
+    }
+    await compCheckbox.dispatchEvent('change');
+
+    // Both rows should be marked as modified
     await expect(row).toHaveClass(/gift-modified/);
+    await expect(compensateRow!).toHaveClass(/gift-modified/);
 
     // Apply and confirm
     await applyAndConfirm(page);
@@ -375,7 +414,7 @@ test.describe('Admin Gifts Tab', () => {
     expect(apiGift).toBeTruthy();
     expect(apiGift.showOnWheel).toBe(!originalWheel);
 
-    // Restore original state
+    // Restore original state for both gifts
     const restoredCheckbox = reloadedRow.locator('[data-field="showOnWheel"]');
     if (originalWheel) {
       await restoredCheckbox.check();
@@ -383,6 +422,16 @@ test.describe('Admin Gifts Tab', () => {
       await restoredCheckbox.uncheck();
     }
     await restoredCheckbox.dispatchEvent('change');
+
+    const reloadedCompRow = page.locator(`#gifts-tbody tr[data-gift-id="${compensateId}"]`);
+    const restoredCompCheckbox = reloadedCompRow.locator('[data-field="showOnWheel"]');
+    if (compensateOriginal) {
+      await restoredCompCheckbox.check();
+    } else {
+      await restoredCompCheckbox.uncheck();
+    }
+    await restoredCompCheckbox.dispatchEvent('change');
+
     await applyAndConfirm(page);
   });
 
@@ -408,7 +457,7 @@ test.describe('Admin Gifts Tab', () => {
 
     // The row may have moved due to order change — find by gift ID
     const reloadedRow = page.locator(`#gifts-tbody tr[data-gift-id="${giftId}"]`);
-    await expect(reloadedRow.locator('[data-field="order"]')).toHaveValue(newOrder, { timeout: 10_000 });
+    await expect(reloadedRow.locator('[data-field="order"]')).toHaveValue(newOrder);
 
     // Restore original order
     await fillAndTrigger(page, reloadedRow.locator('[data-field="order"]'), originalOrder);
@@ -443,7 +492,7 @@ test.describe('Admin Gifts Tab', () => {
     await waitForGiftsTable(page);
 
     const reloadedRow = page.locator(`#gifts-tbody tr[data-gift-id="${giftId}"]`);
-    await expect(reloadedRow.locator('[data-field="animationUrl"]')).toHaveValue(testAnim, { timeout: 10_000 });
+    await expect(reloadedRow.locator('[data-field="animationUrl"]')).toHaveValue(testAnim);
     await expect(reloadedRow.locator('[data-field="soundUrl"]')).toHaveValue(testSound);
     await expect(reloadedRow.locator('[data-field="iconUrl"]')).toHaveValue(testIcon);
 

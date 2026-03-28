@@ -7,7 +7,7 @@ import type { Page } from '@playwright/test';
  */
 async function goToMonitor(page: Page): Promise<void> {
   await navigateToTab(page, 'Spin Monitor');
-  await expect(page.locator('#monitor-panel')).toHaveClass(/visible/, { timeout: 10_000 });
+  await expect(page.locator('#monitor-panel')).toHaveClass(/visible/);
 }
 
 /**
@@ -16,11 +16,10 @@ async function goToMonitor(page: Page): Promise<void> {
 async function startMonitoringUser(page: Page, uniqueId: number): Promise<void> {
   await page.locator('#monitor-uid-input').fill(String(uniqueId));
   await page.locator('#monitor-start-btn').click();
-  // Wait for status to become visible and stats to load
-  await expect(page.locator('#monitor-status')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('#monitor-stats')).toBeVisible({ timeout: 15_000 });
-  // Wait for the dot to go live
-  await expect(page.locator('#monitor-dot')).toHaveClass(/live/, { timeout: 10_000 });
+  // UI should appear immediately (admin panel shows status before Firestore connects)
+  await expect(page.locator('#monitor-status')).toBeVisible();
+  await expect(page.locator('#monitor-stats')).toBeVisible();
+  await expect(page.locator('#monitor-dot')).toHaveClass(/live/);
 }
 
 /**
@@ -28,8 +27,7 @@ async function startMonitoringUser(page: Page, uniqueId: number): Promise<void> 
  */
 async function stopMonitoring(page: Page): Promise<void> {
   await page.locator('#monitor-stop-btn').click();
-  // Wait for start button to reappear
-  await expect(page.locator('#monitor-start-btn')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('#monitor-start-btn')).toBeVisible();
 }
 
 test.describe('Admin Spin Monitor', () => {
@@ -92,11 +90,13 @@ test.describe('Admin Spin Monitor', () => {
   test('start via Enter key — type uniqueId, press Enter, verify starts', async ({ page, testData }) => {
     const input = page.locator('#monitor-uid-input');
     await input.fill(String(testData.user.uniqueId));
-    await input.press('Enter');
+    // Use page.keyboard.press — WebKit does not reliably fire keydown
+    // from locator.press() on inputs with inputmode="numeric"
+    await input.focus();
+    await page.keyboard.press('Enter');
 
-    // Wait for monitoring to start
-    await expect(page.locator('#monitor-status')).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('#monitor-dot')).toHaveClass(/live/, { timeout: 10_000 });
+    await expect(page.locator('#monitor-status')).toBeVisible();
+    await expect(page.locator('#monitor-dot')).toHaveClass(/live/);
 
     // Verify it started correctly
     const statusText = await page.locator('#monitor-status-text').textContent();
@@ -169,7 +169,7 @@ test.describe('Admin Spin Monitor', () => {
 
     // Wait for guarantee gift dropdown to be populated
     const giftSelect = page.locator('#guarantee-gift-select');
-    await expect(giftSelect.locator('option')).not.toHaveCount(1, { timeout: 15_000 });
+    await expect(giftSelect.locator('option')).not.toHaveCount(1);
 
     // Select the first non-placeholder gift option
     const options = giftSelect.locator('option');
@@ -179,14 +179,14 @@ test.describe('Admin Spin Monitor', () => {
     expect(firstGiftValue).toBeTruthy();
     await giftSelect.selectOption(firstGiftValue!);
 
-    // Handle the confirm dialog
+    // Accept all confirm dialogs (set + revoke both trigger confirm())
     page.on('dialog', (dialog) => dialog.accept());
 
     // Click Set Guarantee
     await page.locator('#guarantee-set-btn').click();
 
     // Wait for guarantee status to show "Active"
-    await expect(page.locator('#guarantee-status')).toContainText('Active', { timeout: 15_000 });
+    await expect(page.locator('#guarantee-status')).toContainText('Active');
 
     // Revoke button should now be visible
     await expect(page.locator('#guarantee-revoke-btn')).toBeVisible();
@@ -198,9 +198,8 @@ test.describe('Admin Spin Monitor', () => {
     expect(apiResult.active).toBe(true);
 
     // Clean up: revoke the guarantee
-    page.on('dialog', (dialog) => dialog.accept());
     await page.locator('#guarantee-revoke-btn').click();
-    await expect(page.locator('#guarantee-status')).not.toContainText('Active', { timeout: 10_000 });
+    await expect(page.locator('#guarantee-status')).not.toContainText('Active');
 
     await stopMonitoring(page);
   });
@@ -211,7 +210,7 @@ test.describe('Admin Spin Monitor', () => {
 
     // Wait for guarantee gift dropdown to be populated
     const giftSelect = page.locator('#guarantee-gift-select');
-    await expect(giftSelect.locator('option')).not.toHaveCount(1, { timeout: 15_000 });
+    await expect(giftSelect.locator('option')).not.toHaveCount(1);
 
     // Select a gift and set guarantee
     const options = giftSelect.locator('option');
@@ -222,13 +221,13 @@ test.describe('Admin Spin Monitor', () => {
     page.on('dialog', (dialog) => dialog.accept());
 
     await page.locator('#guarantee-set-btn').click();
-    await expect(page.locator('#guarantee-status')).toContainText('Active', { timeout: 15_000 });
+    await expect(page.locator('#guarantee-status')).toContainText('Active');
 
     // Now revoke
     await page.locator('#guarantee-revoke-btn').click();
 
     // Verify status no longer shows Active
-    await expect(page.locator('#guarantee-status')).toContainText('No guarantee set', { timeout: 10_000 });
+    await expect(page.locator('#guarantee-status')).toContainText('No guarantee set');
 
     // Revoke button should be hidden
     await expect(page.locator('#guarantee-revoke-btn')).toBeHidden();
@@ -246,10 +245,14 @@ test.describe('Admin Spin Monitor', () => {
   test('session and all-time stats — both display numeric values', async ({ page, testData }) => {
     await startMonitoringUser(page, testData.user.uniqueId);
 
-    // Wait for the totals wrap to be visible
-    await expect(page.locator('#monitor-totals-wrap')).toBeVisible({ timeout: 10_000 });
+    // Wait for the totals wrap to be visible (confirms monitoring started
+    // and the display:none wrapper has been shown)
+    await expect(page.locator('#monitor-totals-wrap')).toBeVisible();
 
-    // Session stats should show numeric values
+    // Session stats are initialized to "0" by updateSessionTotals() — verify
+    // the element has a non-null, non-empty textContent (WebKit can return
+    // null for text inside recently-shown containers)
+    await expect(page.locator('#session-spins')).toHaveText(/\d+/);
     const sessionSpins = await page.locator('#session-spins').textContent();
     expect(sessionSpins).toBeTruthy();
     const sessionSpinsNum = Number(sessionSpins!.replace(/,/g, ''));
@@ -280,48 +283,22 @@ test.describe('Admin Spin Monitor', () => {
   test('spin history collapsible — click toggle, verify expands/collapses', async ({ page, testData }) => {
     await startMonitoringUser(page, testData.user.uniqueId);
 
-    const details = page.locator('#spin-history-toggle');
-    const summary = details.locator('summary');
+    const toggle = page.locator('#spin-history-toggle');
+    const summary = page.locator('#spin-history-summary');
     const feed = page.locator('#spin-feed');
 
-    // Initially the details may be closed — check the open attribute
-    const initiallyOpen = await details.evaluate(
-      (el: HTMLDetailsElement) => el.open,
-    );
+    // Initially closed
+    expect(await toggle.evaluate((el: any) => el.open)).toBe(false);
 
-    if (initiallyOpen) {
-      // Close it
-      await summary.click();
-      // Verify feed is hidden (details closed)
-      const isOpenAfterClose = await details.evaluate(
-        (el: HTMLDetailsElement) => el.open,
-      );
-      expect(isOpenAfterClose).toBe(false);
+    // Open it via JS click (on mobile, a floating element covers the summary
+    // and intercepts Playwright's coordinate-based click)
+    await summary.evaluate((el: HTMLElement) => el.click());
+    expect(await toggle.evaluate((el: any) => el.open)).toBe(true);
+    await expect(feed).toBeVisible();
 
-      // Open it again
-      await summary.click();
-      const isOpenAfterReopen = await details.evaluate(
-        (el: HTMLDetailsElement) => el.open,
-      );
-      expect(isOpenAfterReopen).toBe(true);
-    } else {
-      // Open it
-      await summary.click();
-      const isOpenAfterOpen = await details.evaluate(
-        (el: HTMLDetailsElement) => el.open,
-      );
-      expect(isOpenAfterOpen).toBe(true);
-
-      // The spin feed should be visible
-      await expect(feed).toBeVisible();
-
-      // Close it
-      await summary.click();
-      const isOpenAfterClose = await details.evaluate(
-        (el: HTMLDetailsElement) => el.open,
-      );
-      expect(isOpenAfterClose).toBe(false);
-    }
+    // Close it
+    await summary.evaluate((el: HTMLElement) => el.click());
+    expect(await toggle.evaluate((el: any) => el.open)).toBe(false);
 
     // Clean up
     await stopMonitoring(page);

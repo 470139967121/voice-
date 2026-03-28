@@ -78,10 +78,19 @@ async function seed() {
   // Config documents
   console.log("Config:");
   await seedIfMissing("config/economy", {
-    dailyBonus: 50,
-    spinCost: 10,
-    pullCosts: { 1: 10, 10: 80, 100: 700 },
-    milestoneRewards: { 7: 100, 14: 250, 30: 500 },
+    beanConversionRate: 0.6,
+    beanRedeemBonusThreshold: 2000,
+    beanRedeemBonusMultiplier: 1.1,
+    pullCosts: { 1: 10, 10: 100, 100: 1000 },
+    broadcastSendThreshold: 0,
+    broadcastWinThreshold: 5000,
+    dropRateExponent: 1.5,
+    pitySoftStart: 80,
+    pityHardLimit: 120,
+    pitySoftMaxShift: 0.15,
+    pityHighValueThreshold: 5000,
+    dailyBase: 50,
+    milestoneRewards: { 7: 100, 14: 200, 30: 500, 60: 1000, 90: 2000 },
   });
   await seedIfMissing("config/app", {
     minVersionCode: 1,
@@ -226,6 +235,37 @@ async function seed() {
     iconUrl: "",
   });
 
+  // Additional gifts to reach 16 on the wheel (gacha wheel requires exactly 16)
+  const extraGifts = [
+    { id: "local-gift-4", name: "Rose", coinValue: 20 },
+    { id: "local-gift-5", name: "Crown", coinValue: 100 },
+    { id: "local-gift-6", name: "Rocket", coinValue: 150 },
+    { id: "local-gift-7", name: "Teddy Bear", coinValue: 25 },
+    { id: "local-gift-8", name: "Cake", coinValue: 30 },
+    { id: "local-gift-9", name: "Fire", coinValue: 40 },
+    { id: "local-gift-10", name: "Lightning", coinValue: 60 },
+    { id: "local-gift-11", name: "Rainbow", coinValue: 80 },
+    { id: "local-gift-12", name: "Unicorn", coinValue: 120 },
+    { id: "local-gift-13", name: "Spaceship", coinValue: 300 },
+    { id: "local-gift-14", name: "Piano", coinValue: 500 },
+    { id: "local-gift-15", name: "Yacht", coinValue: 1000 },
+    { id: "local-gift-16", name: "Trophy", coinValue: 75 },
+    { id: "local-gift-17", name: "Balloon", coinValue: 15 },
+  ];
+  for (const g of extraGifts) {
+    await seedIfMissing(`gifts/${g.id}`, {
+      name: g.name,
+      coinValue: g.coinValue,
+      showInStore: true,
+      showOnWheel: true,
+      weight: 0.5,
+      order: parseInt(g.id.split("-")[2]),
+      animationUrl: "",
+      soundUrl: "",
+      iconUrl: "",
+    });
+  }
+
   // Coin package
   await seedIfMissing("coinPackages/local-pack-1", {
     coins: 100,
@@ -239,6 +279,30 @@ async function seed() {
   await seedIfMissing("funFacts/local-fact-1", {
     text: "ShyTalk was built with Kotlin Multiplatform!",
     isActive: true,
+  });
+
+  // Sample log entries (the logger is no-op in non-production, so seed directly)
+  console.log("\nLogs:");
+  await seedIfMissing("logs/seed-log-1", {
+    level: "INFO",
+    source: "seed",
+    message: "Emulator seed completed",
+    timestamp: now,
+    userId: null,
+  });
+  await seedIfMissing("logs/seed-log-2", {
+    level: "WARN",
+    source: "seed",
+    message: "Sample warning log entry",
+    timestamp: now - 1000,
+    userId: null,
+  });
+  await seedIfMissing("logs/seed-log-3", {
+    level: "ERROR",
+    source: "seed",
+    message: "Sample error log entry",
+    timestamp: now - 2000,
+    userId: null,
   });
 
   // MinIO bucket (only when MinIO is available)

@@ -9,7 +9,7 @@ import type { Page } from '@playwright/test';
 async function waitForAutoSave(page: Page, fieldSelector: string): Promise<void> {
   await page.locator(fieldSelector).evaluate(el => el.blur());
   const container = page.locator(fieldSelector).locator('..');
-  await expect(container.locator('.field-feedback.saved')).toBeVisible({ timeout: 15_000 });
+  await expect(container.locator('.field-feedback.saved')).toBeVisible();
 }
 
 test.describe('Admin Validation', () => {
@@ -35,7 +35,7 @@ test.describe('Admin Validation', () => {
 
     // Check for validation feedback or that the field was not saved empty
     const container = displayNameInput.locator('..');
-    const errorFeedback = container.locator('.field-feedback.error, .field-feedback.invalid');
+    const errorFeedback = container.locator('.field-feedback.error, .field-feedback.invalid, .field-feedback.failed');
     const hasFeedback = await errorFeedback.count() > 0;
 
     // Also check that an error toast or validation message appeared
@@ -50,9 +50,10 @@ test.describe('Admin Validation', () => {
     // The backend must not save an empty name
     expect(apiData.displayName).toBe(originalName);
 
-    // Restore
-    await displayNameInput.fill(originalName);
-    await waitForAutoSave(page, '[data-field="displayName"]');
+    // Restore via API (auto-save won't fire since the value matches loadedData)
+    await testData.api.patch(`/api/user/${testData.user.uniqueId}`, {
+      displayName: originalName,
+    });
   });
 
   // ── Test 2: Negative number in coin field ──
@@ -87,8 +88,12 @@ test.describe('Admin Validation', () => {
   test('NaN input in number field is handled gracefully', async ({ page, testData }) => {
     await switchUserSubtab(page, 'economy');
 
-    // Try to enter "abc" in coin amount
-    await page.locator('#eco-coins-amount').fill('abc');
+    // Try to enter "abc" in coin amount — use evaluate since Playwright
+    // blocks non-numeric text in <input type="number">
+    await page.locator('#eco-coins-amount').evaluate((el: HTMLInputElement) => {
+      el.value = 'abc';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     await page.locator('#eco-coins-apply').click();
 
     // Wait for response
@@ -198,7 +203,7 @@ test.describe('Admin Validation', () => {
     await navigateToTab(page, 'Users');
     await searchUser(page, String(testData.user.uniqueId));
 
-    await expect(displayNameInput).toHaveValue(emojiName, { timeout: 15_000 });
+    await expect(displayNameInput).toHaveValue(emojiName);
 
     // Verify via API
     const apiData = await testData.api.get(`/api/user/${testData.user.uniqueId}`);
@@ -223,7 +228,7 @@ test.describe('Admin Validation', () => {
     await navigateToTab(page, 'Users');
     await searchUser(page, String(testData.user.uniqueId));
 
-    await expect(descInput).toHaveValue(arabicText, { timeout: 15_000 });
+    await expect(descInput).toHaveValue(arabicText);
 
     // Verify via API
     const apiData = await testData.api.get(`/api/user/${testData.user.uniqueId}`);
@@ -256,7 +261,7 @@ test.describe('Admin Validation', () => {
     await warnBtn.click();
 
     // Wait for processing to complete
-    await expect(warnBtn).toContainText('Issue Warning', { timeout: 15_000 });
+    await expect(warnBtn).toContainText('Issue Warning');
 
     // Verify only 1 warning was created (button should have been disabled during API call)
     const warningsData = await testData.api.get(`/api/user/${uid}/warnings`);
