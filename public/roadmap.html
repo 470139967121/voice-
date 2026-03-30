@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShyTalk — The Roadmap Awakens</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    color: #ffd54f;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  .stars {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .intro-screen {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+  }
+  .intro-screen p {
+    color: #4fc3f7;
+    font-size: clamp(1.6rem, 5vw, 2.8rem);
+    line-height: 2;
+    font-weight: 400;
+  }
+
+  .logo-screen {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+  }
+  .logo-screen .logo-text {
+    font-size: clamp(4rem, 16vw, 10rem);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    background: linear-gradient(180deg, #ffd54f 0%, #ff8f00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 60px rgba(255,213,79,.3));
+    line-height: 1.1;
+  }
+  .logo-screen .logo-sub {
+    font-size: clamp(1rem, 4vw, 2rem);
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: #ffd54f;
+    opacity: .7;
+    margin-top: 16px;
+  }
+
+  .crawl-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 24px 120px;
+  }
+
+  .crawl-section {
+    margin-bottom: 100px;
+    text-align: center;
+  }
+  .crawl-section h2 {
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    margin-bottom: 20px;
+    color: #ffd54f;
+    text-transform: uppercase;
+  }
+  .crawl-section .section-status {
+    display: inline-block;
+    font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 22px;
+    border-radius: 999px;
+    margin-bottom: 40px;
+    border: 2px solid;
+  }
+  .status-active { color: #66bb6a; border-color: #66bb6a; }
+  .status-soon { color: #ffa726; border-color: #ffa726; }
+  .status-planned { color: #42a5f5; border-color: #42a5f5; }
+
+  .crawl-feature {
+    margin-bottom: 44px;
+  }
+  .crawl-feature h3 {
+    font-size: clamp(1.5rem, 5.5vw, 2.6rem);
+    font-weight: 700;
+    color: #ffd54f;
+    margin-bottom: 8px;
+  }
+  .crawl-feature p {
+    font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+    color: #ffd54f;
+    opacity: .65;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+  .feat-badge {
+    display: inline-block;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 999px;
+    letter-spacing: .06em;
+    margin-top: 8px;
+  }
+  .feat-done { background: rgba(102,187,106,.2); color: #66bb6a; }
+  .feat-next { background: rgba(255,167,38,.2); color: #ffa726; }
+  .feat-planned { background: rgba(66,165,245,.15); color: #42a5f5; }
+
+  .crawl-divider {
+    width: 60px;
+    height: 2px;
+    background: rgba(255,213,79,.25);
+    margin: 0 auto 100px;
+  }
+
+  .episode-intro {
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    line-height: 2;
+    opacity: .75;
+    margin-bottom: 80px;
+    text-align: center;
+  }
+
+  .crawl-footer {
+    text-align: center;
+    padding: 80px 24px 60px;
+    border-top: 1px solid rgba(255,213,79,.1);
+  }
+  .crawl-footer .brand {
+    font-size: clamp(3rem, 10vw, 6rem);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    background: linear-gradient(180deg, #ffd54f 0%, #ff8f00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .crawl-footer .brand-sub {
+    font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+    color: #ffd54f;
+    opacity: .4;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+  .crawl-footer .brand-note {
+    margin-top: 24px;
+    font-size: clamp(0.85rem, 2vw, 1rem);
+    color: #ffd54f;
+    opacity: .3;
+  }
+
+  .scroll-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    color: rgba(255,213,79,.4);
+    font-size: .8rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    transition: opacity .5s;
+    pointer-events: none;
+  }
+  .scroll-hint.hidden { opacity: 0; }
+  .scroll-hint .arrow {
+    display: block;
+    text-align: center;
+    font-size: 1.2rem;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+
+  .music-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 20;
+    background: rgba(255,213,79,.15);
+    border: 1px solid rgba(255,213,79,.3);
+    color: #ffd54f;
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .85rem;
+    letter-spacing: .05em;
+    transition: background .3s;
+  }
+  .music-btn:hover { background: rgba(255,213,79,.25); }
+
+  .loading-msg {
+    text-align: center;
+    padding: 80px 20px;
+    color: #ffd54f;
+    opacity: .5;
+    font-size: 1.2rem;
+  }
+</style>
+</head>
+<body>
+
+<canvas class="stars" id="stars"></canvas>
+
+<button class="music-btn" id="musicBtn" onclick="toggleMusic()">&#9654; Play Theme</button>
+<audio id="bgMusic" loop preload="auto">
+  <source src="https://images.shytalk.shyden.co.uk/assets/star-wars-theme.mp3" type="audio/mpeg">
+</audio>
+
+<div class="content" id="content">
+
+  <div class="intro-screen">
+    <p>A short time ago, in a codebase<br>not so far away&hellip;</p>
+  </div>
+
+  <div class="logo-screen">
+    <div>
+      <div class="logo-text">SHYTALK</div>
+      <div class="logo-sub">The Roadmap Awakens</div>
+    </div>
+  </div>
+
+  <div class="crawl-content">
+    <div class="crawl-section">
+      <h2>Episode 2026</h2>
+      <p class="episode-intro">
+        ShyTalk has been evolving fast.<br>
+        New features are on the horizon, safety<br>
+        is being strengthened, and the platform<br>
+        grows to welcome users across every device.<br><br>
+        Here is what lies ahead&hellip;
+      </p>
+    </div>
+
+    <div id="roadmap-container">
+      <div class="loading-msg">Loading roadmap from GitHub&hellip;</div>
+    </div>
+  </div>
+
+  <div class="crawl-footer">
+    <div class="brand">SHYTALK</div>
+    <div class="brand-sub">Built by Shyden Ltd &middot; 2026</div>
+    <div class="brand-note">Priorities may shift &mdash; we ship what matters most to you first.</div>
+    <div class="brand-note" id="last-updated" style="margin-top:16px;"></div>
+  </div>
+
+</div>
+
+<div class="scroll-hint" id="scrollHint">
+  <span class="arrow">&darr;</span>
+  scroll or wait
+</div>
+
+<script>
+// ── Stars ──
+var canvas = document.getElementById('stars');
+var ctx = canvas.getContext('2d');
+var starsArr = [];
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize); resize();
+for (var i = 0; i < 250; i++) {
+  starsArr.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.6 + 0.3,
+    a: Math.random() * 0.8 + 0.2,
+    ts: Math.random() * 0.015 + 0.003
+  });
+}
+var frame = 0;
+function drawStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  frame++;
+  starsArr.forEach(function(s) {
+    var f = Math.sin(frame * s.ts) * 0.25 + 0.75;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,' + (s.a * f) + ')';
+    ctx.fill();
+  });
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+// ── Auto-scroll ──
+var autoScrollSpeed = 1.2;
+var isAutoScrolling = true;
+var autoScrollPaused = false;
+var resumeTimer = null;
+
+function autoScroll() {
+  if (isAutoScrolling && !autoScrollPaused) {
+    window.scrollBy(0, autoScrollSpeed);
+    if ((window.innerHeight + window.scrollY) >= document.body.scrollHeight - 10) {
+      isAutoScrolling = false;
+    }
+  }
+  requestAnimationFrame(autoScroll);
+}
+
+window.addEventListener('wheel', function() {
+  autoScrollPaused = true;
+  clearTimeout(resumeTimer);
+  resumeTimer = setTimeout(function() { autoScrollPaused = false; }, 4000);
+}, { passive: true });
+
+window.addEventListener('touchmove', function() {
+  autoScrollPaused = true;
+  clearTimeout(resumeTimer);
+  resumeTimer = setTimeout(function() { autoScrollPaused = false; }, 4000);
+}, { passive: true });
+
+window.addEventListener('scroll', function() {
+  if (window.scrollY > 200) {
+    document.getElementById('scrollHint').classList.add('hidden');
+  }
+});
+
+autoScroll();
+
+// ── Music ──
+var musicStarted = false;
+function startMusic() {
+  if (musicStarted) return;
+  var audio = document.getElementById('bgMusic');
+  var btn = document.getElementById('musicBtn');
+  audio.play().then(function() {
+    musicStarted = true;
+    btn.innerHTML = '&#9646;&#9646; Pause';
+  }).catch(function() {});
+}
+function toggleMusic() {
+  var audio = document.getElementById('bgMusic');
+  var btn = document.getElementById('musicBtn');
+  if (audio.paused) {
+    audio.play();
+    btn.innerHTML = '&#9646;&#9646; Pause';
+    musicStarted = true;
+  } else {
+    audio.pause();
+    btn.innerHTML = '&#9654; Play Theme';
+  }
+}
+// Auto-play on first user interaction (browsers require interaction before audio)
+['scroll', 'click', 'touchstart', 'keydown'].forEach(function(evt) {
+  window.addEventListener(evt, startMusic, { once: true, passive: true });
+});
+
+// ── i18n ──
+var TRANSLATIONS = {
+  en: { inProgress: 'In Progress', comingSoon: 'Coming Soon', planned: 'Planned', done: 'DONE', upNext: 'UP NEXT', inProg: 'IN PROGRESS', plan: 'PLANNED', lastUpdated: 'Roadmap last updated', loading: 'Loading roadmap\u2026', loadFail: 'Could not load roadmap.', visitGithub: 'Visit our GitHub', intro: 'A short time ago, in a codebase<br>not so far away\u2026', subtitle: 'The Roadmap Awakens', scrollHint: 'scroll or wait', playTheme: '\u25B6 Play Theme', pause: '\u23F8 Pause', builtBy: 'Built by Shyden Ltd', note: 'Priorities may shift \u2014 we ship what matters most to you first.' },
+  ar: { inProgress: '\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630', comingSoon: '\u0642\u0631\u064A\u0628\u064B\u0627', planned: '\u0645\u062E\u0637\u0637', done: '\u0645\u0643\u062A\u0645\u0644', upNext: '\u0627\u0644\u062A\u0627\u0644\u064A', inProg: '\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630', plan: '\u0645\u062E\u0637\u0637', lastUpdated: '\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B', loading: '\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026' },
+  de: { inProgress: 'In Arbeit', comingSoon: 'Kommt bald', planned: 'Geplant', done: 'FERTIG', upNext: 'ALS N\u00C4CHSTES', inProg: 'IN ARBEIT', plan: 'GEPLANT', lastUpdated: 'Zuletzt aktualisiert', loading: 'Roadmap wird geladen\u2026' },
+  es: { inProgress: 'En progreso', comingSoon: 'Pr\u00F3ximamente', planned: 'Planificado', done: 'HECHO', upNext: 'SIGUIENTE', inProg: 'EN PROGRESO', plan: 'PLANIFICADO', lastUpdated: '\u00DAltima actualizaci\u00F3n', loading: 'Cargando\u2026' },
+  fr: { inProgress: 'En cours', comingSoon: 'Bient\u00F4t', planned: 'Planifi\u00E9', done: 'FAIT', upNext: 'SUIVANT', inProg: 'EN COURS', plan: 'PLANIFI\u00C9', lastUpdated: 'Derni\u00E8re mise \u00E0 jour', loading: 'Chargement\u2026' },
+  hi: { inProgress: '\u091C\u093E\u0930\u0940 \u0939\u0948', comingSoon: '\u091C\u0932\u094D\u0926 \u0906 \u0930\u0939\u093E \u0939\u0948', planned: '\u092F\u094B\u091C\u0928\u093E\u092C\u0926\u094D\u0927', done: '\u092A\u0942\u0930\u094D\u0923', upNext: '\u0905\u0917\u0932\u093E', inProg: '\u091C\u093E\u0930\u0940', plan: '\u092F\u094B\u091C\u0928\u093E', lastUpdated: '\u0905\u0902\u0924\u093F\u092E \u0905\u092A\u0921\u0947\u091F', loading: '\u0932\u094B\u0921 \u0939\u094B \u0930\u0939\u093E \u0939\u0948\u2026' },
+  id: { inProgress: 'Sedang berjalan', comingSoon: 'Segera hadir', planned: 'Direncanakan', done: 'SELESAI', upNext: 'SELANJUTNYA', inProg: 'SEDANG BERJALAN', plan: 'DIRENCANAKAN', lastUpdated: 'Terakhir diperbarui', loading: 'Memuat\u2026' },
+  ja: { inProgress: '\u9032\u884C\u4E2D', comingSoon: '\u8FD1\u65E5\u516C\u958B', planned: '\u8A08\u753B\u4E2D', done: '\u5B8C\u4E86', upNext: '\u6B21', inProg: '\u9032\u884C\u4E2D', plan: '\u8A08\u753B', lastUpdated: '\u6700\u7D42\u66F4\u65B0', loading: '\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026' },
+  ko: { inProgress: '\uC9C4\uD589 \uC911', comingSoon: '\uACE7 \uCD9C\uC2DC', planned: '\uACC4\uD68D\uB428', done: '\uC644\uB8CC', upNext: '\uB2E4\uC74C', inProg: '\uC9C4\uD589 \uC911', plan: '\uACC4\uD68D', lastUpdated: '\uB9C8\uC9C0\uB9C9 \uC5C5\uB370\uC774\uD2B8', loading: '\uB85C\uB529\u2026' },
+  pt: { inProgress: 'Em andamento', comingSoon: 'Em breve', planned: 'Planejado', done: 'FEITO', upNext: 'PR\u00D3XIMO', inProg: 'EM ANDAMENTO', plan: 'PLANEJADO', lastUpdated: '\u00DAltima atualiza\u00E7\u00E3o', loading: 'Carregando\u2026' },
+  ru: { inProgress: '\u0412 \u0440\u0430\u0431\u043E\u0442\u0435', comingSoon: '\u0421\u043A\u043E\u0440\u043E', planned: '\u0417\u0430\u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043E', done: '\u0413\u041E\u0422\u041E\u0412\u041E', upNext: '\u0414\u0410\u041B\u0415\u0415', inProg: '\u0412 \u0420\u0410\u0411\u041E\u0422\u0415', plan: '\u041F\u041B\u0410\u041D', lastUpdated: '\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435', loading: '\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430\u2026' },
+  th: { inProgress: '\u0E01\u0E33\u0E25\u0E31\u0E07\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23', comingSoon: '\u0E40\u0E23\u0E47\u0E27\u0E46 \u0E19\u0E35\u0E49', planned: '\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19', done: '\u0E40\u0E2A\u0E23\u0E47\u0E08', upNext: '\u0E16\u0E31\u0E14\u0E44\u0E1B', inProg: '\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23', plan: '\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19', lastUpdated: '\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14', loading: '\u0E01\u0E33\u0E25\u0E31\u0E07\u0E42\u0E2B\u0E25\u0E14\u2026' },
+  tr: { inProgress: 'Devam ediyor', comingSoon: 'Yak\u0131nda', planned: 'Planland\u0131', done: 'TAMAM', upNext: 'S\u0130RADA', inProg: 'DEVAM ED\u0130YOR', plan: 'PLANLANDI', lastUpdated: 'Son g\u00FCncelleme', loading: 'Y\u00FCkleniyor\u2026' },
+  vi: { inProgress: '\u0110ang ti\u1EBFn h\u00E0nh', comingSoon: 'S\u1EAFp ra m\u1EAFt', planned: '\u0110\u00E3 l\u00EAn k\u1EBF ho\u1EA1ch', done: 'HO\u00C0N TH\u00C0NH', upNext: 'TI\u1EEEP THEO', inProg: '\u0110ANG TI\u1EEEN H\u00C0NH', plan: 'K\u1EBE HO\u1EA0CH', lastUpdated: 'C\u1EADp nh\u1EADt l\u1EA7n cu\u1ED1i', loading: '\u0110ang t\u1EA3i\u2026' },
+  zh: { inProgress: '\u8FDB\u884C\u4E2D', comingSoon: '\u5373\u5C06\u63A8\u51FA', planned: '\u5DF2\u8BA1\u5212', done: '\u5B8C\u6210', upNext: '\u4E0B\u4E00\u4E2A', inProg: '\u8FDB\u884C\u4E2D', plan: '\u5DF2\u8BA1\u5212', lastUpdated: '\u6700\u540E\u66F4\u65B0', loading: '\u52A0\u8F7D\u4E2D\u2026' },
+};
+
+// Detect browser language, fall back to English
+var browserLang = (navigator.language || 'en').split('-')[0];
+var t = TRANSLATIONS[browserLang] || TRANSLATIONS.en;
+
+// ── Roadmap data ──
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function getStatusBadge(status) {
+  if (!status) return { cls: 'feat-planned', label: t.plan || 'PLANNED' };
+  switch (status) {
+    case 'done': return { cls: 'feat-done', label: t.done || 'DONE' };
+    case 'next': return { cls: 'feat-next', label: t.upNext || 'UP NEXT' };
+    case 'in-progress': return { cls: 'feat-next', label: t.inProg || 'IN PROGRESS' };
+    default: return { cls: 'feat-planned', label: t.plan || 'PLANNED' };
+  }
+}
+
+function renderRoadmap(data) {
+  var container = document.getElementById('roadmap-container');
+  var html = '';
+
+  for (var p = 0; p < data.phases.length; p++) {
+    var phase = data.phases[p];
+    if (phase.features.length === 0) continue;
+
+    var statusCls = 'status-' + phase.status;
+    var statusLabel = phase.status === 'active' ? (t.inProgress || 'In Progress') :
+                      phase.status === 'soon' ? (t.comingSoon || 'Coming Soon') : (t.planned || 'Planned');
+
+    // Use translated phase title if available
+    var phaseTitle = (phase.titleI18n && phase.titleI18n[browserLang]) || phase.title;
+
+    html += '<div class="crawl-divider"></div>';
+    html += '<div class="crawl-section">';
+    html += '<h2>' + escapeHtml(phaseTitle) + '</h2>';
+    html += '<div class="section-status ' + statusCls + '">' + statusLabel + '</div>';
+
+    for (var f = 0; f < phase.features.length; f++) {
+      var feat = phase.features[f];
+      var badge = getStatusBadge(feat.status);
+
+      // Use translated feature name and description if available
+      var featI18n = feat.i18n && feat.i18n[browserLang];
+      var featName = (featI18n && featI18n.n) || feat.name;
+      var featDesc = (featI18n && featI18n.d) || feat.description;
+
+      html += '<div class="crawl-feature">';
+      html += '<h3>' + escapeHtml(featName) + '</h3>';
+      if (featDesc) {
+        html += '<p>' + escapeHtml(featDesc) + '</p>';
+      }
+      html += '<span class="feat-badge ' + badge.cls + '">' + badge.label + '</span>';
+      html += '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+// ── Load roadmap from JSON ──
+fetch('roadmap-data.json')
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    renderRoadmap(data);
+    if (data.lastUpdated) {
+      document.getElementById('last-updated').textContent =
+        (t.lastUpdated || 'Roadmap last updated') + ': ' + data.lastUpdated;
+    }
+  })
+  .catch(function() {
+    document.getElementById('roadmap-container').innerHTML =
+      '<div class="loading-msg">Could not load roadmap. <a href="https://github.com/ShydenMcM/ShyTalk" style="color:#4fc3f7;">Visit our GitHub</a></div>';
+  });
+</script>
+
+</body>
+</html>
