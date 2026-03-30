@@ -1,8 +1,8 @@
-v0.59.3
+v0.60.0
 
-SonarCloud must pass before E2E/Playwright + pre-push hook (#235)
-- Pipeline change:
--   lint → backend tests → build → SonarCloud → E2E/Playwright/iOS
--   If SonarCloud quality gate fails, E2E/Playwright/iOS are skipped,
--   saving ~20 minutes of runner time.
-- Pre-push hook (.husky/pre-push):
+shared language selector across all web pages (#236)
+- - Floating globe button (bottom-left) opens searchable language modal
+- - 20 languages with native names, search/filter, keyboard navigation
+- - Persists selection in localStorage across pages
+- focus trap, aria-label, aria-modal, keyboard nav, escape to close
+- applyLanguage() wired to data-i18n attributes
