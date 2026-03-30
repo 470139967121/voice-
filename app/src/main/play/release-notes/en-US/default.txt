@@ -1,8 +1,8 @@
-v0.59.2
+v0.59.3
 
-resolve 400+ SonarCloud issues + public roadmap page (#223)
-- resolve 85+ SonarCloud JavaScript issues
-- Vulnerabilities (2):
-- validate and encode URL path segments to prevent traversal
-- Bugs (4):
-- handle async promise from logger.log()
+SonarCloud must pass before E2E/Playwright + pre-push hook (#235)
+- Pipeline change:
+-   lint → backend tests → build → SonarCloud → E2E/Playwright/iOS
+-   If SonarCloud quality gate fails, E2E/Playwright/iOS are skipped,
+-   saving ~20 minutes of runner time.
+- Pre-push hook (.husky/pre-push):
