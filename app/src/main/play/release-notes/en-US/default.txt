@@ -1,8 +1,8 @@
-v0.59.1
+v0.59.2
 
-PR Gate must require detect-changes success + full branch diff (#221)
-- Two issues caused PR #218 to auto-merge without Playwright validation:
-- 1. PR Gate treated skipped checks as passing when detect-changes was
--    cancelled. Now explicitly requires detect-changes == success.
-- 2. Detect-changes only diffed the latest push against base, not the
--    full branch. A push with only workflow files made it think there
+resolve 400+ SonarCloud issues + public roadmap page (#223)
+- resolve 85+ SonarCloud JavaScript issues
+- Vulnerabilities (2):
+- validate and encode URL path segments to prevent traversal
+- Bugs (4):
+- handle async promise from logger.log()
