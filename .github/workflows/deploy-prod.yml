@@ -243,7 +243,7 @@ jobs:
           packageName: com.shyden.shytalk
           releaseFiles: android-release/build/outputs/bundle/prodRelease/*.aab
           track: internal
-          status: completed
+          status: draft
           releaseName: ${{ needs.validate-release.outputs.version }}
           whatsNewDirectory: android-release/src/main/play/release-notes
 

@@ -8,6 +8,7 @@ import com.shyden.shytalk.core.util.Constants.SEAT_REQUEST_IMMEDIATE_THRESHOLD_M
 import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
+import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.RoomRepository
@@ -239,7 +240,16 @@ class RoomSettingsViewModel(
         val room = _uiState.value.room ?: return
         if (currentUserId != room.ownerId) return
         viewModelScope.launch {
-            roomRepository.closeRoom(currentRoomId)
+            when (val result = roomRepository.closeRoom(currentRoomId)) {
+                is Resource.Success -> {
+                    logI("RoomSettingsVM", "Room closed: $currentRoomId")
+                }
+                is Resource.Error -> {
+                    logE("RoomSettingsVM", "Failed to close room: ${result.message}")
+                    _uiState.update { it.copy(error = result.message) }
+                }
+                is Resource.Loading -> Unit
+            }
         }
     }
 

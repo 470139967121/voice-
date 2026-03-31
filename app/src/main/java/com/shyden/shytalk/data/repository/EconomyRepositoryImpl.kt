@@ -23,18 +23,19 @@ class EconomyRepositoryImpl(
     private val api: WorkerApiClient,
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
+    private val authRepository: AuthRepository,
 ) : EconomyRepository {
     // Real-time balance from Firestore user doc
     override fun observeBalance(): Flow<Long> =
         callbackFlow {
-            val uid =
-                auth.currentUser?.uid ?: run {
+            val uniqueId =
+                authRepository.currentUserId ?: run {
                     close()
                     return@callbackFlow
                 }
             val listener =
                 firestore
-                    .document("users/$uid")
+                    .document("users/$uniqueId")
                     .addSnapshotListener { snapshot, error ->
                         if (error != null || snapshot == null) return@addSnapshotListener
                         val coins = snapshot.getLong("shyCoins") ?: 0L
