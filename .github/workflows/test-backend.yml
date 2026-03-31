@@ -7,11 +7,15 @@ on:
         description: 'Git ref to check out'
         type: string
         required: true
+      report_env:
+        description: 'Report environment: pr or deploy'
+        type: string
+        default: 'pr'
 
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -31,5 +35,27 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Run Express API tests
-        run: cd express-api && npm ci && npm test
+      - name: Run Express API tests with coverage
+        run: cd express-api && npm ci && npx jest --coverage --coverageReporters=html --forceExit
+
+      - name: Write metadata.json
+        if: always()
+        env:
+          REPORT_ENV: ${{ inputs.report_env || 'pr' }}
+        run: |
+          PASSED=$(grep -oP '"numPassedTests":\K\d+' express-api/coverage/coverage-summary.json 2>/dev/null || echo 0)
+          FAILED=$(grep -oP '"numFailedTests":\K\d+' express-api/coverage/coverage-summary.json 2>/dev/null || echo 0)
+          TOTAL=$((PASSED + FAILED))
+          DATE=$(date +%Y-%m-%d)
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          mkdir -p express-api/coverage
+          echo "{\"passed\":${PASSED},\"failed\":${FAILED},\"total\":${TOTAL},\"date\":\"${DATE}\",\"runUrl\":\"${RUN_URL}\",\"suite\":\"express\",\"env\":\"${REPORT_ENV}\"}" > express-api/coverage/metadata.json
+
+      - name: Deploy Express report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: express-api/coverage
+          destination_dir: express/${{ inputs.report_env || 'pr' }}/latest
+          keep_files: true

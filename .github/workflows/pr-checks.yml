@@ -152,6 +152,25 @@ jobs:
             **/build/reports/
             **/build/classes/
 
+      - name: Prepare Kotlin test report for GitHub Pages
+        if: always()
+        run: |
+          mkdir -p kotlin-report
+          cp -r shared/build/reports/tests/jvmTest/* kotlin-report/ 2>/dev/null || true
+          cp -r app/build/reports/tests/testDevDebugUnitTest/* kotlin-report/ 2>/dev/null || true
+          DATE=$(date +%Y-%m-%d)
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "{\"passed\":0,\"failed\":0,\"total\":0,\"date\":\"${DATE}\",\"runUrl\":\"${RUN_URL}\",\"suite\":\"kotlin\",\"env\":\"pr\"}" > kotlin-report/metadata.json
+
+      - name: Deploy Kotlin report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: kotlin-report
+          destination_dir: kotlin/pr/latest
+          keep_files: true
+
   sonarcloud:
     needs: [detect-changes, build-and-test]
     if: |
@@ -174,6 +193,7 @@ jobs:
     uses: ./.github/workflows/test-backend.yml
     with:
       ref: ${{ github.event.pull_request.head.sha }}
+      report_env: pr
     secrets: inherit
 
   android-e2e:
@@ -188,6 +208,7 @@ jobs:
       android: '33-phone'
       parallel: true
       ref: ${{ github.event.pull_request.head.sha }}
+      report_env: pr
     secrets: inherit
 
   playwright-web:
@@ -202,6 +223,7 @@ jobs:
       web: 'all'
       parallel: true
       ref: ${{ github.event.pull_request.head.sha }}
+      report_env: pr
     secrets: inherit
 
   ios-e2e:
