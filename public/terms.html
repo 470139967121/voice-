@@ -148,18 +148,18 @@
   <div class="container">
     <header>
       <div class="logo"><a href="/">Shy<span>Talk</span></a></div>
-      <h1>Terms of Service</h1>
-      <p class="last-updated">Last updated: March 2026</p>
+      <h1 data-i18n="tos_title">Terms of Service</h1>
+      <p class="last-updated" data-i18n="tos_updated">Last updated: March 2026</p>
     </header>
 
     <main>
       <section>
-        <h2>1. Acceptance</h2>
+        <h2 data-i18n="tos_s1_h">1. Acceptance</h2>
         <p>By using ShyTalk, you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use ShyTalk.</p>
       </section>
 
       <section>
-        <h2>2. Account Rules</h2>
+        <h2 data-i18n="tos_s2_h">2. Account Rules</h2>
         <ul>
           <li>One account per device. You may link multiple sign-in methods (Google, Apple, Email) to your account, but each device remains bound to a single account.</li>
           <li>You must be at least 13 years old to use ShyTalk.</li>
@@ -168,7 +168,7 @@
       </section>
 
       <section>
-        <h2>3. Acceptable Use</h2>
+        <h2 data-i18n="tos_s3_h">3. Acceptable Use</h2>
         <p>You agree not to use ShyTalk for any of the following:</p>
         <ul>
           <li>Harassment, bullying, or hate speech</li>
@@ -179,17 +179,17 @@
       </section>
 
       <section>
-        <h2>4. Device &amp; Network Banning</h2>
+        <h2 data-i18n="tos_s4_h">4. Device &amp; Network Banning</h2>
         <p>We may ban specific devices or network addresses that violate our policies. Multi-account abuse is prevented through device binding. Bans may be applied automatically (e.g., upon account suspension) or manually by our moderation team.</p>
       </section>
 
       <section>
-        <h2>5. Data Collection</h2>
+        <h2 data-i18n="tos_s5_h">5. Data Collection</h2>
         <p>By using ShyTalk, you consent to the collection and processing of data as described in our <a href="/privacy.html">Privacy Policy</a>. This includes device information, network information, and usage logs.</p>
       </section>
 
       <section>
-        <h2>6. Virtual Economy</h2>
+        <h2 data-i18n="tos_s6_h">6. Virtual Economy</h2>
         <ul>
           <li>Virtual items within ShyTalk have no real-world monetary value.</li>
           <li>Purchases of virtual items are non-refundable, except as required by applicable law.</li>
@@ -198,33 +198,40 @@
       </section>
 
       <section>
-        <h2>7. Termination</h2>
+        <h2 data-i18n="tos_s7_h">7. Termination</h2>
         <p>We may suspend or terminate your account at our discretion if you violate these terms or our policies. You may delete your account at any time through the app settings or by contacting us.</p>
       </section>
 
       <section>
-        <h2>8. Disclaimer</h2>
+        <h2 data-i18n="tos_s8_h">8. Disclaimer</h2>
         <p>ShyTalk is provided "as is" without warranty of any kind, either expressed or implied. We do not guarantee that the service will be uninterrupted, secure, or error-free.</p>
       </section>
 
       <section>
-        <h2>9. Changes</h2>
+        <h2 data-i18n="tos_s9_h">9. Changes</h2>
         <p>We may modify these terms at any time. Continued use of ShyTalk after changes are posted constitutes your acceptance of the revised terms.</p>
       </section>
 
       <section>
-        <h2>10. Contact</h2>
+        <h2 data-i18n="tos_s10_h">10. Contact</h2>
         <p>If you have questions about these terms, contact us at <a href="mailto:shytalk.help@gmail.com">shytalk.help@gmail.com</a>.</p>
       </section>
     </main>
 
     <footer>
-      <a href="/privacy.html">Privacy Policy</a> &nbsp;&middot;&nbsp;
-      <a href="/community-guidelines.html">Community Guidelines</a> &nbsp;&middot;&nbsp;
-      <a href="/cyber-bullying.html">Cyber Bullying Policy</a>
-      <p class="copyright">&copy; 2026 ShyTalk. All rights reserved.</p>
+      <a href="/privacy.html" data-i18n="footer_privacy">Privacy Policy</a> &nbsp;&middot;&nbsp;
+      <a href="/community-guidelines.html" data-i18n="footer_guidelines">Community Guidelines</a> &nbsp;&middot;&nbsp;
+      <a href="/cyber-bullying.html" data-i18n="footer_cyber">Cyber Bullying Policy</a>
+      <p class="copyright" data-i18n="footer_copy">&copy; 2026 ShyTalk. All rights reserved.</p>
     </footer>
   </div>
+<script>window.LEGAL_PAGE_TYPE = 'terms';</script>
+<script src="/js/language-selector.js"></script>
+<script src="/js/legal-translations.js"></script>
+<script>
+  var lang = (window.ShyTalkLanguage && window.ShyTalkLanguage.get()) || 'en';
+  applyLegalTranslations('terms', lang);
+</script>
 <script>
   ShyTalkLogger.init({
     source: 'terms-page',

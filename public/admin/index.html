@@ -2922,7 +2922,7 @@
                aria-label="Email">
         <input type="password" id="login-password" placeholder="Password"
                autocomplete="current-password" aria-label="Password">
-        <button id="login-btn" data-log="sign-in">Sign In</button>
+        <button id="login-btn" data-log="sign-in" data-i18n="btn_sign_in">Sign In</button>
         <div class="login-error" id="login-error"></div>
     </div>
 </div>
@@ -2932,31 +2932,31 @@
     <div class="header">
         <h1>ShyTalk Admin</h1>
         <div class="tab-bar">
-            <button class="tab-btn active" id="tab-users">Users</button>
-            <button class="tab-btn" id="tab-appeals">Appeals</button>
-            <button class="tab-btn" id="tab-reports">Reports</button>
-            <button class="tab-btn" id="tab-gifts">Gifts</button>
-            <button class="tab-btn" id="tab-economy">Economy</button>
-            <button class="tab-btn" id="tab-maintenance">Maintenance</button>
-            <button class="tab-btn" id="tab-monitor">Spin Monitor</button>
-            <button class="tab-btn" id="tab-banners">Banners</button>
-            <button class="tab-btn" id="tab-funfacts">Fun Facts</button>
-            <button class="tab-btn" id="tab-backups">Backups</button>
-            <button class="tab-btn" id="tab-logs">Logs</button>
-            <button class="tab-btn" id="tab-devices">Devices</button>
-            <button class="tab-btn" id="tab-starting-screens">Starting Screens</button>
+            <button class="tab-btn active" id="tab-users" data-i18n="tab_users">Users</button>
+            <button class="tab-btn" id="tab-appeals" data-i18n="tab_appeals">Appeals</button>
+            <button class="tab-btn" id="tab-reports" data-i18n="tab_reports">Reports</button>
+            <button class="tab-btn" id="tab-gifts" data-i18n="tab_gifts">Gifts</button>
+            <button class="tab-btn" id="tab-economy" data-i18n="tab_economy">Economy</button>
+            <button class="tab-btn" id="tab-maintenance" data-i18n="tab_maintenance">Maintenance</button>
+            <button class="tab-btn" id="tab-monitor" data-i18n="tab_monitor">Spin Monitor</button>
+            <button class="tab-btn" id="tab-banners" data-i18n="tab_banners">Banners</button>
+            <button class="tab-btn" id="tab-funfacts" data-i18n="tab_funfacts">Fun Facts</button>
+            <button class="tab-btn" id="tab-backups" data-i18n="tab_backups">Backups</button>
+            <button class="tab-btn" id="tab-logs" data-i18n="tab_logs">Logs</button>
+            <button class="tab-btn" id="tab-devices" data-i18n="tab_devices">Devices</button>
+            <button class="tab-btn" id="tab-starting-screens" data-i18n="tab_starting_screens">Starting Screens</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
             <button class="alert-bell" id="alert-bell" title="Alerts" aria-label="Alerts">&#128276;<span class="alert-bell-badge" id="alert-bell-badge" style="display:none;">0</span></button>
-            <button id="signout-btn" data-log="sign-out">Sign Out</button>
+            <button id="signout-btn" data-log="sign-out" data-i18n="btn_sign_out">Sign Out</button>
         </div>
     </div>
 
     <div class="main-content">
         <div class="search-bar">
-            <input type="number" id="search-uid" placeholder="Enter ShyTalk User ID"
+            <input type="number" id="search-uid" placeholder="Enter ShyTalk User ID" data-i18n="placeholder_search_uid"
                    aria-label="ShyTalk User ID">
-            <button id="search-btn" data-log="search-user">Search</button>
+            <button id="search-btn" data-log="search-user" data-i18n="btn_search">Search</button>
         </div>
 
         <div id="user-form">
@@ -2964,10 +2964,10 @@
             <div id="suspended-banner" style="display:none;background:#e74c3c;color:#fff;font-size:20px;font-weight:800;text-align:center;padding:14px 20px;border-radius:8px;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;">THIS USER IS SUSPENDED</div>
             <!-- Sub-tabs -->
             <div class="user-subtabs" id="user-subtabs" style="display:none">
-                <button class="user-subtab active" data-subtab="profile">Profile</button>
-                <button class="user-subtab" data-subtab="moderation">Moderation</button>
-                <button class="user-subtab" data-subtab="security">Security</button>
-                <button class="user-subtab" data-subtab="economy">Economy</button>
+                <button class="user-subtab active" data-subtab="profile" data-i18n="subtab_profile">Profile</button>
+                <button class="user-subtab" data-subtab="moderation" data-i18n="subtab_moderation">Moderation</button>
+                <button class="user-subtab" data-subtab="security" data-i18n="subtab_security">Security</button>
+                <button class="user-subtab" data-subtab="economy" data-i18n="subtab_economy">Economy</button>
             </div>
 
             <div class="user-subpanel visible" data-subtab="profile">
@@ -12308,6 +12308,13 @@
         btn.disabled = false; btn.textContent = "Recover Photos from R2";
       }
     });
+</script>
+<script src="/js/language-selector.js"></script>
+<script src="/admin/translations.js"></script>
+<script>
+  // Apply translations on load
+  var savedLang = (window.ShyTalkLanguage && window.ShyTalkLanguage.get()) || 'en';
+  applyAdminTranslations(savedLang);
 </script>
 </body>
 </html>

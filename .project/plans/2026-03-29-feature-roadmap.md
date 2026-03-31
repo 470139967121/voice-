@@ -15,6 +15,12 @@ These enable everything else. SonarCloud blocks all future PRs. Allure gives vis
 | 35 | **Legal docs: Shyden Ltd branding** — update all public docs and legal pages | Small | |
 | 32 | **OnPush CLI** — local doc generation (`onpush init/generate/clean`). CI is paid; run locally only | Small | |
 | 40 | **CI workflow deduplication** — extract duplicated steps into reusable workflows (Firebase rules deploy, google-services decode, iOS signing, Allure report). 6+ workflows have duplicated logic | Small | |
+| 41 | **Admin panel restructure** — break 12,000+ line index.html into modular components/pages. Support future growth (more tabs, more features). Consider SPA framework or web components | Large | |
+| 42 | **Admin role-based access control** — internal admin roles (super-admin, moderator, viewer) controlling which tools each admin can use. Store roles in Firestore, enforce server-side | Medium | |
+| 43 | **MC Host dedicated panel** — separate login + dashboard for MC Hosts to manage games, participants, prizes. Isolated from main admin panel | Medium | |
+| 44 | **MC Singer dedicated panel** — separate login + dashboard for MC Singers to manage singing sessions, rooms, competitions | Medium | |
+| 45 | **Teacher dedicated panel** — separate login + dashboard for Teachers to manage teaching rooms, students, schedules | Medium | |
+| 46 | **Web page i18n completion** — full translations for all web pages including admin panel, legal pages. Language selector on every page | Medium | |
 
 ---
 
