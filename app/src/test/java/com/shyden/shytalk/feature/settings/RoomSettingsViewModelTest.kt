@@ -50,6 +50,7 @@ class RoomSettingsViewModelTest {
     fun setup() {
         every { authRepository.currentUserId } returns currentUserId
         every { seatRequestRepository.getPendingRequests(any()) } returns flowOf(emptyList())
+        coEvery { roomRepository.closeRoom(any()) } returns Resource.Success(Unit)
     }
 
     @After
