@@ -1,8 +1,8 @@
-v0.63.1
+v0.63.2
 
-full legal page paragraph translations (privacy, terms, guidelines) (#246)
+complete remaining legal page translations (18/18 all pages) (#247)
 - ## Summary
-- full paragraph translations for all 18 locales
-- full paragraph translations for 8 core locales (ar,
-- de, es, fr, ja, ko, zh, ru)
-- full paragraph translations for 8 core locales
+- Completes the remaining 10 locale translations for Community Guidelines
+- paragraphs.
+- **Final coverage:**
+- 18/18 locales - complete
