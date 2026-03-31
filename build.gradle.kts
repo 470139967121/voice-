@@ -83,5 +83,9 @@ sonar {
 
         // Coverage reports
         property("sonar.javascript.lcov.reportPaths", "express-api/coverage/lcov.info")
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            "${rootProject.projectDir}/app/build/reports/jacoco/devDebug/jacoco.xml",
+        )
     }
 }

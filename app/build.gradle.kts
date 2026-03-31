@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
     alias(libs.plugins.play.publisher)
+    jacoco
 }
 
 play {
@@ -292,4 +293,33 @@ dependencies {
     androidTestImplementation(libs.cucumber.android)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// ── Jacoco coverage for SonarCloud ──────────────────────────────
+android.testOptions.unitTests.all {
+    it.extensions.configure(JacocoTaskExtension::class.java) {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
+}
+
+tasks.register<JacocoReport>("jacocoDevDebugUnitTestReport") {
+    dependsOn("testDevDebugUnitTest")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/devDebug/jacoco.xml"))
+    }
+    val debugTree =
+        fileTree("${layout.buildDirectory.get()}/intermediates/built_in_kotlinc/devDebug/compileDevDebugKotlin/classes") {
+            exclude("**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*", "**/ComposableSingletons*")
+        }
+    val mainSrc = files("$projectDir/src/main/java")
+    sourceDirectories.setFrom(mainSrc)
+    classDirectories.setFrom(debugTree)
+    executionData.setFrom(
+        fileTree(layout.buildDirectory) {
+            include("jacoco/testDevDebugUnitTest.exec")
+        },
+    )
 }
