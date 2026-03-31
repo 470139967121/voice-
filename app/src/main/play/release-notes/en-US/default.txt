@@ -1,8 +1,8 @@
-v0.63.0
+v0.63.1
 
-web page i18n + Play Store auto-release (#244)
+full legal page paragraph translations (privacy, terms, guidelines) (#246)
 - ## Summary
-- - Language selector + translations for all web pages (privacy, terms,
-- community guidelines, admin panel, roadmap)
-- `legal-translations.js` (3 legal pages),
-- `admin/translations.js` (admin panel)
+- full paragraph translations for all 18 locales
+- full paragraph translations for 8 core locales (ar,
+- de, es, fr, ja, ko, zh, ru)
+- full paragraph translations for 8 core locales
