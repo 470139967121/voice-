@@ -93,10 +93,19 @@ async function buildDataExport(uniqueId) {
       .collection('conversations')
       .where('participantIds', 'array-contains', Number.parseInt(uniqueId, 10))
       .get();
-    conversations = convSnap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+    const numericId = Number.parseInt(uniqueId, 10);
+    conversations = convSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        type: data.type,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        participantCount: data.participantIds ? data.participantIds.length : undefined,
+        userRole: data.roles ? data.roles[uniqueId] : undefined,
+        isUserOwner: data.ownerId === numericId,
+      };
+    });
 
     // Collect user's own messages from each conversation (max 1000 total)
     for (const conv of convSnap.docs) {

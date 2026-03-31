@@ -442,6 +442,7 @@ describe('Async export processing', () => {
       expect.any(Buffer),
       'application/zip',
       expect.objectContaining({ expiresAt: expect.any(String) }),
+      expect.objectContaining({ cacheControl: 'private, no-cache, no-store' }),
     );
   });
 
