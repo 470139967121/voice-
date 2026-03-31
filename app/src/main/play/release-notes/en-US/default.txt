@@ -1,8 +1,8 @@
-v0.61.1
+v0.62.0
 
-data export security hotfix (#240)
+Allure report directory structure + Play Store fix (#243)
 - ## Summary
-- Fix download endpoint — auth middleware blocked requests
-- before HMAC validation, making the download link from email
-- non-functional
-- Require `EXPORT_DOWNLOAD_SECRET` env var in production
+- - Per-suite, per-environment Allure report directory structure on GitHub
+- Pages
+- - Landing page at root with ShyTalk dark theme, report cards, "how to
+- read" guide
