@@ -9603,8 +9603,10 @@
           const results = [];
           for (const action of actions) {
             const stepEl = $(`#${action.id}`);
-            stepEl.className = "step running";
-            stepEl.innerHTML = "&#9679; " + escapeHtml(action.label) + "...";
+            if (stepEl) {
+              stepEl.className = "step running";
+              stepEl.innerHTML = "&#9679; " + escapeHtml(action.label) + "...";
+            }
             stepLabel.textContent = `${completed + 1}/${actions.length}: ${action.label}...`;
             try {
               const resp = await fetch(`${API_BASE}/api/cleanup/${action.endpoint}`, {
@@ -9614,12 +9616,16 @@
               });
               const data = await resp.json();
               if (!resp.ok) throw new Error(data.error || "Failed");
-              stepEl.className = "step done";
-              stepEl.innerHTML = "&#10003; " + escapeHtml(action.label) + " — done";
+              if (stepEl) {
+                stepEl.className = "step done";
+                stepEl.innerHTML = "&#10003; " + escapeHtml(action.label) + " — done";
+              }
               results.push(`${action.label}: OK`);
             } catch (err) {
-              stepEl.className = "step failed";
-              stepEl.innerHTML = "&#10007; " + escapeHtml(action.label) + " — " + escapeHtml(err.message);
+              if (stepEl) {
+                stepEl.className = "step failed";
+                stepEl.innerHTML = "&#10007; " + escapeHtml(action.label) + " — " + escapeHtml(err.message);
+              }
               results.push(`${action.label}: FAILED (${err.message})`);
               failed++;
             }
