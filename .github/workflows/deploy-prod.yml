@@ -233,6 +233,9 @@ jobs:
           name: android-prod-release
           path: android-release
 
+      - name: List downloaded artifacts
+        run: find android-release -type f | head -20
+
       - name: Upload to Play Store internal testing track
         uses: r0adkll/upload-google-play@935ef9c68bb393a8e6116b1575626a7f5be3a7fb # v1
         with:

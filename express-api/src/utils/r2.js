@@ -47,14 +47,14 @@ const CDN_URL =
     ? `${process.env.MINIO_ENDPOINT || 'http://localhost:9002'}/${bucketName}`
     : 'https://images.shytalk.shyden.co.uk');
 
-async function putObject(key, body, contentType, metadata = {}) {
+async function putObject(key, body, contentType, metadata = {}, options = {}) {
   await s3.send(
     new PutObjectCommand({
       Bucket: bucketName,
       Key: key,
       Body: body,
       ContentType: contentType,
-      CacheControl: 'public, max-age=31536000, immutable',
+      CacheControl: options.cacheControl || 'public, max-age=31536000, immutable',
       Metadata: metadata,
     }),
   );

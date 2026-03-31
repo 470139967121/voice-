@@ -46,7 +46,8 @@ app.use('/api', (req, res, next) => {
     req.path === '/log-config' ||
     req.path.startsWith('/auth/') ||
     (req.method === 'GET' && req.path === '/config/startingScreens') ||
-    (req.path.startsWith('/test/') && process.env.NODE_ENV !== 'production')
+    (req.path.startsWith('/test/') && process.env.NODE_ENV !== 'production') ||
+    (req.method === 'GET' && /^\/users\/[^/]+\/data-export\/download$/.test(req.path))
   )
     return next();
   authMiddleware(req, res, next);

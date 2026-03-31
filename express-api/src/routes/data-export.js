@@ -18,6 +18,9 @@ const { buildDataExportReadyEmail } = require('../utils/email-templates');
 
 const RATE_LIMIT_MS = 24 * 60 * 60 * 1000; // 24 hours
 const EXPORT_EXPIRY_MS = 48 * 60 * 60 * 1000; // 48 hours
+if (!process.env.EXPORT_DOWNLOAD_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('EXPORT_DOWNLOAD_SECRET is required in production');
+}
 const EXPORT_DOWNLOAD_SECRET = process.env.EXPORT_DOWNLOAD_SECRET || 'dev-export-secret';
 
 // ─── Helper: ownership check ────────────────────────────────────
@@ -80,9 +83,13 @@ router.post('/users/:uniqueId/data-export', async (req, res) => {
         const r2Key = `exports/${uniqueId}/${generateId()}.zip`;
 
         // Upload to R2 with private cache headers
-        await r2.putObject(r2Key, result.buffer, 'application/zip', {
-          expiresAt: String(timestamp + EXPORT_EXPIRY_MS),
-        });
+        await r2.putObject(
+          r2Key,
+          result.buffer,
+          'application/zip',
+          { expiresAt: String(timestamp + EXPORT_EXPIRY_MS) },
+          { cacheControl: 'private, no-cache, no-store' },
+        );
 
         const expiresAt = timestamp + EXPORT_EXPIRY_MS;
         const downloadToken = generateDownloadToken(uniqueId, expiresAt);
