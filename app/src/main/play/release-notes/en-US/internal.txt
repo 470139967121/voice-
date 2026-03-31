@@ -1,3 +1,8 @@
-Data Export — download all your personal data
+v0.61.0
 
-You can now request a copy of all your personal data from Settings. ShyTalk will prepare a downloadable file containing your profile, messages, followers, economy, and more. A download link is sent to your email once ready. Files are available for 48 hours. You can request a new export once every 24 hours.
+GDPR Article 20 data export (#238)
+- GDPR Article 20 data export
+- Implement user data export with 48-hour download window:
+- - POST /api/users/:uniqueId/data-export — request export (rate-limited 24h)
+- - GET /api/users/:uniqueId/data-export/status — poll status
+- - GET /api/users/:uniqueId/data-export/download — HMAC-authenticated download
