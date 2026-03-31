@@ -241,11 +241,11 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.shyden.shytalk
-          releaseFiles: android-release/app/build/outputs/bundle/prodRelease/*.aab
+          releaseFiles: android-release/build/outputs/bundle/prodRelease/*.aab
           track: internal
           status: draft
           releaseName: ${{ needs.validate-release.outputs.version }}
-          whatsNewDirectory: android-release/app/src/main/play/release-notes
+          whatsNewDirectory: android-release/src/main/play/release-notes
 
   deploy-ios-prod:
     name: Deploy iOS to App Store

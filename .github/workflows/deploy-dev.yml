@@ -354,4 +354,5 @@ jobs:
       web: 'all'
       parallel: true
       ref: ${{ github.sha }}
+      report_env: deploy
     secrets: inherit
