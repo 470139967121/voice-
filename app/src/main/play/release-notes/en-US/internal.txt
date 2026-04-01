@@ -1,8 +1,8 @@
-v0.63.3
+v0.63.4
 
-CRITICAL — room close, gacha coins, Play Store (#248)
+voice diagnostic banner + room confirmation dialog (#251)
 - ## Summary
-- Three critical fixes:
-- ### 1. Room close bug (rooms stay in list after closing)
-- **Root cause:** Firestore security rules type mismatch.
-- `callerUniqueId()` returns a **Number** from the auth custom claim, but
+- 1. Voice banner now shows the specific error (e.g., "Voice token error:
+- ...") instead of generic "temporarily unavailable"
+- 2. Room confirmation dialog appears when creating a room while having an
+- existing one open
