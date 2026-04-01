@@ -160,11 +160,6 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Set up Gradle
-        if: steps.cached-apk.outputs.found != 'true' || steps.download-apk.outcome == 'failure'
-        uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6.0.1
-        with:
-          cache-read-only: false
 
       - name: Decode google-services.json
         if: steps.cached-apk.outputs.found != 'true' || steps.download-apk.outcome == 'failure'
@@ -230,12 +225,6 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Set up Gradle
-
-        uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6.0.1
-        with:
-          cache-read-only: false
-
       - name: Install Apple API key
 
         env:
@@ -289,14 +278,24 @@ jobs:
           echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/dev/google-services.json
           echo "$GOOGLE_SERVICES_DEV_BASE64" | base64 -d > app/src/prod/google-services.json
 
-      - name: Build KMP shared framework for iOS
+      - name: Cache KMP shared framework
+        id: kmp-cache
+        uses: actions/cache@d4323992aba1c3a8070c6d3243fa097f2652837e # v4
+        with:
+          path: shared/build/bin/iosArm64/releaseFramework
+          key: kmp-ios-framework-${{ hashFiles('shared/src/**', 'shared/build.gradle.kts') }}
 
+      - name: Build KMP shared framework for iOS
+        if: steps.kmp-cache.outputs.cache-hit != 'true'
         run: ./gradlew :shared:linkReleaseFrameworkIosArm64
 
-      - name: Build and archive iOS app
-
+      - name: Build, archive, and export iOS app
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           cd iosApp
+          # Archive
           xcodebuild \
             -project iosApp.xcodeproj \
             -scheme iosApp \
@@ -308,14 +307,7 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="ShyTalk App Store Distribution" \
             DEVELOPMENT_TEAM=F3XX4PM3MF \
             archive
-
-      - name: Export IPA
-
-        env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-        run: |
-          cd iosApp
+          # Export IPA
           xcodebuild \
             -exportArchive \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
