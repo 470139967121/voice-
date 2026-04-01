@@ -1,8 +1,8 @@
-v0.63.4
+v0.63.5
 
-voice diagnostic banner + room confirmation dialog (#251)
+admin panel CSP errors, backup metadata, and banner upload (#252)
 - ## Summary
-- 1. Voice banner now shows the specific error (e.g., "Voice token error:
-- ...") instead of generic "temporarily unavailable"
-- 2. Room confirmation dialog appears when creating a room while having an
-- existing one open
+- - Remove invalid `X-Frame-Options` and `frame-ancestors` meta tags
+- (browser ignores these in `<meta>`, must be HTTP headers)
+- - Add `blob:` to CSP `img-src` directive to fix banner image preview
+- blocking
