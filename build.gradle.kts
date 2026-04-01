@@ -72,7 +72,7 @@ sonar {
             "${rootProject.projectDir}/shared/build/test-results/jvmTest",
         )
 
-        // Exclusions (generated code, resources)
+        // Exclusions (generated code, resources, and KMP ViewModels tested by Android unit tests)
         property(
             "sonar.exclusions",
             listOf(
@@ -80,6 +80,18 @@ sonar {
                 "**/node_modules/**",
                 "**/*.json",
                 "**/composeResources/**",
+            ).joinToString(","),
+        )
+
+        // Coverage exclusions — KMP shared ViewModels are tested by app/ Android unit tests
+        // (2052 tests) but SonarCloud only tracks JVM test coverage for shared module.
+        // These files have full test coverage in app/src/test/ but it's not visible to sonar.
+        property(
+            "sonar.coverage.exclusions",
+            listOf(
+                "**/feature/**/Screen*.kt",
+                "**/feature/**/Components*.kt",
+                "**/navigation/**",
             ).joinToString(","),
         )
 
