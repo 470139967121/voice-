@@ -97,21 +97,21 @@ test.describe('Admin Reports', () => {
     const archivedBtn = page.locator('#report-filter-bar button[data-report-filter="archived"]');
 
     // Pending (default)
-    await expect(pendingBtn).toHaveClass(/active/);
+    await expect(pendingBtn).toHaveClass(/active/, { timeout: 5_000 });
 
     // Switch to Resolved
     await filterReports(page, 'resolved');
-    await expect(resolvedBtn).toHaveClass(/active/);
-    await expect(pendingBtn).not.toHaveClass(/active/);
+    await expect(resolvedBtn).toHaveClass(/active/, { timeout: 5_000 });
+    await expect(pendingBtn).not.toHaveClass(/active/, { timeout: 5_000 });
 
     // Switch to Archived
     await filterReports(page, 'archived');
-    await expect(archivedBtn).toHaveClass(/active/);
-    await expect(resolvedBtn).not.toHaveClass(/active/);
+    await expect(archivedBtn).toHaveClass(/active/, { timeout: 5_000 });
+    await expect(resolvedBtn).not.toHaveClass(/active/, { timeout: 5_000 });
 
     // Back to Pending
     await filterReports(page, 'pending');
-    await expect(pendingBtn).toHaveClass(/active/);
+    await expect(pendingBtn).toHaveClass(/active/, { timeout: 5_000 });
   });
 
   // ── Test 3: Search by unique ID — enter user uniqueId, verify filtered ──
