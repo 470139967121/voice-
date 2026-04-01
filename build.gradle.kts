@@ -60,8 +60,9 @@ sonar {
         property("sonar.qualitygate.wait", "true")
 
         // Let the Gradle plugin auto-detect Kotlin sources from shared module.
-        // Only manually specify Express API paths (not managed by Gradle).
-        property("sonar.sources", "express-api/src")
+        // Manually add Express API and app sources (app module excluded from sonar task
+        // due to Android SDK dependency, but sources still need scanning for coverage).
+        property("sonar.sources", "express-api/src,app/src/main/java")
         property("sonar.tests", "express-api/tests")
 
         // Kotlin test reports — use absolute path to avoid shared/shared/ doubling

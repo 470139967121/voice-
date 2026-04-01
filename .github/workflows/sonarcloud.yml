@@ -88,7 +88,12 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew sonar -Dsonar.token=$SONAR_TOKEN -Dsonar.qualitygate.wait=true
+        run: >-
+          ./gradlew sonar
+          -Dsonar.token=$SONAR_TOKEN
+          -Dsonar.qualitygate.wait=true
+          -x :app:sonar
+          -Dsonar.coverage.jacoco.xmlReportPaths="${{ github.workspace }}/app/build/reports/jacoco/devDebug/jacoco.xml"
 
       - name: Skip SonarCloud (no token)
         if: env.SONAR_TOKEN == ''
