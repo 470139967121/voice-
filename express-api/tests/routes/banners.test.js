@@ -595,4 +595,19 @@ describe('POST /api/admin/banners/upload', () => {
     expect(res.status).toBe(200);
     expect(res.body.key).toMatch(/\.webp$/);
   });
+
+  it('returns 500 when R2 upload fails', async () => {
+    putObject.mockRejectedValueOnce(new Error('R2 connection timeout'));
+
+    const app = createApp({ isAdmin: true });
+    const res = await request(app)
+      .post('/api/admin/banners/upload')
+      .attach('file', Buffer.from('image data'), {
+        filename: 'banner.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('Internal server error');
+  });
 });

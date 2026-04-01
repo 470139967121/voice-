@@ -243,6 +243,27 @@ describe('GET /api/admin/backups', () => {
     expect(res.body.backups[0].userCount).toBeUndefined();
   });
 
+  test('returns null userCount when manifest has no users collection', async () => {
+    mockListObjectsWithMetadata.mockResolvedValue([
+      { key: 'backups/full/2026-03-16/rooms.json', size: 500 },
+    ]);
+
+    const manifestData = { collections: { rooms: 5 }, totalDocs: 5 };
+    mockGetObject.mockImplementation(async (key) => {
+      if (key.includes('manifest.json')) {
+        return { Body: jsonBodyStream(manifestData) };
+      }
+      throw Object.assign(new Error('Not found'), { name: 'NoSuchKey' });
+    });
+
+    const app = createApp();
+    const res = await request(app).get('/api/admin/backups').expect(200);
+
+    expect(res.body.backups).toHaveLength(1);
+    expect(res.body.backups[0].userCount).toBeNull();
+    expect(res.body.backups[0].size).toBe(500);
+  });
+
   test('skips objects with invalid date format in key', async () => {
     mockListObjectsWithMetadata.mockResolvedValue([
       { key: 'backups/full/invalid-date/users.json', size: 100 },
