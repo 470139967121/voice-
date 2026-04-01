@@ -12,7 +12,7 @@
 
 const router = require('express').Router();
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const { db } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
 const { requireAdmin } = require('../middleware/auth');
@@ -214,32 +214,46 @@ router.delete('/admin/banners/:id', async (req, res) => {
 });
 
 // ── Upload banner image to R2 (admin) ──
-router.post('/admin/banners/upload', upload.single('file'), async (req, res) => {
-  try {
-    if (requireAdmin(req, res)) return;
+router.post(
+  '/admin/banners/upload',
+  (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ error: 'File too large (max 10 MB)' });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      if (requireAdmin(req, res)) return;
 
-    const file = req.file;
-    if (!file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const mimeToExt = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif',
+      };
+      const ext = mimeToExt[file.mimetype] || 'jpg';
+      const key = `banners/${generateId()}_${Date.now()}.${ext}`;
+
+      await putObject(key, file.buffer, file.mimetype);
+
+      const imageUrl = `${CDN_URL}/${key}`;
+      res.json({ success: true, image_url: imageUrl, imageUrl, key });
+    } catch (err) {
+      log.error('banners', 'Failed to upload banner image', { error: err.message });
+      res.status(500).json({ error: 'Internal server error' });
     }
-
-    const mimeToExt = {
-      'image/jpeg': 'jpg',
-      'image/png': 'png',
-      'image/webp': 'webp',
-      'image/gif': 'gif',
-    };
-    const ext = mimeToExt[file.mimetype] || 'jpg';
-    const key = `banners/${generateId()}_${Date.now()}.${ext}`;
-
-    await putObject(key, file.buffer, file.mimetype);
-
-    const imageUrl = `${CDN_URL}/${key}`;
-    res.json({ success: true, image_url: imageUrl, imageUrl, key });
-  } catch (err) {
-    log.error('banners', 'Failed to upload banner image', { error: err.message });
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  },
+);
 
 module.exports = router;

@@ -200,7 +200,7 @@ describe('GET /api/admin/backups', () => {
     ]);
 
     // readR2Json uses r2.getObject — mock manifest lookups
-    const manifestData = { collections: ['users', 'rooms'], totalDocs: 50 };
+    const manifestData = { collections: { users: 42, rooms: 8 }, totalDocs: 50 };
     mockGetObject.mockImplementation(async (key) => {
       if (key.includes('manifest.json')) {
         return { Body: jsonBodyStream(manifestData) };
@@ -215,11 +215,15 @@ describe('GET /api/admin/backups', () => {
     // Sorted by date descending
     expect(res.body.backups[0].date).toBe('2026-03-16');
     expect(res.body.backups[0].totalSize).toBe(1536);
+    expect(res.body.backups[0].size).toBe(1536);
+    expect(res.body.backups[0].userCount).toBe(42);
     expect(res.body.backups[0].files).toHaveLength(2);
     expect(res.body.backups[0].manifest).toEqual(manifestData);
 
     expect(res.body.backups[1].date).toBe('2026-03-15');
     expect(res.body.backups[1].totalSize).toBe(2048);
+    expect(res.body.backups[1].size).toBe(2048);
+    expect(res.body.backups[1].userCount).toBe(42);
   });
 
   test('handles missing manifests gracefully', async () => {
@@ -235,6 +239,8 @@ describe('GET /api/admin/backups', () => {
 
     expect(res.body.backups).toHaveLength(1);
     expect(res.body.backups[0].manifest).toBeNull();
+    expect(res.body.backups[0].size).toBe(100);
+    expect(res.body.backups[0].userCount).toBeUndefined();
   });
 
   test('skips objects with invalid date format in key', async () => {
