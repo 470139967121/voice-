@@ -720,7 +720,9 @@ fun RoomScreen(
                                         modifier = Modifier.padding(end = 8.dp),
                                     )
                                     Text(
-                                        text = stringResource(Res.string.voice_chat_unavailable),
+                                        text =
+                                            uiState.voiceErrorDetail
+                                                ?: stringResource(Res.string.voice_chat_unavailable),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = Color(0xFFE65100),
                                     )

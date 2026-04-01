@@ -95,6 +95,7 @@ data class RoomUiState(
     val isVoiceJoined: Boolean = false,
     val isVoiceReady: Boolean = false,
     val isVoiceUnavailable: Boolean = false,
+    val voiceErrorDetail: String? = null,
     val pendingInvite: String? = null,
     val seatUsers: Map<String, User> = emptyMap(),
     val participantUsers: Map<String, User> = emptyMap(),
@@ -807,12 +808,13 @@ class RoomViewModel(
                             // unavailable banner handles display. Avoids double error.
                         )
                     }
-                    // Voice error — show the banner and unblock room if needed
+                    // Voice error — show the banner with diagnostic detail
                     if (errorMsg != null) {
                         _uiState.update {
                             it.copy(
                                 isVoiceReady = true,
                                 isVoiceUnavailable = true,
+                                voiceErrorDetail = errorMsg,
                                 speakingUserIds = emptySet(),
                             )
                         }

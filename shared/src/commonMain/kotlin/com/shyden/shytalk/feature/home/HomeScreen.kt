@@ -13,11 +13,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -168,6 +170,24 @@ fun RoomListContent(
                 viewModel.createRoom(name)
             },
             initialRoomName = uiState.lastRoomName,
+        )
+    }
+
+    if (uiState.showReplaceRoomConfirmation) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelReplaceRoom() },
+            title = { Text(stringResource(Res.string.replace_room_title)) },
+            text = { Text(stringResource(Res.string.replace_room_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmReplaceRoom() }) {
+                    Text(stringResource(Res.string.replace_room_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelReplaceRoom() }) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
         )
     }
 }

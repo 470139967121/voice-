@@ -685,6 +685,9 @@
     <string name="connecting">Connecting...</string>
     <string name="voice_chat_unavailable">Voice chat is temporarily unavailable</string>
     <string name="mic_permission_denied">Microphone permission denied. You won\'t be able to use voice chat.</string>
+    <string name="replace_room_title">Close existing room?</string>
+    <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one. Do you want to continue?</string>
+    <string name="replace_room_confirm">Close and create new</string>
 
     <!-- Warning screen -->
     <string name="official_warning">Official Warning</string>
