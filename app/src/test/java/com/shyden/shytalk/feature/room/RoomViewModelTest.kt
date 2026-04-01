@@ -1416,17 +1416,18 @@ class RoomViewModelTest {
     // ===== Voice Error Surfacing =====
 
     @Test
-    fun `voice error from voice service sets isVoiceUnavailable`() =
+    fun `voice error from voice service sets isVoiceUnavailable and voiceErrorDetail`() =
         roomTest {
             viewModel = createViewModel()
             emitRoomAsOwner()
             advanceUntilIdle()
 
-            voiceErrorFlow.value = "Voice join failed (code -7)"
+            voiceErrorFlow.value = "Voice token error: connection refused"
             advanceUntilIdle()
 
-            // Voice errors show via the banner (isVoiceUnavailable), not the snackbar (error)
+            // Voice errors show via the banner with diagnostic detail
             assertTrue(viewModel.uiState.value.isVoiceUnavailable)
+            assertEquals("Voice token error: connection refused", viewModel.uiState.value.voiceErrorDetail)
             assertNull(viewModel.uiState.value.error)
             verify { voiceService.clearError() }
         }

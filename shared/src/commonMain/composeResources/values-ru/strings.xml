@@ -841,4 +841,7 @@
     <string name="pin_dots_state">%1$d из %2$d цифр введено</string>
     <string name="export_data">Export My Data</string>
     <string name="export_data_pending">Export requested. Check your email for the download link.</string>
+    <string name="replace_room_title">04170430043A0440044B0442044C 04420435043A044304490443044E 043A043E043C043D043004420443?</string>
+    <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
+    <string name="replace_room_confirm">Close and create new</string>
 </resources>
