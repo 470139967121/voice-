@@ -1,8 +1,8 @@
-v0.63.2
+v0.63.3
 
-complete remaining legal page translations (18/18 all pages) (#247)
+CRITICAL — room close, gacha coins, Play Store (#248)
 - ## Summary
-- Completes the remaining 10 locale translations for Community Guidelines
-- paragraphs.
-- **Final coverage:**
-- 18/18 locales - complete
+- Three critical fixes:
+- ### 1. Room close bug (rooms stay in list after closing)
+- **Root cause:** Firestore security rules type mismatch.
+- `callerUniqueId()` returns a **Number** from the auth custom claim, but
