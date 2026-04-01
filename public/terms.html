@@ -235,7 +235,7 @@
 <script>
   ShyTalkLogger.init({
     source: 'terms-page',
-    endpoint: 'https://api.shytalk.shyden.co.uk/api/logs'
+    endpoint: (location.hostname.includes('dev') ? 'https://dev-api.shytalk.shyden.co.uk' : 'https://api.shytalk.shyden.co.uk') + '/api/logs'
   });
 </script>
 </body>

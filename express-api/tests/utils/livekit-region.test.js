@@ -87,6 +87,34 @@ describe('livekit-region', () => {
     expect(config.apiSecret).toBe('fallback-secret');
   });
 
+  test('falls back to LIVEKIT_URL when per-region URL not set (dev single-server)', () => {
+    delete process.env.LIVEKIT_URL_ASIA;
+    delete process.env.LIVEKIT_URL_EU;
+    process.env.LIVEKIT_URL = 'wss://single-dev-server.example.com';
+
+    const { getRegionConfig } = require('../../src/utils/livekit-region');
+    expect(getRegionConfig('asia').url).toBe('wss://single-dev-server.example.com');
+    expect(getRegionConfig('eu').url).toBe('wss://single-dev-server.example.com');
+  });
+
+  test('per-region URL takes precedence over global LIVEKIT_URL', () => {
+    process.env.LIVEKIT_URL = 'wss://should-not-use.example.com';
+
+    const { getRegionConfig } = require('../../src/utils/livekit-region');
+    expect(getRegionConfig('asia').url).toBe('wss://livekit.shytalk.shyden.co.uk');
+    expect(getRegionConfig('eu').url).toBe('wss://livekit-eu.shytalk.shyden.co.uk');
+  });
+
+  test('returns undefined URL when no env vars set at all', () => {
+    delete process.env.LIVEKIT_URL_ASIA;
+    delete process.env.LIVEKIT_URL_EU;
+    delete process.env.LIVEKIT_URL;
+
+    const { getRegionConfig } = require('../../src/utils/livekit-region');
+    expect(getRegionConfig('asia').url).toBeUndefined();
+    expect(getRegionConfig('eu').url).toBeUndefined();
+  });
+
   test('returns asia for null cf-ipcountry header', () => {
     const { getRegion } = require('../../src/utils/livekit-region');
     expect(getRegion({ headers: { 'cf-ipcountry': null } })).toBe('asia');
