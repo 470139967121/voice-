@@ -566,6 +566,19 @@ describe('POST /api/admin/banners/upload', () => {
     expect(res.body.key).toMatch(/\.png$/);
   });
 
+  it('returns 413 when file exceeds size limit', async () => {
+    const app = createApp({ isAdmin: true });
+    // 11 MB file exceeds the 10 MB limit
+    const largeBuffer = Buffer.alloc(11 * 1024 * 1024, 'x');
+    const res = await request(app).post('/api/admin/banners/upload').attach('file', largeBuffer, {
+      filename: 'huge.jpg',
+      contentType: 'image/jpeg',
+    });
+
+    expect(res.status).toBe(413);
+    expect(res.body.error).toMatch(/file too large/i);
+  });
+
   it('uses correct file extension for WebP uploads', async () => {
     putObject.mockResolvedValueOnce(
       'https://images.shytalk.shyden.co.uk/banners/banner-id_12345.webp',
@@ -581,5 +594,46 @@ describe('POST /api/admin/banners/upload', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.key).toMatch(/\.webp$/);
+  });
+
+  it('returns 400 when file type is not an allowed image format', async () => {
+    const app = createApp({ isAdmin: true });
+    const res = await request(app)
+      .post('/api/admin/banners/upload')
+      .attach('file', Buffer.from('<svg onload="alert(1)"/>'), {
+        filename: 'malicious.svg',
+        contentType: 'image/svg+xml',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/unsupported file type/i);
+  });
+
+  it('returns 400 for PDF upload', async () => {
+    const app = createApp({ isAdmin: true });
+    const res = await request(app)
+      .post('/api/admin/banners/upload')
+      .attach('file', Buffer.from('pdf content'), {
+        filename: 'doc.pdf',
+        contentType: 'application/pdf',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/unsupported file type/i);
+  });
+
+  it('returns 500 when R2 upload fails', async () => {
+    putObject.mockRejectedValueOnce(new Error('R2 connection timeout'));
+
+    const app = createApp({ isAdmin: true });
+    const res = await request(app)
+      .post('/api/admin/banners/upload')
+      .attach('file', Buffer.from('image data'), {
+        filename: 'banner.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('Internal server error');
   });
 });

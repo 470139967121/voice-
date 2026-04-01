@@ -77,10 +77,12 @@ router.get('/admin/backups', async (req, res) => {
         const manifest = await readR2Json(`backups/full/${date}/manifest.json`);
         if (manifest) {
           entry.manifest = manifest;
+          entry.userCount = manifest.collections?.users ?? null;
         }
       } catch {
         // Manifest might not exist for older backups
       }
+      entry.size = entry.totalSize;
       backups.push(entry);
     }
 
