@@ -198,7 +198,7 @@ class DateUtilsTest {
 
     @Test
     fun `formatRelativeTime - just under 1 minute is just now`() {
-        val ts = System.currentTimeMillis() - 59_999L // 59.999 seconds ago
+        val ts = System.currentTimeMillis() - 58_000L // 58 seconds ago (margin for test execution)
         assertEquals("just now", formatRelativeTime(ts))
     }
 
