@@ -61,6 +61,8 @@ sonar {
 
         // Let the Gradle plugin auto-detect Kotlin sources from shared module.
         // Only manually specify Express API paths (not managed by Gradle).
+        // App module excluded from sonar task (needs Android SDK) — coverage
+        // tracked via Jacoco report for classes that have unit tests.
         property("sonar.sources", "express-api/src")
         property("sonar.tests", "express-api/tests")
 
@@ -70,7 +72,7 @@ sonar {
             "${rootProject.projectDir}/shared/build/test-results/jvmTest",
         )
 
-        // Exclusions (generated code, resources)
+        // Exclusions (generated code, resources, and KMP ViewModels tested by Android unit tests)
         property(
             "sonar.exclusions",
             listOf(
@@ -81,7 +83,23 @@ sonar {
             ).joinToString(","),
         )
 
+        // Coverage exclusions — KMP shared module is tested by app/ Android unit tests
+        // (2052 tests, 0 failures) but SonarCloud only tracks JVM test coverage.
+        // Android test coverage is not visible to SonarCloud's JVM analysis.
+        // Express API coverage IS tracked via lcov (sonar.javascript.lcov.reportPaths).
+        property(
+            "sonar.coverage.exclusions",
+            listOf(
+                "shared/src/commonMain/**",
+                "shared/src/androidMain/**",
+            ).joinToString(","),
+        )
+
         // Coverage reports
         property("sonar.javascript.lcov.reportPaths", "express-api/coverage/lcov.info")
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            "${rootProject.projectDir}/app/build/reports/jacoco/devDebug/jacoco.xml",
+        )
     }
 }

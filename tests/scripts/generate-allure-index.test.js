@@ -42,12 +42,13 @@ describe('generateHtml', () => {
     expect(html).toContain('#8b7fff');
   });
 
-  test('renders all four suite cards', () => {
+  test('renders all five suite cards', () => {
     const html = generateHtml({});
     expect(html).toContain('Android E2E');
     expect(html).toContain('Playwright');
     expect(html).toContain('Express');
     expect(html).toContain('Kotlin');
+    expect(html).toContain('iOS E2E');
   });
 
   test('renders metadata when available', () => {

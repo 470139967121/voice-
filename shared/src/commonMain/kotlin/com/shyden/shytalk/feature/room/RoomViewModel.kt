@@ -803,13 +803,18 @@ class RoomViewModel(
                         it.copy(
                             speakingUserIds = if (isUnavailable) emptySet() else speaking,
                             isVoiceJoined = joined,
-                            error = errorMsg ?: it.error,
+                            // Don't set voice errors in main error field — the voice
+                            // unavailable banner handles display. Avoids double error.
                         )
                     }
-                    // Voice error before ready — unblock the room immediately
+                    // Voice error — show the banner and unblock room if needed
                     if (errorMsg != null) {
-                        if (!_uiState.value.isVoiceReady) {
-                            _uiState.update { it.copy(isVoiceReady = true, isVoiceUnavailable = true, speakingUserIds = emptySet()) }
+                        _uiState.update {
+                            it.copy(
+                                isVoiceReady = true,
+                                isVoiceUnavailable = true,
+                                speakingUserIds = emptySet(),
+                            )
                         }
                         voiceService.clearError()
                     }

@@ -23,18 +23,19 @@ class EconomyRepositoryImpl(
     private val api: WorkerApiClient,
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
+    private val authRepository: AuthRepository,
 ) : EconomyRepository {
     // Real-time balance from Firestore user doc
     override fun observeBalance(): Flow<Long> =
         callbackFlow {
-            val uid =
-                auth.currentUser?.uid ?: run {
+            val uniqueId =
+                authRepository.currentUserId ?: run {
                     close()
                     return@callbackFlow
                 }
             val listener =
                 firestore
-                    .document("users/$uid")
+                    .document("users/$uniqueId")
                     .addSnapshotListener { snapshot, error ->
                         if (error != null || snapshot == null) return@addSnapshotListener
                         val coins = snapshot.getLong("shyCoins") ?: 0L
@@ -209,7 +210,7 @@ class EconomyRepositoryImpl(
 
     override suspend fun getRecentTransactions(limit: Int): Resource<List<Transaction>> =
         firebaseCall("Failed to load transactions") {
-            val uid = auth.currentUser?.uid ?: throw Exception("Not authenticated")
+            val uid = authRepository.currentUserId ?: throw Exception("Not authenticated")
             val snapshot =
                 firestore
                     .collection("users/$uid/transactions")
@@ -225,7 +226,7 @@ class EconomyRepositoryImpl(
 
     override suspend fun getAllTransactions(filterType: String?): Resource<List<Transaction>> =
         firebaseCall("Failed to load transactions") {
-            val uid = auth.currentUser?.uid ?: throw Exception("Not authenticated")
+            val uid = authRepository.currentUserId ?: throw Exception("Not authenticated")
             var query =
                 firestore
                     .collection("users/$uid/transactions")

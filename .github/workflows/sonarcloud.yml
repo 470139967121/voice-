@@ -79,8 +79,8 @@ jobs:
           if [ -d "shared/build/test-results" ]; then
             echo "Build artifacts found — skipping rebuild"
           else
-            echo "No build artifacts — running tests"
-            ./gradlew :shared:jvmTest || true
+            echo "No build artifacts — running tests with coverage"
+            ./gradlew :shared:jvmTest testDevDebugUnitTest jacocoDevDebugUnitTestReport || true
           fi
 
       - name: Run SonarCloud analysis

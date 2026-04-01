@@ -41,6 +41,12 @@ const SUITES = [
     icon: '🟣',
     desc: 'Business logic unit tests (JVM + Android)',
   },
+  {
+    id: 'ios-e2e',
+    name: 'iOS E2E',
+    icon: '🍎',
+    desc: 'iOS app tests on simulators via XCTest',
+  },
 ];
 
 const ENVS = ['pr', 'deploy'];

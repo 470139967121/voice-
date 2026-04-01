@@ -1,5 +1,11 @@
 #!/usr/bin/env sh
 
+# Load .env if SONAR_TOKEN not already set
+if [ -z "$SONAR_TOKEN" ] && [ -f ".env" ]; then
+  SONAR_TOKEN=$(grep '^SONAR_TOKEN=' .env 2>/dev/null | cut -d= -f2-)
+  export SONAR_TOKEN
+fi
+
 # Skip SonarCloud for workflow-only changes
 CHANGED=$(git diff --name-only origin/main...HEAD 2>/dev/null)
 HAS_CODE=false
@@ -12,11 +18,11 @@ if [ "$HAS_CODE" = "false" ]; then
   exit 0
 fi
 
-# Check for SONAR_TOKEN
+# SONAR_TOKEN is required for code changes
 if [ -z "$SONAR_TOKEN" ]; then
-  echo "⚠ SONAR_TOKEN not set — skipping SonarCloud pre-push scan"
-  echo "  Set it with: export SONAR_TOKEN=your_token"
-  exit 0
+  echo "✗ SONAR_TOKEN not set — push blocked"
+  echo "  Add SONAR_TOKEN=your_token to .env or set it as an environment variable"
+  exit 1
 fi
 
 echo "Running SonarCloud pre-push scan..."

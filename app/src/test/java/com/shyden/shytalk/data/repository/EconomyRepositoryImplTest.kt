@@ -27,7 +27,8 @@ class EconomyRepositoryImplTest {
         api = mockk(relaxed = true)
         firestore = mockk(relaxed = true)
         auth = mockk(relaxed = true)
-        repo = EconomyRepositoryImpl(api, firestore, auth)
+        val authRepository = mockk<AuthRepository>(relaxed = true)
+        repo = EconomyRepositoryImpl(api, firestore, auth, authRepository)
     }
 
     // region observeEconomyConfig — reads from Firestore (tested via integration tests)

@@ -87,7 +87,7 @@ class DailyRewardViewModelTest {
             // Use java.time to compute today's date in the same format as the VM
             val today =
                 java.time.LocalDate
-                    .now()
+                    .now(java.time.ZoneOffset.UTC)
                     .toString()
             val user =
                 TestData.createTestUser(uid = "user-1").copy(
@@ -167,7 +167,7 @@ class DailyRewardViewModelTest {
             val vm = createViewModel()
             val today =
                 java.time.LocalDate
-                    .now()
+                    .now(java.time.ZoneOffset.UTC)
                     .toString()
             val user =
                 TestData.createTestUser(uid = "user-1").copy(

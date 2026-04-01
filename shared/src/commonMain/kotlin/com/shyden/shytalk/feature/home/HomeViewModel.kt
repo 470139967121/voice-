@@ -32,6 +32,8 @@ data class HomeUiState(
     val error: String? = null,
     val createdRoomId: String? = null,
     val lastRoomName: String = "",
+    val showReplaceRoomConfirmation: Boolean = false,
+    val pendingRoomName: String? = null,
 )
 
 class HomeViewModel(
@@ -279,32 +281,50 @@ class HomeViewModel(
         val userId = authRepository.currentUserId ?: return
         logI(TAG, "Creating room: name=$name")
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, lastRoomName = name) }
-            launch { userRepository.updateProfile(userId, mapOf("lastRoomName" to name)) }
-            // Close old rooms BEFORE creating new one to avoid race where the
-            // closeAll query picks up the newly-created room and closes it.
-            roomRepository.closeAllRoomsByOwner(userId)
-
-            // Safety check: verify no active room remains after close attempt.
-            // This prevents duplicate rooms from race conditions or failed closes.
+            // Check if user already has an active room — ask before replacing
             val existingRoomId = roomRepository.findActiveRoomByOwner(userId)
             if (existingRoomId != null) {
-                logE(TAG, "Active room still exists after close attempt: $existingRoomId")
-                _uiState.update { it.copy(isLoading = false, error = "You already have an active room") }
+                logI(TAG, "User has existing room $existingRoomId — showing confirmation")
+                _uiState.update {
+                    it.copy(showReplaceRoomConfirmation = true, pendingRoomName = name)
+                }
                 return@launch
             }
+            doCreateRoom(name, userId)
+        }
+    }
 
-            when (val result = roomRepository.createRoom(name, userId)) {
-                is Resource.Success -> {
-                    logI(TAG, "Room created: id=${result.data}")
-                    _uiState.update { it.copy(isLoading = false, createdRoomId = result.data) }
-                }
-                is Resource.Error -> {
-                    logE(TAG, "Room creation failed: ${result.message}")
-                    _uiState.update { it.copy(isLoading = false, error = result.message) }
-                }
-                is Resource.Loading -> Unit
+    fun confirmReplaceRoom() {
+        val userId = authRepository.currentUserId ?: return
+        val name = _uiState.value.pendingRoomName ?: return
+        _uiState.update { it.copy(showReplaceRoomConfirmation = false, pendingRoomName = null) }
+        viewModelScope.launch {
+            roomRepository.closeAllRoomsByOwner(userId)
+            doCreateRoom(name, userId)
+        }
+    }
+
+    fun cancelReplaceRoom() {
+        _uiState.update { it.copy(showReplaceRoomConfirmation = false, pendingRoomName = null) }
+    }
+
+    private suspend fun doCreateRoom(
+        name: String,
+        userId: String,
+    ) {
+        _uiState.update { it.copy(isLoading = true, error = null, lastRoomName = name) }
+        viewModelScope.launch { userRepository.updateProfile(userId, mapOf("lastRoomName" to name)) }
+
+        when (val result = roomRepository.createRoom(name, userId)) {
+            is Resource.Success -> {
+                logI(TAG, "Room created: id=${result.data}")
+                _uiState.update { it.copy(isLoading = false, createdRoomId = result.data) }
             }
+            is Resource.Error -> {
+                logE(TAG, "Room creation failed: ${result.message}")
+                _uiState.update { it.copy(isLoading = false, error = result.message) }
+            }
+            is Resource.Loading -> Unit
         }
     }
 

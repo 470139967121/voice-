@@ -133,7 +133,7 @@ class HomeViewModelTest {
         }
 
     @Test
-    fun `createRoom closes existing rooms first`() =
+    fun `createRoom with no existing room creates directly`() =
         runTest {
             val vm = createViewModel()
             advanceUntilIdle()
@@ -142,7 +142,7 @@ class HomeViewModelTest {
             vm.createRoom("My Room")
             advanceUntilIdle()
 
-            coVerify { roomRepository.closeAllRoomsByOwner(currentUserId) }
+            coVerify(exactly = 0) { roomRepository.closeAllRoomsByOwner(any()) }
             coVerify { roomRepository.createRoom("My Room", currentUserId) }
             assertEquals("new-room-id", vm.uiState.value.createdRoomId)
         }
@@ -599,20 +599,19 @@ class HomeViewModelTest {
     // ===== createRoom - duplicate room prevention =====
 
     @Test
-    fun `createRoom fails when user already has active room after close attempt`() =
+    fun `createRoom shows confirmation when user has active room`() =
         runTest {
             val vm = createViewModel()
             advanceUntilIdle()
-            // closeAllRoomsByOwner runs but an active room still exists (race condition / failed close)
             coEvery { roomRepository.findActiveRoomByOwner(currentUserId) } returns "existing-room-id"
 
             vm.createRoom("New Room")
             advanceUntilIdle()
 
-            // Should NOT call createRoom if an active room still exists
+            // Should show confirmation instead of creating or showing error
+            assertTrue(vm.uiState.value.showReplaceRoomConfirmation)
+            assertEquals("New Room", vm.uiState.value.pendingRoomName)
             coVerify(exactly = 0) { roomRepository.createRoom(any(), any()) }
-            assertNotNull(vm.uiState.value.error)
-            assertFalse(vm.uiState.value.isLoading)
         }
 
     @Test
@@ -631,20 +630,47 @@ class HomeViewModelTest {
         }
 
     @Test
-    fun `createRoom closes old rooms before creating new one to avoid race`() =
+    fun `confirmReplaceRoom closes old rooms then creates new`() =
         runTest {
             val vm = createViewModel()
             advanceUntilIdle()
+            coEvery { roomRepository.findActiveRoomByOwner(currentUserId) } returns "existing-room-id"
             coEvery { roomRepository.createRoom(any(), any()) } returns Resource.Success("new-id")
 
+            // First, createRoom shows confirmation
             vm.createRoom("New Room")
             advanceUntilIdle()
+            assertTrue(vm.uiState.value.showReplaceRoomConfirmation)
 
-            // closeAllRoomsByOwner must complete BEFORE createRoom starts,
-            // otherwise the close query can pick up the newly-created room.
+            // Reset findActiveRoomByOwner so doCreateRoom doesn't loop
+            coEvery { roomRepository.findActiveRoomByOwner(currentUserId) } returns null
+
+            // User confirms — closes old and creates new
+            vm.confirmReplaceRoom()
+            advanceUntilIdle()
+
             coVerifyOrder {
                 roomRepository.closeAllRoomsByOwner(currentUserId)
                 roomRepository.createRoom("New Room", currentUserId)
             }
+            assertFalse(vm.uiState.value.showReplaceRoomConfirmation)
+            assertEquals("new-id", vm.uiState.value.createdRoomId)
+        }
+
+    @Test
+    fun `cancelReplaceRoom dismisses confirmation`() =
+        runTest {
+            val vm = createViewModel()
+            advanceUntilIdle()
+            coEvery { roomRepository.findActiveRoomByOwner(currentUserId) } returns "existing-room-id"
+
+            vm.createRoom("New Room")
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value.showReplaceRoomConfirmation)
+
+            vm.cancelReplaceRoom()
+
+            assertFalse(vm.uiState.value.showReplaceRoomConfirmation)
+            assertNull(vm.uiState.value.pendingRoomName)
         }
 }
