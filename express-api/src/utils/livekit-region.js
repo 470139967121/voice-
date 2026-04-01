@@ -92,15 +92,19 @@ function getRegion(req) {
 }
 
 function getRegionConfig(region) {
+  // Each region requires explicit LIVEKIT_URL_*, LIVEKIT_KEY_*, and LIVEKIT_SECRET_*
+  // env vars. LIVEKIT_API_KEY/SECRET are the global fallback for unconfigured regions.
+  // On dev, all regions should point to the same LiveKit instance to avoid
+  // routing to prod when CF-IPCountry headers are absent.
   if (region === 'eu') {
     return {
-      url: process.env.LIVEKIT_URL_EU || 'wss://livekit-eu.shytalk.shyden.co.uk',
+      url: process.env.LIVEKIT_URL_EU || process.env.LIVEKIT_URL,
       apiKey: process.env.LIVEKIT_KEY_EU || process.env.LIVEKIT_API_KEY,
       apiSecret: process.env.LIVEKIT_SECRET_EU || process.env.LIVEKIT_API_SECRET,
     };
   }
   return {
-    url: process.env.LIVEKIT_URL_ASIA || 'wss://livekit.shytalk.shyden.co.uk',
+    url: process.env.LIVEKIT_URL_ASIA || process.env.LIVEKIT_URL,
     apiKey: process.env.LIVEKIT_KEY_ASIA || process.env.LIVEKIT_API_KEY,
     apiSecret: process.env.LIVEKIT_SECRET_ASIA || process.env.LIVEKIT_API_SECRET,
   };
