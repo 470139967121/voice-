@@ -117,15 +117,13 @@ test.describe('Admin Realtime Features', () => {
       currency: 'COINS', amount: 100,
     });
 
-    // Wait for the live monitor to pick up the change (Firestore listener)
-    await page.waitForTimeout(5_000);
-
-    // Read updated coins
-    const updatedCoinsText = await page.locator('#monitor-coins').textContent();
-    const updatedCoins = Number(updatedCoinsText!.replace(/,/g, ''));
-
-    // Coins must have increased — proves the onSnapshot listener delivered the update
-    expect(updatedCoins).toBeGreaterThan(initialCoins);
+    // Poll for the live monitor to pick up the change (Firestore listener).
+    // WebKit's WebChannel transport can be slower — use retry loop instead of fixed wait.
+    await expect(async () => {
+      const updatedCoinsText = await page.locator('#monitor-coins').textContent();
+      const updatedCoins = Number(updatedCoinsText!.replace(/,/g, ''));
+      expect(updatedCoins).toBeGreaterThan(initialCoins);
+    }).toPass({ timeout: 15_000 });
 
     // Restore coins
     await testData.api.post(`/api/users/${testData.user.uniqueId}/adjust-balance`, {

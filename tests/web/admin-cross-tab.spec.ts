@@ -449,6 +449,7 @@ test.describe('Admin Cross-Tab Interactions', () => {
     await navigateToTab(page, 'Users');
     await searchUser(page, String(testData.user.uniqueId));
     const displayNameInput = page.locator('[data-field="displayName"]');
-    await expect(displayNameInput).toHaveValue(testData.user.displayName);
+    await expect(displayNameInput).toBeVisible({ timeout: 10_000 });
+    await expect(displayNameInput).toHaveValue(testData.user.displayName, { timeout: 10_000 });
   });
 });
