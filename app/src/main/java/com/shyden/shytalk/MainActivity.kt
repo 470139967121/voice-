@@ -356,9 +356,21 @@ class MainActivity : AppCompatActivity() {
 
                         val pendingEmailLink by pendingEmailLinkState
 
+                        // Skip sign-in screen if already authenticated (prevents login flash)
+                        val initialRoute =
+                            if (
+                                authRepository.isAuthenticated &&
+                                appLockRepository.hasCredential &&
+                                authRepository.currentUserId != null
+                            ) {
+                                Screen.Main.route
+                            } else {
+                                Screen.SignIn.route
+                            }
+
                         NavGraph(
                             navController = navController,
-                            startDestination = Screen.SignIn.route,
+                            startDestination = initialRoute,
                             isBackendDegraded = backendDegraded,
                             pendingEmailLink = pendingEmailLink,
                             onEmailLinkConsumed = { pendingEmailLinkState.value = null },

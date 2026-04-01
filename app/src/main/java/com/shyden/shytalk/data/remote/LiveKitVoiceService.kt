@@ -162,8 +162,8 @@ class LiveKitVoiceService(
                             }
                         }
                         is RoomEvent.FailedToConnect -> {
-                            logE(TAG, "FailedToConnect event: ${event.error?.message}", event.error)
-                            _error.value = "Voice failed: ${event.error?.message ?: "unknown"}"
+                            logE(TAG, "FailedToConnect event: ${event.error.message}", event.error)
+                            _error.value = "Voice failed: ${event.error.message}"
                             _connectionState.value = VoiceConnectionState.DISCONNECTED
                             _isJoined.value = false
                             isSwitchingAudioType = false
