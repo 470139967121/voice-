@@ -1416,7 +1416,7 @@ class RoomViewModelTest {
     // ===== Voice Error Surfacing =====
 
     @Test
-    fun `voice error from voice service surfaces in uiState`() =
+    fun `voice error from voice service sets isVoiceUnavailable`() =
         roomTest {
             viewModel = createViewModel()
             emitRoomAsOwner()
@@ -1425,7 +1425,9 @@ class RoomViewModelTest {
             voiceErrorFlow.value = "Voice join failed (code -7)"
             advanceUntilIdle()
 
-            assertEquals("Voice join failed (code -7)", viewModel.uiState.value.error)
+            // Voice errors show via the banner (isVoiceUnavailable), not the snackbar (error)
+            assertTrue(viewModel.uiState.value.isVoiceUnavailable)
+            assertNull(viewModel.uiState.value.error)
             verify { voiceService.clearError() }
         }
 
