@@ -210,7 +210,7 @@ class EconomyRepositoryImpl(
 
     override suspend fun getRecentTransactions(limit: Int): Resource<List<Transaction>> =
         firebaseCall("Failed to load transactions") {
-            val uid = auth.currentUser?.uid ?: throw Exception("Not authenticated")
+            val uid = authRepository.currentUserId ?: throw Exception("Not authenticated")
             val snapshot =
                 firestore
                     .collection("users/$uid/transactions")
@@ -226,7 +226,7 @@ class EconomyRepositoryImpl(
 
     override suspend fun getAllTransactions(filterType: String?): Resource<List<Transaction>> =
         firebaseCall("Failed to load transactions") {
-            val uid = auth.currentUser?.uid ?: throw Exception("Not authenticated")
+            val uid = authRepository.currentUserId ?: throw Exception("Not authenticated")
             var query =
                 firestore
                     .collection("users/$uid/transactions")
