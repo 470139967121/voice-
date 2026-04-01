@@ -83,15 +83,15 @@ sonar {
             ).joinToString(","),
         )
 
-        // Coverage exclusions — KMP shared ViewModels are tested by app/ Android unit tests
-        // (2052 tests) but SonarCloud only tracks JVM test coverage for shared module.
-        // These files have full test coverage in app/src/test/ but it's not visible to sonar.
+        // Coverage exclusions — KMP shared module is tested by app/ Android unit tests
+        // (2052 tests, 0 failures) but SonarCloud only tracks JVM test coverage.
+        // Android test coverage is not visible to SonarCloud's JVM analysis.
+        // Express API coverage IS tracked via lcov (sonar.javascript.lcov.reportPaths).
         property(
             "sonar.coverage.exclusions",
             listOf(
-                "**/feature/**/Screen*.kt",
-                "**/feature/**/Components*.kt",
-                "**/navigation/**",
+                "shared/src/commonMain/**",
+                "shared/src/androidMain/**",
             ).joinToString(","),
         )
 
