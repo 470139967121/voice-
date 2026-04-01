@@ -162,8 +162,8 @@ class LiveKitVoiceService(
                             }
                         }
                         is RoomEvent.FailedToConnect -> {
-                            Log.e(TAG, "Failed to connect: ${event.error}")
-                            _error.value = "Voice is temporarily unavailable"
+                            logE(TAG, "FailedToConnect event: ${event.error?.message}", event.error)
+                            _error.value = "Voice failed: ${event.error?.message ?: "unknown"}"
                             _connectionState.value = VoiceConnectionState.DISCONNECTED
                             _isJoined.value = false
                             isSwitchingAudioType = false
@@ -217,14 +217,15 @@ class LiveKitVoiceService(
                 try {
                     tokenService.fetchToken(roomName)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Token fetch failed", e)
-                    _error.value = "Voice is temporarily unavailable"
+                    logE(TAG, "Token fetch failed: ${e.message}", e)
+                    _error.value = "Voice token error: ${e.message}"
                     currentRoomName = null
                     currentUserId = null
                     return@withLock
                 }
             token = response.token
             serverUrl = response.url ?: BuildConfig.LIVEKIT_SERVER_URL
+            logI(TAG, "Token received, serverUrl=${serverUrl.take(50)}")
         }
 
         cachedToken = token
@@ -232,19 +233,20 @@ class LiveKitVoiceService(
 
         try {
             if (serverUrl.isBlank()) {
-                _error.value = "Voice is temporarily unavailable"
+                logE(TAG, "LiveKit server URL is blank — BuildConfig=${BuildConfig.LIVEKIT_SERVER_URL.take(20)}")
+                _error.value = "Voice server not configured"
                 currentRoomName = null
                 currentUserId = null
                 cachedToken = null
                 cachedServerUrl = null
                 return@withLock
             }
-            logI(TAG, "Connecting to room: roomId=$roomName")
+            logI(TAG, "Connecting to room: roomId=$roomName url=${serverUrl.take(50)}")
             room.connect(serverUrl, token)
             logI(TAG, "Connected to room: roomId=$roomName")
         } catch (e: Exception) {
-            logE(TAG, "Voice connection failed", e)
-            _error.value = "Voice is temporarily unavailable"
+            logE(TAG, "Voice connection failed: ${e.message}", e)
+            _error.value = "Voice connection failed: ${e.message}"
             currentRoomName = null
             currentUserId = null
             cachedToken = null
