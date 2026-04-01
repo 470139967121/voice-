@@ -596,6 +596,32 @@ describe('POST /api/admin/banners/upload', () => {
     expect(res.body.key).toMatch(/\.webp$/);
   });
 
+  it('returns 400 when file type is not an allowed image format', async () => {
+    const app = createApp({ isAdmin: true });
+    const res = await request(app)
+      .post('/api/admin/banners/upload')
+      .attach('file', Buffer.from('<svg onload="alert(1)"/>'), {
+        filename: 'malicious.svg',
+        contentType: 'image/svg+xml',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/unsupported file type/i);
+  });
+
+  it('returns 400 for PDF upload', async () => {
+    const app = createApp({ isAdmin: true });
+    const res = await request(app)
+      .post('/api/admin/banners/upload')
+      .attach('file', Buffer.from('pdf content'), {
+        filename: 'doc.pdf',
+        contentType: 'application/pdf',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/unsupported file type/i);
+  });
+
   it('returns 500 when R2 upload fails', async () => {
     putObject.mockRejectedValueOnce(new Error('R2 connection timeout'));
 

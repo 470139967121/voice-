@@ -12,7 +12,15 @@
 
 const router = require('express').Router();
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.has(file.mimetype)) return cb(null, true);
+    cb(new Error('Unsupported file type. Allowed: JPEG, PNG, WebP, GIF'));
+  },
+});
 const { db } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
 const { requireAdmin } = require('../middleware/auth');
@@ -217,6 +225,10 @@ router.delete('/admin/banners/:id', async (req, res) => {
 router.post(
   '/admin/banners/upload',
   (req, res, next) => {
+    if (requireAdmin(req, res)) return;
+    next();
+  },
+  (req, res, next) => {
     upload.single('file')(req, res, (err) => {
       if (err) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -229,8 +241,6 @@ router.post(
   },
   async (req, res) => {
     try {
-      if (requireAdmin(req, res)) return;
-
       const file = req.file;
       if (!file) {
         return res.status(400).json({ error: 'No file uploaded' });
