@@ -18,9 +18,10 @@ async function waitForListLoaded(page: Page): Promise<void> {
   await expect(page.locator('#funfacts-list').locator('.list-loader')).toBeHidden({ timeout: 15_000 }).catch((err) => console.warn('Loader wait failed:', err.message));
 }
 
-/** Find the card in #funfacts-list whose text content includes the given substring. */
+/** Find the first card in #funfacts-list whose text content includes the given substring.
+ * Uses .first() because the emulator may accumulate duplicate entries across test runs. */
 function factCard(page: Page, textSubstring: string) {
-  return page.locator('#funfacts-list > div').filter({ hasText: textSubstring });
+  return page.locator('#funfacts-list > div').filter({ hasText: textSubstring }).first();
 }
 
 /** Fill the fun-fact dialog fields and save. */
@@ -70,7 +71,9 @@ test.describe('Admin Fun Facts', () => {
 
   // ── Test 1: Seeded fact appears in list — API verify ──
   test('seeded fact appears in list with API verification', async ({ page, testData }) => {
-    // The seeded fact text should be visible in the list
+    // The seeded fact text should be visible in the list.
+    // Use .first() because previous test runs may have left duplicate entries
+    // with the same prefix pattern (the emulator accumulates across runs).
     const card = factCard(page, testData.funFact.text);
     await expect(card).toBeVisible({ timeout: 15_000 });
 
@@ -161,9 +164,12 @@ test.describe('Admin Fun Facts', () => {
 
   // ── Test 4: Delete fun fact — confirm, verify removed, reload, re-seed ──
   test('delete fun fact removes it permanently', async ({ page, testData }) => {
-    const factText = testData.funFact.text;
+    // Create a dedicated fun fact to delete — do NOT delete the seeded one,
+    // as serial block retries would then fail on the "seeded fact appears" test.
+    const factText = `e2e-delete-${Date.now()}`;
+    await testData.api.testWrite('funFacts', { text: factText, category: 'Science', emoji: '🧪', isActive: true, createdAt: Date.now() });
+    await reloadAndReturn(page);
 
-    // Ensure the card is visible
     const card = factCard(page, factText);
     await expect(card).toBeVisible({ timeout: 15_000 });
 

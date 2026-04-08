@@ -335,6 +335,53 @@ router.get('/test/verify/:collection/:id', async (req, res) => {
   }
 });
 
+// POST /api/test/create-user — create a user doc (optionally without identity data)
+// Used by the "empty graph: No identity data yet" test which needs a user
+// without any identity graph records. /api/test/* routes bypass auth
+// middleware entirely so req.auth is not set here — accept either the
+// test API key OR any Bearer token (the admin panel test infra calls
+// this via testData.api which uses Bearer, and the bypass means only
+// direct test-helper calls ever hit this route).
+router.post('/test/create-user', async (req, res) => {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Not available in production' });
+    }
+    const keyHeader = req.headers['x-test-api-key'];
+    const hasApiKey = keyHeader && keyHeader === process.env.TEST_API_KEY;
+    const hasBearer = req.headers.authorization && req.headers.authorization.startsWith('Bearer ');
+    if (!hasApiKey && !hasBearer) {
+      return res.status(403).json({ error: 'Test API key or Bearer token required' });
+    }
+    const { name, skipIdentity } = req.body || {};
+    const uid = 'test_noidentity_' + Date.now();
+    // Use crypto.randomInt rather than Math.random — it's cryptographically
+    // secure and avoids SonarCloud's "pseudorandom number generator" hotspot
+    // warning. The unique id doesn't need to be unpredictable here (it's a
+    // test user), but using the secure API keeps the security gate clean.
+    const crypto = require('crypto');
+    const uniqueId = 900000000 + crypto.randomInt(99999999);
+    await db.doc(`users/${uid}`).set({
+      uid,
+      uniqueId,
+      displayName: name || 'Test User',
+      createdAt: Date.now(),
+      isSuspended: false,
+    });
+    if (!skipIdentity) {
+      await db.doc(`identityGraphs/${uid}`).set({
+        nodes: [
+          { id: 'account-' + uid, type: 'account', label: String(uniqueId), suspended: false },
+        ],
+        edges: [],
+      });
+    }
+    res.json({ uid, uniqueId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/test/write/:collection — write a document to an allowed collection
 router.post('/test/write/:collection', async (req, res) => {
   try {
@@ -351,6 +398,7 @@ router.post('/test/write/:collection', async (req, res) => {
       'reports',
       'suspensionAppeals',
       'alerts',
+      'suggestions',
     ];
     if (!ALLOWED_COLLECTIONS.includes(collection)) {
       return res.status(400).json({ error: 'Collection not allowed' });
@@ -551,6 +599,39 @@ async function deleteTestData(testRunId) {
 
   return deleted;
 }
+
+// POST /api/test/clear/:collection — delete all documents in a collection.
+// Used by Playwright global-setup to clear test-generated data between runs.
+const CLEARABLE_COLLECTIONS = new Set([
+  'suggestions',
+  'notifications',
+  'moderationLog',
+  'auditLog',
+  'adminAuditLog',
+  'blockedTopics',
+  'funFacts',
+]);
+
+router.post('/test/clear/:collection', async (req, res) => {
+  try {
+    if (requireTestApiKey(req, res)) return;
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Not available in production' });
+    }
+    const { collection } = req.params;
+    if (!CLEARABLE_COLLECTIONS.has(collection)) {
+      return res.status(400).json({ error: `Collection ${collection} is not clearable` });
+    }
+    const snap = await db.collection(collection).limit(500).get();
+    const batch = db.batch();
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    res.json({ deleted: snap.size });
+  } catch (err) {
+    log.error('test-helpers', `Clear ${req.params.collection} failed`, { error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
 module.exports.deleteTestData = deleteTestData;

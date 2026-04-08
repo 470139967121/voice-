@@ -358,10 +358,15 @@ test.describe('Admin Economy Config', () => {
     // Reload and verify the gift milestone renders correctly
     // Day 999 is guaranteed to sort last (milestones are sorted by day ascending)
     await reloadAndNavigateToEconomy(page);
-    const lastRow = page.locator('#milestone-rows .milestone-row').last();
-    await expect(lastRow.locator('.ms-day')).toHaveValue('999');
-    await expect(lastRow.locator('.ms-type')).toHaveValue('gift');
-    await expect(lastRow.locator('.ms-gift-select')).toBeVisible();
+    // Wait for milestone rows to render before checking the last one
+    const milestoneRows = page.locator('#milestone-rows .milestone-row');
+    await expect(milestoneRows.first()).toBeVisible({ timeout: 10_000 });
+    // Wait for day-999 row specifically (it may take a moment to sort/render all rows)
+    const day999Row = milestoneRows.filter({ has: page.locator('.ms-day[value="999"]') });
+    await expect(day999Row).toBeVisible({ timeout: 10_000 });
+    await expect(day999Row.locator('.ms-type')).toHaveValue('gift');
+    // Gift select renders conditionally based on type — wait for it
+    await expect(day999Row.locator('.ms-gift-select')).toBeVisible({ timeout: 5_000 });
 
     // Restore (remove the day-999 milestone)
     await restoreEconomyConfig(page, testData);

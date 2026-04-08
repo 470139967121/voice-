@@ -26,15 +26,21 @@ async function filterReports(page: Page, status: 'pending' | 'resolved' | 'archi
 
 /** Select the first report card for keyboard interaction. */
 async function selectFirstReportCard(page: Page): Promise<void> {
-  await page.keyboard.press('ArrowDown');
   const firstCard = page.locator('.report-card').first();
-  await expect(firstCard).toHaveClass(/selected/, { timeout: 3_000 });
+  // Blur any focused input/select to ensure the document-level keyboard
+  // handler runs (it returns early when target is INPUT/SELECT/TEXTAREA).
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur?.());
+  await page.keyboard.press('ArrowDown');
+  await expect(firstCard).toHaveClass(/selected/, { timeout: 5_000 });
 }
 
 test.describe('Admin Keyboard Shortcuts', () => {
   test.describe.configure({ mode: 'serial' });
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, browserName }) => {
+    // Keyboard shortcuts are desktop-only — skip on mobile viewports
+    const projectName = test.info().project.name;
+    test.skip(projectName.includes('mobile'), 'Keyboard shortcuts not applicable on mobile viewports');
     await adminLogin(page);
   });
 

@@ -16,6 +16,7 @@ if (process.env.ALLURE_ENABLED === 'true') {
 }
 
 export default defineConfig({
+  globalSetup: './tests/web/global-setup.ts',
   testDir: './tests/web',
   testIgnore: ['**/auth.setup.ts'],
   timeout: 20_000,
@@ -33,7 +34,7 @@ export default defineConfig({
     video: 'off',
   },
   projects: [
-    { name: 'chromium', use: { browserName: 'chromium' } },
+    { name: 'chromium', use: { browserName: 'chromium', hasTouch: true } },
     { name: 'firefox', use: { browserName: 'firefox' } },
     { name: 'webkit', use: { browserName: 'webkit' } },
     {

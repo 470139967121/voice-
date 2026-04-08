@@ -44,17 +44,34 @@ app.use('/api', (req, res, next) => {
   if (
     req.path === '/health' ||
     req.path === '/log-config' ||
+    req.path === '/logs' ||
+    req.path === '/firebase-config' ||
     req.path.startsWith('/auth/') ||
     (req.method === 'GET' && req.path === '/config/startingScreens') ||
     (req.path.startsWith('/test/') && process.env.NODE_ENV !== 'production') ||
-    (req.method === 'GET' && /^\/users\/[^/]+\/data-export\/download$/.test(req.path))
+    (req.method === 'GET' && /^\/users\/[^/]+\/data-export\/download$/.test(req.path)) ||
+    // Public suggestion endpoints (browsing without login)
+    (req.method === 'GET' && req.path === '/suggestions') ||
+    (req.method === 'GET' && req.path === '/suggestions/search') ||
+    (req.method === 'GET' && req.path === '/suggestions/blocked') ||
+    (req.method === 'GET' && req.path === '/suggestions/tags') ||
+    (req.method === 'GET' &&
+      /^\/suggestions\/[^/]+$/.test(req.path) &&
+      req.path !== '/suggestions/mine') ||
+    // One-click email unsubscribe (token-based, no auth)
+    (req.method === 'POST' && req.path === '/subscriptions/unsubscribe')
   )
     return next();
   authMiddleware(req, res, next);
 });
 
-// General rate limit on all API routes
-app.use('/api', generalLimiter);
+// General rate limit on all API routes (except /test/* in non-prod)
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/test/') && process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+  return generalLimiter(req, res, next);
+});
 
 // Stricter limits on write-heavy routes
 app.use('/api/conversations', writeLimiter);
@@ -100,6 +117,14 @@ app.use('/api', require('./routes/admin-devices'));
 app.use('/api', require('./routes/admin-temp-id'));
 app.use('/api', require('./routes/admin-alerts'));
 app.use('/api', require('./routes/translate'));
+app.use('/api', require('./routes/suggestions'));
+app.use('/api', require('./routes/subscriptions'));
+app.use('/api', require('./routes/suggestions-notifications'));
+app.use('/api', require('./routes/admin-suggestions'));
+app.use('/api', require('./routes/admin-audit-log'));
+app.use('/api', require('./routes/suggestions-maintenance'));
+app.use('/api', require('./routes/identity-graph'));
+app.use('/api', require('./routes/roadmap-auth'));
 
 const { createLogsRouter } = require('./routes/logs');
 app.use('/api', createLogsRouter(logger));
