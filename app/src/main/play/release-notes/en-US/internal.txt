@@ -1,8 +1,7 @@
-v0.63.6
+v0.63.7
 
-environment config hardening — prevent dev/prod cross-contamination (#253)
-- ## Summary
-- - Fix 4 legal pages sending logs to prod API when on dev site
-- - Fix deploy-dev.yml writing dev Firebase config to prod build path
-- - Remove hardcoded prod URLs from LiveKit region fallbacks — use
-- `LIVEKIT_URL` env var as generic fallback so dev single-server setups
+release workflow — don't skip on workflow_dispatch (#279)
+- Manual workflow_dispatch triggers should always run the release job,
+- bypassing the workflow_only skip check (which examines HEAD~1 diff
+- and would skip if the latest commit is workflow-only).
+- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
