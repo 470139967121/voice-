@@ -281,4 +281,75 @@ router.post('/portal/totp/confirm-setup', authMiddlewareStrict, async (req, res)
   }
 });
 
+/**
+ * POST /portal/totp/verify — Verify TOTP code after sign-in.
+ *
+ * Called when a password user with TOTP enrolled signs in and needs
+ * to prove possession of their authenticator app. On success, sets
+ * the totpVerified custom claim so portal/me returns full dashboard data.
+ */
+router.post('/portal/totp/verify', authMiddlewareStrict, async (req, res) => {
+  try {
+    const { uniqueId, uid, token } = req.auth;
+    const { code } = req.body || {};
+
+    // 1. Validate code format: must be exactly 6 digits
+    if (!code || typeof code !== 'string' || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({ error: 'Code must be exactly 6 digits' });
+    }
+
+    // 2. Verify password provider
+    if (token.firebase?.sign_in_provider !== 'password') {
+      return res.status(400).json({ error: 'Password provider required' });
+    }
+
+    // 3. Read TOTP doc — must exist (user must be enrolled)
+    const totpSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
+    if (!totpSnap.exists) {
+      return res.status(403).json({ error: 'TOTP not enrolled' });
+    }
+
+    const totpData = totpSnap.data();
+
+    // 4. Replay prevention: same code within 30s window
+    if (
+      totpData.lastUsedCode === code &&
+      totpData.lastUsedAt &&
+      Date.now() - totpData.lastUsedAt < 30000
+    ) {
+      return res.status(401).json({ error: 'Code already used' });
+    }
+
+    // 5. Decrypt secret
+    const secret = decryptSecret(totpData.encryptedSecret);
+
+    // 6. Verify code with otplib
+    const result = verifySync({ token: code, secret, ...otplibPlugins });
+    if (!result.valid) {
+      return res.status(401).json({ error: 'Invalid code' });
+    }
+
+    // 7. Update TOTP doc with lastUsedCode/lastUsedAt
+    await db.doc(`users/${uniqueId}/private/totp`).set({
+      ...totpData,
+      lastUsedCode: code,
+      lastUsedAt: Date.now(),
+    });
+
+    // 8. Set totpVerified claim, preserving existing claims
+    const userRecord = await auth.getUser(uid);
+    const existingClaims = userRecord.customClaims || {};
+    await auth.setCustomUserClaims(uid, {
+      ...existingClaims,
+      totpVerified: true,
+      totpVerifiedAt: Date.now(),
+    });
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    log.error('portal', 'POST /portal/totp/verify failed', { error: err.message });
+    return res.status(503).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
