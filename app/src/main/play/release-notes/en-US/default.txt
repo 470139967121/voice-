@@ -1,7 +1,8 @@
-v0.63.7
+v0.63.8
 
-release workflow — don't skip on workflow_dispatch (#279)
-- Manual workflow_dispatch triggers should always run the release job,
-- bypassing the workflow_only skip check (which examines HEAD~1 diff
-- and would skip if the latest commit is workflow-only).
+use GitHub App token for release workflow (#281)
+- use GitHub App token for release workflow push
+- Replace RELEASE_TOKEN (PAT) with shytalk-release-bot GitHub App token
+- via actions/create-github-app-token. The app is in the main branch
+- ruleset bypass list, allowing the release commit to push to main.
 - Claude Opus 4.6 (1M context) <noreply@anthropic.com>
