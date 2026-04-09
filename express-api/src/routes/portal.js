@@ -2,6 +2,13 @@ const router = require('express').Router();
 const { authMiddlewareStrict } = require('../middleware/auth');
 const { db, auth } = require('../utils/firebase');
 const log = require('../utils/log');
+const { encryptSecret, decryptSecret } = require('../utils/totp-crypto');
+const { generateSecret, generateURI, verifySync } = require('otplib/functional');
+const { NobleCryptoPlugin } = require('@otplib/plugin-crypto-noble');
+const { ScureBase32Plugin } = require('@otplib/plugin-base32-scure');
+
+// Instantiate otplib plugins once at module load
+const otplibPlugins = { crypto: new NobleCryptoPlugin(), base32: new ScureBase32Plugin() };
 
 // All portal routes use authMiddlewareStrict except totp-recovery (unauthenticated)
 // Individual endpoints will be added in subsequent tasks
@@ -127,6 +134,149 @@ router.get('/portal/me', authMiddlewareStrict, async (req, res) => {
     });
   } catch (err) {
     log.error('portal', 'GET /portal/me failed', { error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /portal/totp/setup — Begin TOTP enrollment.
+ *
+ * Generates a TOTP secret, stores it encrypted in a pending doc,
+ * and returns the secret + otpauth URI for QR code rendering.
+ * Password provider only. Overwrites any existing pending doc (page refresh).
+ */
+router.post('/portal/totp/setup', authMiddlewareStrict, async (req, res) => {
+  try {
+    const { uniqueId, token } = req.auth;
+
+    // 1. Verify password provider
+    if (token.firebase?.sign_in_provider !== 'password') {
+      return res.status(400).json({ error: 'Password provider required' });
+    }
+
+    // 2. Check if already enrolled
+    const totpSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
+    if (totpSnap.exists) {
+      return res.status(409).json({ error: 'Already enrolled' });
+    }
+
+    // 3. Generate TOTP secret (length: 20 bytes → 32 BASE32 chars)
+    const secret = generateSecret({ length: 20, ...otplibPlugins });
+
+    // 4. Generate otpauth URI (email is URI-encoded in the label by generateURI)
+    const userEmail = token.email || '';
+    const qrCodeUrl = generateURI({
+      issuer: 'ShyTalk',
+      label: userEmail,
+      secret,
+      type: 'totp',
+    });
+
+    // 5. Encrypt the secret
+    const encryptedSecret = encryptSecret(secret);
+
+    // 6. Store in totp-pending (overwrites if already exists — handles page refresh)
+    await db.doc(`users/${uniqueId}/private/totp-pending`).set({
+      encryptedSecret,
+      expiresAt: Date.now() + 600000, // 10 minutes
+      attempts: 0,
+    });
+
+    // 7. Return secret and QR code URL
+    return res.status(200).json({ secret, qrCodeUrl });
+  } catch (err) {
+    log.error('portal', 'POST /portal/totp/setup failed', { error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /portal/totp/confirm-setup — Confirm TOTP enrollment with a code.
+ *
+ * Validates the TOTP code against the pending secret, then promotes
+ * the secret to permanent storage and sets MFA claims.
+ */
+router.post('/portal/totp/confirm-setup', authMiddlewareStrict, async (req, res) => {
+  try {
+    const { uniqueId, uid } = req.auth;
+    const { code } = req.body || {};
+
+    // 1. Validate code format: must be exactly 6 digits
+    if (!code || typeof code !== 'string' || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({ error: 'Code must be exactly 6 digits' });
+    }
+
+    // 2. Read pending doc
+    const pendingSnap = await db.doc(`users/${uniqueId}/private/totp-pending`).get();
+    if (!pendingSnap.exists) {
+      return res.status(400).json({ error: 'No pending setup session' });
+    }
+
+    const pendingData = pendingSnap.data();
+
+    // 3. Check expiry
+    if (pendingData.expiresAt < Date.now()) {
+      return res.status(400).json({ error: 'Setup session expired' });
+    }
+
+    // 4. Check attempts (BEFORE incrementing)
+    if (pendingData.attempts >= 5) {
+      return res.status(429).json({ error: 'Too many attempts' });
+    }
+
+    // 5. Increment attempts
+    await db.doc(`users/${uniqueId}/private/totp-pending`).set({
+      ...pendingData,
+      attempts: pendingData.attempts + 1,
+    });
+
+    // 6. Decrypt the secret
+    const secret = decryptSecret(pendingData.encryptedSecret);
+
+    // 9. Replay prevention: check if this code was just used
+    const totpSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
+    if (totpSnap.exists) {
+      const totpData = totpSnap.data();
+      if (
+        totpData.lastUsedCode === code &&
+        totpData.lastUsedAt &&
+        Date.now() - totpData.lastUsedAt < 30000
+      ) {
+        return res.status(401).json({ error: 'Code already used' });
+      }
+    }
+
+    // 7. Verify code
+    const result = verifySync({ token: code, secret, ...otplibPlugins });
+    if (!result.valid) {
+      return res.status(401).json({ error: 'Invalid code' });
+    }
+
+    // 10. If valid: store permanent doc, delete pending, set claims, revoke tokens
+    const freshEncryptedSecret = encryptSecret(secret);
+
+    await db.doc(`users/${uniqueId}/private/totp`).set({
+      encryptedSecret: freshEncryptedSecret,
+      createdAt: Date.now(),
+      lastUsedCode: code,
+      lastUsedAt: Date.now(),
+    });
+
+    await db.doc(`users/${uniqueId}/private/totp-pending`).delete();
+
+    const userRecord = await auth.getUser(uid);
+    const existingClaims = userRecord.customClaims || {};
+    await auth.setCustomUserClaims(uid, {
+      ...existingClaims,
+      totpVerified: true,
+      totpVerifiedAt: Date.now(),
+    });
+
+    await auth.revokeRefreshTokens(uid);
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    log.error('portal', 'POST /portal/totp/confirm-setup failed', { error: err.message });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

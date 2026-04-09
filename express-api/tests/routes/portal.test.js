@@ -41,6 +41,26 @@ jest.mock('../../src/middleware/rateLimit', () => ({
   recoveryLimiter: (req, res, next) => next(),
 }));
 
+// Mock TOTP dependencies (portal.js imports these for TOTP setup endpoints)
+jest.mock('../../src/utils/totp-crypto', () => ({
+  encryptSecret: jest.fn((s) => `encrypted:${s}`),
+  decryptSecret: jest.fn((s) => s.replace('encrypted:', '')),
+}));
+
+jest.mock('otplib/functional', () => ({
+  generateSecret: jest.fn(() => 'MOCKSECRET'),
+  generateURI: jest.fn(() => 'otpauth://totp/mock'),
+  verifySync: jest.fn(() => ({ valid: true })),
+}));
+
+jest.mock('@otplib/plugin-crypto-noble', () => ({
+  NobleCryptoPlugin: class MockNobleCryptoPlugin {},
+}));
+
+jest.mock('@otplib/plugin-base32-scure', () => ({
+  ScureBase32Plugin: class MockScureBase32Plugin {},
+}));
+
 const { auth } = require('../../src/utils/firebase');
 const log = require('../../src/utils/log');
 
