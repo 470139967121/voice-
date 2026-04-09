@@ -352,4 +352,71 @@ router.post('/portal/totp/verify', authMiddlewareStrict, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /portal/totp — Remove TOTP enrollment (re-enrollment flow).
+ *
+ * A logged-in user who wants to switch their authenticator app. Requires
+ * verifying their current TOTP code first. On success, deletes the TOTP doc,
+ * clears the totpVerified claim, and revokes all refresh tokens so the user
+ * must re-authenticate and re-enroll.
+ */
+router.delete('/portal/totp', authMiddlewareStrict, async (req, res) => {
+  try {
+    const { uniqueId, uid } = req.auth;
+    const { totpCode } = req.body || {};
+
+    // 1. Validate totpCode: must be exactly 6 digits
+    if (!totpCode || typeof totpCode !== 'string' || !/^\d{6}$/.test(totpCode)) {
+      return res.status(400).json({ error: 'Code must be exactly 6 digits' });
+    }
+
+    // 2. Read TOTP doc — must exist (user must be enrolled)
+    const totpSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
+    if (!totpSnap.exists) {
+      return res.status(403).json({ error: 'TOTP not enrolled' });
+    }
+
+    const totpData = totpSnap.data();
+
+    // 3. Replay prevention: same code within 30s window
+    if (
+      totpData.lastUsedCode === totpCode &&
+      totpData.lastUsedAt &&
+      Date.now() - totpData.lastUsedAt < 30000
+    ) {
+      return res.status(401).json({ error: 'Code already used' });
+    }
+
+    // 4. Decrypt secret and verify code with otplib
+    const secret = decryptSecret(totpData.encryptedSecret);
+    const result = verifySync({ token: totpCode, secret, ...otplibPlugins });
+    if (!result.valid) {
+      return res.status(401).json({ error: 'Invalid code' });
+    }
+
+    // 5. Delete private/totp
+    await db.doc(`users/${uniqueId}/private/totp`).delete();
+
+    // 6. Delete private/totp-pending (cleanup, if exists)
+    await db.doc(`users/${uniqueId}/private/totp-pending`).delete();
+
+    // 7. Clear totpVerified claim while preserving other claims (e.g. admin)
+    const userRecord = await auth.getUser(uid);
+    const existingClaims = userRecord.customClaims || {};
+    await auth.setCustomUserClaims(uid, {
+      ...existingClaims,
+      totpVerified: false,
+      totpVerifiedAt: null,
+    });
+
+    // 8. Revoke all refresh tokens
+    await auth.revokeRefreshTokens(uid);
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    log.error('portal', 'DELETE /portal/totp failed', { error: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

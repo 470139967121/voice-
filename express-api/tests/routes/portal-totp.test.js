@@ -844,3 +844,222 @@ describe('POST /api/portal/totp/verify', () => {
     );
   });
 });
+
+// ─── TOTP Delete (re-enrollment) ───────────────────────────────
+
+describe('DELETE /api/portal/totp', () => {
+  let app;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuth = null;
+    app = buildApp();
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+  });
+
+  // ─── 1. Valid TOTP code → 200, private/totp deleted, sessions revoked, totpVerified cleared
+
+  it('should return 200, delete private/totp, revoke sessions, and clear totpVerified on valid code', async () => {
+    setMockAuth();
+    // private/totp exists
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc());
+    auth.getUser.mockResolvedValueOnce({
+      customClaims: { totpVerified: true, totpVerifiedAt: 1234 },
+    });
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    // private/totp should be deleted
+    const deleteTotpCall = mockDocDelete.mock.calls.find(
+      (call) => String(call[0]).includes('/private/totp') && !String(call[0]).includes('pending'),
+    );
+    expect(deleteTotpCall).toBeDefined();
+
+    // sessions revoked
+    expect(auth.revokeRefreshTokens).toHaveBeenCalledWith('firebase-uid-1');
+
+    // totpVerified cleared
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        totpVerified: false,
+        totpVerifiedAt: null,
+      }),
+    );
+  });
+
+  // ─── 2. Invalid TOTP code → 401
+
+  it('should return 401 for invalid TOTP code', async () => {
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc());
+    mockVerifySync.mockReturnValueOnce({ valid: false });
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '999999' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/invalid code/i);
+  });
+
+  // ─── 3. No TOTP enrolled → 403
+
+  it('should return 403 when user has no TOTP enrolled', async () => {
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce({ exists: false });
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/totp not enrolled/i);
+  });
+
+  // ─── 4. No auth token → 401
+
+  it('should return 401 when no auth token is provided', async () => {
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    expect(res.status).toBe(401);
+  });
+
+  // ─── 5. Code "12345" (5 digits) → 400
+
+  it('should return 400 for 5-digit totpCode', async () => {
+    setMockAuth();
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '12345' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  // ─── 6. Code "abcdef" → 400
+
+  it('should return 400 for alphabetic totpCode', async () => {
+    setMockAuth();
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: 'abcdef' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  // ─── 7. Code "" → 400
+
+  it('should return 400 for empty string totpCode', async () => {
+    setMockAuth();
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  // ─── 8. totpCode null/missing → 400
+
+  it('should return 400 for null totpCode', async () => {
+    setMockAuth();
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: null });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('should return 400 when totpCode field is missing from body', async () => {
+    setMockAuth();
+
+    const res = await request(app).delete('/api/portal/totp').send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  // ─── 9. Replay same code in same 30s window → 401
+
+  it('should return 401 when replaying the same code within 30s window', async () => {
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce(
+      makeTotpDoc({
+        lastUsedCode: '123456',
+        lastUsedAt: Date.now() - 5000, // 5 seconds ago (within 30s window)
+      }),
+    );
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/code already used/i);
+  });
+
+  // ─── 10. Admin user: admin claim preserved after TOTP deletion
+
+  it('should preserve admin claim after TOTP deletion for admin user', async () => {
+    setMockAuth({ token: { admin: true, firebase: { sign_in_provider: 'password' } } });
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc());
+    auth.getUser.mockResolvedValueOnce({ customClaims: { admin: true, totpVerified: true } });
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        admin: true,
+        totpVerified: false,
+        totpVerifiedAt: null,
+      }),
+    );
+  });
+
+  // ─── Additional: totp-pending also deleted if it exists
+
+  it('should also delete totp-pending doc during cleanup', async () => {
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc());
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    // Both totp and totp-pending should be deleted
+    const deletePendingCall = mockDocDelete.mock.calls.find((call) =>
+      String(call[0]).includes('totp-pending'),
+    );
+    expect(deletePendingCall).toBeDefined();
+  });
+
+  // ─── Additional: replay outside 30s window → allowed (then deletes)
+
+  it('should allow deletion when same code is outside 30s replay window', async () => {
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce(
+      makeTotpDoc({
+        lastUsedCode: '123456',
+        lastUsedAt: Date.now() - 31000, // 31 seconds ago (outside window)
+      }),
+    );
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    const res = await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  // ─── Additional: decrypts secret for verification
+
+  it('should decrypt the stored secret before verifying the code', async () => {
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce(
+      makeTotpDoc({ encryptedSecret: 'encrypted:MYSECRETKEY123456789012345678901' }),
+    );
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    expect(mockDecryptSecret).toHaveBeenCalledWith('encrypted:MYSECRETKEY123456789012345678901');
+  });
+});
