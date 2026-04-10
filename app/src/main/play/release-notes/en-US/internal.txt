@@ -1,7 +1,10 @@
-v0.63.9
+v0.64.0
 
-auto-regenerate roadmap JSON in pre-push hook (#283)
-- Ensures public/roadmap-data.json stays in sync with the internal
-- roadmap whenever changes are pushed. If the JSON changes, the commit
-- is automatically amended to include it.
-- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+Unified Web Portal
+- New portal at /portal/ for all users to manage their account
+- Sign in with Google, Apple, or email/password
+- Two-factor authentication (TOTP) for email/password users
+- View your profile, manage security settings, and privacy
+- Real-time role change detection with automatic sign-out
+- Account recovery flow for lost authenticator apps
+- Full accessibility support and 19 language translations

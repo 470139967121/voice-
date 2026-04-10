@@ -3,12 +3,16 @@ const request = require('supertest');
 
 // ─── Firebase mock ──────────────────────────────────────────────
 const mockDocGet = jest.fn();
+const mockDocSet = jest.fn().mockResolvedValue();
+const mockDocDelete = jest.fn().mockResolvedValue();
 
 jest.mock('../../src/utils/firebase', () => ({
   db: {
     doc: jest.fn((path) => ({
       _path: path,
       get: (...args) => mockDocGet(path, ...args),
+      set: (...args) => mockDocSet(path, ...args),
+      delete: (...args) => mockDocDelete(path, ...args),
     })),
     collection: jest.fn(() => ({
       where: jest.fn(() => ({
@@ -22,6 +26,7 @@ jest.mock('../../src/utils/firebase', () => ({
     verifyIdToken: jest.fn(),
     getUser: jest.fn(),
     setCustomUserClaims: jest.fn().mockResolvedValue(),
+    revokeRefreshTokens: jest.fn().mockResolvedValue(),
   },
 }));
 
@@ -42,15 +47,19 @@ jest.mock('../../src/middleware/rateLimit', () => ({
 }));
 
 // Mock TOTP dependencies (portal.js imports these for TOTP setup endpoints)
+const mockDecryptSecret = jest.fn((s) => s.replace('encrypted:', ''));
+
 jest.mock('../../src/utils/totp-crypto', () => ({
   encryptSecret: jest.fn((s) => `encrypted:${s}`),
-  decryptSecret: jest.fn((s) => s.replace('encrypted:', '')),
+  decryptSecret: (...args) => mockDecryptSecret(...args),
 }));
+
+const mockVerifySync = jest.fn(() => ({ valid: true }));
 
 jest.mock('otplib/functional', () => ({
   generateSecret: jest.fn(() => 'MOCKSECRET'),
   generateURI: jest.fn(() => 'otpauth://totp/mock'),
-  verifySync: jest.fn(() => ({ valid: true })),
+  verifySync: (...args) => mockVerifySync(...args),
 }));
 
 jest.mock('@otplib/plugin-crypto-noble', () => ({
@@ -579,5 +588,253 @@ describe('GET /api/portal/me', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.totpEnrolled).toBe(true);
+  });
+});
+
+// ─── POST /api/portal/sign-out ─────────────────────────────────
+
+describe('POST /api/portal/sign-out', () => {
+  let app;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuth = null;
+    mockVerifySync.mockReturnValue({ valid: true });
+    app = buildApp();
+  });
+
+  // ─── 1. Valid sign-out → 200, totpVerified cleared, revokeRefreshTokens called
+
+  it('should return 200, clear totpVerified claim, and revoke refresh tokens on valid sign-out', async () => {
+    setMockAuth({
+      token: {
+        firebase: { sign_in_provider: 'password' },
+        totpVerified: true,
+        totpVerifiedAt: Date.now() - 1000,
+      },
+    });
+    auth.getUser.mockResolvedValueOnce({
+      customClaims: { totpVerified: true, totpVerifiedAt: 12345 },
+    });
+
+    const res = await request(app).post('/api/portal/sign-out').send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        totpVerified: false,
+        totpVerifiedAt: null,
+      }),
+    );
+    expect(auth.revokeRefreshTokens).toHaveBeenCalledWith('firebase-uid-1');
+  });
+
+  // ─── 2. No auth token → 401
+
+  it('should return 401 when no auth token is provided', async () => {
+    const res = await request(app).post('/api/portal/sign-out').send({});
+
+    expect(res.status).toBe(401);
+  });
+
+  // ─── 3. Double sign-out (second call with revoked token) → 401
+  //        Simulated by mockAuth being null (auth middleware rejects revoked tokens)
+
+  it('should return 401 on double sign-out (simulated revoked token)', async () => {
+    // First sign-out
+    setMockAuth();
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    const firstRes = await request(app).post('/api/portal/sign-out').send({});
+    expect(firstRes.status).toBe(200);
+
+    // Second sign-out — middleware rejects because token is revoked (no mockAuth)
+    mockAuth = null;
+    const secondRes = await request(app).post('/api/portal/sign-out').send({});
+    expect(secondRes.status).toBe(401);
+  });
+
+  // ─── 4. Admin user signs out → 200, admin:true claim preserved
+
+  it('should preserve admin:true claim when admin user signs out', async () => {
+    setMockAuth({
+      token: {
+        admin: true,
+        firebase: { sign_in_provider: 'password' },
+        totpVerified: true,
+      },
+    });
+    auth.getUser.mockResolvedValueOnce({ customClaims: { admin: true, totpVerified: true } });
+
+    const res = await request(app).post('/api/portal/sign-out').send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        admin: true,
+        totpVerified: false,
+        totpVerifiedAt: null,
+      }),
+    );
+  });
+
+  // ─── 5. OAuth user (no totpVerified claim) signs out → 200, no error from missing claim
+
+  it('should return 200 for OAuth user with no totpVerified claim without error', async () => {
+    setMockAuth({
+      token: {
+        firebase: { sign_in_provider: 'google.com' },
+        // no totpVerified claim
+      },
+    });
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    const res = await request(app).post('/api/portal/sign-out').send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(auth.revokeRefreshTokens).toHaveBeenCalledWith('firebase-uid-1');
+  });
+});
+
+// ─── POST /api/portal/revoke-all-sessions ──────────────────────
+
+describe('POST /api/portal/revoke-all-sessions', () => {
+  let app;
+
+  function makeTotpDocFull(overrides = {}) {
+    return {
+      exists: true,
+      data: () => ({
+        encryptedSecret: 'encrypted:ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', // eslint-disable-line sonarjs/no-hardcoded-secrets -- test mock data
+        lastUsedCode: null,
+        lastUsedAt: null,
+        createdAt: Date.now() - 10000,
+        ...overrides,
+      }),
+    };
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuth = null;
+    mockVerifySync.mockReturnValue({ valid: true });
+    app = buildApp();
+  });
+
+  // ─── 1. Valid with TOTP code (password user) → 200, all sessions revoked
+
+  it('should return 200 and revoke all sessions for password user with valid TOTP code', async () => {
+    setMockAuth({
+      token: {
+        firebase: { sign_in_provider: 'password' },
+        totpVerified: true,
+        totpVerifiedAt: Date.now() - 1000,
+      },
+    });
+    mockDocGet.mockResolvedValueOnce(makeTotpDocFull());
+    auth.getUser.mockResolvedValueOnce({ customClaims: { totpVerified: true } });
+
+    const res = await request(app)
+      .post('/api/portal/revoke-all-sessions')
+      .send({ totpCode: '123456' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(auth.revokeRefreshTokens).toHaveBeenCalledWith('firebase-uid-1');
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        totpVerified: false,
+        totpVerifiedAt: null,
+      }),
+    );
+  });
+
+  // ─── 2. Invalid TOTP code → 401
+
+  it('should return 401 for invalid TOTP code', async () => {
+    setMockAuth({
+      token: {
+        firebase: { sign_in_provider: 'password' },
+      },
+    });
+    mockDocGet.mockResolvedValueOnce(makeTotpDocFull());
+    mockVerifySync.mockReturnValueOnce({ valid: false });
+
+    const res = await request(app)
+      .post('/api/portal/revoke-all-sessions')
+      .send({ totpCode: '000000' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/invalid code/i);
+    expect(auth.revokeRefreshTokens).not.toHaveBeenCalled();
+  });
+
+  // ─── 3. OAuth user (no TOTP needed) → 200
+
+  it('should return 200 for OAuth user without requiring TOTP code', async () => {
+    setMockAuth({
+      token: {
+        firebase: { sign_in_provider: 'google.com' },
+      },
+    });
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    const res = await request(app).post('/api/portal/revoke-all-sessions').send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(auth.revokeRefreshTokens).toHaveBeenCalledWith('firebase-uid-1');
+  });
+
+  // ─── 4. No auth token → 401
+
+  it('should return 401 when no auth token is provided', async () => {
+    const res = await request(app).post('/api/portal/revoke-all-sessions').send({});
+
+    expect(res.status).toBe(401);
+  });
+
+  // ─── 5. Password user, malformed totpCode → 400
+
+  it('should return 400 for malformed totpCode (password user)', async () => {
+    setMockAuth({
+      token: {
+        firebase: { sign_in_provider: 'password' },
+      },
+    });
+
+    const res = await request(app)
+      .post('/api/portal/revoke-all-sessions')
+      .send({ totpCode: 'abc123' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+    expect(auth.revokeRefreshTokens).not.toHaveBeenCalled();
+  });
+
+  // ─── 6. Password user, not enrolled in TOTP → 403
+
+  it('should return 403 for password user not enrolled in TOTP', async () => {
+    setMockAuth({
+      token: {
+        firebase: { sign_in_provider: 'password' },
+      },
+    });
+    mockDocGet.mockResolvedValueOnce({ exists: false });
+
+    const res = await request(app)
+      .post('/api/portal/revoke-all-sessions')
+      .send({ totpCode: '123456' });
+
+    expect(res.status).toBe(403);
+    expect(auth.revokeRefreshTokens).not.toHaveBeenCalled();
   });
 });
