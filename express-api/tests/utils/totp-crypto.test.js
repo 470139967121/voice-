@@ -5,19 +5,20 @@
  * - encryptSecret(plaintext) → "iv:ciphertext:tag" (hex-encoded, AES-256-GCM)
  * - decryptSecret(encryptedString) → original plaintext
  *
- * Key is read from TOTP_ENCRYPTION_KEY env var (64 hex chars = 32 bytes).
- * Module throws at load time if key is missing or wrong length.
+ * Key is read lazily from TOTP_ENCRYPTION_KEY env var (64 hex chars = 32 bytes)
+ * on the first encrypt/decrypt call. Missing/invalid key throws at call time,
+ * not at module load, so a misconfigured dev env can't take down the whole API.
  */
 
 const VALID_KEY = 'a'.repeat(64); // 64 hex chars = 32 bytes
 
-// ─── Module-load validation ────────────────────────────────────────
+// ─── Lazy key validation (on first encrypt/decrypt call) ──────────
 
-describe('module load validation', () => {
+describe('lazy key validation', () => {
   const originalKey = process.env.TOTP_ENCRYPTION_KEY;
 
   afterEach(() => {
-    // Restore env and purge module cache so each test gets a fresh load
+    // Restore env and purge module cache so each test gets a fresh load + cache
     if (originalKey === undefined) {
       delete process.env.TOTP_ENCRYPTION_KEY;
     } else {
@@ -26,24 +27,49 @@ describe('module load validation', () => {
     jest.resetModules();
   });
 
-  it('throws a clear error when TOTP_ENCRYPTION_KEY is missing', () => {
+  it('module loads successfully when TOTP_ENCRYPTION_KEY is missing', () => {
     delete process.env.TOTP_ENCRYPTION_KEY;
-    expect(() => require('../../src/utils/totp-crypto')).toThrow(/TOTP_ENCRYPTION_KEY/);
-  });
-
-  it('throws a clear error when TOTP_ENCRYPTION_KEY is too short', () => {
-    process.env.TOTP_ENCRYPTION_KEY = 'a'.repeat(62);
-    expect(() => require('../../src/utils/totp-crypto')).toThrow(/TOTP_ENCRYPTION_KEY/);
-  });
-
-  it('throws a clear error when TOTP_ENCRYPTION_KEY is too long', () => {
-    process.env.TOTP_ENCRYPTION_KEY = 'a'.repeat(66);
-    expect(() => require('../../src/utils/totp-crypto')).toThrow(/TOTP_ENCRYPTION_KEY/);
-  });
-
-  it('does not throw when TOTP_ENCRYPTION_KEY is exactly 64 hex chars', () => {
-    process.env.TOTP_ENCRYPTION_KEY = VALID_KEY;
     expect(() => require('../../src/utils/totp-crypto')).not.toThrow();
+  });
+
+  it('module loads successfully when TOTP_ENCRYPTION_KEY is invalid', () => {
+    process.env.TOTP_ENCRYPTION_KEY = 'too-short';
+    expect(() => require('../../src/utils/totp-crypto')).not.toThrow();
+  });
+
+  it('encryptSecret throws a clear error when key is missing', () => {
+    delete process.env.TOTP_ENCRYPTION_KEY;
+    jest.resetModules();
+    const { encryptSecret } = require('../../src/utils/totp-crypto');
+    expect(() => encryptSecret('anything')).toThrow(/TOTP_ENCRYPTION_KEY/);
+  });
+
+  it('decryptSecret throws a clear error when key is missing', () => {
+    delete process.env.TOTP_ENCRYPTION_KEY;
+    jest.resetModules();
+    const { decryptSecret } = require('../../src/utils/totp-crypto');
+    expect(() => decryptSecret('aa:bb:cc')).toThrow(/TOTP_ENCRYPTION_KEY/);
+  });
+
+  it('encryptSecret throws when key is too short', () => {
+    process.env.TOTP_ENCRYPTION_KEY = 'a'.repeat(62);
+    jest.resetModules();
+    const { encryptSecret } = require('../../src/utils/totp-crypto');
+    expect(() => encryptSecret('anything')).toThrow(/TOTP_ENCRYPTION_KEY/);
+  });
+
+  it('encryptSecret throws when key is too long', () => {
+    process.env.TOTP_ENCRYPTION_KEY = 'a'.repeat(66);
+    jest.resetModules();
+    const { encryptSecret } = require('../../src/utils/totp-crypto');
+    expect(() => encryptSecret('anything')).toThrow(/TOTP_ENCRYPTION_KEY/);
+  });
+
+  it('encryptSecret succeeds when key is exactly 64 hex chars', () => {
+    process.env.TOTP_ENCRYPTION_KEY = VALID_KEY;
+    jest.resetModules();
+    const { encryptSecret } = require('../../src/utils/totp-crypto');
+    expect(() => encryptSecret('JBSWY3DPEHPK3PXP')).not.toThrow();
   });
 });
 

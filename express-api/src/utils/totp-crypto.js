@@ -22,18 +22,28 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12;
 const KEY_HEX_LENGTH = 64; // 32 bytes × 2 hex chars each
 
-// ─── Key validation at module load ────────────────────────────────
+// ─── Lazy key resolution ──────────────────────────────────────────
+//
+// Resolve (and validate) the TOTP_ENCRYPTION_KEY env var the first
+// time an encrypt/decrypt call is made, not at module load. This
+// isolates config errors to the TOTP endpoints — missing/invalid key
+// fails those calls with a clear 500 instead of taking down the
+// entire Express API on startup.
 
-const rawKey = process.env.TOTP_ENCRYPTION_KEY;
+let cachedKey = null;
 
-if (!rawKey || rawKey.length !== KEY_HEX_LENGTH) {
-  throw new Error(
-    `TOTP_ENCRYPTION_KEY must be exactly ${KEY_HEX_LENGTH} hex characters (32 bytes). ` +
-      `Got: ${rawKey ? rawKey.length : 0} characters.`,
-  );
+function getKey() {
+  if (cachedKey) return cachedKey;
+  const rawKey = process.env.TOTP_ENCRYPTION_KEY;
+  if (!rawKey || rawKey.length !== KEY_HEX_LENGTH) {
+    throw new Error(
+      `TOTP_ENCRYPTION_KEY must be exactly ${KEY_HEX_LENGTH} hex characters (32 bytes). ` +
+        `Got: ${rawKey ? rawKey.length : 0} characters.`,
+    );
+  }
+  cachedKey = Buffer.from(rawKey, 'hex');
+  return cachedKey;
 }
-
-const KEY = Buffer.from(rawKey, 'hex');
 
 // ─── encryptSecret ────────────────────────────────────────────────
 
@@ -45,7 +55,7 @@ const KEY = Buffer.from(rawKey, 'hex');
  */
 function encryptSecret(plaintext) {
   const iv = crypto.randomBytes(IV_BYTES);
-  const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv);
+  const cipher = crypto.createCipheriv(ALGORITHM, getKey(), iv);
 
   const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
 
@@ -77,7 +87,7 @@ function decryptSecret(encryptedString) {
   const ciphertext = Buffer.from(ciphertextHex, 'hex');
   const tag = Buffer.from(tagHex, 'hex');
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, KEY, iv);
+  const decipher = crypto.createDecipheriv(ALGORITHM, getKey(), iv);
   decipher.setAuthTag(tag);
 
   const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
