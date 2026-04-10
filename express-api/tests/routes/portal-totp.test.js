@@ -1063,3 +1063,445 @@ describe('DELETE /api/portal/totp', () => {
     expect(mockDecryptSecret).toHaveBeenCalledWith('encrypted:MYSECRETKEY123456789012345678901');
   });
 });
+
+// ─── State Transition / Integration Tests ─────────────────────────
+describe('TOTP State Transitions', () => {
+  let app;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuth = null;
+    app = buildApp();
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+  });
+
+  // ─── 1. Full lifecycle: setup → confirm → verify ──────────────
+
+  it('should complete full lifecycle: setup → confirm-setup → verify', async () => {
+    // Step 1: Setup — no existing TOTP
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // private/totp does not exist
+
+    const setupRes = await request(app).post('/api/portal/totp/setup');
+
+    expect(setupRes.status).toBe(200);
+    expect(setupRes.body.secret).toBeDefined();
+    expect(setupRes.body.qrCodeUrl).toBeDefined();
+
+    // Verify the pending doc was stored via mockDocSet
+    const pendingSetCall = mockDocSet.mock.calls.find((call) =>
+      String(call[0]).includes('totp-pending'),
+    );
+    expect(pendingSetCall).toBeDefined();
+
+    // Step 2: Confirm — pending doc exists, totp doc does not
+    mockDocGet.mockResolvedValueOnce(makePendingDoc()); // totp-pending exists
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // totp doc for replay check
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    const confirmRes = await request(app)
+      .post('/api/portal/totp/confirm-setup')
+      .send({ code: '123456' });
+
+    expect(confirmRes.status).toBe(200);
+    expect(confirmRes.body.success).toBe(true);
+
+    // Verify permanent totp doc was created
+    const setTotpCall = mockDocSet.mock.calls.find(
+      (call) => String(call[0]).includes('/private/totp') && !String(call[0]).includes('pending'),
+    );
+    expect(setTotpCall).toBeDefined();
+
+    // Verify pending doc was cleaned up
+    const deletePendingCall = mockDocDelete.mock.calls.find((call) =>
+      String(call[0]).includes('totp-pending'),
+    );
+    expect(deletePendingCall).toBeDefined();
+
+    // Verify totpVerified claim was set
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({ totpVerified: true, totpVerifiedAt: expect.any(Number) }),
+    );
+
+    // Step 3: Verify — totp doc now exists
+    jest.clearAllMocks();
+    setMockAuth();
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc()); // private/totp exists
+    auth.getUser.mockResolvedValueOnce({ customClaims: { totpVerified: true } });
+
+    const verifyRes = await request(app).post('/api/portal/totp/verify').send({ code: '654321' });
+
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.success).toBe(true);
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({ totpVerified: true, totpVerifiedAt: expect.any(Number) }),
+    );
+  });
+
+  // ─── 2. Re-enrollment: delete → setup → confirm ──────────────
+
+  it('should allow re-enrollment: delete → setup → confirm with new secret', async () => {
+    // Step 1: Delete existing TOTP
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc()); // private/totp exists
+    auth.getUser.mockResolvedValueOnce({
+      customClaims: { totpVerified: true, totpVerifiedAt: 1234 },
+    });
+
+    const deleteRes = await request(app).delete('/api/portal/totp').send({ totpCode: '123456' });
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.success).toBe(true);
+
+    // Verify TOTP doc was deleted
+    const deleteTotpCall = mockDocDelete.mock.calls.find(
+      (call) => String(call[0]).includes('/private/totp') && !String(call[0]).includes('pending'),
+    );
+    expect(deleteTotpCall).toBeDefined();
+
+    // Verify claims were cleared
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({ totpVerified: false, totpVerifiedAt: null }),
+    );
+
+    // Step 2: Setup a new TOTP
+    jest.clearAllMocks();
+    setMockAuth();
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+
+    // Return a different secret for the new enrollment
+    const newSecret = 'NEWSECRETNEWSECRETNEWSECRET23456';
+    mockGenerateSecret.mockReturnValueOnce(newSecret);
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // no existing totp doc
+
+    const setupRes = await request(app).post('/api/portal/totp/setup');
+
+    expect(setupRes.status).toBe(200);
+    expect(setupRes.body.secret).toBe(newSecret);
+
+    // Step 3: Confirm with the new secret
+    mockDocGet.mockResolvedValueOnce(makePendingDoc({ encryptedSecret: `encrypted:${newSecret}` }));
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // no replay
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    const confirmRes = await request(app)
+      .post('/api/portal/totp/confirm-setup')
+      .send({ code: '789012' });
+
+    expect(confirmRes.status).toBe(200);
+    expect(confirmRes.body.success).toBe(true);
+
+    // The new secret should have been decrypted and re-encrypted
+    expect(mockDecryptSecret).toHaveBeenCalledWith(`encrypted:${newSecret}`);
+    expect(mockEncryptSecret).toHaveBeenCalledWith(newSecret);
+  });
+
+  // ─── 3. Cross-endpoint replay prevention ──────────────────────
+
+  it('should prevent cross-endpoint replay: code used on confirm-setup cannot be reused on verify', async () => {
+    const replayCode = '123456';
+
+    // Step 1: Confirm setup with the code
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce(makePendingDoc()); // totp-pending
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // replay check — no prior use
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    const confirmRes = await request(app)
+      .post('/api/portal/totp/confirm-setup')
+      .send({ code: replayCode });
+
+    expect(confirmRes.status).toBe(200);
+
+    // Step 2: Try to reuse the same code on verify
+    // The permanent totp doc now has the lastUsedCode from confirm
+    jest.clearAllMocks();
+    setMockAuth();
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+    mockDocGet.mockResolvedValueOnce(
+      makeTotpDoc({
+        lastUsedCode: replayCode,
+        lastUsedAt: Date.now() - 5000, // within 30s window
+      }),
+    );
+
+    const verifyRes = await request(app).post('/api/portal/totp/verify').send({ code: replayCode });
+
+    expect(verifyRes.status).toBe(401);
+    expect(verifyRes.body.error).toMatch(/code already used/i);
+  });
+
+  // ─── 4. Expired setup session ─────────────────────────────────
+
+  it('should reject confirm-setup when setup session has expired (mocked time)', async () => {
+    // Step 1: Setup — creates pending doc
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce({ exists: false });
+
+    const setupRes = await request(app).post('/api/portal/totp/setup');
+
+    expect(setupRes.status).toBe(200);
+
+    // Step 2: Try to confirm after session has expired
+    // The pending doc's expiresAt is in the past
+    mockDocGet.mockResolvedValueOnce(
+      makePendingDoc({ expiresAt: Date.now() - 1 }), // already expired
+    );
+
+    const confirmRes = await request(app)
+      .post('/api/portal/totp/confirm-setup')
+      .send({ code: '123456' });
+
+    expect(confirmRes.status).toBe(400);
+    expect(confirmRes.body.error).toMatch(/setup session expired/i);
+  });
+
+  it('should reject confirm-setup when Date.now has advanced past expiry', async () => {
+    // Use a fixed initial time
+    const originalNow = Date.now;
+    const baseTime = 1700000000000;
+
+    try {
+      // Step 1: Setup at baseTime
+      Date.now = jest.fn(() => baseTime);
+      setMockAuth();
+      mockDocGet.mockResolvedValueOnce({ exists: false });
+
+      const setupRes = await request(app).post('/api/portal/totp/setup');
+      expect(setupRes.status).toBe(200);
+
+      // Step 2: Advance time past expiry (10 min = 600000ms + 1ms)
+      Date.now = jest.fn(() => baseTime + 600001);
+
+      // The pending doc was created with expiresAt = baseTime + 600000
+      mockDocGet.mockResolvedValueOnce(makePendingDoc({ expiresAt: baseTime + 600000 }));
+
+      const confirmRes = await request(app)
+        .post('/api/portal/totp/confirm-setup')
+        .send({ code: '123456' });
+
+      expect(confirmRes.status).toBe(400);
+      expect(confirmRes.body.error).toMatch(/setup session expired/i);
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+
+  // ─── 5. Concurrent setup attempts ────────────────────────────
+
+  it('should handle concurrent setup calls: second setup overwrites pending session', async () => {
+    // First setup
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // no existing totp
+
+    const firstSecret = 'FIRSTSECRETFIRSTSECRETFIRSTSECR';
+    mockGenerateSecret.mockReturnValueOnce(firstSecret);
+
+    const setup1Res = await request(app).post('/api/portal/totp/setup');
+    expect(setup1Res.status).toBe(200);
+    expect(setup1Res.body.secret).toBe(firstSecret);
+
+    // Capture the first pending doc set call
+    const firstSetCall = mockDocSet.mock.calls.find((call) =>
+      String(call[0]).includes('totp-pending'),
+    );
+    expect(firstSetCall).toBeDefined();
+
+    // Second setup — should overwrite the pending doc
+    const secondSecret = 'SECONDSECRETSECONDSECRETSECONDSE';
+    mockGenerateSecret.mockReturnValueOnce(secondSecret);
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // no existing totp
+
+    const setup2Res = await request(app).post('/api/portal/totp/setup');
+    expect(setup2Res.status).toBe(200);
+    expect(setup2Res.body.secret).toBe(secondSecret);
+
+    // Both calls should have written to the totp-pending path
+    const pendingSetCalls = mockDocSet.mock.calls.filter((call) =>
+      String(call[0]).includes('totp-pending'),
+    );
+    expect(pendingSetCalls.length).toBe(2);
+
+    // The second call should have the second secret (encrypted)
+    expect(mockEncryptSecret).toHaveBeenCalledWith(secondSecret);
+  });
+
+  it('should only accept code from the latest setup after concurrent attempts', async () => {
+    // After two setups, confirming with the second secret should work
+    setMockAuth();
+
+    // Simulate: second setup's pending doc is the one stored
+    const secondSecret = 'SECONDSECRETSECONDSECRETSECONDSE';
+    mockDocGet.mockResolvedValueOnce(
+      makePendingDoc({ encryptedSecret: `encrypted:${secondSecret}` }),
+    );
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // replay check
+    auth.getUser.mockResolvedValueOnce({ customClaims: {} });
+
+    const confirmRes = await request(app)
+      .post('/api/portal/totp/confirm-setup')
+      .send({ code: '123456' });
+
+    expect(confirmRes.status).toBe(200);
+    expect(confirmRes.body.success).toBe(true);
+
+    // The decrypted secret should be the second one
+    expect(mockDecryptSecret).toHaveBeenCalledWith(`encrypted:${secondSecret}`);
+  });
+
+  // ─── 6. Claims persistence through lifecycle ─────────────────
+
+  it('should preserve admin claim through setup → confirm → verify → delete', async () => {
+    const existingClaims = { admin: true, role: 'superadmin', featureFlag: 'beta' };
+
+    // Step 1: Setup (claims not modified during setup)
+    setMockAuth({ token: { admin: true, firebase: { sign_in_provider: 'password' } } });
+    mockDocGet.mockResolvedValueOnce({ exists: false });
+
+    const setupRes = await request(app).post('/api/portal/totp/setup');
+    expect(setupRes.status).toBe(200);
+    // Setup should not call setCustomUserClaims
+    expect(auth.setCustomUserClaims).not.toHaveBeenCalled();
+
+    // Step 2: Confirm — claims should be preserved
+    jest.clearAllMocks();
+    setMockAuth({ token: { admin: true, firebase: { sign_in_provider: 'password' } } });
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+    mockDocGet.mockResolvedValueOnce(makePendingDoc());
+    mockDocGet.mockResolvedValueOnce({ exists: false }); // replay check
+    auth.getUser.mockResolvedValueOnce({ customClaims: { ...existingClaims } });
+
+    const confirmRes = await request(app)
+      .post('/api/portal/totp/confirm-setup')
+      .send({ code: '111111' });
+
+    expect(confirmRes.status).toBe(200);
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        admin: true,
+        role: 'superadmin',
+        featureFlag: 'beta',
+        totpVerified: true,
+        totpVerifiedAt: expect.any(Number),
+      }),
+    );
+
+    // Step 3: Verify — claims still preserved
+    jest.clearAllMocks();
+    setMockAuth({ token: { admin: true, firebase: { sign_in_provider: 'password' } } });
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc());
+    auth.getUser.mockResolvedValueOnce({
+      customClaims: { ...existingClaims, totpVerified: true, totpVerifiedAt: 1234 },
+    });
+
+    const verifyRes = await request(app).post('/api/portal/totp/verify').send({ code: '222222' });
+
+    expect(verifyRes.status).toBe(200);
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        admin: true,
+        role: 'superadmin',
+        featureFlag: 'beta',
+        totpVerified: true,
+        totpVerifiedAt: expect.any(Number),
+      }),
+    );
+
+    // Step 4: Delete — admin and other claims preserved, only totpVerified cleared
+    jest.clearAllMocks();
+    setMockAuth({ token: { admin: true, firebase: { sign_in_provider: 'password' } } });
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc());
+    auth.getUser.mockResolvedValueOnce({
+      customClaims: { ...existingClaims, totpVerified: true, totpVerifiedAt: 1234 },
+    });
+
+    const deleteRes = await request(app).delete('/api/portal/totp').send({ totpCode: '333333' });
+
+    expect(deleteRes.status).toBe(200);
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        admin: true,
+        role: 'superadmin',
+        featureFlag: 'beta',
+        totpVerified: false,
+        totpVerifiedAt: null,
+      }),
+    );
+  });
+
+  it('should preserve custom claims with no admin role through full lifecycle', async () => {
+    const existingClaims = { role: 'moderator', locale: 'fr' };
+
+    // Confirm
+    setMockAuth();
+    mockDocGet.mockResolvedValueOnce(makePendingDoc());
+    mockDocGet.mockResolvedValueOnce({ exists: false });
+    auth.getUser.mockResolvedValueOnce({ customClaims: { ...existingClaims } });
+
+    const confirmRes = await request(app)
+      .post('/api/portal/totp/confirm-setup')
+      .send({ code: '123456' });
+
+    expect(confirmRes.status).toBe(200);
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        role: 'moderator',
+        locale: 'fr',
+        totpVerified: true,
+      }),
+    );
+
+    // Verify
+    jest.clearAllMocks();
+    setMockAuth();
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc());
+    auth.getUser.mockResolvedValueOnce({
+      customClaims: { ...existingClaims, totpVerified: true, totpVerifiedAt: 9999 },
+    });
+
+    const verifyRes = await request(app).post('/api/portal/totp/verify').send({ code: '654321' });
+
+    expect(verifyRes.status).toBe(200);
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        role: 'moderator',
+        locale: 'fr',
+        totpVerified: true,
+      }),
+    );
+
+    // Delete
+    jest.clearAllMocks();
+    setMockAuth();
+    mockVerifySync.mockReturnValue({ valid: true, delta: 0 });
+    mockDocGet.mockResolvedValueOnce(makeTotpDoc());
+    auth.getUser.mockResolvedValueOnce({
+      customClaims: { ...existingClaims, totpVerified: true, totpVerifiedAt: 9999 },
+    });
+
+    const deleteRes = await request(app).delete('/api/portal/totp').send({ totpCode: '111111' });
+
+    expect(deleteRes.status).toBe(200);
+    expect(auth.setCustomUserClaims).toHaveBeenCalledWith(
+      'firebase-uid-1',
+      expect.objectContaining({
+        role: 'moderator',
+        locale: 'fr',
+        totpVerified: false,
+        totpVerifiedAt: null,
+      }),
+    );
+  });
+});
