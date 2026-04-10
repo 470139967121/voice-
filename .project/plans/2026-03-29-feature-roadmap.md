@@ -15,7 +15,7 @@ These enable everything else. SonarCloud blocks all future PRs. Allure gives vis
 | 35 | **Legal docs: Shyden Ltd branding** — update all public docs and legal pages | Small | DONE (PR #280, 2026-04-09) |
 | 32 | **OnPush CLI** — local doc generation (`onpush init/generate/clean`). CI is paid; run locally only | Small | |
 | 40 | **CI workflow deduplication** — extract duplicated steps into reusable workflows (Firebase rules deploy, google-services decode, iOS signing, Allure report). 6+ workflows have duplicated logic | Small | DONE (PR #282, 2026-04-09) |
-| 47 | **Unified web portal** — single login page where users authenticate with their ShyTalk account. Routes to Admin panel, MC Host panel, MC Singer panel, Teacher panel, or suggestions+roadmap based on role. Must be done BEFORE admin restructure (#41) | Medium | DONE (PR #TBD, 2026-04-10) |
+| 47 | **Unified web portal** — single login page where users authenticate with their ShyTalk account. Routes to Admin panel, MC Host panel, MC Singer panel, Teacher panel, or suggestions+roadmap based on role. Must be done BEFORE admin restructure (#41) | Medium | DONE (PR #284, 2026-04-10) |
 | 41 | **Admin panel restructure** — break 12,000+ line index.html into modular components/pages. Support future growth (more tabs, more features). Consider SPA framework or web components. Blocked by #47 | Large | |
 | 42 | **Admin role-based access control** — internal admin roles (super-admin, moderator, viewer) controlling which tools each admin can use. Store roles in Firestore, enforce server-side | Medium | |
 | 43 | **MC Host dedicated panel** — separate login + dashboard for MC Hosts to manage games, participants, prizes. Isolated from main admin panel | Medium | |
