@@ -19,8 +19,9 @@
 
   // ─── Environment-aware API base ──────────────────────────────
 
+  // Use config.js API_BASE if available, otherwise detect from hostname
   // eslint-disable-next-line -- localhost fallback is the first branch of the ternary
-  var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : location.hostname.includes('dev') ? 'https://dev-api.shytalk.shyden.co.uk' : 'https://api.shytalk.shyden.co.uk';
+  var API_BASE = (window.PORTAL_CONFIG && window.PORTAL_CONFIG.API_BASE) ? window.PORTAL_CONFIG.API_BASE : (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : location.hostname.includes('dev') ? 'https://dev-api.shytalk.shyden.co.uk' : 'https://api.shytalk.shyden.co.uk';
 
   // ─── State ───────────────────────────────────────────────────
 
@@ -129,20 +130,33 @@
   async function initFirebase() {
     if (typeof firebase === 'undefined') {
       console.error('Firebase SDK not loaded');
-      showSection('login-section');
+      handleUnauthenticatedRoute();
       return;
     }
 
     try {
-      var configRes = await fetch(API_BASE + '/api/firebase-config');
-      if (!configRes.ok) throw new Error('Config fetch failed: ' + configRes.status);
-      var config = await configRes.json();
+      // Use local config.js if available, otherwise fetch from API
+      var portalConfig = window.PORTAL_CONFIG || {};
+      var config;
+      if (portalConfig.FIREBASE_CONFIG) {
+        config = portalConfig.FIREBASE_CONFIG;
+      } else {
+        var configRes = await fetch(API_BASE + '/api/firebase-config');
+        if (!configRes.ok) throw new Error('Config fetch failed: ' + configRes.status);
+        config = await configRes.json();
+      }
 
       if (!firebase.apps.length) {
         firebase.initializeApp(config);
       }
       auth = firebase.auth();
       db = firebase.firestore();
+
+      // Connect to Firebase emulators when running locally
+      if (portalConfig.USE_EMULATORS) {
+        auth.useEmulator('http://localhost:9099', { disableWarnings: true });
+        db.useEmulator('localhost', 8080);
+      }
 
       // Handle redirect result (for redirect-based OAuth)
       try {
@@ -157,6 +171,18 @@
       auth.onAuthStateChanged(handleAuthStateChanged);
     } catch (err) {
       console.error('Firebase init failed:', err);
+      handleUnauthenticatedRoute();
+    }
+  }
+
+  // Show login or a pseudo-route when Firebase isn't available
+  function handleUnauthenticatedRoute() {
+    var hash = location.hash.slice(1);
+    if (hash === 'no-account') {
+      showSection('no-account-section');
+    } else if (hash === 'recovery') {
+      showSection('recovery-section');
+    } else {
       showSection('login-section');
     }
   }
