@@ -29,6 +29,76 @@ const SUSPENSION_REASONS_ALLOWLIST = [
 ];
 
 const TOTP_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const TOTP_REPLAY_WINDOW_MS = 30_000;
+const TOTP_CODE_FORMAT_RE = /^\d{6}$/;
+
+// ═══════════════════════════════════════════════════════════════════
+// Private helpers — shared TOTP lifecycle operations
+//
+// All helpers that can "fail" return { status, error } for the caller
+// to forward via res.status(status).json({ error }), or null on success.
+// Callers remain in full control of the response, matching the Express
+// idiom used elsewhere in this codebase.
+// ═══════════════════════════════════════════════════════════════════
+
+/** Returns { status, error } if the code is not exactly 6 digits, else null. */
+function validateCodeFormat(code) {
+  if (!code || typeof code !== 'string' || !TOTP_CODE_FORMAT_RE.test(code)) {
+    return { status: 400, error: 'Code must be exactly 6 digits' };
+  }
+  return null;
+}
+
+/** Returns true if this code was used within the replay window. */
+function isReplay(totpData, code) {
+  return (
+    totpData.lastUsedCode === code &&
+    totpData.lastUsedAt &&
+    Date.now() - totpData.lastUsedAt < TOTP_REPLAY_WINDOW_MS
+  );
+}
+
+/** Reads the enrolled TOTP doc. Returns { data } on hit, { status, error } on miss. */
+async function readEnrolledTotp(uniqueId) {
+  const snap = await db.doc(`users/${uniqueId}/private/totp`).get();
+  if (!snap.exists) {
+    return { status: 403, error: 'TOTP not enrolled' };
+  }
+  return { data: snap.data() };
+}
+
+/** Decrypts the stored secret and verifies the code via otplib. */
+function verifyTotpCode(totpData, code) {
+  const secret = decryptSecret(totpData.encryptedSecret);
+  const result = verifySync({ token: code, secret, ...otplibPlugins });
+  return result.valid;
+}
+
+/**
+ * Clears totpVerified/totpVerifiedAt claims (preserving other claims like `admin`)
+ * and revokes all refresh tokens. Used by sign-out, revoke-all-sessions, and DELETE /portal/totp.
+ */
+async function clearTotpSessionAndRevoke(uid) {
+  const userRecord = await auth.getUser(uid);
+  const existingClaims = userRecord.customClaims || {};
+  await auth.setCustomUserClaims(uid, {
+    ...existingClaims,
+    totpVerified: false,
+    totpVerifiedAt: null,
+  });
+  await auth.revokeRefreshTokens(uid);
+}
+
+/** Sets totpVerified:true with a fresh timestamp, preserving other claims. */
+async function setTotpVerifiedClaim(uid) {
+  const userRecord = await auth.getUser(uid);
+  const existingClaims = userRecord.customClaims || {};
+  await auth.setCustomUserClaims(uid, {
+    ...existingClaims,
+    totpVerified: true,
+    totpVerifiedAt: Date.now(),
+  });
+}
 
 /**
  * GET /portal/me — Returns the authenticated user's portal-relevant data.
@@ -204,10 +274,9 @@ router.post('/portal/totp/confirm-setup', authMiddlewareStrict, async (req, res)
     const { uniqueId, uid } = req.auth;
     const { code } = req.body || {};
 
-    // 1. Validate code format: must be exactly 6 digits
-    if (!code || typeof code !== 'string' || !/^\d{6}$/.test(code)) {
-      return res.status(400).json({ error: 'Code must be exactly 6 digits' });
-    }
+    // 1. Validate code format
+    const formatErr = validateCodeFormat(code);
+    if (formatErr) return res.status(formatErr.status).json({ error: formatErr.error });
 
     // 2. Read pending doc
     const pendingSnap = await db.doc(`users/${uniqueId}/private/totp-pending`).get();
@@ -233,48 +302,30 @@ router.post('/portal/totp/confirm-setup', authMiddlewareStrict, async (req, res)
       attempts: pendingData.attempts + 1,
     });
 
-    // 6. Decrypt the secret
+    // 6. Decrypt the pending secret (used both for verify and for re-encrypting on promote)
     const secret = decryptSecret(pendingData.encryptedSecret);
 
-    // 9. Replay prevention: check if this code was just used
-    const totpSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
-    if (totpSnap.exists) {
-      const totpData = totpSnap.data();
-      if (
-        totpData.lastUsedCode === code &&
-        totpData.lastUsedAt &&
-        Date.now() - totpData.lastUsedAt < 30000
-      ) {
-        return res.status(401).json({ error: 'Code already used' });
-      }
+    // 7. Replay prevention against any pre-existing enrolled doc
+    const existingSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
+    if (existingSnap.exists && isReplay(existingSnap.data(), code)) {
+      return res.status(401).json({ error: 'Code already used' });
     }
 
-    // 7. Verify code
+    // 8. Verify code (uses pending secret, not enrolled)
     const result = verifySync({ token: code, secret, ...otplibPlugins });
     if (!result.valid) {
       return res.status(401).json({ error: 'Invalid code' });
     }
 
-    // 10. If valid: store permanent doc, delete pending, set claims, revoke tokens
-    const freshEncryptedSecret = encryptSecret(secret);
-
+    // 9. Valid: store permanent doc (freshly encrypted), delete pending, set claim, revoke tokens
     await db.doc(`users/${uniqueId}/private/totp`).set({
-      encryptedSecret: freshEncryptedSecret,
+      encryptedSecret: encryptSecret(secret),
       createdAt: Date.now(),
       lastUsedCode: code,
       lastUsedAt: Date.now(),
     });
-
     await db.doc(`users/${uniqueId}/private/totp-pending`).delete();
-
-    const userRecord = await auth.getUser(uid);
-    const existingClaims = userRecord.customClaims || {};
-    await auth.setCustomUserClaims(uid, {
-      ...existingClaims,
-      totpVerified: true,
-      totpVerifiedAt: Date.now(),
-    });
-
+    await setTotpVerifiedClaim(uid);
     await auth.revokeRefreshTokens(uid);
 
     return res.status(200).json({ success: true });
@@ -296,57 +347,39 @@ router.post('/portal/totp/verify', authMiddlewareStrict, async (req, res) => {
     const { uniqueId, uid, token } = req.auth;
     const { code } = req.body || {};
 
-    // 1. Validate code format: must be exactly 6 digits
-    if (!code || typeof code !== 'string' || !/^\d{6}$/.test(code)) {
-      return res.status(400).json({ error: 'Code must be exactly 6 digits' });
-    }
+    // 1. Validate code format
+    const formatErr = validateCodeFormat(code);
+    if (formatErr) return res.status(formatErr.status).json({ error: formatErr.error });
 
     // 2. Verify password provider
     if (token.firebase?.sign_in_provider !== 'password') {
       return res.status(400).json({ error: 'Password provider required' });
     }
 
-    // 3. Read TOTP doc — must exist (user must be enrolled)
-    const totpSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
-    if (!totpSnap.exists) {
-      return res.status(403).json({ error: 'TOTP not enrolled' });
-    }
+    // 3. Read enrolled TOTP doc
+    const enrolled = await readEnrolledTotp(uniqueId);
+    if (enrolled.error) return res.status(enrolled.status).json({ error: enrolled.error });
+    const totpData = enrolled.data;
 
-    const totpData = totpSnap.data();
-
-    // 4. Replay prevention: same code within 30s window
-    if (
-      totpData.lastUsedCode === code &&
-      totpData.lastUsedAt &&
-      Date.now() - totpData.lastUsedAt < 30000
-    ) {
+    // 4. Replay prevention
+    if (isReplay(totpData, code)) {
       return res.status(401).json({ error: 'Code already used' });
     }
 
-    // 5. Decrypt secret
-    const secret = decryptSecret(totpData.encryptedSecret);
-
-    // 6. Verify code with otplib
-    const result = verifySync({ token: code, secret, ...otplibPlugins });
-    if (!result.valid) {
+    // 5. Decrypt + verify code
+    if (!verifyTotpCode(totpData, code)) {
       return res.status(401).json({ error: 'Invalid code' });
     }
 
-    // 7. Update TOTP doc with lastUsedCode/lastUsedAt
+    // 6. Update TOTP doc with lastUsedCode/lastUsedAt
     await db.doc(`users/${uniqueId}/private/totp`).set({
       ...totpData,
       lastUsedCode: code,
       lastUsedAt: Date.now(),
     });
 
-    // 8. Set totpVerified claim, preserving existing claims
-    const userRecord = await auth.getUser(uid);
-    const existingClaims = userRecord.customClaims || {};
-    await auth.setCustomUserClaims(uid, {
-      ...existingClaims,
-      totpVerified: true,
-      totpVerifiedAt: Date.now(),
-    });
+    // 7. Set totpVerified claim
+    await setTotpVerifiedClaim(uid);
 
     return res.status(200).json({ success: true });
   } catch (err) {
@@ -368,52 +401,31 @@ router.delete('/portal/totp', authMiddlewareStrict, async (req, res) => {
     const { uniqueId, uid } = req.auth;
     const { totpCode } = req.body || {};
 
-    // 1. Validate totpCode: must be exactly 6 digits
-    if (!totpCode || typeof totpCode !== 'string' || !/^\d{6}$/.test(totpCode)) {
-      return res.status(400).json({ error: 'Code must be exactly 6 digits' });
-    }
+    // 1. Validate code format
+    const formatErr = validateCodeFormat(totpCode);
+    if (formatErr) return res.status(formatErr.status).json({ error: formatErr.error });
 
-    // 2. Read TOTP doc — must exist (user must be enrolled)
-    const totpSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
-    if (!totpSnap.exists) {
-      return res.status(403).json({ error: 'TOTP not enrolled' });
-    }
+    // 2. Read enrolled TOTP doc
+    const enrolled = await readEnrolledTotp(uniqueId);
+    if (enrolled.error) return res.status(enrolled.status).json({ error: enrolled.error });
+    const totpData = enrolled.data;
 
-    const totpData = totpSnap.data();
-
-    // 3. Replay prevention: same code within 30s window
-    if (
-      totpData.lastUsedCode === totpCode &&
-      totpData.lastUsedAt &&
-      Date.now() - totpData.lastUsedAt < 30000
-    ) {
+    // 3. Replay prevention
+    if (isReplay(totpData, totpCode)) {
       return res.status(401).json({ error: 'Code already used' });
     }
 
-    // 4. Decrypt secret and verify code with otplib
-    const secret = decryptSecret(totpData.encryptedSecret);
-    const result = verifySync({ token: totpCode, secret, ...otplibPlugins });
-    if (!result.valid) {
+    // 4. Decrypt + verify code
+    if (!verifyTotpCode(totpData, totpCode)) {
       return res.status(401).json({ error: 'Invalid code' });
     }
 
-    // 5. Delete private/totp
+    // 5. Delete enrollment and any pending setup
     await db.doc(`users/${uniqueId}/private/totp`).delete();
-
-    // 6. Delete private/totp-pending (cleanup, if exists)
     await db.doc(`users/${uniqueId}/private/totp-pending`).delete();
 
-    // 7. Clear totpVerified claim while preserving other claims (e.g. admin)
-    const userRecord = await auth.getUser(uid);
-    const existingClaims = userRecord.customClaims || {};
-    await auth.setCustomUserClaims(uid, {
-      ...existingClaims,
-      totpVerified: false,
-      totpVerifiedAt: null,
-    });
-
-    // 8. Revoke all refresh tokens
-    await auth.revokeRefreshTokens(uid);
+    // 6. Clear session claim and revoke tokens
+    await clearTotpSessionAndRevoke(uid);
 
     return res.status(200).json({ success: true });
   } catch (err) {
@@ -430,22 +442,7 @@ router.delete('/portal/totp', authMiddlewareStrict, async (req, res) => {
  */
 router.post('/portal/sign-out', authMiddlewareStrict, async (req, res) => {
   try {
-    const { uid } = req.auth;
-
-    // 1. Get existing claims
-    const userRecord = await auth.getUser(uid);
-    const existingClaims = userRecord.customClaims || {};
-
-    // 2. Clear TOTP claims while preserving others
-    await auth.setCustomUserClaims(uid, {
-      ...existingClaims,
-      totpVerified: false,
-      totpVerifiedAt: null,
-    });
-
-    // 3. Revoke all refresh tokens
-    await auth.revokeRefreshTokens(uid);
-
+    await clearTotpSessionAndRevoke(req.auth.uid);
     return res.status(200).json({ success: true });
   } catch (err) {
     log.error('portal', 'POST /portal/sign-out failed', { error: err.message });
@@ -465,51 +462,25 @@ router.post('/portal/revoke-all-sessions', authMiddlewareStrict, async (req, res
     const { uniqueId, uid, token } = req.auth;
     const { totpCode } = req.body || {};
 
-    const isPasswordUser = token.firebase?.sign_in_provider === 'password';
+    // Password users must re-prove ownership via TOTP; OAuth users can proceed directly.
+    if (token.firebase?.sign_in_provider === 'password') {
+      const formatErr = validateCodeFormat(totpCode);
+      if (formatErr) return res.status(formatErr.status).json({ error: formatErr.error });
 
-    if (isPasswordUser) {
-      // 1. Validate totpCode format: must be exactly 6 digits
-      if (!totpCode || typeof totpCode !== 'string' || !/^\d{6}$/.test(totpCode)) {
-        return res.status(400).json({ error: 'Code must be exactly 6 digits' });
-      }
+      const enrolled = await readEnrolledTotp(uniqueId);
+      if (enrolled.error) return res.status(enrolled.status).json({ error: enrolled.error });
+      const totpData = enrolled.data;
 
-      // 2. Read TOTP doc — must exist (user must be enrolled)
-      const totpSnap = await db.doc(`users/${uniqueId}/private/totp`).get();
-      if (!totpSnap.exists) {
-        return res.status(403).json({ error: 'TOTP not enrolled' });
-      }
-
-      const totpData = totpSnap.data();
-
-      // 3. Replay prevention: same code within 30s window
-      if (
-        totpData.lastUsedCode === totpCode &&
-        totpData.lastUsedAt &&
-        Date.now() - totpData.lastUsedAt < 30000
-      ) {
+      if (isReplay(totpData, totpCode)) {
         return res.status(401).json({ error: 'Code already used' });
       }
 
-      // 4. Decrypt secret and verify code
-      const secret = decryptSecret(totpData.encryptedSecret);
-      const result = verifySync({ token: totpCode, secret, ...otplibPlugins });
-      if (!result.valid) {
+      if (!verifyTotpCode(totpData, totpCode)) {
         return res.status(401).json({ error: 'Invalid code' });
       }
     }
 
-    // 5. Clear TOTP claims (preserve admin etc.)
-    const userRecord = await auth.getUser(uid);
-    const existingClaims = userRecord.customClaims || {};
-    await auth.setCustomUserClaims(uid, {
-      ...existingClaims,
-      totpVerified: false,
-      totpVerifiedAt: null,
-    });
-
-    // 6. Revoke all refresh tokens
-    await auth.revokeRefreshTokens(uid);
-
+    await clearTotpSessionAndRevoke(uid);
     return res.status(200).json({ success: true });
   } catch (err) {
     log.error('portal', 'POST /portal/revoke-all-sessions failed', { error: err.message });
