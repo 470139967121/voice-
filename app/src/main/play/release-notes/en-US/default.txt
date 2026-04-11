@@ -1,7 +1,8 @@
-v0.63.9
+v0.64.0
 
-auto-regenerate roadmap JSON in pre-push hook (#283)
-- Ensures public/roadmap-data.json stays in sync with the internal
-- roadmap whenever changes are pushed. If the JSON changes, the commit
-- is automatically amended to include it.
-- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+unified web portal with TOTP MFA (#284)
+- ## Summary
+- - New web portal at `/portal/` for all ShyTalk users to manage their
+- account
+- - Custom TOTP two-factor authentication for email/password users (uses
+- `otplib` — no paid Firebase Identity Platform needed)

@@ -1,10 +1,8 @@
 v0.64.0
 
-Unified Web Portal
-- New portal at /portal/ for all users to manage their account
-- Sign in with Google, Apple, or email/password
-- Two-factor authentication (TOTP) for email/password users
-- View your profile, manage security settings, and privacy
-- Real-time role change detection with automatic sign-out
-- Account recovery flow for lost authenticator apps
-- Full accessibility support and 19 language translations
+unified web portal with TOTP MFA (#284)
+- ## Summary
+- - New web portal at `/portal/` for all ShyTalk users to manage their
+- account
+- - Custom TOTP two-factor authentication for email/password users (uses
+- `otplib` — no paid Firebase Identity Platform needed)
