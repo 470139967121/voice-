@@ -10,7 +10,7 @@
 - `public/admin/index.html`: **14,520 lines**
 - ~3,000 lines of HTML markup + CSS
 - One giant inline `<script type="module">` from lines 5058-14510 (~9,500 lines of JS, **214 top-level functions**)
-- 21 tabs (Users, Reports, Appeals, Gifts, Economy, Maintenance, Spin Monitor, Banners, Fun Facts, Backups, Logs, Devices, Starting Screens, Suggestions, Audit Log, …)
+- 15 tabs: Users, Appeals, Reports, Gifts, Economy, Maintenance, Spin Monitor, Banners, Fun Facts, Backups, Logs, Devices, Starting Screens, Suggestions, Audit Log
 - Tab buttons use IDs `tab-users`, `tab-reports`, etc. (nav buttons in the top bar)
 - Tab content panels use IDs `appeals-panel`, `reports-panel`, etc. — **with one asymmetry**: Users tab uses `user-form` (no `users-panel` wrapper; it's the default main content)
 - Already uses ES modules internally (the big inline `<script type="module">`)
@@ -395,34 +395,39 @@ api.configure({
   getToken: () => store.get('currentUser')?.getIdToken() ?? Promise.resolve(null),
 });
 
-// Configure core/tabs with the panel ID map
-tabs.configure({
-  panelMap: {
-    users:             'user-form',           // asymmetric
-    appeals:           'appeals-panel',
-    reports:           'reports-panel',
-    gifts:             'gifts-panel',
-    economy:           'economy-panel',
-    maintenance:       'maintenance-panel',
-    monitor:           'monitor-panel',
-    banners:           'banners-panel',
-    funfacts:          'funfacts-panel',
-    backups:           'backups-panel',
-    logs:              'logs-panel',
-    devices:           'devices-panel',
-    'starting-screens':'starting-screens-panel',
-    suggestions:       'suggestions-panel',
-    'audit-log':       'audit-log-panel',
-  },
-});
+// Configure core/tabs with the panel ID map (defined as a constant so
+// we can reuse it below to wire tab button click handlers)
+const PANEL_MAP = {
+  users:              'user-form',           // asymmetric — no panel wrapper
+  appeals:            'appeals-panel',
+  reports:            'reports-panel',
+  gifts:              'gifts-panel',
+  economy:            'economy-panel',
+  maintenance:        'maintenance-panel',
+  monitor:            'monitor-panel',
+  banners:            'banners-panel',
+  funfacts:           'funfacts-panel',
+  backups:            'backups-panel',
+  logs:               'logs-panel',
+  devices:            'devices-panel',
+  'starting-screens': 'starting-screens-panel',
+  suggestions:        'suggestions-panel',
+  'audit-log':        'audit-log-panel',
+};
+tabs.configure({ panelMap: PANEL_MAP });
 
-// Register each tab module
-tabs.register('users', usersTab);
-tabs.register('reports', reportsTab);
-// ... etc
+// Register each tab module (mapping tab ID to the imported module)
+const TAB_MODULES = {
+  users: usersTab,
+  reports: reportsTab,
+  // ... etc (15 entries)
+};
+for (const [tabId, mod] of Object.entries(TAB_MODULES)) {
+  tabs.register(tabId, mod);
+}
 
 // Wire tab button clicks
-for (const tabId of Object.keys(tabs.getPanelMap())) {
+for (const tabId of Object.keys(PANEL_MAP)) {
   document.getElementById(`tab-${tabId}`)?.addEventListener('click', () => tabs.show(tabId));
 }
 
@@ -473,25 +478,32 @@ Only 5 cross-tab call sites in the current code. None create circular dependenci
 1. Create `public/js/core/{state,auth,api,ui,tabs}.js` with the contracts above.
 2. Create `public/admin/js/main.js` that wires Firebase Auth, creates the store, configures `api`/`tabs`, imports each core module.
 3. Modify `public/admin/index.html`:
-   - Replace the inline `<script type="module">` opening with `<script type="module" src="js/main.js">`
-   - Keep the inline block, but **shortened** — remove the functions that were extracted (`showToast`, `showConfirm`, `showScreen`, `apiCall`, `switchTab`, auth setup).
-   - Add a transitional **backwards-compat shim** at the top of the inline block:
+   - Add a new `<script type="module" src="js/main.js"></script>` before the existing inline block. This triggers all the core-module setup (Firebase Auth, store, tab switcher wiring) without touching any tab logic.
+   - Keep the existing inline `<script type="module">` block, but add `import` statements at the top to bring in the extracted helpers as module-local bindings:
      ```js
-     // Transitional shim — until PR B extracts tab logic, the inline script
-     // still expects these as globals. PR C removes this shim.
+     <script type="module">
+     // Import the helpers that used to be defined inline. These are module-
+     // local bindings (not window.* globals) and completely replace the
+     // original function definitions. PR B will move the rest of the tab
+     // logic out of this block into tabs/*.js files. PR C removes this
+     // block entirely.
      import { showToast, showConfirm, showScreen } from '/js/core/ui.js';
      import { apiCall } from '/js/core/api.js';
      import { show as switchTab } from '/js/core/tabs.js';
      import { store } from './js/main.js';
-     // Re-export as module-local bindings (not window.*) — ES module scope only
+
+     // ... rest of the original inline code, minus the duplicated function
+     // definitions that were just imported above.
+     </script>
      ```
-4. All Playwright tests still pass unchanged.
+   - Delete the original `function showToast(...)`, `function showConfirm(...)`, `function showScreen(...)`, `async function apiCall(...)`, `function switchTab(...)`, and the Firebase Auth init block — they're all replaced by the imports above.
+4. All Playwright tests still pass unchanged (class names and DOM shapes preserved).
 5. Manual QA: all tabs still work, all confirm dialogs still work, tab switching still cancels requests, admin access-denied fix (PR #284) still works.
 
 **Commit structure within PR A** (3 commits):
-- Commit A1: create core modules + main.js, no HTML changes (standalone files)
-- Commit A2: add `<script src="js/main.js">` to index.html, add shim at top of inline block
-- Commit A3: remove the now-duplicated helper functions from the inline block
+- **A1**: create `public/js/core/*.js` modules + `public/admin/js/main.js`. No changes to `index.html`. Pure addition — zero regression risk. Deployed files exist but aren't imported yet.
+- **A2**: add `<script type="module" src="js/main.js"></script>` to `index.html`. Now `main.js` runs alongside the inline block, but the inline block still has its own copies of `showToast`/`apiCall`/etc. Both versions exist but the inline ones win (they're defined after main.js runs). Tests still pass because inline versions are unchanged.
+- **A3**: replace the inline `function showToast(...)` etc. definitions with `import` statements at the top of the inline block. Each commit in isolation is revertable.
 
 **Why this order:** A1 is a pure addition (zero regression risk). A2 wires main.js but the inline block still has its own copies. A3 is the actual removal. Each commit is revertable.
 
