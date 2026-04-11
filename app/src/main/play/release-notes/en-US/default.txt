@@ -1,8 +1,8 @@
-v0.64.0
+v0.64.1
 
-unified web portal with TOTP MFA (#284)
+move Phase 0 user-facing items to Phase 6 + add translations (#286)
 - ## Summary
-- - New web portal at `/portal/` for all ShyTalk users to manage their
-- account
-- - Custom TOTP two-factor authentication for email/password users (uses
-- `otplib` — no paid Firebase Identity Platform needed)
+- - Moves 7 user-facing items out of Phase 0 into Phase 6 (Website &
+- Public Presence) where they belong — the fix Option 1 from PR #284 did
+- was a temporary unhide, this is the proper structural fix
+- - Phase 0 is back to hidden-only (pure internal infrastructure)
