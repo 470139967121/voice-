@@ -1,6 +1,55 @@
 {
-  "lastUpdated": "2026-03-30",
+  "lastUpdated": "2026-04-11",
   "phases": [
+    {
+      "title": "Infrastructure",
+      "titleI18n": {},
+      "status": "active",
+      "features": [
+        {
+          "name": "Unified web portal",
+          "description": "single login page where users authenticate with their ShyTalk account. Routes to Admin panel, MC Host panel, MC Singer panel, Teacher panel, or suggestions+roadmap based on role. Must be done BEFORE admin restructure (#41)",
+          "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "Admin role-based access control",
+          "description": "internal admin roles (super-admin, moderator, viewer) controlling which tools each admin can use. Store roles in Firestore, enforce server-side",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "MC Host dedicated panel",
+          "description": "separate login + dashboard for MC Hosts to manage games, participants, prizes. Isolated from main admin panel",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "MC Singer dedicated panel",
+          "description": "separate login + dashboard for MC Singers to manage singing sessions, rooms, competitions",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Teacher dedicated panel",
+          "description": "separate login + dashboard for Teachers to manage teaching rooms, students, schedules",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Web personal profile",
+          "description": "full profile management on portal: avatar upload, display name, SuperShy status/purchase, coins, linked accounts, voting history, submitted suggestions. Needs its own design cycle",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Web page i18n completion",
+          "description": "full translations for all web pages including admin panel, legal pages. Language selector on every page",
+          "status": "planned",
+          "i18n": {}
+        }
+      ]
+    },
     {
       "title": "Safety & Compliance",
       "titleI18n": {
