@@ -1,8 +1,8 @@
-v0.64.2
+v0.64.3
 
-add favicon + document FIREBASE_WEB_API_KEY for local dev (#287)
+local flavor supports physical devices via -PlocalHost (#288)
 - ## Summary
-- Two pre-existing issues found during PR #284 manual QA, bundled as a
-- single dev-QoL PR.
-- ## 1. Missing favicon (closes #17)
-- Every web page emitted a `/favicon.ico` 404 on load because no HTML file
+- The `local` Android build flavor hardcoded all URLs to `10.0.2.2`
+- (Android emulator's host alias), so physical devices showed "Technical
+- Difficulties" on launch because API requests failed. This was found
+- during PR #284 manual QA on a physical device.
