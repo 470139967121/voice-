@@ -86,15 +86,19 @@ test.describe('Portal — CSP & Security Headers', () => {
     });
     for (const src of scriptSrcs) {
       if (!src) continue;
-      // Must be self (relative path) or gstatic.com (Firebase CDN)
+      // Must be self (relative path), Firebase CDN (gstatic), or the Google
+      // API loader that Firebase Auth uses for OAuth popup flows (apis.google.com).
+      // Webkit/Safari loads apis.google.com/js/api.js dynamically during Firebase
+      // Auth init even when no OAuth flow is active yet.
       const isAllowed =
         src.startsWith('/') ||
         src.startsWith('./') ||
         src.startsWith('config') ||
         src.startsWith('portal') ||
         src.startsWith('qrcode') ||
-        src.includes('gstatic.com/firebasejs');
-      expect(isAllowed).toBe(true);
+        src.includes('gstatic.com/firebasejs') ||
+        src.startsWith('https://apis.google.com/js/api.js');
+      expect(isAllowed, `Disallowed script src: ${src}`).toBe(true);
     }
   });
 });
