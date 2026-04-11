@@ -41,7 +41,13 @@ const PHASE_STATUS = {
 };
 
 // Phases to hide from the public (internal tooling)
-const SKIP_PHASES = new Set([0]);
+//
+// Phase 0 used to be blanket-hidden, but it contains a mix of internal
+// infrastructure AND user-facing items (unified web portal, MC panels,
+// personal profile, etc.). Internal-only items are now filtered by
+// HIDE_KEYWORDS instead, so Phase 0's user-facing features reach the
+// public roadmap page.
+const SKIP_PHASES = new Set();
 
 // Features to hide from public (internal tooling keywords)
 const HIDE_KEYWORDS = [
@@ -50,6 +56,8 @@ const HIDE_KEYWORDS = [
   'OnPush CLI',
   'Legal docs:',
   'ktlint',
+  'CI workflow deduplication',
+  'Admin panel restructure',
 ];
 
 // User-friendly phase titles (override the markdown headings)

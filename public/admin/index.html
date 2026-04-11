@@ -5211,8 +5211,12 @@
         // Check admin claim (client-side UX only)
         const tokenResult = await user.getIdTokenResult();
         if (tokenResult.claims.admin !== true) {
-          showToast("This account does not have admin privileges", "error");
-          await signOut(auth);
+          // Show access denied on login screen WITHOUT signing out —
+          // the user may be authenticated for the portal and signing
+          // them out here would destroy that session.
+          const loginError = document.getElementById('login-error');
+          loginError.textContent = 'Access denied — admin privileges required. If you have a portal account, go to /portal/ instead.';
+          loginError.style.display = 'block';
           showScreen("login");
           return;
         }
