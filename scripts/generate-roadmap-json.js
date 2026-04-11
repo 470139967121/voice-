@@ -42,14 +42,18 @@ const PHASE_STATUS = {
 
 // Phases to hide from the public (internal tooling)
 //
-// Phase 0 used to be blanket-hidden, but it contains a mix of internal
-// infrastructure AND user-facing items (unified web portal, MC panels,
-// personal profile, etc.). Internal-only items are now filtered by
-// HIDE_KEYWORDS instead, so Phase 0's user-facing features reach the
-// public roadmap page.
-const SKIP_PHASES = new Set();
+// Phase 0 is internal infrastructure only (SonarCloud, OnPush CLI, CI
+// workflow dedup, admin panel refactor). User-facing features that used
+// to be placed in Phase 0 for ordering (unified web portal, MC/Singer/
+// Teacher panels, personal profile, admin RBAC, web i18n) now live in
+// their proper Phase 6 home and appear on the public roadmap directly.
+const SKIP_PHASES = new Set([0]);
 
 // Features to hide from public (internal tooling keywords)
+//
+// Defensive allowlist — even if an internal item slips out of Phase 0
+// into a later phase, it will still be filtered by keyword. Keeps the
+// public roadmap clean of implementation detail.
 const HIDE_KEYWORDS = [
   'SonarCloud',
   'Allure report',
