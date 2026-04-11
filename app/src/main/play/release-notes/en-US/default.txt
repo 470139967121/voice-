@@ -1,8 +1,8 @@
-v0.64.1
+v0.64.2
 
-move Phase 0 user-facing items to Phase 6 + add translations (#286)
+add favicon + document FIREBASE_WEB_API_KEY for local dev (#287)
 - ## Summary
-- - Moves 7 user-facing items out of Phase 0 into Phase 6 (Website &
-- Public Presence) where they belong — the fix Option 1 from PR #284 did
-- was a temporary unhide, this is the proper structural fix
-- - Phase 0 is back to hidden-only (pure internal infrastructure)
+- Two pre-existing issues found during PR #284 manual QA, bundled as a
+- single dev-QoL PR.
+- ## 1. Missing favicon (closes #17)
+- Every web page emitted a `/favicon.ico` 404 on load because no HTML file
