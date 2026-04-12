@@ -3150,6 +3150,12 @@
           }
         },
         {
+          "name": "MC Host Team Leader panel",
+          "description": "oversight panel for Team Leaders who manage multiple MC Hosts. View team performance, assign games/events, review MC Host activity, handle escalations",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
           "name": "MC Singer dedicated panel",
           "description": "separate login + dashboard for MC Singers to manage singing sessions, rooms, competitions",
           "status": "planned",
@@ -3231,6 +3237,12 @@
               "d": "MC歌手专用的表演管理面板"
             }
           }
+        },
+        {
+          "name": "MC Singer Team Leader panel",
+          "description": "oversight panel for Team Leaders who manage multiple MC Singers. View team performance, assign singing sessions, review MC Singer activity, handle escalations",
+          "status": "planned",
+          "i18n": {}
         },
         {
           "name": "Teacher dedicated panel",
