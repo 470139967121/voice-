@@ -23,10 +23,9 @@ import * as api from '/js/core/api.js';
 import { showScreen, registerScreen } from '/js/core/ui.js';
 import * as tabs from '/js/core/tabs.js';
 
-// ── Tab modules (loaded but not initialized — PR C will wire them) ──
-// NOTE: users.js needs manual cleanup before import (auto-extracted, has
-// inline script globals and unclosed constructs). Other 14 are ready.
-/*
+// ── Tab modules (loaded but not initialized — inline script still authoritative) ──
+// users.js excluded — needs manual cleanup before import.
+// import * as tabUsers from '/admin/js/tabs/users.js';
 import * as tabAppeals from '/admin/js/tabs/appeals.js';
 import * as tabReports from '/admin/js/tabs/reports.js';
 import * as tabGifts from '/admin/js/tabs/gifts.js';
@@ -41,7 +40,6 @@ import * as tabDevices from '/admin/js/tabs/devices.js';
 import * as tabStartingScreens from '/admin/js/tabs/starting-screens.js';
 import * as tabSuggestions from '/admin/js/tabs/suggestions.js';
 import * as tabAuditLog from '/admin/js/tabs/audit-log.js';
-*/
 
 // ── Config ──────────────────────────────────────────────────────
 const CONFIG = window.SHYTALK_CONFIG || {};
