@@ -30,6 +30,7 @@
       loadFail: "Could not load the roadmap.",
       tryAgain: "Try again",
       notifyPrompt: "Sign in to the app to get notified about this feature.",
+      disclaimer: "Features and priorities may change as development progresses and user feedback is received.",
     },
     ar: {
       inProgress:
@@ -293,6 +294,33 @@
         "\u767B\u5F55\u5E94\u7528\u4EE5\u63A5\u6536\u901A\u77E5\u3002",
     },
   };
+
+  // Disclaimer translations (added separately to avoid touching every language block)
+  var DISCLAIMER = {
+    ar: "\u0642\u062f \u062a\u062a\u063a\u064a\u0631 \u0627\u0644\u0645\u064a\u0632\u0627\u062a \u0648\u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0627\u062a \u0645\u0639 \u062a\u0642\u062f\u0645 \u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0648\u062a\u0644\u0642\u064a \u0645\u0644\u0627\u062d\u0638\u0627\u062a \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u064a\u0646.",
+    de: "Funktionen und Priorit\u00e4ten k\u00f6nnen sich im Laufe der Entwicklung und durch Nutzerfeedback \u00e4ndern.",
+    es: "Las funciones y prioridades pueden cambiar a medida que avanza el desarrollo y se reciben comentarios.",
+    fr: "Les fonctionnalit\u00e9s et priorit\u00e9s peuvent changer au fil du d\u00e9veloppement et des retours utilisateurs.",
+    hi: "\u0935\u093f\u0915\u093e\u0938 \u0914\u0930 \u0909\u092a\u092f\u094b\u0917\u0915\u0930\u094d\u0924\u093e \u092a\u094d\u0930\u0924\u093f\u0915\u094d\u0930\u093f\u092f\u093e \u0915\u0947 \u0906\u0927\u093e\u0930 \u092a\u0930 \u0938\u0941\u0935\u093f\u0927\u093e\u090f\u0901 \u0914\u0930 \u092a\u094d\u0930\u093e\u0925\u092e\u093f\u0915\u0924\u093e\u090f\u0901 \u092c\u0926\u0932 \u0938\u0915\u0924\u0940 \u0939\u0948\u0902\u0964",
+    id: "Fitur dan prioritas dapat berubah seiring perkembangan dan masukan pengguna.",
+    it: "Le funzionalit\u00e0 e le priorit\u00e0 possono cambiare con lo sviluppo e il feedback degli utenti.",
+    ja: "\u958b\u767a\u306e\u9032\u884c\u3084\u30e6\u30fc\u30b6\u30fc\u30d5\u30a3\u30fc\u30c9\u30d0\u30c3\u30af\u306b\u3088\u308a\u3001\u6a5f\u80fd\u3084\u512a\u5148\u9806\u4f4d\u304c\u5909\u66f4\u3055\u308c\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002",
+    ko: "\uac1c\ubc1c \uc9c4\ud589 \ubc0f \uc0ac\uc6a9\uc790 \ud53c\ub4dc\ubc31\uc5d0 \ub530\ub77c \uae30\ub2a5\uacfc \uc6b0\uc120\uc21c\uc704\uac00 \ubcc0\uacbd\ub420 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
+    nl: "Functies en prioriteiten kunnen veranderen naarmate de ontwikkeling vordert en gebruikersfeedback wordt ontvangen.",
+    pl: "Funkcje i priorytety mog\u0105 si\u0119 zmieni\u0107 w miar\u0119 post\u0119pu prac i opinii u\u017cytkownik\u00f3w.",
+    pt: "Recursos e prioridades podem mudar conforme o desenvolvimento avan\u00e7a e o feedback dos usu\u00e1rios \u00e9 recebido.",
+    ru: "\u0424\u0443\u043d\u043a\u0446\u0438\u0438 \u0438 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442\u044b \u043c\u043e\u0433\u0443\u0442 \u0438\u0437\u043c\u0435\u043d\u044f\u0442\u044c\u0441\u044f \u043f\u043e \u043c\u0435\u0440\u0435 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0438 \u0438 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u044f \u043e\u0442\u0437\u044b\u0432\u043e\u0432.",
+    sv: "Funktioner och prioriteringar kan \u00e4ndras allt eftersom utvecklingen fortskrider och anv\u00e4ndarfeedback tas emot.",
+    th: "\u0e04\u0e38\u0e13\u0e2a\u0e21\u0e1a\u0e31\u0e15\u0e34\u0e41\u0e25\u0e30\u0e25\u0e33\u0e14\u0e31\u0e1a\u0e04\u0e27\u0e32\u0e21\u0e2a\u0e33\u0e04\u0e31\u0e0d\u0e2d\u0e32\u0e08\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e41\u0e1b\u0e25\u0e07\u0e15\u0e32\u0e21\u0e04\u0e27\u0e32\u0e21\u0e04\u0e37\u0e1a\u0e2b\u0e19\u0e49\u0e32\u0e41\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e04\u0e34\u0e14\u0e40\u0e2b\u0e47\u0e19\u0e02\u0e2d\u0e07\u0e1c\u0e39\u0e49\u0e43\u0e0a\u0e49",
+    tr: "\u00d6zellikler ve \u00f6ncelikler, geli\u015ftirme ilerledik\u00e7e ve kullan\u0131c\u0131 geri bildirimleri al\u0131nd\u0131k\u00e7a de\u011fi\u015febilir.",
+    uk: "\u0424\u0443\u043d\u043a\u0446\u0456\u0457 \u0442\u0430 \u043f\u0440\u0456\u043e\u0440\u0438\u0442\u0435\u0442\u0438 \u043c\u043e\u0436\u0443\u0442\u044c \u0437\u043c\u0456\u043d\u044e\u0432\u0430\u0442\u0438\u0441\u044f \u0432 \u043c\u0456\u0440\u0443 \u0440\u043e\u0437\u0432\u0438\u0442\u043a\u0443 \u0442\u0430 \u043e\u0442\u0440\u0438\u043c\u0430\u043d\u043d\u044f \u0432\u0456\u0434\u0433\u0443\u043a\u0456\u0432.",
+    vi: "T\u00ednh n\u0103ng v\u00e0 \u01b0u ti\u00ean c\u00f3 th\u1ec3 thay \u0111\u1ed5i khi qu\u00e1 tr\u00ecnh ph\u00e1t tri\u1ec3n ti\u1ebfn tri\u1ec3n v\u00e0 nh\u1eadn \u0111\u01b0\u1ee3c ph\u1ea3n h\u1ed3i t\u1eeb ng\u01b0\u1eddi d\u00f9ng.",
+    zh: "\u529f\u80fd\u548c\u4f18\u5148\u7ea7\u53ef\u80fd\u4f1a\u968f\u7740\u5f00\u53d1\u8fdb\u5c55\u548c\u7528\u6237\u53cd\u9988\u800c\u53d8\u5316\u3002",
+  };
+  // Merge disclaimer into each language block
+  for (var lang in DISCLAIMER) {
+    if (LABELS[lang]) LABELS[lang].disclaimer = DISCLAIMER[lang];
+  }
 
   function t(key) {
     var labels = LABELS[currentLang] || LABELS.en;
@@ -622,6 +650,12 @@
       if (updatedEl) {
         updatedEl.textContent = t("lastUpdated") + ": " + data.lastUpdated;
       }
+    }
+
+    // Update footer disclaimer translation
+    var disclaimerEl = document.querySelector("[data-i18n='disclaimer']");
+    if (disclaimerEl) {
+      disclaimerEl.textContent = t("disclaimer");
     }
 
     // Attach collapse/expand handlers

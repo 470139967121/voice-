@@ -62,6 +62,8 @@ const HIDE_KEYWORDS = [
   'ktlint',
   'CI workflow deduplication',
   'Admin panel restructure',
+  'Firestore rules',
+  'Suspension enforcement',
 ];
 
 // User-friendly phase titles (override the markdown headings)
