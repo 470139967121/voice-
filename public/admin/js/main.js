@@ -24,9 +24,7 @@ import { showScreen, registerScreen } from '/js/core/ui.js';
 import * as tabs from '/js/core/tabs.js';
 
 // ── Tab modules (loaded but not initialized — inline script still authoritative) ──
-// users.js excluded from PR B — auto-extraction produced broken module.
-// Will be properly hand-written in PR C.
-// import * as tabUsers from '/admin/js/tabs/users.js';
+import * as tabUsers from '/admin/js/tabs/users.js';
 import * as tabAppeals from '/admin/js/tabs/appeals.js';
 import * as tabReports from '/admin/js/tabs/reports.js';
 import * as tabGifts from '/admin/js/tabs/gifts.js';
@@ -115,8 +113,23 @@ registerScreen('dashboard', document.getElementById('dashboard-screen'));
 // PR C will call initAllTabs() and remove the inline code.
 //
 // Tab module references are available for import by other modules:
-// TAB_MODULES will be populated in PR C when imports are enabled.
-export const TAB_MODULES = {};
+export const TAB_MODULES = {
+  users: tabUsers,
+  appeals: tabAppeals,
+  reports: tabReports,
+  gifts: tabGifts,
+  economy: tabEconomyConfig,
+  maintenance: tabMaintenance,
+  monitor: tabSpinMonitor,
+  banners: tabBanners,
+  funfacts: tabFunFacts,
+  backups: tabBackups,
+  logs: tabLogs,
+  devices: tabDevices,
+  'starting-screens': tabStartingScreens,
+  suggestions: tabSuggestions,
+  'audit-log': tabAuditLog,
+};
 
 export const authHandler = createAuthStateHandler({
   requireClaim: 'admin',

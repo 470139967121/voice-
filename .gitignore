@@ -87,3 +87,4 @@ express-api/coverage/
 firebase-debug.log
 firestore-debug.log
 database-debug.log
+.project/test-reports/
