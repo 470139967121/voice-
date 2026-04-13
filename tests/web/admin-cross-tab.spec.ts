@@ -107,21 +107,29 @@ test.describe('Admin Cross-Tab Interactions', () => {
     await confirmBtn.click();
     await waitForReportsLoaded(page);
 
-    // Wait for the warning to be written — the resolve endpoint writes to
-    // Firestore async and the emulator may lag behind the API response.
-    await page.waitForTimeout(1_000);
+    // Verify the warning was actually created via API before checking UI.
+    // The resolve endpoint creates the warning synchronously, but the emulator
+    // may have propagation lag. Poll the API until the warning appears.
+    const userUniqueId = String(testData.user.uniqueId);
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const warningsData = await testData.api.get(`/api/user/${userUniqueId}/warnings`);
+      const warnings = warningsData.warnings || [];
+      if (warnings.some((w: any) => !w.revoked && w.severity === 2)) break;
+      await page.waitForTimeout(1_000);
+    }
 
     // Navigate to Users → search → Moderation subtab
     await navigateToTab(page, 'Users');
-    await searchUser(page, String(testData.user.uniqueId));
+    await searchUser(page, userUniqueId);
     await switchUserSubtab(page, 'moderation');
 
-    // Verify warning with severity 2 appears in history.
-    // If not visible, the warning write may not have propagated yet — reload.
+    // Poll the UI for the warning — re-search if needed (the moderation
+    // subtab loads warnings on activation, but may cache stale state).
     const warningList = page.locator('#warning-history-list');
-    if (await warningList.locator('.warning-item').count() === 0) {
+    for (let retry = 0; retry < 3; retry++) {
+      if (await warningList.locator('.warning-item').count() > 0) break;
       await page.waitForTimeout(2_000);
-      await searchUser(page, String(testData.user.uniqueId));
+      await searchUser(page, userUniqueId);
       await switchUserSubtab(page, 'moderation');
     }
     await expect(warningList.locator('.warning-item')).not.toHaveCount(0, { timeout: 10_000 });
