@@ -5,7 +5,7 @@
  * core modules (api, tabs, ui), and handles the auth state flow
  * (admin claim check, access-denied inline error, dashboard show).
  *
- * All 15 tab modules are imported and initialized here.
+ * Tab modules are pre-loaded via dynamic import (non-blocking).
  * Each tab exports init(deps), activate(), deactivate().
  */
 
@@ -23,22 +23,11 @@ import * as api from '/js/core/api.js';
 import { showScreen, registerScreen } from '/js/core/ui.js';
 import * as tabs from '/js/core/tabs.js';
 
-// ── Tab modules (loaded but not initialized — inline script still authoritative) ──
-import * as tabUsers from '/admin/js/tabs/users.js';
-import * as tabAppeals from '/admin/js/tabs/appeals.js';
-import * as tabReports from '/admin/js/tabs/reports.js';
-import * as tabGifts from '/admin/js/tabs/gifts.js';
-import * as tabEconomyConfig from '/admin/js/tabs/economy-config.js';
-import * as tabMaintenance from '/admin/js/tabs/maintenance.js';
-import * as tabSpinMonitor from '/admin/js/tabs/spin-monitor.js';
-import * as tabBanners from '/admin/js/tabs/banners.js';
-import * as tabFunFacts from '/admin/js/tabs/fun-facts.js';
-import * as tabBackups from '/admin/js/tabs/backups.js';
-import * as tabLogs from '/admin/js/tabs/logs.js';
-import * as tabDevices from '/admin/js/tabs/devices.js';
-import * as tabStartingScreens from '/admin/js/tabs/starting-screens.js';
-import * as tabSuggestions from '/admin/js/tabs/suggestions.js';
-import * as tabAuditLog from '/admin/js/tabs/audit-log.js';
+// ── Tab modules (deferred via dynamic import to avoid blocking inline script) ──
+// Static imports here create a dependency chain: inline script imports from main.js,
+// so the browser must fetch+parse all 15 tab modules before the inline script can run.
+// Dynamic imports let the admin panel become interactive immediately while modules
+// load in the background. PR C will wire them into the tab system.
 
 // ── Config ──────────────────────────────────────────────────────
 const CONFIG = window.SHYTALK_CONFIG || {};
@@ -108,28 +97,31 @@ registerScreen('dashboard', document.getElementById('dashboard-screen'));
 // the infrastructure; the inline block remains authoritative for auth flow.
 
 // ── Tab Registry (prepared for PR C switchover) ───────────────────
-// Tab modules are imported above but NOT initialized yet.
-// The inline script block still handles all tab logic.
-// PR C will call initAllTabs() and remove the inline code.
-//
-// Tab module references are available for import by other modules:
-export const TAB_MODULES = {
-  users: tabUsers,
-  appeals: tabAppeals,
-  reports: tabReports,
-  gifts: tabGifts,
-  economy: tabEconomyConfig,
-  maintenance: tabMaintenance,
-  monitor: tabSpinMonitor,
-  banners: tabBanners,
-  funfacts: tabFunFacts,
-  backups: tabBackups,
-  logs: tabLogs,
-  devices: tabDevices,
-  'starting-screens': tabStartingScreens,
-  suggestions: tabSuggestions,
-  'audit-log': tabAuditLog,
+// Tab modules load lazily via dynamic import() to avoid blocking the inline script.
+// PR C will wire these into the tab system. For now they pre-load silently.
+export const TAB_MODULES = {};
+
+// Pre-load tab modules in the background after the critical path completes.
+const _tabPaths = {
+  users: '/admin/js/tabs/users.js',
+  appeals: '/admin/js/tabs/appeals.js',
+  reports: '/admin/js/tabs/reports.js',
+  gifts: '/admin/js/tabs/gifts.js',
+  economy: '/admin/js/tabs/economy-config.js',
+  maintenance: '/admin/js/tabs/maintenance.js',
+  monitor: '/admin/js/tabs/spin-monitor.js',
+  banners: '/admin/js/tabs/banners.js',
+  funfacts: '/admin/js/tabs/fun-facts.js',
+  backups: '/admin/js/tabs/backups.js',
+  logs: '/admin/js/tabs/logs.js',
+  devices: '/admin/js/tabs/devices.js',
+  'starting-screens': '/admin/js/tabs/starting-screens.js',
+  suggestions: '/admin/js/tabs/suggestions.js',
+  'audit-log': '/admin/js/tabs/audit-log.js',
 };
+for (const [key, path] of Object.entries(_tabPaths)) {
+  import(path).then(m => { TAB_MODULES[key] = m; }).catch(() => {});
+}
 
 export const authHandler = createAuthStateHandler({
   requireClaim: 'admin',

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-04-13",
+  "lastUpdated": "2026-04-16",
   "phases": [
     {
       "title": "Safety & Compliance",
@@ -525,87 +525,28 @@
           }
         },
         {
-          "name": "Block enforcement on DMs",
-          "description": "blocking a user must prevent them from sending you messages, not just gifts. UK OSA compliance requirement",
+          "name": "Inactive account deletion",
+          "description": "automated process to delete accounts inactive for extended period. Needs discussion on retention period, warnings, data handling",
           "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "حظر الرسائل المباشرة",
-              "d": "منع المستخدمين المحظورين من إرسال رسائل"
-            },
-            "de": {
-              "n": "Blockierung in DMs",
-              "d": "Blockierte Nutzer können keine Nachrichten mehr senden"
-            },
-            "es": {
-              "n": "Bloqueo en mensajes",
-              "d": "Los usuarios bloqueados no pueden enviar mensajes"
-            },
-            "fr": {
-              "n": "Blocage dans les DM",
-              "d": "Les utilisateurs bloqués ne peuvent plus envoyer de messages"
-            },
-            "hi": {
-              "n": "DM में ब्लॉक",
-              "d": "ब्लॉक किए गए उपयोगकर्ता संदेश नहीं भेज सकते"
-            },
-            "id": {
-              "n": "Blokir di DM",
-              "d": "Pengguna yang diblokir tidak bisa mengirim pesan"
-            },
-            "it": {
-              "n": "Blocco nei DM",
-              "d": "Gli utenti bloccati non possono inviare messaggi"
-            },
-            "ja": {
-              "n": "DMでのブロック",
-              "d": "ブロックしたユーザーからのメッセージを防止"
-            },
-            "ko": {
-              "n": "DM 차단",
-              "d": "차단된 사용자의 메시지 전송 방지"
-            },
-            "nl": {
-              "n": "Blokkering in DM's",
-              "d": "Geblokkeerde gebruikers kunnen geen berichten sturen"
-            },
-            "pl": {
-              "n": "Blokada w wiadomościach",
-              "d": "Zablokowani użytkownicy nie mogą wysyłać wiadomości"
-            },
-            "pt": {
-              "n": "Bloqueio em DMs",
-              "d": "Usuários bloqueados não podem enviar mensagens"
-            },
-            "ru": {
-              "n": "Блокировка в ЛС",
-              "d": "Заблокированные пользователи не смогут отправлять сообщения"
-            },
-            "sv": {
-              "n": "Blockering i DM",
-              "d": "Blockerade användare kan inte skicka meddelanden"
-            },
-            "th": {
-              "n": "บล็อกในข้อความ",
-              "d": "ผู้ใช้ที่ถูกบล็อกไม่สามารถส่งข้อความได้"
-            },
-            "tr": {
-              "n": "DM'de engelleme",
-              "d": "Engellenen kullanıcılar mesaj gönderemez"
-            },
-            "uk": {
-              "n": "Блокування в ПП",
-              "d": "Заблоковані користувачі не зможуть надсилати повідомлення"
-            },
-            "vi": {
-              "n": "Chặn trong tin nhắn",
-              "d": "Người dùng bị chặn không thể gửi tin nhắn"
-            },
-            "zh": {
-              "n": "私信屏蔽",
-              "d": "被屏蔽的用户无法发送消息"
-            }
-          }
+          "i18n": {}
+        },
+        {
+          "name": "VPN detection and blocking",
+          "description": "prevent VPN connections. Cascading ban system risks banning innocent users sharing VPN exit nodes",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Account sharing detection & prevention",
+          "description": "detect concurrent sessions from different devices/IPs/geolocations, impossible travel. Alert admin, force re-auth or lock",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Automated content moderation",
+          "description": "AI-powered detection: image nudity, voice toxicity (speech-to-text), text profanity. Auto-flag or auto-action based on severity",
+          "status": "planned",
+          "i18n": {}
         }
       ]
     },
@@ -880,89 +821,6 @@
             "zh": {
               "n": "支付升级",
               "d": "更流畅的购买体验"
-            }
-          }
-        },
-        {
-          "name": "Fix coin purchase flow",
-          "description": "purchases complete in Google Play but coins never credited due to broken event handling",
-          "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "إصلاح شراء العملات",
-              "d": "إصلاح مشكلة عدم إضافة العملات بعد الشراء"
-            },
-            "de": {
-              "n": "Münzkauf reparieren",
-              "d": "Münzen werden nach dem Kauf nicht gutgeschrieben"
-            },
-            "es": {
-              "n": "Reparar compra de monedas",
-              "d": "Las monedas no se acreditan después de la compra"
-            },
-            "fr": {
-              "n": "Corriger l'achat de pièces",
-              "d": "Les pièces ne sont pas créditées après l'achat"
-            },
-            "hi": {
-              "n": "सिक्का खरीदारी ठीक करें",
-              "d": "खरीदारी के बाद सिक्के क्रेडिट नहीं हो रहे"
-            },
-            "id": {
-              "n": "Perbaiki pembelian koin",
-              "d": "Koin tidak ditambahkan setelah pembelian"
-            },
-            "it": {
-              "n": "Correggere acquisto monete",
-              "d": "Le monete non vengono accreditate dopo l'acquisto"
-            },
-            "ja": {
-              "n": "コイン購入を修正",
-              "d": "購入後にコインが反映されない問題を修正"
-            },
-            "ko": {
-              "n": "코인 구매 수정",
-              "d": "구매 후 코인이 지급되지 않는 문제 수정"
-            },
-            "nl": {
-              "n": "Muntaankoop repareren",
-              "d": "Munten worden niet bijgeschreven na aankoop"
-            },
-            "pl": {
-              "n": "Napraw zakup monet",
-              "d": "Monety nie są dodawane po zakupie"
-            },
-            "pt": {
-              "n": "Corrigir compra de moedas",
-              "d": "Moedas não são creditadas após a compra"
-            },
-            "ru": {
-              "n": "Исправить покупку монет",
-              "d": "Монеты не зачисляются после покупки"
-            },
-            "sv": {
-              "n": "Fixa myntköp",
-              "d": "Mynt krediteras inte efter köp"
-            },
-            "th": {
-              "n": "แก้ไขการซื้อเหรียญ",
-              "d": "เหรียญไม่เพิ่มหลังจากซื้อ"
-            },
-            "tr": {
-              "n": "Jeton satın alma düzelt",
-              "d": "Satın alma sonrası jetonlar eklenmiyor"
-            },
-            "uk": {
-              "n": "Виправити купівлю монет",
-              "d": "Монети не зараховуються після покупки"
-            },
-            "vi": {
-              "n": "Sửa mua xu",
-              "d": "Xu không được cộng sau khi mua"
-            },
-            "zh": {
-              "n": "修复金币购买",
-              "d": "购买后金币未到账"
             }
           }
         }
@@ -1768,87 +1626,10 @@
           }
         },
         {
-          "name": "Follow notifications",
-          "description": "notify users when someone follows them",
+          "name": "Clans system",
+          "description": "user-created groups with leaders, members, ranks, shared chat, clan-level leaderboards, inter-clan competitions. Clan badges on profiles",
           "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "إشعارات المتابعة",
-              "d": "اعرف عندما يتابعك شخص ما"
-            },
-            "de": {
-              "n": "Folge-Benachrichtigungen",
-              "d": "Erfahre, wenn dir jemand folgt"
-            },
-            "es": {
-              "n": "Notificaciones de seguimiento",
-              "d": "Descubre cuando alguien te sigue"
-            },
-            "fr": {
-              "n": "Notifications de suivi",
-              "d": "Soyez alerté quand quelqu'un vous suit"
-            },
-            "hi": {
-              "n": "फ़ॉलो सूचनाएं",
-              "d": "जानें जब कोई आपको फ़ॉलो करे"
-            },
-            "id": {
-              "n": "Notifikasi pengikut",
-              "d": "Ketahui saat seseorang mengikuti Anda"
-            },
-            "it": {
-              "n": "Notifiche di follow",
-              "d": "Scopri quando qualcuno ti segue"
-            },
-            "ja": {
-              "n": "フォロー通知",
-              "d": "誰かにフォローされたら通知"
-            },
-            "ko": {
-              "n": "팔로우 알림",
-              "d": "누군가 팔로우하면 알림"
-            },
-            "nl": {
-              "n": "Volgmeldingen",
-              "d": "Weet wanneer iemand je volgt"
-            },
-            "pl": {
-              "n": "Powiadomienia o obserwujących",
-              "d": "Dowiedz się, gdy ktoś zacznie Cię obserwować"
-            },
-            "pt": {
-              "n": "Notificações de seguir",
-              "d": "Saiba quando alguém começa a seguir você"
-            },
-            "ru": {
-              "n": "Уведомления о подписках",
-              "d": "Узнавайте, когда кто-то подписывается"
-            },
-            "sv": {
-              "n": "Följ-notiser",
-              "d": "Få reda på när någon följer dig"
-            },
-            "th": {
-              "n": "แจ้งเตือนการติดตาม",
-              "d": "รู้เมื่อมีคนติดตามคุณ"
-            },
-            "tr": {
-              "n": "Takip bildirimleri",
-              "d": "Birisi sizi takip ettiğinde bilgilenin"
-            },
-            "uk": {
-              "n": "Сповіщення про підписки",
-              "d": "Дізнавайтеся, коли хтось підписується"
-            },
-            "vi": {
-              "n": "Thông báo theo dõi",
-              "d": "Biết khi ai đó theo dõi bạn"
-            },
-            "zh": {
-              "n": "关注通知",
-              "d": "有人关注你时通知你"
-            }
-          }
+          "i18n": {}
         }
       ]
     },
@@ -2625,585 +2406,10 @@
           }
         },
         {
-          "name": "Real-time moderation alerts",
-          "description": "instant in-app notifications when account actions are taken (suspension, warning, ban) instead of discovering on next app restart",
+          "name": "App startup redesign",
+          "description": "prevent login screen flash on auto-login (race condition), improve perceived startup time, better loading states",
           "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "تنبيهات فورية",
-              "d": "إشعارات فورية عند اتخاذ إجراءات على حسابك"
-            },
-            "de": {
-              "n": "Echtzeit-Moderationshinweise",
-              "d": "Sofortige Benachrichtigung bei Kontoaktionen"
-            },
-            "es": {
-              "n": "Alertas de moderación en tiempo real",
-              "d": "Notificación instantánea de acciones en tu cuenta"
-            },
-            "fr": {
-              "n": "Alertes de modération en temps réel",
-              "d": "Notification instantanée des actions sur votre compte"
-            },
-            "hi": {
-              "n": "रीयल-टाइम मॉडरेशन अलर्ट",
-              "d": "खाता कार्रवाइयों की तुरंत सूचना"
-            },
-            "id": {
-              "n": "Peringatan moderasi real-time",
-              "d": "Notifikasi instan saat ada tindakan pada akun"
-            },
-            "it": {
-              "n": "Avvisi moderazione in tempo reale",
-              "d": "Notifica istantanea delle azioni sul tuo account"
-            },
-            "ja": {
-              "n": "リアルタイムモデレーション通知",
-              "d": "アカウントへのアクションを即座に通知"
-            },
-            "ko": {
-              "n": "실시간 관리 알림",
-              "d": "계정 조치 즉시 알림"
-            },
-            "nl": {
-              "n": "Realtime moderatiemeldingen",
-              "d": "Direct bericht bij accountacties"
-            },
-            "pl": {
-              "n": "Powiadomienia moderacji w czasie rzeczywistym",
-              "d": "Natychmiastowe powiadomienie o działaniach na koncie"
-            },
-            "pt": {
-              "n": "Alertas de moderação em tempo real",
-              "d": "Notificação instantânea de ações na sua conta"
-            },
-            "ru": {
-              "n": "Уведомления модерации в реальном времени",
-              "d": "Мгновенное уведомление о действиях с аккаунтом"
-            },
-            "sv": {
-              "n": "Realtids-moderationsvarningar",
-              "d": "Omedelbart meddelande vid kontoåtgärder"
-            },
-            "th": {
-              "n": "แจ้งเตือนการดูแลแบบเรียลไทม์",
-              "d": "แจ้งเตือนทันทีเมื่อมีการดำเนินการกับบัญชี"
-            },
-            "tr": {
-              "n": "Gerçek zamanlı moderasyon uyarıları",
-              "d": "Hesap işlemlerinde anında bildirim"
-            },
-            "uk": {
-              "n": "Сповіщення модерації в реальному часі",
-              "d": "Миттєве сповіщення про дії з обліковим записом"
-            },
-            "vi": {
-              "n": "Cảnh báo kiểm duyệt thời gian thực",
-              "d": "Thông báo tức thì khi có hành động trên tài khoản"
-            },
-            "zh": {
-              "n": "实时管理通知",
-              "d": "账户操作即时通知"
-            }
-          }
-        },
-        {
-          "name": "Purchase confirmation dialog",
-          "description": "require confirmation before completing in-app purchases to prevent accidental buys",
-          "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "تأكيد الشراء",
-              "d": "طلب تأكيد قبل إتمام عمليات الشراء"
-            },
-            "de": {
-              "n": "Kaufbestätigung",
-              "d": "Bestätigung vor Abschluss von In-App-Käufen"
-            },
-            "es": {
-              "n": "Confirmación de compra",
-              "d": "Confirmación antes de completar compras"
-            },
-            "fr": {
-              "n": "Confirmation d'achat",
-              "d": "Confirmation avant de finaliser les achats"
-            },
-            "hi": {
-              "n": "खरीदारी पुष्टिकरण",
-              "d": "खरीदारी पूरी करने से पहले पुष्टि"
-            },
-            "id": {
-              "n": "Konfirmasi pembelian",
-              "d": "Konfirmasi sebelum menyelesaikan pembelian"
-            },
-            "it": {
-              "n": "Conferma acquisto",
-              "d": "Conferma prima di completare gli acquisti"
-            },
-            "ja": {
-              "n": "購入確認",
-              "d": "購入完了前に確認ダイアログを表示"
-            },
-            "ko": {
-              "n": "구매 확인",
-              "d": "구매 완료 전 확인 요청"
-            },
-            "nl": {
-              "n": "Aankoopbevestiging",
-              "d": "Bevestiging vóór het afronden van aankopen"
-            },
-            "pl": {
-              "n": "Potwierdzenie zakupu",
-              "d": "Potwierdzenie przed zakończeniem zakupów"
-            },
-            "pt": {
-              "n": "Confirmação de compra",
-              "d": "Confirmação antes de concluir compras"
-            },
-            "ru": {
-              "n": "Подтверждение покупки",
-              "d": "Подтверждение перед завершением покупок"
-            },
-            "sv": {
-              "n": "Köpbekräftelse",
-              "d": "Bekräftelse innan köp slutförs"
-            },
-            "th": {
-              "n": "ยืนยันการซื้อ",
-              "d": "ขอการยืนยันก่อนดำเนินการซื้อ"
-            },
-            "tr": {
-              "n": "Satın alma onayı",
-              "d": "Satın alma işleminden önce onay"
-            },
-            "uk": {
-              "n": "Підтвердження покупки",
-              "d": "Підтвердження перед завершенням покупок"
-            },
-            "vi": {
-              "n": "Xác nhận mua hàng",
-              "d": "Xác nhận trước khi hoàn tất mua hàng"
-            },
-            "zh": {
-              "n": "购买确认",
-              "d": "完成购买前需要确认"
-            }
-          }
-        },
-        {
-          "name": "Room auto-closure",
-          "description": "automatically close rooms with no participants after 24 hours and allow ownership transfer to co-hosts",
-          "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "إغلاق الغرف تلقائياً",
-              "d": "إغلاق الغرف الفارغة تلقائياً ونقل ملكيتها"
-            },
-            "de": {
-              "n": "Automatisches Raumschließen",
-              "d": "Leere Räume automatisch schließen und Besitz übertragen"
-            },
-            "es": {
-              "n": "Cierre automático de salas",
-              "d": "Cerrar salas vacías automáticamente y transferir propiedad"
-            },
-            "fr": {
-              "n": "Fermeture auto des salons",
-              "d": "Fermer les salons vides et transférer la propriété"
-            },
-            "hi": {
-              "n": "कमरा स्वतः बंद",
-              "d": "खाली कमरे स्वतः बंद करें और स्वामित्व स्थानांतरित करें"
-            },
-            "id": {
-              "n": "Penutupan otomatis ruangan",
-              "d": "Tutup ruangan kosong otomatis dan transfer kepemilikan"
-            },
-            "it": {
-              "n": "Chiusura auto stanze",
-              "d": "Chiudi stanze vuote automaticamente e trasferisci proprietà"
-            },
-            "ja": {
-              "n": "ルーム自動クローズ",
-              "d": "空のルームを自動的に閉じてオーナーを移譲"
-            },
-            "ko": {
-              "n": "방 자동 닫기",
-              "d": "빈 방 자동 닫기 및 소유권 이전"
-            },
-            "nl": {
-              "n": "Automatisch kamers sluiten",
-              "d": "Lege kamers automatisch sluiten en eigendom overdragen"
-            },
-            "pl": {
-              "n": "Automatyczne zamykanie pokoi",
-              "d": "Automatycznie zamykaj puste pokoje i przenoś własność"
-            },
-            "pt": {
-              "n": "Fechamento automático de salas",
-              "d": "Fechar salas vazias automaticamente e transferir propriedade"
-            },
-            "ru": {
-              "n": "Автоматическое закрытие комнат",
-              "d": "Автоматически закрывать пустые комнаты и передавать владение"
-            },
-            "sv": {
-              "n": "Automatisk rumsstängning",
-              "d": "Stäng tomma rum automatiskt och överför ägarskap"
-            },
-            "th": {
-              "n": "ปิดห้องอัตโนมัติ",
-              "d": "ปิดห้องว่างอัตโนมัติและโอนความเป็นเจ้าของ"
-            },
-            "tr": {
-              "n": "Otomatik oda kapatma",
-              "d": "Boş odaları otomatik kapat ve sahipliği devret"
-            },
-            "uk": {
-              "n": "Автоматичне закриття кімнат",
-              "d": "Автоматично закривати порожні кімнати та передавати власність"
-            },
-            "vi": {
-              "n": "Tự động đóng phòng",
-              "d": "Tự động đóng phòng trống và chuyển quyền sở hữu"
-            },
-            "zh": {
-              "n": "房间自动关闭",
-              "d": "自动关闭空房间并转移所有权"
-            }
-          }
-        },
-        {
-          "name": "Faster app startup",
-          "description": "parallelise startup checks and add progress indication to reduce cold launch time from 15+ seconds",
-          "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "بدء تشغيل أسرع",
-              "d": "تقليل وقت التحميل وإضافة مؤشر التقدم"
-            },
-            "de": {
-              "n": "Schnellerer App-Start",
-              "d": "Ladezeit verkürzen und Fortschrittsanzeige hinzufügen"
-            },
-            "es": {
-              "n": "Inicio más rápido",
-              "d": "Reducir tiempo de carga y añadir indicador de progreso"
-            },
-            "fr": {
-              "n": "Démarrage plus rapide",
-              "d": "Réduire le temps de chargement et ajouter un indicateur"
-            },
-            "hi": {
-              "n": "तेज़ ऐप स्टार्टअप",
-              "d": "लोडिंग समय कम करें और प्रगति संकेतक जोड़ें"
-            },
-            "id": {
-              "n": "Startup lebih cepat",
-              "d": "Kurangi waktu loading dan tambahkan indikator progres"
-            },
-            "it": {
-              "n": "Avvio più veloce",
-              "d": "Ridurre tempo di caricamento e aggiungere indicatore"
-            },
-            "ja": {
-              "n": "アプリ起動を高速化",
-              "d": "起動時間の短縮とプログレス表示の追加"
-            },
-            "ko": {
-              "n": "앱 시작 속도 개선",
-              "d": "로딩 시간 단축 및 진행 표시기 추가"
-            },
-            "nl": {
-              "n": "Snellere app-start",
-              "d": "Laadtijd verkorten en voortgangsindicator toevoegen"
-            },
-            "pl": {
-              "n": "Szybszy start aplikacji",
-              "d": "Skróć czas ładowania i dodaj wskaźnik postępu"
-            },
-            "pt": {
-              "n": "Inicialização mais rápida",
-              "d": "Reduzir tempo de carregamento e adicionar indicador"
-            },
-            "ru": {
-              "n": "Быстрый запуск приложения",
-              "d": "Сокращение времени загрузки и добавление индикатора"
-            },
-            "sv": {
-              "n": "Snabbare appstart",
-              "d": "Minska laddningstiden och lägg till framstegsindikator"
-            },
-            "th": {
-              "n": "เริ่มแอปเร็วขึ้น",
-              "d": "ลดเวลาโหลดและเพิ่มตัวบอกความคืบหน้า"
-            },
-            "tr": {
-              "n": "Daha hızlı uygulama başlatma",
-              "d": "Yükleme süresini azalt ve ilerleme göstergesi ekle"
-            },
-            "uk": {
-              "n": "Швидший запуск додатку",
-              "d": "Скорочення часу завантаження та індикатор прогресу"
-            },
-            "vi": {
-              "n": "Khởi động nhanh hơn",
-              "d": "Giảm thời gian tải và thêm thanh tiến trình"
-            },
-            "zh": {
-              "n": "更快的应用启动",
-              "d": "缩短加载时间并添加进度指示器"
-            }
-          }
-        },
-        {
-          "name": "Audio output selector",
-          "description": "choose between speaker, earpiece, or Bluetooth in voice rooms",
-          "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "اختيار مخرج الصوت",
-              "d": "التبديل بين السماعة والسماعات في غرف الصوت"
-            },
-            "de": {
-              "n": "Audio-Ausgabeauswahl",
-              "d": "In Sprachräumen zwischen Lautsprecher und Kopfhörer wechseln"
-            },
-            "es": {
-              "n": "Selector de audio",
-              "d": "Cambiar entre altavoz y auricular en salas de voz"
-            },
-            "fr": {
-              "n": "Sélecteur audio",
-              "d": "Choisir entre haut-parleur et écouteur dans les salons"
-            },
-            "hi": {
-              "n": "ऑडियो आउटपुट चयन",
-              "d": "वॉइस रूम में स्पीकर और इयरपीस के बीच स्विच करें"
-            },
-            "id": {
-              "n": "Pemilih output audio",
-              "d": "Beralih antara speaker dan earpiece di ruang suara"
-            },
-            "it": {
-              "n": "Selettore audio",
-              "d": "Passa tra altoparlante e auricolare nelle stanze vocali"
-            },
-            "ja": {
-              "n": "音声出力の選択",
-              "d": "ボイスルームでスピーカーとイヤピースを切り替え"
-            },
-            "ko": {
-              "n": "오디오 출력 선택",
-              "d": "음성 방에서 스피커와 이어피스 전환"
-            },
-            "nl": {
-              "n": "Audio-uitvoerkeuze",
-              "d": "Schakel tussen speaker en oortje in spraakkamers"
-            },
-            "pl": {
-              "n": "Wybór wyjścia audio",
-              "d": "Przełączaj między głośnikiem a słuchawką w pokojach głosowych"
-            },
-            "pt": {
-              "n": "Seletor de áudio",
-              "d": "Alternar entre alto-falante e fone em salas de voz"
-            },
-            "ru": {
-              "n": "Выбор аудиовыхода",
-              "d": "Переключение между динамиком и наушником в голосовых комнатах"
-            },
-            "sv": {
-              "n": "Ljudutgångsväljare",
-              "d": "Växla mellan högtalare och hörsnäcka i röstrum"
-            },
-            "th": {
-              "n": "เลือกเอาต์พุตเสียง",
-              "d": "สลับระหว่างลำโพงและหูฟังในห้องเสียง"
-            },
-            "tr": {
-              "n": "Ses çıkışı seçici",
-              "d": "Sesli odalarda hoparlör ve kulaklık arasında geçiş"
-            },
-            "uk": {
-              "n": "Вибір аудіовиходу",
-              "d": "Перемикання між динаміком і навушником у голосових кімнатах"
-            },
-            "vi": {
-              "n": "Chọn đầu ra âm thanh",
-              "d": "Chuyển giữa loa và tai nghe trong phòng thoại"
-            },
-            "zh": {
-              "n": "音频输出选择",
-              "d": "在语音房间中切换扬声器和耳机"
-            }
-          }
-        },
-        {
-          "name": "Clear bean conversion display",
-          "description": "show exact coin amount users will receive before confirming bean redemption",
-          "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "عرض واضح لتحويل الفاصوليا",
-              "d": "عرض المبلغ الدقيق قبل تأكيد استبدال الفاصوليا"
-            },
-            "de": {
-              "n": "Klare Bohnen-Umrechnung",
-              "d": "Genauen Betrag vor Bohnen-Einlösung anzeigen"
-            },
-            "es": {
-              "n": "Conversión clara de beans",
-              "d": "Mostrar monto exacto antes de canjear beans"
-            },
-            "fr": {
-              "n": "Conversion beans claire",
-              "d": "Afficher le montant exact avant le rachat de beans"
-            },
-            "hi": {
-              "n": "बीन रूपांतरण प्रदर्शन",
-              "d": "बीन रिडेम्प्शन से पहले सटीक राशि दिखाएं"
-            },
-            "id": {
-              "n": "Tampilan konversi bean jelas",
-              "d": "Tampilkan jumlah pasti sebelum menukar bean"
-            },
-            "it": {
-              "n": "Conversione bean chiara",
-              "d": "Mostra importo esatto prima del riscatto bean"
-            },
-            "ja": {
-              "n": "ビーン変換表示の改善",
-              "d": "ビーン交換前に正確な金額を表示"
-            },
-            "ko": {
-              "n": "빈 전환 표시 개선",
-              "d": "빈 교환 전 정확한 금액 표시"
-            },
-            "nl": {
-              "n": "Duidelijke bonen-conversie",
-              "d": "Exact bedrag tonen voor bonen-inwisseling"
-            },
-            "pl": {
-              "n": "Jasna konwersja ziaren",
-              "d": "Pokaż dokładną kwotę przed wymianą ziaren"
-            },
-            "pt": {
-              "n": "Conversão clara de beans",
-              "d": "Mostrar valor exato antes de resgatar beans"
-            },
-            "ru": {
-              "n": "Чёткое отображение конвертации",
-              "d": "Показывать точную сумму перед обменом бобов"
-            },
-            "sv": {
-              "n": "Tydlig bönkonvertering",
-              "d": "Visa exakt belopp innan bönor löses in"
-            },
-            "th": {
-              "n": "แสดงการแปลงบีนชัดเจน",
-              "d": "แสดงจำนวนที่แน่นอนก่อนแลกบีน"
-            },
-            "tr": {
-              "n": "Net bean dönüşümü",
-              "d": "Bean kullanmadan önce tam tutarı göster"
-            },
-            "uk": {
-              "n": "Чітке відображення конвертації",
-              "d": "Показувати точну суму перед обміном бобів"
-            },
-            "vi": {
-              "n": "Hiển thị quy đổi bean rõ ràng",
-              "d": "Hiển thị số tiền chính xác trước khi đổi bean"
-            },
-            "zh": {
-              "n": "清晰的豆子兑换显示",
-              "d": "兑换豆子前显示确切金额"
-            }
-          }
-        },
-        {
-          "name": "Skip warmup option",
-          "description": "allow users to skip the \"Getting ready\" splash after 10 seconds if startup is slow",
-          "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "تخطي التحميل",
-              "d": "تخطي شاشة التحميل إذا استغرقت وقتاً طويلاً"
-            },
-            "de": {
-              "n": "Ladevorgang überspringen",
-              "d": "Ladebildschirm überspringen wenn zu langsam"
-            },
-            "es": {
-              "n": "Saltar carga",
-              "d": "Saltar pantalla de carga si tarda mucho"
-            },
-            "fr": {
-              "n": "Passer le chargement",
-              "d": "Passer l'écran de chargement s'il est trop lent"
-            },
-            "hi": {
-              "n": "लोडिंग छोड़ें",
-              "d": "धीमा होने पर लोडिंग स्क्रीन छोड़ें"
-            },
-            "id": {
-              "n": "Lewati pemuatan",
-              "d": "Lewati layar pemuatan jika terlalu lama"
-            },
-            "it": {
-              "n": "Salta caricamento",
-              "d": "Salta la schermata di caricamento se troppo lenta"
-            },
-            "ja": {
-              "n": "起動スキップ",
-              "d": "起動が遅い場合にスキップ可能"
-            },
-            "ko": {
-              "n": "로딩 건너뛰기",
-              "d": "로딩 화면이 느릴 때 건너뛰기"
-            },
-            "nl": {
-              "n": "Laden overslaan",
-              "d": "Laadscherm overslaan als het te lang duurt"
-            },
-            "pl": {
-              "n": "Pomiń ładowanie",
-              "d": "Pomiń ekran ładowania jeśli trwa za długo"
-            },
-            "pt": {
-              "n": "Pular carregamento",
-              "d": "Pular tela de carregamento se muito lenta"
-            },
-            "ru": {
-              "n": "Пропустить загрузку",
-              "d": "Пропустить экран загрузки если слишком долго"
-            },
-            "sv": {
-              "n": "Hoppa över laddning",
-              "d": "Hoppa över laddningsskärmen om den tar för lång tid"
-            },
-            "th": {
-              "n": "ข้ามการโหลด",
-              "d": "ข้ามหน้าจอโหลดถ้าช้าเกินไป"
-            },
-            "tr": {
-              "n": "Yüklemeyi atla",
-              "d": "Yükleme ekranını çok yavaşsa atla"
-            },
-            "uk": {
-              "n": "Пропустити завантаження",
-              "d": "Пропустити екран завантаження якщо занадто довго"
-            },
-            "vi": {
-              "n": "Bỏ qua tải",
-              "d": "Bỏ qua màn hình tải nếu quá chậm"
-            },
-            "zh": {
-              "n": "跳过加载",
-              "d": "如果加载太慢可以跳过"
-            }
-          }
+          "i18n": {}
         }
       ]
     },
@@ -3733,7 +2939,7 @@
         {
           "name": "Web page i18n completion",
           "description": "full translations for all web pages including admin panel, legal pages. Language selector on every page",
-          "status": "planned",
+          "status": "in-progress",
           "i18n": {
             "ar": {
               "n": "ترجمة موقع الويب",
@@ -3812,6 +3018,12 @@
               "d": "所有网页支持19种语言"
             }
           }
+        },
+        {
+          "name": "Portal CSS/i18n unification",
+          "description": "migrate portal from separate portal-translations.js + portal.css to shared language-selector.js + inline styles",
+          "status": "planned",
+          "i18n": {}
         },
         {
           "name": "Admin role-based access control",
@@ -5206,6 +4418,18 @@
               "d": "语言学习专用房间"
             }
           }
+        },
+        {
+          "name": "Contact form",
+          "description": "private feedback/bug reports/safety concerns sent to admin panel. Category dropdown, optional email for replies",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Contact support page for suspended users",
+          "description": "suspended users need a way to reach support even when locked out",
+          "status": "planned",
+          "i18n": {}
         }
       ]
     }
