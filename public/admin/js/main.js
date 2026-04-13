@@ -24,9 +24,9 @@ import { showScreen, registerScreen } from '/js/core/ui.js';
 import * as tabs from '/js/core/tabs.js';
 
 // ── Tab modules (loaded but not initialized — PR C will wire them) ──
-// Temporarily commented out to debug console errors:
+// NOTE: users.js needs manual cleanup before import (auto-extracted, has
+// inline script globals and unclosed constructs). Other 14 are ready.
 /*
-import * as tabUsers from '/admin/js/tabs/users.js';
 import * as tabAppeals from '/admin/js/tabs/appeals.js';
 import * as tabReports from '/admin/js/tabs/reports.js';
 import * as tabGifts from '/admin/js/tabs/gifts.js';

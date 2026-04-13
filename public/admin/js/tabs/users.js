@@ -2057,4 +2057,5 @@ function setupEconomyListeners() { /* wired by economy admin section */ }
 function setupSuspensionListeners() { /* wired by suspension section */ }
 function setupAccountDeletionListeners() { /* wired by account deletion section */ }
 function setupWarningListeners() { /* wired by warnings section */ }
-function setupSecurityListeners() { /* wired by security section */ }
+function setupSecurityListeners() { /* wired by security section */ }}
+}
