@@ -12,16 +12,20 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, connectAuthEmulator }
   from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, limit, where, onSnapshot, getDocs, doc }
-  from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+// Firestore SDK deferred — will be imported when inline code is removed (PR C).
+// Importing it here causes duplicate Firestore init conflicts with the inline block.
+// import { getFirestore, collection, query, orderBy, limit, where, onSnapshot, getDocs, doc }
+//   from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 import { createStore } from '/js/core/state.js';
 import { createAuthStateHandler } from '/js/core/auth.js';
 import * as api from '/js/core/api.js';
-import { showScreen, registerScreen, showToast, showConfirm, escapeHtml } from '/js/core/ui.js';
+import { showScreen, registerScreen } from '/js/core/ui.js';
 import * as tabs from '/js/core/tabs.js';
 
-// ── Tab modules ────────────────────────────────────────────────────
+// ── Tab modules (loaded but not initialized — PR C will wire them) ──
+// Temporarily commented out to debug console errors:
+/*
 import * as tabUsers from '/admin/js/tabs/users.js';
 import * as tabAppeals from '/admin/js/tabs/appeals.js';
 import * as tabReports from '/admin/js/tabs/reports.js';
@@ -37,6 +41,7 @@ import * as tabDevices from '/admin/js/tabs/devices.js';
 import * as tabStartingScreens from '/admin/js/tabs/starting-screens.js';
 import * as tabSuggestions from '/admin/js/tabs/suggestions.js';
 import * as tabAuditLog from '/admin/js/tabs/audit-log.js';
+*/
 
 // ── Config ──────────────────────────────────────────────────────
 const CONFIG = window.SHYTALK_CONFIG || {};
@@ -61,13 +66,6 @@ if (CONFIG.USE_EMULATORS) {
 
 // Re-export auth utilities for the inline script block during transition.
 export { auth, signInWithEmailAndPassword, signOut };
-
-// ── Firestore (client SDK for real-time listeners) ─────────────────
-const clientDb = getFirestore(app);
-if (CONFIG.USE_EMULATORS) {
-  // Firestore emulator connection is handled by the inline block for now
-}
-const firestoreFns = { collection, query, orderBy, limit, where, onSnapshot, getDocs, doc };
 
 // ── Configure core modules ──────────────────────────────────────
 api.configure({
@@ -112,103 +110,14 @@ registerScreen('dashboard', document.getElementById('dashboard-screen'));
 // when the inline auth block is removed. For now, main.js just sets up
 // the infrastructure; the inline block remains authoritative for auth flow.
 
-// ── Tab Registry ───────────────────────────────────────────────────
-// Maps tab name → module. Used by switchTab to call activate/deactivate.
-const TAB_MODULES = {
-  users: tabUsers,
-  appeals: tabAppeals,
-  reports: tabReports,
-  gifts: tabGifts,
-  economy: tabEconomyConfig,
-  maintenance: tabMaintenance,
-  monitor: tabSpinMonitor,
-  banners: tabBanners,
-  funfacts: tabFunFacts,
-  backups: tabBackups,
-  logs: tabLogs,
-  devices: tabDevices,
-  'starting-screens': tabStartingScreens,
-  suggestions: tabSuggestions,
-  'audit-log': tabAuditLog,
-};
-
-// Shared deps for all tabs
-const sharedDeps = {
-  apiBase: API_BASE,
-  getToken: () => {
-    const user = store.get('currentUser');
-    return user ? user.getIdToken() : Promise.resolve(null);
-  },
-  switchTab: (name) => tabs.show(name),
-  getCurrentTab: () => store.get('currentTab'),
-  clientDb,
-  firestoreFns,
-  renderEvidence: () => '', // TODO: move evidence helpers to shared module
-  openEvidenceLightbox: () => {},
-  searchUserByUniqueId: (uid) => tabUsers.searchUserByUniqueId(uid),
-};
-
-// Initialize all tab modules (one-time setup, wires DOM event listeners)
-function initAllTabs() {
-  tabDevices.init({ switchTab: sharedDeps.switchTab });
-  tabBackups.init({ apiBase: API_BASE, getToken: sharedDeps.getToken });
-  tabAuditLog.init();
-  tabFunFacts.init();
-  tabMaintenance.init({ apiBase: API_BASE, getToken: sharedDeps.getToken });
-  tabBanners.init();
-  tabGifts.init();
-  tabAppeals.init({
-    renderEvidence: sharedDeps.renderEvidence,
-    openEvidenceLightbox: sharedDeps.openEvidenceLightbox,
-  });
-  tabEconomyConfig.init({ apiBase: API_BASE, getToken: sharedDeps.getToken });
-  tabStartingScreens.init();
-  tabLogs.init({
-    clientDb,
-    firestoreFns,
-    switchTab: sharedDeps.switchTab,
-    getCurrentTab: sharedDeps.getCurrentTab,
-  });
-  tabSpinMonitor.init({
-    clientDb,
-    firestoreFns,
-    getCurrentTab: sharedDeps.getCurrentTab,
-    getPityHardLimit: () => tabEconomyConfig.getPityHardLimit?.() ?? 120,
-  });
-  tabReports.init({
-    clientDb,
-    firestoreFns,
-    getCurrentTab: sharedDeps.getCurrentTab,
-    searchUserByUniqueId: sharedDeps.searchUserByUniqueId,
-    renderEvidence: sharedDeps.renderEvidence,
-    openEvidenceLightbox: sharedDeps.openEvidenceLightbox,
-    apiBase: API_BASE,
-    getToken: sharedDeps.getToken,
-    getCurrentUser: () => store.get('currentUser'),
-    switchTab: sharedDeps.switchTab,
-    auth,
-    onAuthStateChanged,
-  });
-  tabSuggestions.init({
-    searchUserByUniqueId: sharedDeps.searchUserByUniqueId,
-    switchTab: sharedDeps.switchTab,
-    currentTab: sharedDeps.getCurrentTab,
-  });
-  tabUsers.init({
-    apiBase: API_BASE,
-    getToken: sharedDeps.getToken,
-    switchTab: sharedDeps.switchTab,
-    getCurrentTab: sharedDeps.getCurrentTab,
-    renderEvidence: sharedDeps.renderEvidence,
-    openEvidenceLightbox: sharedDeps.openEvidenceLightbox,
-  });
-}
-
-// Call init after DOM is ready (module scripts are deferred)
-initAllTabs();
-
-// Export for use by inline script during transition:
-export { clientDb, firestoreFns };
+// ── Tab Registry (prepared for PR C switchover) ───────────────────
+// Tab modules are imported above but NOT initialized yet.
+// The inline script block still handles all tab logic.
+// PR C will call initAllTabs() and remove the inline code.
+//
+// Tab module references are available for import by other modules:
+// TAB_MODULES will be populated in PR C when imports are enabled.
+export const TAB_MODULES = {};
 
 export const authHandler = createAuthStateHandler({
   requireClaim: 'admin',
