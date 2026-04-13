@@ -24,7 +24,8 @@ import { showScreen, registerScreen } from '/js/core/ui.js';
 import * as tabs from '/js/core/tabs.js';
 
 // ── Tab modules (loaded but not initialized — inline script still authoritative) ──
-// users.js excluded — needs manual cleanup before import.
+// users.js excluded from PR B — auto-extraction produced broken module.
+// Will be properly hand-written in PR C.
 // import * as tabUsers from '/admin/js/tabs/users.js';
 import * as tabAppeals from '/admin/js/tabs/appeals.js';
 import * as tabReports from '/admin/js/tabs/reports.js';
