@@ -5,10 +5,8 @@
  * and if so: overrides CSS custom properties and shows a seasonal banner.
  *
  * Banner adapts to page layout:
- * - Landing page (flex-centered): injects a card inside .container
- * - Scrollable pages: shows a fixed bottom banner
- *
- * Banners are NOT dismissible — they stay visible for the duration of the event.
+ * - Landing page (flex-centered): injects a card inside .container (not dismissible)
+ * - Scrollable pages: shows a fixed bottom banner (dismissible per page view)
  *
  * Default ShyTalk theme = the inline CSS variables in each page's <style>.
  * When no event is active, this script does nothing — defaults remain.
@@ -50,13 +48,14 @@
 
 /**
  * Landing page: a festive seasonal card inside .container.
- * Positioned between the tagline and the roadmap CTA for natural flow.
+ * Not dismissible — always visible during the event.
  */
 function injectLandingCard(event, container) {
   const card = document.createElement('a');
   card.id = 'seasonal-ribbon';
   card.href = event.pageUrl;
   card.setAttribute('role', 'banner');
+  card.setAttribute('aria-label', `${event.name} — learn more`);
   card.setAttribute('data-log', 'seasonal-event-link');
 
   const p = event.theme.primary;
@@ -64,7 +63,7 @@ function injectLandingCard(event, container) {
   const glow = event.theme.primaryGlow || p;
 
   card.innerHTML = `
-    <span class="seasonal-card-emoji">\u{1FAB7}</span>
+    <span class="seasonal-card-emoji" aria-hidden="true">\u{1FAB7}</span>
     <span class="seasonal-card-body">
       <span class="seasonal-card-title">${event.name}</span>
       <span class="seasonal-card-subtitle">${event.ribbonText || 'Learn more'} \u2192</span>
@@ -108,7 +107,6 @@ function injectLandingCard(event, container) {
   const subtitle = card.querySelector('.seasonal-card-subtitle');
   subtitle.style.cssText = 'font-size: 0.8rem; opacity: 0.75; color: #fff;';
 
-  // Add animation
   const style = document.createElement('style');
   style.textContent = `
     @keyframes seasonalFadeIn {
@@ -130,43 +128,48 @@ function injectLandingCard(event, container) {
 }
 
 /**
- * Scrollable pages: a fixed bottom banner that slides up.
- * Always visible during the event — no dismiss button.
+ * Scrollable pages: a fixed bottom banner above the language selector.
+ * Dismissible per page view (not persisted across navigation).
+ * Positioned above the language button (bottom: 76px) to avoid overlap.
  */
 function injectBottomBanner(event) {
-  const banner = document.createElement('a');
+  const banner = document.createElement('div');
   banner.id = 'seasonal-ribbon';
-  banner.href = event.pageUrl;
   banner.setAttribute('role', 'banner');
+  banner.setAttribute('aria-label', `${event.name} — click to learn more`);
 
   const p = event.theme.primary;
   const a = event.theme.accent || p;
-  const glow = event.theme.primaryGlow || p;
 
   banner.innerHTML = `
-    <span class="seasonal-bottom-emoji">\u{1FAB7}</span>
-    <span class="seasonal-bottom-text">${event.ribbonText || event.name}</span>
-    <span class="seasonal-bottom-arrow">\u2192</span>
+    <a href="${event.pageUrl}" class="seasonal-bottom-link" aria-label="Learn about ${event.name}">
+      <span class="seasonal-bottom-emoji" aria-hidden="true">\u{1FAB7}</span>
+      <span class="seasonal-bottom-text">${event.ribbonText || event.name}</span>
+      <span class="seasonal-bottom-arrow" aria-hidden="true">\u2192</span>
+    </a>
+    <button class="seasonal-ribbon-close" aria-label="Dismiss seasonal banner">\u2715</button>
   `;
 
   banner.style.cssText = `
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 10000;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9990;
+    display: flex; align-items: center;
     background: linear-gradient(135deg, ${p}, ${a});
-    padding: 12px 20px;
-    color: #fff; text-decoration: none;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 0; margin: 0;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     animation: seasonalSlideUp 0.5s ease-out;
-    transition: filter 0.2s;
   `;
 
-  banner.addEventListener('mouseenter', () => {
-    banner.style.filter = 'brightness(1.1)';
-  });
-  banner.addEventListener('mouseleave', () => {
-    banner.style.filter = '';
-  });
+  const link = banner.querySelector('.seasonal-bottom-link');
+  link.style.cssText = `
+    display: flex; align-items: center; gap: 10px;
+    flex: 1; padding: 14px 20px;
+    color: #fff; text-decoration: none;
+    justify-content: center;
+    transition: filter 0.2s;
+  `;
+  link.addEventListener('mouseenter', () => { link.style.filter = 'brightness(1.1)'; });
+  link.addEventListener('mouseleave', () => { link.style.filter = ''; });
 
   const emoji = banner.querySelector('.seasonal-bottom-emoji');
   emoji.style.cssText = 'font-size: 1.2rem;';
@@ -177,11 +180,46 @@ function injectBottomBanner(event) {
   const arrow = banner.querySelector('.seasonal-bottom-arrow');
   arrow.style.cssText = 'font-size: 1rem; opacity: 0.8;';
 
+  const closeBtn = banner.querySelector('.seasonal-ribbon-close');
+  closeBtn.style.cssText = `
+    flex-shrink: 0; margin-right: 14px;
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    font-size: 13px; cursor: pointer; padding: 6px 10px;
+    border-radius: 6px; opacity: 0.9;
+    transition: background 0.2s;
+    min-width: 44px; min-height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  `;
+  closeBtn.addEventListener('mouseenter', () => {
+    closeBtn.style.background = 'rgba(255,255,255,0.25)';
+  });
+  closeBtn.addEventListener('mouseleave', () => {
+    closeBtn.style.background = 'rgba(255,255,255,0.15)';
+  });
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    banner.style.animation = 'seasonalSlideDown 0.3s ease-in forwards';
+    setTimeout(() => {
+      banner.remove();
+      // Restore language button to original position
+      const langBtn = document.querySelector('.stl-lang-btn');
+      if (langBtn) langBtn.style.bottom = '20px';
+    }, 300);
+  });
+
+  // Push language selector button up above the banner
+  const langBtn = document.querySelector('.stl-lang-btn');
+  if (langBtn) langBtn.style.bottom = '64px';
+
   const style = document.createElement('style');
   style.textContent = `
     @keyframes seasonalSlideUp {
       from { transform: translateY(100%); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes seasonalSlideDown {
+      from { transform: translateY(0); opacity: 1; }
+      to { transform: translateY(100%); opacity: 0; }
     }
   `;
   document.head.appendChild(style);
