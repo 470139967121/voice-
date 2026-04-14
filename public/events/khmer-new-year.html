@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#0f0a06">
+<meta name="description" content="Learn about Choul Chnam Thmey — the Khmer New Year celebrated across Cambodia every April.">
+<title>Khmer New Year — ShyTalk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0a06;
+    --surface: #1a1208;
+    --card: #201810;
+    --border: #3a2a18;
+    --border-glow: #5a4020;
+    --text: #f0e8d8;
+    --text2: #c4a878;
+    --text-dim: #8a7050;
+    --gold: #d4a017;
+    --gold-bright: #f0c246;
+    --gold-dim: #a07810;
+    --red: #c0392b;
+    --saffron: #e67e22;
+    --lotus: #d4618a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  /* ─── Kbach-inspired decorative border pattern ─── */
+  .kbach-border {
+    height: 3px;
+    background: linear-gradient(90deg,
+      transparent 0%, var(--gold-dim) 15%, var(--gold) 30%,
+      var(--gold-bright) 50%,
+      var(--gold) 70%, var(--gold-dim) 85%, transparent 100%
+    );
+    opacity: 0.6;
+  }
+
+  /* ─── Ambient gold particles ─── */
+  .particles {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .particle {
+    position: absolute; width: 3px; height: 3px;
+    background: var(--gold); border-radius: 50%;
+    opacity: 0; animation: float-up linear infinite;
+  }
+  @keyframes float-up {
+    0% { opacity: 0; transform: translateY(0) scale(0.5); }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.2; }
+    100% { opacity: 0; transform: translateY(-100vh) scale(1); }
+  }
+
+  /* ─── Hero ─── */
+  .hero {
+    text-align: center;
+    padding: clamp(3rem, 10vw, 5rem) 1.5rem clamp(2rem, 6vw, 3rem);
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    top: 40%; left: 50%;
+    width: min(500px, 90vw); height: min(500px, 90vw);
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(212,160,23,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-emoji {
+    font-size: clamp(3rem, 10vw, 5rem);
+    display: block;
+    margin-bottom: 0.75rem;
+    filter: drop-shadow(0 0 20px rgba(212,160,23,0.3));
+    animation: gentle-pulse 4s ease-in-out infinite;
+  }
+
+  @keyframes gentle-pulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(212,160,23,0.3)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(212,160,23,0.5)); }
+  }
+
+  .hero h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    font-weight: 700;
+    color: var(--gold-bright);
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 24px rgba(240,194,70,0.2);
+  }
+
+  .hero .subtitle {
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    color: var(--text2);
+    margin-bottom: 0.5rem;
+    font-weight: 400;
+  }
+
+  .hero .khmer-script {
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    color: var(--gold);
+    opacity: 0.7;
+    letter-spacing: 0.15em;
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  .hero .year-badge {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.3rem 1rem;
+    border: 1px solid var(--gold-dim);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  /* ─── Content ─── */
+  .content {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 0 clamp(1rem, 4vw, 1.5rem) 4rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  section {
+    margin-top: clamp(2rem, 6vw, 3rem);
+  }
+
+  section h2 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(1.2rem, 3.5vw, 1.5rem);
+    color: var(--gold-bright);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+  }
+
+  section h2 .icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+
+  p {
+    color: var(--text2);
+    margin-bottom: 1rem;
+    font-size: clamp(0.88rem, 2.2vw, 0.95rem);
+  }
+
+  strong { color: var(--text); font-weight: 600; }
+
+  /* ─── The Three Days ─── */
+  .day-entry {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    border-radius: 0 10px 10px 0;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .day-entry:hover {
+    border-left-color: var(--gold-bright);
+    box-shadow: -4px 0 20px rgba(212,160,23,0.1);
+  }
+
+  .day-entry .day-label {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 0.15rem;
+  }
+
+  .day-entry .day-date {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+  }
+
+  .day-entry p {
+    margin-bottom: 0;
+    font-size: 0.88rem;
+  }
+
+  /* ─── Tradition Cards ─── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  @media (min-width: 520px) {
+    .card-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .tradition-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: transform 0.2s, border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .tradition-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-glow);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  .tradition-card .card-emoji {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .tradition-card h4 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .tradition-card p {
+    font-size: 0.85rem;
+    margin-bottom: 0;
+    color: var(--text2);
+  }
+
+  /* ─── Zodiac ─── */
+  .zodiac-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.88rem;
+  }
+
+  .zodiac-table th {
+    background: var(--surface);
+    color: var(--gold);
+    padding: 0.6rem 0.6rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .zodiac-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+
+  .zodiac-table tr.highlight {
+    background: rgba(212,160,23,0.08);
+  }
+
+  .zodiac-table tr.highlight td {
+    color: var(--gold-bright);
+    font-weight: 600;
+  }
+
+  .zodiac-table .emoji-col {
+    font-size: 1.2rem;
+    text-align: center;
+    width: 2.5rem;
+  }
+
+  .fact-box {
+    background: linear-gradient(135deg, rgba(212,160,23,0.08), rgba(230,126,34,0.06));
+    border: 1px solid var(--gold-dim);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-top: 1.25rem;
+  }
+
+  .fact-box .label {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gold-bright);
+    margin-bottom: 0.4rem;
+  }
+
+  .fact-box p:last-child { margin-bottom: 0; }
+
+  /* ─── Greetings ─── */
+  .greeting-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  @media (min-width: 420px) {
+    .greeting-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .greeting-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .greeting-item .lang {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.3rem;
+  }
+
+  .greeting-item .text {
+    font-size: 1rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .greeting-item .pronunciation {
+    font-size: 0.75rem;
+    color: var(--text2);
+    font-style: italic;
+    margin-top: 0.2rem;
+  }
+
+  /* ─── Footer ─── */
+  .page-footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  /* ─── Scroll to top ─── */
+  #scroll-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    color: var(--bg);
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    transition: transform 0.2s, background 0.2s;
+    z-index: 100;
+  }
+
+  #scroll-top:hover {
+    transform: translateY(-2px);
+    background: var(--gold);
+  }
+
+  #scroll-top:focus-visible {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 2px;
+  }
+
+  /* ─── Responsive overflow guard ─── */
+  @media (max-width: 360px) {
+    .zodiac-table { font-size: 0.78rem; }
+    .zodiac-table th, .zodiac-table td { padding: 0.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Ambient gold particles -->
+<div class="particles" aria-hidden="true"></div>
+
+<!-- Hero -->
+<header class="hero">
+  <span class="hero-emoji" aria-hidden="true">🪷</span>
+  <h1>សួស្តីឆ្នាំថ្មី</h1>
+  <p class="subtitle">Choul Chnam Thmey 2026</p>
+  <span class="khmer-script" aria-label="Happy New Year in Khmer">ចូលឆ្នាំថ្មី ប្រពៃណីខ្មែរ</span>
+  <span class="year-badge">Khmer New Year</span>
+</header>
+
+<div class="kbach-border" aria-hidden="true"></div>
+
+<main class="content">
+
+  <!-- What is Choul Chnam Thmey? -->
+  <section>
+    <h2><span class="icon" aria-hidden="true">🏛️</span> What is Choul Chnam Thmey?</h2>
+    <p>
+      <strong>Choul Chnam Thmey</strong> (ចូលឆ្នាំថ្មី), meaning "entering the new year," is Cambodia's most
+      celebrated holiday. Observed from <strong>April 13 to 16</strong>, it marks the end of the harvest season and
+      the beginning of the Khmer solar calendar's new year.
+    </p>
+    <p>
+      Rooted in Theravada Buddhist tradition, the festival is a time for spiritual renewal, paying respect to
+      elders, and gathering with family. Across Cambodia, temples overflow with offerings, homes are cleaned
+      and decorated, and communities come together for traditional games, music, and feasting.
+    </p>
+    <p>
+      The celebration coincides with the end of the dry season, when farmers have completed their harvest and
+      can take time to rest, celebrate, and prepare for the coming rains. It shares cultural connections with
+      <strong>Songkran</strong> in Thailand, <strong>Pi Mai</strong> in Laos, and <strong>Thingyan</strong>
+      in Myanmar — all marking the solar new year in April.
+    </p>
+  </section>
+
+  <!-- The Three Days -->
+  <section>
+    <h2><span class="icon" aria-hidden="true">📿</span> The Three Days</h2>
+    <p>
+      Choul Chnam Thmey unfolds over three ceremonial days, each with distinct rituals and significance.
+      A fourth day is sometimes observed as a continuation of the celebrations.
+    </p>
+
+    <div class="day-entry">
+      <div class="day-label">Maha Sangkran — មហាសង្ក្រាន្ត</div>
+      <div class="day-date">Day 1 · April 13</div>
+      <p>
+        The first day marks the arrival of the new celestial angel (<strong>Tevoda</strong>) who will watch
+        over the world for the coming year. Families clean their homes thoroughly, prepare offerings of food
+        and incense, and dress in new clothes. Homes and pagodas are decorated with colourful lights, and
+        people gather at temples for prayers and blessings. In the evening, incense is lit to welcome the
+        new Tevoda.
+      </p>
+    </div>
+
+    <div class="day-entry">
+      <div class="day-label">Virak Wanabat — វិរ:វ័នបត</div>
+      <div class="day-date">Day 2 · April 14</div>
+      <p>
+        The second day is dedicated to charity, generosity, and honouring elders. Families visit
+        monasteries to offer food to monks and build <strong>sand hillocks</strong> (ភ្នំខ្សាច់) at
+        temples — each grain of sand symbolizing the release of a sin. Younger family members pay respect
+        to parents and grandparents by washing their hands and feet, seeking blessings for the year ahead.
+      </p>
+    </div>
+
+    <div class="day-entry">
+      <div class="day-label">Tngai Leang Sak — ថ្ងៃលើងសក</div>
+      <div class="day-date">Day 3 · April 15–16</div>
+      <p>
+        The final day is the most sacred. Buddhists bathe <strong>Buddha statues</strong> with perfumed water
+        as a symbolic act of purification, and elders are bathed in the same tradition. Water is sprinkled
+        on friends and neighbours as a blessing. Families share a celebratory meal, and the evening is filled
+        with traditional music, dancing, and community games. In rural areas, celebrations can continue for
+        several more days.
+      </p>
+    </div>
+  </section>
+
+  <!-- Traditions & Customs -->
+  <section>
+    <h2><span class="icon" aria-hidden="true">✨</span> Traditions & Customs</h2>
+
+    <div class="card-grid">
+      <div class="tradition-card">
+        <span class="card-emoji" aria-hidden="true">🏯</span>
+        <h4>Temple Visits & Offerings</h4>
+        <p>Devotees bring food, flowers, and incense to pagodas. Monks receive alms and chant prayers for prosperity. Many Cambodians spend the first morning at their local wat (temple).</p>
+      </div>
+      <div class="tradition-card">
+        <span class="card-emoji" aria-hidden="true">💧</span>
+        <h4>Water Ceremonies</h4>
+        <p>Perfumed water is gently poured over elders' hands as a sign of respect and to receive their blessings. Buddha statues are ritually bathed. Water splashing between friends symbolizes washing away misfortune.</p>
+      </div>
+      <div class="tradition-card">
+        <span class="card-emoji" aria-hidden="true">⛰️</span>
+        <h4>Sand Hillocks (ភ្នំខ្សាច់)</h4>
+        <p>Small mountains of sand are built at temples, each grain representing a bad deed released. Flags and flowers adorn the hillocks. This tradition symbolizes spiritual cleansing and merit-making.</p>
+      </div>
+      <div class="tradition-card">
+        <span class="card-emoji" aria-hidden="true">🎮</span>
+        <h4>Traditional Games</h4>
+        <p><strong>Chol Chhoung</strong> (scarf tossing between boys and girls), <strong>Leak Kanseng</strong> (hiding a towel in a circle), and tug of war are played in temple grounds and villages, bringing communities together in joyful competition.</p>
+      </div>
+      <div class="tradition-card">
+        <span class="card-emoji" aria-hidden="true">🍜</span>
+        <h4>Khmer Food</h4>
+        <p><strong>Num Ansom</strong> (sticky rice cakes wrapped in banana leaves), <strong>Kralan</strong> (bamboo sticky rice), and various curries are prepared days in advance. Families share these festive dishes together.</p>
+      </div>
+      <div class="tradition-card">
+        <span class="card-emoji" aria-hidden="true">👗</span>
+        <h4>New Clothes & Family</h4>
+        <p>Wearing new clothes symbolizes a fresh start. Families gather from near and far — it's the biggest homecoming of the year. Children receive gifts and blessings from elders.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="kbach-border" aria-hidden="true"></div>
+
+  <!-- Khmer Zodiac -->
+  <section id="zodiac">
+    <h2><span class="icon" aria-hidden="true">🐴</span> Khmer Zodiac</h2>
+    <p>
+      The Khmer zodiac follows a 12-year animal cycle, similar to the Chinese zodiac but with
+      Khmer names and cultural interpretations. 2026 is the <strong>Year of the Horse</strong>
+      (ឆ្នាំមមី), symbolizing energy, freedom, and adventure.
+    </p>
+
+    <div style="overflow-x: auto;">
+      <table class="zodiac-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Animal</th>
+            <th>Khmer</th>
+            <th>Years</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="emoji-col">🐀</td><td>Rat</td><td>ជូត (Jut)</td><td>2020, 2032</td></tr>
+          <tr><td class="emoji-col">🐂</td><td>Ox</td><td>ឆ្លូវ (Chlou)</td><td>2021, 2033</td></tr>
+          <tr><td class="emoji-col">🐅</td><td>Tiger</td><td>ខាល (Khal)</td><td>2022, 2034</td></tr>
+          <tr><td class="emoji-col">🐇</td><td>Rabbit</td><td>ថោះ (Thoh)</td><td>2023, 2035</td></tr>
+          <tr><td class="emoji-col">🐉</td><td>Dragon</td><td>រោង (Rong)</td><td>2024, 2036</td></tr>
+          <tr><td class="emoji-col">🐍</td><td>Snake</td><td>ម្សាញ់ (Msanh)</td><td>2025, 2037</td></tr>
+          <tr class="highlight"><td class="emoji-col">🐴</td><td>Horse</td><td>មមី (Momee)</td><td>2026, 2038</td></tr>
+          <tr><td class="emoji-col">🐐</td><td>Goat</td><td>មមែ (Momae)</td><td>2027, 2039</td></tr>
+          <tr><td class="emoji-col">🐒</td><td>Monkey</td><td>វក (Vok)</td><td>2028, 2040</td></tr>
+          <tr><td class="emoji-col">🐓</td><td>Rooster</td><td>រកា (Roka)</td><td>2029, 2041</td></tr>
+          <tr><td class="emoji-col">🐕</td><td>Dog</td><td>ច (Cho)</td><td>2030, 2042</td></tr>
+          <tr><td class="emoji-col">🐖</td><td>Pig</td><td>កុរ (Kor)</td><td>2031, 2043</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fact-box">
+      <p class="label">2026 — Year of the Horse · ឆ្នាំorg មមី</p>
+      <p>
+        The Horse (មមី) symbolizes energy, freedom, and adventure in Khmer astrology. People born in
+        Horse years are said to be lively, independent, and courageous. The Horse year encourages taking
+        bold steps, pursuing new opportunities, and embracing change with confidence.
+      </p>
+    </div>
+  </section>
+
+  <!-- Greetings -->
+  <section>
+    <h2><span class="icon" aria-hidden="true">🙏</span> New Year Greetings</h2>
+    <p>Say "Happy New Year" across the region's celebrations:</p>
+
+    <div class="greeting-grid">
+      <div class="greeting-item">
+        <div class="lang">Khmer</div>
+        <div class="text">សួស្តីឆ្នាំថ្មី</div>
+        <div class="pronunciation">Soursdey Chnam Thmey</div>
+      </div>
+      <div class="greeting-item">
+        <div class="lang">Thai</div>
+        <div class="text">สวัสดีปีใหม่</div>
+        <div class="pronunciation">Sawasdee Pee Mai</div>
+      </div>
+      <div class="greeting-item">
+        <div class="lang">Lao</div>
+        <div class="text">ສະບາຍດີປີໃໝ່</div>
+        <div class="pronunciation">Sabaidee Pee Mai</div>
+      </div>
+      <div class="greeting-item">
+        <div class="lang">Burmese</div>
+        <div class="text">နှစ်သစ်ကူးမင်္ဂလာပါ</div>
+        <div class="pronunciation">Hnit Thit Ku Mingala Ba</div>
+      </div>
+      <div class="greeting-item">
+        <div class="lang">English</div>
+        <div class="text">Happy Khmer New Year!</div>
+        <div class="pronunciation">&nbsp;</div>
+      </div>
+      <div class="greeting-item">
+        <div class="lang">French</div>
+        <div class="text">Joyeux Nouvel An Khmer !</div>
+        <div class="pronunciation">&nbsp;</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="page-footer">
+  <p>&copy; 2026 ShyTalk &middot; Celebrating Choul Chnam Thmey</p>
+</footer>
+
+<!-- Scroll to top -->
+<button id="scroll-top" aria-label="Scroll to top">&uarr;</button>
+
+<script>
+// Scroll-to-top button visibility
+const scrollBtn = document.getElementById('scroll-top');
+window.addEventListener('scroll', () => {
+  scrollBtn.style.display = window.scrollY > 400 ? 'flex' : 'none';
+});
+scrollBtn.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Generate ambient gold particles
+const particlesContainer = document.querySelector('.particles');
+for (let i = 0; i < 20; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.left = Math.random() * 100 + '%';
+  p.style.bottom = -(Math.random() * 20) + '%';
+  p.style.animationDuration = (8 + Math.random() * 12) + 's';
+  p.style.animationDelay = (Math.random() * 10) + 's';
+  p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+  particlesContainer.appendChild(p);
+}
+</script>
+</body>
+</html>
