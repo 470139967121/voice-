@@ -80,12 +80,13 @@ test.describe('Khmer New Year Page', () => {
 
   test('scroll-to-top button works', async ({ page }) => {
     await page.goto(PAGE_URL);
+    // Scroll down and wait for the scroll event to fire
     await page.evaluate(() => window.scrollTo(0, 2000));
-    await page.waitForTimeout(500);
     const scrollTop = page.locator('#scroll-top');
-    await expect(scrollTop).toBeVisible();
+    await expect(scrollTop).toBeVisible({ timeout: 5_000 });
     await scrollTop.click();
-    await page.waitForTimeout(500);
+    // Wait for smooth scroll to complete
+    await page.waitForFunction(() => window.scrollY < 100, { timeout: 5_000 });
     const scrollY = await page.evaluate(() => window.scrollY);
     expect(scrollY).toBeLessThan(100);
   });
@@ -118,6 +119,7 @@ test.describe('Language Selector Regression', () => {
     { name: 'Community Guidelines', path: '/community-guidelines.html' },
     { name: 'Cyber Bullying', path: '/cyber-bullying.html' },
     { name: 'Roadmap', path: '/roadmap.html' },
+    { name: 'Khmer New Year', path: '/events/khmer-new-year.html' },
   ];
 
   for (const { name, path } of pagesWithSelector) {
