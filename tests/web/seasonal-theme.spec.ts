@@ -19,7 +19,7 @@ test.describe('Seasonal Theme System', () => {
     expect(Array.isArray(data.events)).toBe(true);
   });
 
-  test('seasonal ribbon appears when event is active', async ({ page }) => {
+  test('seasonal banner appears when event is active', async ({ page }) => {
     await page.addInitScript(() => {
       const RealDate = Date;
       class MockDate extends RealDate {
@@ -37,7 +37,7 @@ test.describe('Seasonal Theme System', () => {
     await expect(ribbon).toContainText('Khmer New Year');
   });
 
-  test('seasonal ribbon does NOT appear outside event dates', async ({ page }) => {
+  test('seasonal banner does NOT appear outside event dates', async ({ page }) => {
     await page.addInitScript(() => {
       const RealDate = Date;
       class MockDate extends RealDate {
@@ -54,7 +54,7 @@ test.describe('Seasonal Theme System', () => {
     await expect(page.locator('#seasonal-ribbon')).not.toBeVisible();
   });
 
-  test('seasonal ribbon is dismissible', async ({ page }) => {
+  test('seasonal banner links to event page', async ({ page }) => {
     await page.addInitScript(() => {
       const RealDate = Date;
       class MockDate extends RealDate {
@@ -69,8 +69,8 @@ test.describe('Seasonal Theme System', () => {
     await page.goto(BASE);
     const ribbon = page.locator('#seasonal-ribbon');
     await expect(ribbon).toBeVisible({ timeout: 5_000 });
-    await ribbon.locator('.seasonal-ribbon-close').click();
-    await expect(ribbon).not.toBeVisible();
+    const href = await ribbon.getAttribute('href');
+    expect(href).toBe('/events/khmer-new-year.html');
   });
 
   test('CSS variables are overridden during active event', async ({ page }) => {
@@ -111,5 +111,22 @@ test.describe('Seasonal Theme System', () => {
       getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()
     );
     expect(primary).not.toBe('#d4a017');
+  });
+
+  test('landing page banner is inside .container (not body-level)', async ({ page }) => {
+    await page.addInitScript(() => {
+      const RealDate = Date;
+      class MockDate extends RealDate {
+        constructor(...args: any[]) {
+          if (args.length === 0) super(2026, 3, 14, 12, 0, 0);
+          else super(...(args as [any]));
+        }
+        static now() { return new MockDate().getTime(); }
+      }
+      (globalThis as any).Date = MockDate;
+    });
+    await page.goto(BASE);
+    const ribbon = page.locator('.container #seasonal-ribbon');
+    await expect(ribbon).toBeVisible({ timeout: 5_000 });
   });
 });
