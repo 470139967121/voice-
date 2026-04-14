@@ -21,6 +21,7 @@
     { code: 'hi', name: 'Hindi', native: 'हिन्दी' },
     { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia' },
     { code: 'it', name: 'Italian', native: 'Italiano' },
+    { code: 'km', name: 'Khmer', native: 'ភាសាខ្មែរ' },
     { code: 'ja', name: 'Japanese', native: '日本語' },
     { code: 'ko', name: 'Korean', native: '한국어' },
     { code: 'nl', name: 'Dutch', native: 'Nederlands' },
