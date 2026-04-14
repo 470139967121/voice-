@@ -46,8 +46,11 @@
       }
     }
 
-    // Don't show banner on the event page itself — we're already there
-    if (window.location.pathname === active.pageUrl) return;
+    // Don't show banner on the event page itself — we're already there.
+    // Check with and without .html extension (some servers strip it).
+    const path = window.location.pathname;
+    const eventPath = active.pageUrl;
+    if (path === eventPath || path === eventPath.replace('.html', '') || path + '.html' === eventPath) return;
 
     // Detect page layout to choose banner style
     const container = document.querySelector('.container');

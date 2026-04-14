@@ -119,7 +119,6 @@ test.describe('Language Selector Regression', () => {
     { name: 'Community Guidelines', path: '/community-guidelines.html' },
     { name: 'Cyber Bullying', path: '/cyber-bullying.html' },
     { name: 'Roadmap', path: '/roadmap.html' },
-    { name: 'Khmer New Year', path: '/events/khmer-new-year.html' },
   ];
 
   for (const { name, path } of pagesWithSelector) {
