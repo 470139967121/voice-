@@ -456,6 +456,55 @@
     var totalIp = 0;
     var totalPlanned = 0;
 
+    // Collect all in-progress items from all phases into a top section
+    var inProgressItems = [];
+    for (var ip = 0; ip < phases.length; ip++) {
+      var ipFeatures = phases[ip].features || [];
+      for (var ifi = 0; ifi < ipFeatures.length; ifi++) {
+        var ipStatus = ipFeatures[ifi].status;
+        if (ipStatus === "in-progress" || ipStatus === "next") {
+          inProgressItems.push({
+            feature: ipFeatures[ifi],
+            phaseTitle: phases[ip].title,
+            phaseI18n: phases[ip].titleI18n,
+          });
+        }
+      }
+    }
+
+    // Render "In Progress" section at the top
+    if (inProgressItems.length > 0) {
+      html += '<div id="in-progress-section" class="phase-card" data-testid="in-progress-section" style="border-left: 3px solid var(--in-progress, #ff9800);">';
+      html += '<button class="phase-header" aria-expanded="true">';
+      html += CHEVRON_SVG;
+      html += '<span class="phase-title">' + escapeHtml(t("inProgress") || "In Progress") + '</span>';
+      html += '<span class="phase-progress">';
+      html += '<span class="phase-progress-text">' + inProgressItems.length + ' ' + escapeHtml(t("items") || "items") + '</span>';
+      html += '</span>';
+      html += '</button>';
+      html += '<div class="phase-body">';
+      html += '<ul class="feature-list" data-testid="feature-list">';
+      for (var ipi = 0; ipi < inProgressItems.length; ipi++) {
+        var ipItem = inProgressItems[ipi];
+        var ipStatusInfo = getStatusIcon(ipItem.feature.status);
+        var ipFeatI18n = ipItem.feature.i18n && ipItem.feature.i18n[currentLang];
+        var ipFeatName = (ipFeatI18n && ipFeatI18n.n) || ipItem.feature.name;
+        var ipFeatDesc = (ipFeatI18n && ipFeatI18n.d) || ipItem.feature.description;
+        var ipPhaseLabel = (ipItem.phaseI18n && ipItem.phaseI18n[currentLang]) || ipItem.phaseTitle;
+
+        html += '<li class="feature-item">';
+        html += '<span class="feature-status-icon ' + ipStatusInfo.cls + '" aria-hidden="true">' + ipStatusInfo.icon + '</span>';
+        html += '<div class="feature-info">';
+        html += '<div class="feature-name">' + escapeHtml(ipFeatName) + '</div>';
+        if (ipFeatDesc) html += '<div class="feature-desc">' + escapeHtml(ipFeatDesc) + '</div>';
+        html += '<div class="feature-desc" style="font-size:0.75rem;opacity:0.6;margin-top:2px;">' + escapeHtml(ipPhaseLabel) + '</div>';
+        html += '</div>';
+        html += '<button class="feature-bell" aria-label="Notify me about ' + escapeHtml(ipFeatName) + '" data-testid="feature-bell" data-log="bell-' + escapeHtml(ipItem.feature.name) + '">' + BELL_SVG + '</button>';
+        html += '</li>';
+      }
+      html += '</ul></div></div>';
+    }
+
     for (var p = 0; p < phases.length; p++) {
       var phase = phases[p];
       var features = phase.features || [];
@@ -504,12 +553,6 @@
         '">';
       html += CHEVRON_SVG;
       html += '<span class="phase-title">' + escapeHtml(phaseTitle) + "</span>";
-      html +=
-        '<span class="phase-status-badge ' +
-        getPhaseStatusClass(phase.status) +
-        '">' +
-        escapeHtml(getPhaseStatusLabel(phase.status)) +
-        "</span>";
       html += '<span class="phase-progress">';
       html +=
         '<span class="phase-progress-bar"><span class="phase-progress-fill" style="width:' +
@@ -530,6 +573,8 @@
 
       for (var fi = 0; fi < features.length; fi++) {
         var feat = features[fi];
+        // Skip in-progress items — they're shown in the top "In Progress" section
+        if (feat.status === "in-progress" || feat.status === "next") continue;
         var statusInfo = getStatusIcon(feat.status);
         var featI18n = feat.i18n && feat.i18n[currentLang];
         var featName = (featI18n && featI18n.n) || feat.name;

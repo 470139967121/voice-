@@ -128,6 +128,20 @@ test.describe('Translation Verification', () => {
       expect(html).toMatch(/[\u0E00-\u0E7F]/);
     });
 
+    test('in-progress section appears at top when items are in progress', async ({ page }) => {
+      await page.goto(`${BASE}/roadmap.html`);
+      await page.waitForTimeout(3_000);
+      const inProgressSection = page.locator('#in-progress-section');
+      const count = await inProgressSection.count();
+      if (count > 0) {
+        await expect(inProgressSection).toBeVisible();
+        // Should be the first .phase-card in the container (index 0)
+        const firstCard = page.locator('#roadmap-container > .phase-card').first();
+        const firstId = await firstCard.getAttribute('id');
+        expect(firstId).toBe('in-progress-section');
+      }
+    });
+
     test('progress disclaimer is visible', async ({ page }) => {
       await page.goto(`${BASE}/roadmap.html`);
       const disclaimer = page.locator('.stats-disclaimer');

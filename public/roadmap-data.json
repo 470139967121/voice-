@@ -525,6 +525,12 @@
           }
         },
         {
+          "name": "Inactive account deletion",
+          "description": "automated process to delete accounts inactive for extended period. Needs discussion on retention period, warnings, data handling",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
           "name": "VPN detection and blocking",
           "description": "prevent VPN connections. Cascading ban system risks banning innocent users sharing VPN exit nodes",
           "status": "planned",
