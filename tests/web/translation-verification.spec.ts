@@ -121,14 +121,29 @@ test.describe('Translation Verification', () => {
   test.describe('Roadmap Page', () => {
     test('content changes when language is set to Thai', async ({ page }) => {
       await page.goto(`${BASE}/roadmap.html`);
-      // Wait for page to load
       await page.waitForTimeout(2_000);
       await changeLanguage(page, 'th');
-      // The subscribe button or header should change
       await page.waitForTimeout(1_000);
       const html = await page.locator('body').innerHTML();
-      // Thai characters should appear somewhere on the page
       expect(html).toMatch(/[\u0E00-\u0E7F]/);
+    });
+
+    test('progress disclaimer is visible', async ({ page }) => {
+      await page.goto(`${BASE}/roadmap.html`);
+      const disclaimer = page.locator('.stats-disclaimer');
+      await expect(disclaimer).toBeVisible({ timeout: 5_000 });
+      await expect(disclaimer).toContainText('Progress may go up or down');
+    });
+
+    test('progress disclaimer translates when language changes', async ({ page }) => {
+      await page.goto(`${BASE}/roadmap.html`);
+      const disclaimer = page.locator('.stats-disclaimer');
+      await expect(disclaimer).toBeVisible({ timeout: 5_000 });
+      const englishText = await disclaimer.textContent();
+      await changeLanguage(page, 'es');
+      await page.waitForTimeout(1_000);
+      const spanishText = await disclaimer.textContent();
+      expect(spanishText).not.toBe(englishText);
     });
   });
 
