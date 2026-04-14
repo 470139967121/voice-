@@ -845,4 +845,10 @@
     <string name="replace_room_title">517395ED73B06709623F95F4FF1F</string>
     <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
     <string name="replace_room_confirm">Close and create new</string>
+
+    <!-- Seasonal Events -->
+    <string name="seasonal_khmer_new_year_greeting">高棉新年快乐！</string>
+    <string name="seasonal_khmer_new_year_cta">了解柬埔寨新年</string>
+    <string name="seasonal_event_dismiss">关闭</string>
+
 </resources>

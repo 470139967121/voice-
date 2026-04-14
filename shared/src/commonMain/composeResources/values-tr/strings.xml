@@ -845,4 +845,10 @@
     <string name="replace_room_title">Close existing room?</string>
     <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
     <string name="replace_room_confirm">Close and create new</string>
+
+    <!-- Seasonal Events -->
+    <string name="seasonal_khmer_new_year_greeting">Mutlu Khmer Yeni Yılı!</string>
+    <string name="seasonal_khmer_new_year_cta">Choul Chnam Thmey hakkında bilgi edinin</string>
+    <string name="seasonal_event_dismiss">Kapat</string>
+
 </resources>

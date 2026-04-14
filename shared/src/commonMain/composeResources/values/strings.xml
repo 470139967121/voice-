@@ -929,4 +929,9 @@
     <string name="time_less_than_minute">Less than 1 minute</string>
     <string name="pin_dots_state">%1$d of %2$d digits entered</string>
 
+    <!-- Seasonal Events -->
+    <string name="seasonal_khmer_new_year_greeting">Happy Khmer New Year!</string>
+    <string name="seasonal_khmer_new_year_cta">Learn about Choul Chnam Thmey</string>
+    <string name="seasonal_event_dismiss">Dismiss</string>
+
 </resources>

@@ -845,4 +845,10 @@
     <string name="replace_room_title">Fermer le salon existant ?</string>
     <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
     <string name="replace_room_confirm">Close and create new</string>
+
+    <!-- Seasonal Events -->
+    <string name="seasonal_khmer_new_year_greeting">Joyeux Nouvel An Khmer !</string>
+    <string name="seasonal_khmer_new_year_cta">Découvrez Choul Chnam Thmey</string>
+    <string name="seasonal_event_dismiss">Fermer</string>
+
 </resources>
