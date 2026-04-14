@@ -50,7 +50,7 @@ echo "  → SonarCloud analysis..."
   -Dsonar.token="$SONAR_TOKEN" \
   -Dsonar.qualitygate.wait=true \
   -x :app:sonar \
-  --quiet
+  --no-configuration-cache
 
 if [ $? -ne 0 ]; then
   echo ""
