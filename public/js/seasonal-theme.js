@@ -32,6 +32,20 @@
       root.style.setProperty(cssVar, value);
     }
 
+    // Swap favicon if the event provides one
+    if (active.favicon) {
+      const existingFavicon = document.querySelector('link[rel="icon"]');
+      if (existingFavicon) {
+        existingFavicon.href = active.favicon;
+      } else {
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        link.type = 'image/svg+xml';
+        link.href = active.favicon;
+        document.head.appendChild(link);
+      }
+    }
+
     // Detect page layout to choose banner style
     const container = document.querySelector('.container');
     const isLandingPage = container && getComputedStyle(document.body).display === 'flex';
