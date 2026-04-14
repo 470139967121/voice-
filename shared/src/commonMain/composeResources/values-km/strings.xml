@@ -286,11 +286,11 @@
     <string name="members">សមាជិក</string>
     <string name="members_count">%1$d សមាជិក</string>
     <string name="message_ellipsis">សារ...</string>
-    <string name="message_permissions">សិទ្ធិផ្ញើសារ</string>
+    <string name="message_permissions">ការអនុញ្ញាតសារ</string>
     <string name="message_preview_image">[រូបភាព]</string>
-    <string name="message_preview_recalled">[សារត្រូវបានដកវិញ]</string>
-    <string name="message_preview_room_invite">[ការអញ្ជើញចូលបន្ទប់]</string>
-    <string name="message_preview_sticker">[ស្ទីកឃើរ]</string>
+    <string name="message_preview_recalled">[សារត្រូវបានដកមកវិញ]</string>
+    <string name="message_preview_room_invite">[ការអញ្ជើញបន្ទប់]</string>
+    <string name="message_preview_sticker">[ស្ទីកឃ័រ]</string>
     <string name="messages">សារ</string>
     <string name="mod_notifications">ការជូនដំណឹងអ្នកសម្របសម្រួល</string>
     <string name="move_to_front">ផ្លាស់ទៅខាងមុខ</string>
@@ -303,28 +303,28 @@
     <string name="new_group">ក្រុមថ្មី</string>
     <string name="new_group_selected">ក្រុមថ្មី (%1$d បានជ្រើសរើស)</string>
     <string name="new_message">សារថ្មី</string>
-    <string name="no_action_needed">មិនចាំបាច់សកម្មភាពទេ</string>
-    <string name="no_followers_following_found">រកមិនឃើញអ្នកតាមដាន ឬការតាមដានទេ</string>
-    <string name="no_matches_found">រកមិនឃើញលទ្ធផលទេ</string>
+    <string name="no_action_needed">មិនត្រូវការសកម្មភាពទេ</string>
+    <string name="no_followers_following_found">រកមិនឃើញអ្នកតាមដាន ឬកំពុងតាមដានទេ</string>
+    <string name="no_matches_found">រកមិនឃើញលទ្ធផលត្រូវទេ</string>
     <string name="no_messages">មិនទាន់មានសារទេ</string>
-    <string name="no_pending_reports">គ្មានរបាយការណ៍រង់ចាំទេ</string>
-    <string name="no_stickers_yet">មិនទាន់មានស្ទីកឃើរទេ</string>
+    <string name="no_pending_reports">មិនមានរាយការណ៍រង់ចាំទេ</string>
+    <string name="no_stickers_yet">មិនទាន់មានស្ទីកឃ័រទេ</string>
     <string name="no_users_found">រកមិនឃើញអ្នកប្រើប្រាស់ទេ</string>
     <string name="notify_owner_only">ជូនដំណឹងម្ចាស់ប៉ុណ្ណោះ</string>
-    <string name="online">អនឡាញ</string>
+    <string name="online">នៅលើអីនធឺណែត</string>
     <string name="only_admins_can_send">មានតែអ្នកគ្រប់គ្រង និងអ្នកសម្របសម្រួលប៉ុណ្ណោះដែលអាចផ្ញើសារក្នុងក្រុមនេះ</string>
     <string name="only_owner_can_change_permissions">មានតែម្ចាស់ក្រុមប៉ុណ្ណោះដែលអាចផ្លាស់ប្ដូរសិទ្ធិ។</string>
     <string name="owner_only">ម្ចាស់ប៉ុណ្ណោះ</string>
     <string name="participants">អ្នកចូលរួម</string>
     <string name="participants_count">អ្នកចូលរួម (%1$d)</string>
-    <string name="pin">ខ្ទាស់</string>
+    <string name="pin">ភ្ជាប់</string>
     <string name="recent">ថ្មីៗ</string>
-    <string name="replying_to">ឆ្លើយតប %1$s</string>
+    <string name="replying_to">ឆ្លើយតបទៅ %1$s</string>
     <string name="report_message_prompt">ហេតុអ្វីបានជាអ្នករាយការណ៍សារនេះ?</string>
-    <string name="report_review">ពិនិត្យរបាយការណ៍</string>
+    <string name="report_review">ពិនិត្យរាយការណ៍</string>
     <string name="report_user">រាយការណ៍ %1$s</string>
     <string name="report_user_prompt">ហេតុអ្វីបានជាអ្នករាយការណ៍អ្នកប្រើប្រាស់នេះ?</string>
-    <string name="reset_to_default">កំណត់ទៅលំនាំដើមវិញ</string>
+    <string name="reset_to_default">កំណត់ឡើងវិញដើម</string>
     <string name="result_count">%1$d លទ្ធផល</string>
     <string name="review_report">ពិនិត្យរបាយការណ៍</string>
     <string name="role_admin">អ្នកគ្រប់គ្រង</string>
@@ -336,25 +336,25 @@
     <string name="search_conversations">ស្វែងរកការសន្ទនា...</string>
     <string name="search_messages">ស្វែងរកសារ...</string>
     <string name="search_people">ស្វែងរកមនុស្ស...</string>
-    <string name="select_action">ជ្រើសរើសសកម្មភាព៖</string>
+    <string name="select_action">ជ្រើសរើសសកម្មភាព:</string>
     <string name="selected_count">%1$d បានជ្រើសរើស</string>
     <string name="start_conversation">ចាប់ផ្ដើមការសន្ទនា</string>
-    <string name="submit_report">បញ្ជូនរបាយការណ៍</string>
-    <string name="submitting">កំពុងបញ្ជូន...</string>
+    <string name="submit_report">ដាក់ស្នើរាយការណ៍</string>
+    <string name="submitting">កំពុងដាក់ស្នើ...</string>
     <string name="system_messages">សារប្រព័ន្ធ</string>
-    <string name="transfer_ownership">ផ្ទេរភាពជាម្ចាស់</string>
+    <string name="transfer_ownership">ផ្ទេរការជាម្ចាស់</string>
     <string name="transfer_ownership_warning">ជ្រើសរើសសមាជិកដើម្បីផ្ទេរភាពជាម្ចាស់។ អ្នកនឹងបាត់បង់សិទ្ធិម្ចាស់។ វាមិនអាចត្រឡប់វិញបានទេ។</string>
     <string name="type_message">វាយសារ…</string>
     <string name="typing">កំពុងវាយ...</string>
     <string name="unmute_action">បើកសំឡេង</string>
     <string name="unmute_notifications">បើកការជូនដំណឹង</string>
-    <string name="unpin">ដកខ្ទាស់</string>
+    <string name="unpin">ដោះភ្ជាប់</string>
     <string name="view_profile">មើលប្រវត្តិរូប</string>
 
     <!-- Messaging - report reasons -->
-    <string name="report_reason_spam">សារឥតបានការ</string>
-    <string name="report_reason_harassment">ការបៀតបៀន</string>
-    <string name="report_reason_inappropriate">មាតិកាមិនសមរម្យ</string>
+    <string name="report_reason_spam">ស្បែម</string>
+    <string name="report_reason_harassment">ការបៀរបាញ</string>
+    <string name="report_reason_inappropriate">ខ្លឹមសារមិនសមរម្យ</string>
     <string name="report_reason_other">ផ្សេងៗ</string>
 
     <!-- Messaging - report actions -->
@@ -464,18 +464,18 @@
     <string name="upgrade_to_lifetime">ដំឡើងទៅពេញមួយជីវិត</string>
 
     <!-- Legal -->
-    <string name="accept_all_and_continue">ទទួលយកទាំងអស់ &amp; បន្ត</string>
+    <string name="accept_all_and_continue">យល់ព្រមទាំងអស់ &amp; បន្ត</string>
     <string name="community_standards">ស្តង់ដារសហគមន៍</string>
-    <string name="cyber_bullying_policy">គោលនយោបាយប្រឆាំងការសម្លុតតាមអ៊ីនធឺណិត</string>
-    <string name="i_have_read_and_agree">ខ្ញុំបានអាន និងយល់ព្រមនឹង </string>
-    <string name="privacy_policy">គោលនយោបាយឯកជនភាព</string>
+    <string name="cyber_bullying_policy">គោលនីយោបាយប្រឆាំងអីនធឺណែត</string>
+    <string name="i_have_read_and_agree">ខ្ញុំបានអាន និងយល់ព្រមនូវ </string>
+    <string name="privacy_policy">គោលនីយោបាយឯកជនភាព</string>
     <string name="review_and_accept_policies">សូមពិនិត្យ និងទទួលយកគោលនយោបាយរបស់យើងដើម្បីបន្ត។</string>
-    <string name="terms_and_conditions">លក្ខខណ្ឌ &amp; ខចែង</string>
+    <string name="terms_and_conditions">លក្ខខណ្ឌ &amp; លក្ខខណ្ឌការណ៍</string>
     <string name="welcome_to_shytalk">សូមស្វាគមន៍មកកាន់ ShyTalk</string>
 
     <!-- Auth -->
     <string name="sign_in">ចូល</string>
-    <string name="verification_code">លេខកូដផ្ទៀងផ្ទាត់</string>
+    <string name="verification_code">លេខកូដផ្ទែងផ្ទាត់</string>
     <string name="continue_with_google">បន្តជាមួយ Google</string>
 
     <!-- Settings dialogs -->
@@ -509,7 +509,7 @@
     <string name="unblock_description">ពួកគេនឹងអាចមើលប្រវត្តិរូបរបស់អ្នកម្ដងទៀត។</string>
     <string name="dnd_start_time">ម៉ោងចាប់ផ្ដើមកុំរំខាន</string>
     <string name="dnd_end_time">ម៉ោងបញ្ចប់កុំរំខាន</string>
-    <string name="not_now">មិនមែនឥឡូវទេ</string>
+    <string name="not_now">មិនមែនឥឡូវនេះ</string>
     <string name="allow">អនុញ្ញាត</string>
 
     <!-- Room dialogs -->
@@ -542,7 +542,7 @@
     <string name="no_one">គ្មាននរណា</string>
 
     <!-- Settings - Notifications page -->
-    <string name="private_messages">សារផ្ទាល់</string>
+    <string name="private_messages">សារឯកជន</string>
     <string name="pm_notifications">ការជូនដំណឹងសារផ្ទាល់</string>
     <string name="pm_notifications_description">ទទួលការជូនដំណឹងសម្រាប់សារផ្ទាល់ថ្មី។</string>
     <string name="notification_sound">សំឡេងជូនដំណឹង</string>
@@ -554,7 +554,7 @@
     <string name="show_timestamps_description">បង្ហាញពេលវេលានៃសារក្នុងជជែក។</string>
     <string name="show_date_separators">បង្ហាញចំណែកកាលបរិច្ឆេទ</string>
     <string name="show_date_separators_description">បង្ហាញស្លាកកាលបរិច្ឆេទរវាងសារនៅថ្ងៃផ្សេងៗ។</string>
-    <string name="do_not_disturb">កុំរំខាន</string>
+    <string name="do_not_disturb">កុំរបកវន</string>
     <string name="enable_dnd">បើកកុំរំខាន</string>
     <string name="enable_dnd_description">បិទការជូនដំណឹងសារផ្ទាល់ទាំងអស់ក្នុងពេលដែលបានកំណត់។</string>
     <string name="start">ចាប់ផ្ដើម</string>
@@ -578,7 +578,7 @@
 
     <!-- Settings - Account page -->
     <string name="shytalk_id">ShyTalk ID</string>
-    <string name="email">អ៊ីមែល</string>
+    <string name="email">អីមែល</string>
 
     <!-- Settings - Linked Accounts page -->
     <string name="linked_accounts">គណនីដែលបានភ្ជាប់</string>
@@ -626,25 +626,25 @@
     <string name="kick_reason">មូលហេតុ៖ %1$s</string>
 
     <!-- Auth / Google Sign-In -->
-    <string name="retrying">កំពុងព្យាយាមម្ដងទៀត…</string>
-    <string name="account_restricted">គណនីត្រូវបានដាក់កម្រិត</string>
+    <string name="retrying">កំពុងព្យាយាមម្តងទៀត…</string>
+    <string name="account_restricted">គណនីត្រូវបានដាក់កំណត់</string>
     <string name="device_locked_description">ឧបករណ៍នេះត្រូវបានភ្ជាប់ទៅគណនីផ្សេងរួចហើយ។\nអនុញ្ញាតតែមួយគណនីក្នុងមួយឧបករណ៍។\n\nសម្រាប់ជំនួយ សូមទាក់ទង shytalk.help@gmail.com</string>
     <string name="contact_support_hint">ប្រសិនបើបញ្ហានៅតែមាន សូមទាក់ទង shytalk.help@gmail.com</string>
     <string name="sign_in_with_google">ចូលជាមួយ Google</string>
     <string name="sign_in_with_apple">ចូលជាមួយ Apple</string>
-    <string name="sign_in_with_email">ចូលជាមួយអ៊ីមែល</string>
-    <string name="email_hint">អាសយដ្ឋានអ៊ីមែល</string>
-    <string name="email_link_sent">ពិនិត្យអ៊ីមែលរបស់អ្នក</string>
+    <string name="sign_in_with_email">ចូលជាមួយអីមែល</string>
+    <string name="email_hint">អាសយដ្ឋានអីមែល</string>
+    <string name="email_link_sent">ពិនិត្យមើលអីមែលរបស់អ្នក</string>
     <string name="check_your_email_description">យើងបានផ្ញើតំណចូលទៅអ៊ីមែលរបស់អ្នក។ ចុចតំណដើម្បីបន្ត។</string>
     <string name="signing_in">កំពុងចូល…</string>
     <string name="error_disposable_email">អាសយដ្ឋានអ៊ីមែលបណ្ដោះអាសន្នមិនត្រូវបានអនុញ្ញាតទេ។ សូមប្រើអាសយដ្ឋានអ៊ីមែលអចិន្ត្រៃយ៍។</string>
     <string name="send_link">ផ្ញើតំណ</string>
-    <string name="paste_link">បិទភ្ជាប់តំណ</string>
-    <string name="resend_link">ផ្ញើម្ដងទៀត</string>
-    <string name="use_different_email">ប្រើអ៊ីមែលផ្សេង</string>
+    <string name="paste_link">បិទតំណ</string>
+    <string name="resend_link">ផ្ញើម្តងទៀត</string>
+    <string name="use_different_email">ប្រើអីមែលផ្សេង</string>
     <string name="email_link_paste_hint">បើកតំណក្នុងអ៊ីមែលរបស់អ្នក រួចត្រឡប់មកវិញ ហើយចុចបិទភ្ជាប់តំណ។</string>
     <string name="error_invalid_email_link">នេះមិនមើលទៅដូចជាតំណចូលត្រឹមត្រូវទេ។ សូមបិទភ្ជាប់តំណពេញពីអ៊ីមែលរបស់អ្នក។</string>
-    <string name="verify">ផ្ទៀងផ្ទាត់</string>
+    <string name="verify">ផ្ទែងផ្ទាត់</string>
 
     <!-- Suspension / Ban -->
     <string name="appeal">ប្ដឹងតវ៉ា</string>
@@ -675,7 +675,7 @@
     <string name="stalkers">អ្នកតាមដាន</string>
 
     <!-- Connection / Loading states -->
-    <string name="unable_to_connect">មិនអាចភ្ជាប់បានទេ</string>
+    <string name="unable_to_connect">មិនអាចតភ្ជាប់បានទេ</string>
     <string name="connection_trouble">ShyTalk កំពុងមានបញ្ហាក្នុងការភ្ជាប់ទៅម៉ាស៊ីនមេរបស់យើង។ សូមពិនិត្យការតភ្ជាប់អ៊ីនធឺណិតរបស់អ្នក ហើយព្យាយាមម្ដងទៀត។</string>
     <string name="voice_chat_reimagined">បន្ទប់ជជែកសំឡេង ដែលបានរៀបចំឡើងវិញ។</string>
     <string name="profile_not_available">ប្រវត្តិរូបនេះមិនមានទេ</string>
@@ -683,7 +683,7 @@
     <string name="account_suspended_label">គណនីត្រូវបានផ្អាក</string>
     <string name="account_suspended_description">គណនីរបស់អ្នកប្រើប្រាស់នេះត្រូវបានផ្អាក។</string>
     <string name="closing">កំពុងបិទ...</string>
-    <string name="connecting">កំពុងភ្ជាប់...</string>
+    <string name="connecting">កំពុងតភ្ជាប់...</string>
     <string name="voice_chat_unavailable">ជជែកសំឡេងមិនមានជាបណ្ដោះអាសន្នទេ</string>
     <string name="mic_permission_denied">ការអនុញ្ញាតមីក្រូហ្វូនត្រូវបានបដិសេធ។ អ្នកនឹងមិនអាចប្រើជជែកសំឡេងបានទេ។</string>
     <string name="replace_room_title">បិទបន្ទប់ដែលមានស្រាប់?</string>
@@ -864,22 +864,22 @@
     <string name="security_linked_accounts_desc">គ្រប់គ្រងវិធីចូល</string>
 
     <!-- Email OTP Screen -->
-    <string name="email_sign_in_title">ចូលដោយអ៊ីមែល</string>
-    <string name="email_enter_address">បញ្ចូលអាសយដ្ឋានអ៊ីមែលរបស់អ្នក</string>
-    <string name="email_label">អ៊ីមែល</string>
+    <string name="email_sign_in_title">ចូលជាមួយអីមែល</string>
+    <string name="email_enter_address">បញ្ចូលអាសយដ្ឋានអីមែលរបស់អ្នក</string>
+    <string name="email_label">អីមែល</string>
     <string name="email_send_code">ផ្ញើលេខកូដ</string>
     <string name="email_code_sent_to">លេខកូដត្រូវបានផ្ញើទៅ</string>
-    <string name="email_code_label">លេខកូដ 6 ខ្ទង់</string>
-    <string name="email_verify">ផ្ទៀងផ្ទាត់</string>
+    <string name="email_code_label">លេខកូដ 6 ខ្ទ</string>
+    <string name="email_verify">ផ្ទែងផ្ទាត់</string>
     <string name="email_resend_in">ផ្ញើម្ដងទៀតក្នុង %1$dវិ</string>
-    <string name="email_resend_code">ផ្ញើលេខកូដម្ដងទៀត</string>
+    <string name="email_resend_code">ផ្ញើលេខកូដម្តងទៀត</string>
     <string name="email_code_expires">លេខកូដផុតកំណត់ក្នុង 10 នាទី</string>
-    <string name="email_invalid_address">បញ្ចូលអាសយដ្ឋានអ៊ីមែលត្រឹមត្រូវ</string>
-    <string name="email_disposable_blocked">អាសយដ្ឋានអ៊ីមែលបណ្ដោះអាសន្នមិនត្រូវបានអនុញ្ញាតទេ</string>
+    <string name="email_invalid_address">បញ្ចូលអាសយដ្ឋានអីមែលត្រឹមត្រូវ</string>
+    <string name="email_disposable_blocked">អាសយដ្ឋានអីមែលប្រើតែម្តងមិនត្រូវបានអនុញ្ញាតទេ</string>
     <string name="email_send_failed">បរាជ័យក្នុងការផ្ញើលេខកូដ</string>
-    <string name="email_enter_code">បញ្ចូលលេខកូដ 6 ខ្ទង់</string>
+    <string name="email_enter_code">បញ្ចូលលេខកូដ 6 ខ្ទ</string>
     <string name="email_invalid_code">លេខកូដមិនត្រឹមត្រូវ</string>
-    <string name="email_resend_failed">បរាជ័យក្នុងការផ្ញើម្ដងទៀត</string>
+    <string name="email_resend_failed">បរាជ័យក្នុងការផ្ញើម្តងទៀត</string>
 
     <!-- PIN Setup Screen -->
     <string name="pin_create_title">បង្កើត PIN</string>
@@ -915,7 +915,7 @@
     <string name="biometric_start_failed">មិនអាចចាប់ផ្ដើមការផ្ទៀងផ្ទាត់ជីវមាត្របានទេ</string>
 
     <!-- Sign-in loading states -->
-    <string name="signing_in_loading">កំពុងចូល\u2026</string>
+    <string name="signing_in_loading">កំពុងចូល…</string>
 
     <!-- Date/Time (DateUtils) -->
     <string name="time_just_now">ទើបតែ</string>
@@ -930,8 +930,8 @@
     <string name="pin_dots_state">បានបញ្ចូល %1$d នៃ %2$d ខ្ទង់</string>
 
     <!-- Seasonal Events -->
-    <string name="seasonal_khmer_new_year_greeting">សួស្តីឆ្នាំថ្មី!</string>
-    <string name="seasonal_khmer_new_year_cta">ស្វែងយល់អំពីពិធីចូលឆ្នាំថ្មី</string>
-    <string name="seasonal_event_dismiss">បិទ</string>
+    <string name="seasonal_khmer_new_year_greeting">សួស្តីចូលឆ្នាំថ្មី!</string>
+    <string name="seasonal_khmer_new_year_cta">ស្វែងយល់អំពីចូលឆ្នាំថ្មី</string>
+    <string name="seasonal_event_dismiss">បដិសេធ</string>
 
 </resources>
