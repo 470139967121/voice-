@@ -10,8 +10,14 @@ actual fun ShyTalkTheme(
     dynamicColor: Boolean,
     content: @Composable () -> Unit,
 ) {
-    // CNY 2026: Always use our festive red/gold palette (skip dynamic colors)
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val defaultScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme =
+        SeasonalTheme.activeEvent()?.let { event ->
+            defaultScheme.copy(
+                primary = event.primaryColor,
+                tertiary = event.accentColor,
+            )
+        } ?: defaultScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
