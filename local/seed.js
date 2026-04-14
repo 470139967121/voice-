@@ -281,6 +281,18 @@ async function seed() {
     isActive: true,
   });
 
+  // Seasonal event banner
+  console.log("\nSeasonal banners:");
+  await seedIfMissing("banners/khmer-new-year-2026", {
+    title: "Happy Khmer New Year!",
+    subtitle: "Learn about Choul Chnam Thmey",
+    imageUrl: "/events/assets/khmer-new-year-banner.svg",
+    linkUrl: "/events/khmer-new-year.html",
+    active: true,
+    order: 0,
+    createdAt: now,
+  });
+
   // Sample log entries (the logger is no-op in non-production, so seed directly)
   console.log("\nLogs:");
   await seedIfMissing("logs/seed-log-1", {
