@@ -72,7 +72,7 @@ sonar {
             "${rootProject.projectDir}/shared/build/test-results/jvmTest",
         )
 
-        // Exclusions (generated code, resources, and KMP ViewModels tested by Android unit tests)
+        // Exclusions (generated code, resources, translations, and KMP ViewModels tested by Android unit tests)
         property(
             "sonar.exclusions",
             listOf(
@@ -80,6 +80,9 @@ sonar {
                 "**/node_modules/**",
                 "**/*.json",
                 "**/composeResources/**",
+                "public/js/event-translations.js",
+                "public/js/legal-translations.js",
+                "public/js/suggestions-i18n.js",
             ).joinToString(","),
         )
 
