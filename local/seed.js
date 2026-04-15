@@ -277,7 +277,7 @@ async function seed() {
 
   // Fun fact
   await seedIfMissing("funFacts/local-fact-1", {
-    text: "ShyTalk was built with Kotlin Multiplatform!",
+    text: "ShyTalk connects people through voice \u2014 no camera needed!",
     isActive: true,
   });
 
