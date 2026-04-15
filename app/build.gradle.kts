@@ -78,6 +78,7 @@ android {
             buildConfigField("String", "WORKER_URL", "\"http://$localHostAlias:3000\"")
             buildConfigField("String", "LIVEKIT_SERVER_URL", "\"ws://$localHostAlias:7880\"")
             buildConfigField("String", "RTDB_URL", "\"http://$localHostAlias:9000\"")
+            buildConfigField("String", "LOCAL_HOST", "\"$localHostAlias\"")
             buildConfigField("String", "EMAIL_LINK_DOMAIN", "\"localhost\"")
             buildConfigField("String", "WEB_CLIENT_ID", "\"placeholder-local\"")
             buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "true")

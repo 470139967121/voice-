@@ -15,7 +15,10 @@ actual fun ShyTalkTheme(
         SeasonalTheme.activeEvent()?.let { event ->
             defaultScheme.copy(
                 primary = event.primaryColor,
+                primaryContainer = event.primaryColor.copy(alpha = 0.3f),
+                onPrimaryContainer = event.primaryColor,
                 tertiary = event.accentColor,
+                tertiaryContainer = event.accentColor.copy(alpha = 0.3f),
             )
         } ?: defaultScheme
 

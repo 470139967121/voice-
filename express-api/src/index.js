@@ -1,4 +1,7 @@
-require('dotenv').config({ quiet: true });
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'local' ? '.env.local' : '.env',
+  quiet: true,
+});
 const express = require('express');
 const helmet = require('helmet');
 const corsMiddleware = require('./middleware/cors');

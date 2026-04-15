@@ -111,9 +111,10 @@ val appModule =
 
         // Connect to Firebase Emulators for local development
         if (BuildConfig.FLAVOR == "local") {
-            Firebase.firestore.useEmulator("10.0.2.2", 8080)
-            Firebase.auth.useEmulator("10.0.2.2", 9099)
-            Firebase.database.useEmulator("10.0.2.2", 9000)
+            val host = BuildConfig.LOCAL_HOST
+            Firebase.firestore.useEmulator(host, 8080)
+            Firebase.auth.useEmulator(host, 9099)
+            Firebase.database.useEmulator(host, 9000)
         }
 
         // HTTP client

@@ -97,7 +97,9 @@ import com.shyden.shytalk.feature.settings.RoomSettingsSheet
 import com.shyden.shytalk.feature.shop.WalletViewModel
 import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.ui.components.seasonal.SeasonalBackground
 import com.shyden.shytalk.ui.theme.DarkColorScheme
+import com.shyden.shytalk.ui.theme.SeasonalTheme
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -602,11 +604,26 @@ fun RoomScreen(
             uiState.allKnownUsers
         }
 
-    MaterialTheme(colorScheme = DarkColorScheme) {
+    val roomColorScheme =
+        SeasonalTheme.activeEvent()?.let { event ->
+            DarkColorScheme.copy(
+                primary = event.primaryColor,
+                primaryContainer = event.primaryColor.copy(alpha = 0.3f),
+                onPrimaryContainer = event.primaryColor,
+                tertiary = event.accentColor,
+                tertiaryContainer = event.accentColor.copy(alpha = 0.3f),
+            )
+        } ?: DarkColorScheme
+
+    MaterialTheme(colorScheme = roomColorScheme) {
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            RoomStarfieldBackground(modifier = Modifier.fillMaxSize())
+            if (SeasonalTheme.activeEvent() != null) {
+                SeasonalBackground()
+            } else {
+                RoomStarfieldBackground(modifier = Modifier.fillMaxSize())
+            }
             Scaffold(
                 containerColor = Color.Transparent,
                 snackbarHost = { StyledSnackbarHost(snackbarHostState) },

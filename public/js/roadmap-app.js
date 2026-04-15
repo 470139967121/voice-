@@ -479,7 +479,9 @@
       html += CHEVRON_SVG;
       html += '<span class="phase-title">' + escapeHtml(t("inProgress") || "In Progress") + '</span>';
       html += '<span class="phase-progress">';
-      html += '<span class="phase-progress-text">' + inProgressItems.length + ' ' + escapeHtml(t("items") || "items") + '</span>';
+      var ipDone = 0;
+      for (var ipd = 0; ipd < inProgressItems.length; ipd++) { if (inProgressItems[ipd].feature.status === 'done') ipDone++; }
+      html += '<span class="phase-progress-text">' + ipDone + '/' + inProgressItems.length + '</span>';
       html += '</span>';
       html += '</button>';
       html += '<div class="phase-body">';
@@ -745,6 +747,12 @@
     if (target) {
       // Use instant scroll so the initial position is set before scroll spy runs
       target.scrollIntoView({ behavior: "auto", block: "start" });
+      // Re-scroll after suggestions board loads (it renders asynchronously)
+      if (targetId === "suggestions") {
+        setTimeout(function () {
+          target.scrollIntoView({ behavior: "auto", block: "start" });
+        }, 500);
+      }
     }
   }
 
