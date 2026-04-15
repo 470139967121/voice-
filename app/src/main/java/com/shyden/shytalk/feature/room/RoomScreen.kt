@@ -604,8 +604,9 @@ fun RoomScreen(
             uiState.allKnownUsers
         }
 
+    val seasonalEvent = SeasonalTheme.activeEvent()
     val roomColorScheme =
-        SeasonalTheme.activeEvent()?.let { event ->
+        seasonalEvent?.let { event ->
             DarkColorScheme.copy(
                 primary = event.primaryColor,
                 primaryContainer = event.primaryColor.copy(alpha = 0.3f),
@@ -619,7 +620,7 @@ fun RoomScreen(
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            if (SeasonalTheme.activeEvent() != null) {
+            if (seasonalEvent != null) {
                 SeasonalBackground()
             } else {
                 RoomStarfieldBackground(modifier = Modifier.fillMaxSize())

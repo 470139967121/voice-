@@ -479,9 +479,7 @@
       html += CHEVRON_SVG;
       html += '<span class="phase-title">' + escapeHtml(t("inProgress") || "In Progress") + '</span>';
       html += '<span class="phase-progress">';
-      var ipDone = 0;
-      for (var ipd = 0; ipd < inProgressItems.length; ipd++) { if (inProgressItems[ipd].feature.status === 'done') ipDone++; }
-      html += '<span class="phase-progress-text">' + ipDone + '/' + inProgressItems.length + '</span>';
+      html += '<span class="phase-progress-text">' + inProgressItems.length + ' ' + escapeHtml(t("active") || "active") + '</span>';
       html += '</span>';
       html += '</button>';
       html += '<div class="phase-body">';

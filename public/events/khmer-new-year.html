@@ -18,7 +18,7 @@
     --border-glow: #5a4020;
     --text: #f0e8d8;
     --text2: #c4a878;
-    --text-dim: #8a7050;
+    --text-dim: #9a8060;
     --gold: #d4a017;
     --gold-bright: #f0c246;
     --gold-dim: #a07810;
@@ -246,7 +246,7 @@
     margin-bottom: 0.5rem;
   }
 
-  .tradition-card h4 {
+  .tradition-card h3 {
     font-family: 'Cormorant Garamond', Georgia, serif;
     color: var(--text);
     font-size: 1.05rem;
@@ -406,9 +406,15 @@
     .zodiac-table { font-size: 0.78rem; }
     .zodiac-table th, .zodiac-table td { padding: 0.4rem; }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .particle { animation: none !important; }
+    .hero-emoji { animation: none !important; }
+    html { scroll-behavior: auto; }
+  }
 </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;padding:8px 16px;background:var(--gold);color:#000;text-decoration:none;font-weight:bold;" onfocus="this.style.left='8px';this.style.top='8px';this.style.width='auto';this.style.height='auto'" onblur="this.style.left='-9999px'">Skip to content</a>
 
 <!-- Ambient gold particles -->
 <div class="particles" aria-hidden="true"></div>
@@ -416,7 +422,7 @@
 <!-- Hero -->
 <header class="hero">
   <span class="hero-emoji" aria-hidden="true">🪷</span>
-  <h1 data-i18n="kny_hero_title">សួស្តីឆ្នាំថ្មី</h1>
+  <h1 lang="km">សួស្តីឆ្នាំថ្មី</h1>
   <p class="subtitle" data-i18n="kny_hero_subtitle">Choul Chnam Thmey 2026</p>
   <span class="khmer-script" aria-label="Happy New Year in Khmer">ចូលឆ្នាំថ្មី ប្រពៃណីខ្មែរ</span>
   <span class="year-badge">Khmer New Year</span>
@@ -424,7 +430,7 @@
 
 <div class="kbach-border" aria-hidden="true"></div>
 
-<main class="content">
+<main id="main-content" class="content">
 
   <!-- What is Choul Chnam Thmey? -->
   <section>
@@ -498,32 +504,32 @@
     <div class="card-grid">
       <div class="tradition-card">
         <span class="card-emoji" aria-hidden="true">🏯</span>
-        <h4 data-i18n="kny_trad1_h">Temple Visits & Offerings</h4>
+        <h3 data-i18n="kny_trad1_h">Temple Visits & Offerings</h3>
         <p data-i18n="kny_trad1_p">Devotees bring food, flowers, and incense to pagodas. Monks receive alms and chant prayers for prosperity. Many Cambodians spend the first morning at their local wat (temple).</p>
       </div>
       <div class="tradition-card">
         <span class="card-emoji" aria-hidden="true">💧</span>
-        <h4 data-i18n="kny_trad2_h">Water Ceremonies</h4>
+        <h3 data-i18n="kny_trad2_h">Water Ceremonies</h3>
         <p data-i18n="kny_trad2_p">Perfumed water is gently poured over elders' hands as a sign of respect and to receive their blessings. Buddha statues are ritually bathed. Water splashing between friends symbolizes washing away misfortune.</p>
       </div>
       <div class="tradition-card">
         <span class="card-emoji" aria-hidden="true">⛰️</span>
-        <h4 data-i18n="kny_trad3_h">Sand Hillocks (ភ្នំខ្សាច់)</h4>
+        <h3 data-i18n="kny_trad3_h">Sand Hillocks (ភ្នំខ្សាច់)</h3>
         <p data-i18n="kny_trad3_p">Small mountains of sand are built at temples, each grain representing a bad deed released. Flags and flowers adorn the hillocks. This tradition symbolizes spiritual cleansing and merit-making.</p>
       </div>
       <div class="tradition-card">
         <span class="card-emoji" aria-hidden="true">🎮</span>
-        <h4 data-i18n="kny_trad4_h">Traditional Games</h4>
+        <h3 data-i18n="kny_trad4_h">Traditional Games</h3>
         <p data-i18n="kny_trad4_p"><strong>Chol Chhoung</strong> (scarf tossing between boys and girls), <strong>Leak Kanseng</strong> (hiding a towel in a circle), and tug of war are played in temple grounds and villages, bringing communities together in joyful competition.</p>
       </div>
       <div class="tradition-card">
         <span class="card-emoji" aria-hidden="true">🍜</span>
-        <h4 data-i18n="kny_trad5_h">Khmer Food</h4>
+        <h3 data-i18n="kny_trad5_h">Khmer Food</h3>
         <p data-i18n="kny_trad5_p"><strong>Num Ansom</strong> (sticky rice cakes wrapped in banana leaves), <strong>Kralan</strong> (bamboo sticky rice), and various curries are prepared days in advance. Families share these festive dishes together.</p>
       </div>
       <div class="tradition-card">
         <span class="card-emoji" aria-hidden="true">👗</span>
-        <h4 data-i18n="kny_trad6_h">New Clothes & Family</h4>
+        <h3 data-i18n="kny_trad6_h">New Clothes & Family</h3>
         <p data-i18n="kny_trad6_p">Wearing new clothes symbolizes a fresh start. Families gather from near and far — it's the biggest homecoming of the year. Children receive gifts and blessings from elders.</p>
       </div>
     </div>
@@ -542,12 +548,13 @@
 
     <div style="overflow-x: auto;">
       <table class="zodiac-table">
+        <caption class="sr-only">Khmer zodiac animals and their years</caption>
         <thead>
           <tr>
-            <th></th>
-            <th>Animal</th>
-            <th>Khmer</th>
-            <th>Years</th>
+            <th scope="col"><span class="sr-only">Symbol</span></th>
+            <th scope="col" data-i18n="kny_zodiac_col_animal">Animal</th>
+            <th scope="col" data-i18n="kny_zodiac_col_khmer">Khmer</th>
+            <th scope="col" data-i18n="kny_zodiac_col_years">Years</th>
           </tr>
         </thead>
         <tbody>

@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -103,7 +104,7 @@ fun KhmerNewYearBackground() {
         label = "dropFall",
     )
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
+    Canvas(modifier = Modifier.fillMaxSize().clearAndSetSemantics { }) {
         val w = size.width
         val h = size.height
 

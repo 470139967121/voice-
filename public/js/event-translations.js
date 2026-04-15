@@ -657,7 +657,12 @@ function applyEventTranslations(eventSlug, lang) {
   document.documentElement.lang = lang;
 }
 
-window.applyLanguage = function(lang) {
-  var slug = window.EVENT_PAGE_SLUG || 'khmer-new-year';
-  applyEventTranslations(slug, lang);
-};
+// Chain with any prior applyLanguage handler (same pattern as suggestions-i18n.js)
+(function() {
+  var _prev = window.applyLanguage;
+  window.applyLanguage = function(lang) {
+    var slug = window.EVENT_PAGE_SLUG || 'khmer-new-year';
+    applyEventTranslations(slug, lang);
+    if (typeof _prev === 'function') _prev(lang);
+  };
+})();

@@ -1,6 +1,5 @@
 require('dotenv').config({
   path: process.env.NODE_ENV === 'local' ? '.env.local' : '.env',
-  quiet: true,
 });
 const express = require('express');
 const helmet = require('helmet');
