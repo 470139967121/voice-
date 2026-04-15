@@ -13,6 +13,7 @@
  */
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function cssColor(v) { return /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : null; }
 
 function injectKeyframes() {
   if (document.getElementById('seasonal-keyframes')) return;
@@ -42,8 +43,10 @@ function injectKeyframes() {
     // Override CSS custom properties with seasonal theme
     const root = document.documentElement;
     for (const [key, value] of Object.entries(active.theme)) {
+      const safe = cssColor(value);
+      if (!safe) continue;
       const cssVar = '--' + key.replace(/([A-Z])/g, '-$1').toLowerCase();
-      root.style.setProperty(cssVar, value);
+      root.style.setProperty(cssVar, safe);
     }
 
     // Swap favicon if the event provides one
@@ -95,9 +98,9 @@ function injectLandingCard(event, container) {
   card.setAttribute('aria-label', `${esc(event.name)} — learn more`);
   card.setAttribute('data-log', 'seasonal-event-link');
 
-  const p = event.theme.primary;
-  const a = event.theme.accent || p;
-  const glow = event.theme.primaryGlow || p;
+  const p = cssColor(event.theme.primary) || '#d4a017';
+  const a = cssColor(event.theme.accent) || p;
+  const glow = cssColor(event.theme.primaryGlow) || p;
 
   card.innerHTML = `
     <span class="seasonal-card-emoji" aria-hidden="true">\u{1FAB7}</span>
@@ -166,8 +169,8 @@ function injectBottomBanner(event) {
   banner.setAttribute('role', 'banner');
   banner.setAttribute('aria-label', `${esc(event.name)} — click to learn more`);
 
-  const p = event.theme.primary;
-  const a = event.theme.accent || p;
+  const p = cssColor(event.theme.primary) || '#d4a017';
+  const a = cssColor(event.theme.accent) || p;
 
   banner.innerHTML = `
     <a href="${esc(event.pageUrl)}" class="seasonal-bottom-link" aria-label="Learn about ${esc(event.name)}">
