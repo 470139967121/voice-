@@ -222,12 +222,23 @@ test.describe('Admin Users - Moderation Subtab', () => {
     const deviceBindingSection = page.locator('#device-binding-section');
     await expect(deviceBindingSection).toBeVisible({ timeout: 15_000 });
 
-    // Verify it shows the seeded device info
+    // Wait for the device binding API response to populate the cards.
+    // In CI the API can be slow — poll until the cards div has child content.
     const deviceCards = page.locator('#device-binding-cards');
-    await expect(deviceCards).toContainText('Pixel 6', { timeout: 15_000 });
+    await page.waitForFunction(
+      (sel) => {
+        const el = document.querySelector(sel);
+        return el && el.children.length > 0;
+      },
+      '#device-binding-cards',
+      { timeout: 30_000 },
+    );
+
+    // Verify it shows the seeded device info
+    await expect(deviceCards).toContainText('Pixel 6', { timeout: 10_000 });
 
     // Verify the seeded device ID appears (manufacturer + model)
-    await expect(deviceCards).toContainText('Google', { timeout: 15_000 });
+    await expect(deviceCards).toContainText('Google', { timeout: 10_000 });
   });
 
   // ── Test 7: Ban all devices for user ──
