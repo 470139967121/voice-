@@ -32,7 +32,7 @@ test.describe('Khmer New Year Page', () => {
     const cards = page.locator('.tradition-card');
     for (let i = 0; i < 6; i++) {
       const card = cards.nth(i);
-      await expect(card.locator('h4')).not.toBeEmpty();
+      await expect(card.locator('h3')).not.toBeEmpty();
       await expect(card.locator('p')).not.toBeEmpty();
     }
   });

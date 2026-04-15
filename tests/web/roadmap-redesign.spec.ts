@@ -62,11 +62,20 @@ test.describe('Roadmap Page — Theme & Layout', () => {
   });
 
   test('per-phase progress bar shows correct fraction', async ({ page }) => {
-    // The progress text (e.g. "2/10") lives in .phase-progress-text inside .phase-progress
-    const progressText = page.locator('.phase-progress-text, [data-testid="phase-progress"]').first();
-    await expect(progressText).toBeVisible({ timeout: 10_000 });
-    // Should show something like "2/10" or "0/3"
-    await expect(progressText).toHaveText(/\d+\/\d+/, { timeout: 10_000 });
+    // The progress text lives in .phase-progress-text. The first one may be "In Progress"
+    // section which shows "N active" format. Phase sections show "X/Y" fraction format.
+    const allProgress = page.locator('.phase-progress-text');
+    await allProgress.first().waitFor({ timeout: 10_000 });
+    const texts = await allProgress.allTextContents();
+    // At least one must show fraction format (X/Y) and at least one may show "N active"
+    const hasFraction = texts.some((t) => /\d+\/\d+/.test(t));
+    const hasActive = texts.some((t) => /\d+\s+active/.test(t));
+    expect(hasFraction || hasActive).toBe(true);
+    // Phase sections (not In Progress) must use fraction format
+    const phaseTexts = texts.filter((t) => !/active/.test(t));
+    for (const t of phaseTexts) {
+      expect(t).toMatch(/\d+\/\d+/);
+    }
   });
 
   test('feature list shows correct status icons', async ({ page }) => {

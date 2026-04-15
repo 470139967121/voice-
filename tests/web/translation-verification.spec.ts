@@ -110,10 +110,10 @@ test.describe('Translation Verification', () => {
 
     test('hero title stays in Khmer script regardless of language', async ({ page }) => {
       await page.goto(`${BASE}/events/khmer-new-year.html`);
-      const hero = page.locator('[data-i18n="kny_hero_title"]');
+      const hero = page.locator('h1[lang="km"]');
       await expect(hero).toContainText('សួស្តីឆ្នាំថ្មី');
       await changeLanguage(page, 'de');
-      // Hero greeting should stay in Khmer for all languages
+      // Hero greeting should stay in Khmer for all languages (no data-i18n, always Khmer)
       await expect(hero).toContainText('សួស្តីឆ្នាំថ្មី');
     });
   });
