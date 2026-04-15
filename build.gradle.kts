@@ -92,7 +92,14 @@ sonar {
             listOf(
                 "shared/src/commonMain/**",
                 "shared/src/androidMain/**",
+                "app/src/main/**",
             ).joinToString(","),
+        )
+
+        // Duplication exclusions — translation files are intentionally repetitive across locales
+        property(
+            "sonar.cpd.exclusions",
+            "public/js/event-translations.js,public/js/legal-translations.js,public/js/suggestions-i18n.js",
         )
 
         // Coverage reports
