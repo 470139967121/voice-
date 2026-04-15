@@ -62,11 +62,11 @@ test.describe('Roadmap Page — Theme & Layout', () => {
   });
 
   test('per-phase progress bar shows correct fraction', async ({ page }) => {
-    const progressBar = page.locator('.phase-progress, [data-testid="phase-progress"]').first();
-    await expect(progressBar).toBeVisible({ timeout: 10_000 });
-    // Should show something like "2/3" or "4/5"
-    const text = await progressBar.textContent();
-    expect(text).toMatch(/\d+\/\d+/);
+    // The progress text (e.g. "2/10") lives in .phase-progress-text inside .phase-progress
+    const progressText = page.locator('.phase-progress-text, [data-testid="phase-progress"]').first();
+    await expect(progressText).toBeVisible({ timeout: 10_000 });
+    // Should show something like "2/10" or "0/3"
+    await expect(progressText).toHaveText(/\d+\/\d+/, { timeout: 10_000 });
   });
 
   test('feature list shows correct status icons', async ({ page }) => {
