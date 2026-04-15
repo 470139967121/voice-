@@ -12,6 +12,20 @@
  * When no event is active, this script does nothing — defaults remain.
  */
 
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function injectKeyframes() {
+  if (document.getElementById('seasonal-keyframes')) return;
+  const style = document.createElement('style');
+  style.id = 'seasonal-keyframes';
+  style.textContent = `
+    @keyframes seasonalFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes seasonalSlideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes seasonalSlideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+  `;
+  document.head.appendChild(style);
+}
+
 (async function loadSeasonalTheme() {
   try {
     const res = await fetch('/events/events.json');
@@ -52,6 +66,9 @@
     const eventPath = active.pageUrl;
     if (path === eventPath || path === eventPath.replace('.html', '') || path + '.html' === eventPath) return;
 
+    // Inject animation keyframes once
+    injectKeyframes();
+
     // Detect page layout to choose banner style
     const container = document.querySelector('.container');
     const isLandingPage = container && getComputedStyle(document.body).display === 'flex';
@@ -75,7 +92,7 @@ function injectLandingCard(event, container) {
   card.id = 'seasonal-ribbon';
   card.href = event.pageUrl;
   card.setAttribute('role', 'banner');
-  card.setAttribute('aria-label', `${event.name} — learn more`);
+  card.setAttribute('aria-label', `${esc(event.name)} — learn more`);
   card.setAttribute('data-log', 'seasonal-event-link');
 
   const p = event.theme.primary;
@@ -85,8 +102,8 @@ function injectLandingCard(event, container) {
   card.innerHTML = `
     <span class="seasonal-card-emoji" aria-hidden="true">\u{1FAB7}</span>
     <span class="seasonal-card-body">
-      <span class="seasonal-card-title">${event.name}</span>
-      <span class="seasonal-card-subtitle">${event.ribbonText || 'Learn more'} \u2192</span>
+      <span class="seasonal-card-title">${esc(event.name)}</span>
+      <span class="seasonal-card-subtitle">${esc(event.ribbonText || "Learn more")} \u2192</span>
     </span>
   `;
 
@@ -127,15 +144,6 @@ function injectLandingCard(event, container) {
   const subtitle = card.querySelector('.seasonal-card-subtitle');
   subtitle.style.cssText = 'font-size: 0.8rem; opacity: 0.75; color: #fff;';
 
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes seasonalFadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `;
-  document.head.appendChild(style);
-
   // Insert after the "Coming Soon" badge for natural reading flow
   const badge = container.querySelector('.badge');
   if (badge) {
@@ -156,15 +164,15 @@ function injectBottomBanner(event) {
   const banner = document.createElement('div');
   banner.id = 'seasonal-ribbon';
   banner.setAttribute('role', 'banner');
-  banner.setAttribute('aria-label', `${event.name} — click to learn more`);
+  banner.setAttribute('aria-label', `${esc(event.name)} — click to learn more`);
 
   const p = event.theme.primary;
   const a = event.theme.accent || p;
 
   banner.innerHTML = `
-    <a href="${event.pageUrl}" class="seasonal-bottom-link" aria-label="Learn about ${event.name}">
+    <a href="${esc(event.pageUrl)}" class="seasonal-bottom-link" aria-label="Learn about ${esc(event.name)}">
       <span class="seasonal-bottom-emoji" aria-hidden="true">\u{1FAB7}</span>
-      <span class="seasonal-bottom-text">${event.ribbonText || event.name}</span>
+      <span class="seasonal-bottom-text">${esc(event.ribbonText || event.name)}</span>
       <span class="seasonal-bottom-arrow" aria-hidden="true">\u2192</span>
     </a>
     <button class="seasonal-ribbon-close" aria-label="Dismiss seasonal banner">\u2715</button>
@@ -231,17 +239,5 @@ function injectBottomBanner(event) {
   const langBtn = document.querySelector('.stl-lang-btn');
   if (langBtn) langBtn.style.bottom = '64px';
 
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes seasonalSlideUp {
-      from { transform: translateY(100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    @keyframes seasonalSlideDown {
-      from { transform: translateY(0); opacity: 1; }
-      to { transform: translateY(100%); opacity: 0; }
-    }
-  `;
-  document.head.appendChild(style);
   document.body.appendChild(banner);
 }

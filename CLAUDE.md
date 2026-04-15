@@ -29,6 +29,8 @@ Social chat app with voice rooms. Kotlin Multiplatform (Android + iOS), Firebase
 - Repository pattern: interface + impl, bound via Koin
 - Most models, repos, ViewModels, UI in `shared/src/commonMain/`
 - Android-only screens in `app/`
+- Seasonal events: `public/events/events.json` (registry), `public/js/seasonal-theme.js` (web), `SeasonalTheme.kt` (app)
+- 20 locales: ar, de, es, fr, hi, id, it, ja, km, ko, nl, pl, pt, ru, sv, th, tr, uk, vi, zh
 
 ## KMP iOS Compatibility (commonMain)
 **NEVER use JVM-only APIs in commonMain** — they compile on Android but break iOS:
@@ -41,7 +43,7 @@ Social chat app with voice rooms. Kotlin Multiplatform (Android + iOS), Firebase
 ## Key Constraints
 - **$0 hosting** — never introduce paid services (no Firebase Blaze, no paid Cloudflare)
 - **Google Play release notes** max 500 chars, non-technical, in `app/src/main/play/release-notes/en-US/internal.txt`
-- **Translations** — user-facing strings must go in ALL 19 locale files (`shared/src/commonMain/composeResources/values-{locale}/strings.xml`)
+- **Translations** — user-facing strings must go in ALL 20 locale files (`shared/src/commonMain/composeResources/values-{locale}/strings.xml`)
 - **Low resolution support** — use proportional/relative sizing, not fixed sp/dp
 - **No rarity-colored borders** on gifts/backpack — neutral theme colors only
 
@@ -70,7 +72,7 @@ Social chat app with voice rooms. Kotlin Multiplatform (Android + iOS), Firebase
 ### Additional checks:
 - Code review agent on the diff
 - Security review agent on the changes
-- i18n checker for all 19 locales (if user-facing strings changed)
+- i18n checker for all 20 locales (if user-facing strings changed)
 - Update CLAUDE.md if new patterns/conventions introduced
 - Re-run all tests after fixes
 - Only push when all checks pass
