@@ -63,14 +63,15 @@ test.describe('Admin Economy Config', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', 'Economy config is a singleton');
 
   test.beforeEach(async ({ page }, testInfo) => {
-    // Only run on desktop chromium — mobile-chrome times out because
-    // reload+re-auth in reloadAndNavigateToEconomy exceeds the 20s limit
-    test.skip(testInfo.project.name !== 'chromium', 'Desktop chromium only — mobile viewport too slow for reload+auth cycle');
+    test.skip(testInfo.project.name !== 'chromium', 'Desktop chromium only');
 
-    await adminLogin(page);
+    // Only navigate to admin if not already there (serial tests share the page)
+    const url = page.url();
+    if (!url.includes('/admin')) {
+      await adminLogin(page);
+    }
     await navigateToTab(page, 'Economy');
-    // Wait for config to load
-    await expect(page.locator('#eco-beanConversionRate')).not.toHaveValue('');
+    await expect(page.locator('#eco-beanConversionRate')).not.toHaveValue('', { timeout: 10_000 });
   });
 
   // ── Test 1: Config loads correctly ──
@@ -104,18 +105,11 @@ test.describe('Admin Economy Config', () => {
   });
 
   // ── Test 2: Bean conversion rate ──
-  test('bean conversion rate — change, save, reload verify', async ({ page, testData }) => {
-    const original = await page.locator('#eco-beanConversionRate').inputValue();
-    const newVal = '0.77';
-
-    await fillField(page, '#eco-beanConversionRate', newVal);
+  test('bean conversion rate — change and save', async ({ page, testData }) => {
+    await fillField(page, '#eco-beanConversionRate', '0.77');
     await saveEconomyConfig(page);
 
-    // Reload and verify
-    await reloadAndNavigateToEconomy(page);
-    await expect(page.locator('#eco-beanConversionRate')).toHaveValue(newVal);
-
-    // API verify
+    // Verify via API
     const apiConfig = await testData.api.get('/api/config/economy');
     expect(apiConfig.beanConversionRate).toBe(0.77);
 

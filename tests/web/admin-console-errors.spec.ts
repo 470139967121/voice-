@@ -183,57 +183,60 @@ test.describe("Admin Console Error Checks", () => {
     expect(realErrors.length).toBe(0);
   });
 
-  // ── Test 3: Open/close dialogs — zero console errors ──
-  test("opening and closing dialogs produces zero console errors", async ({
+  // ── Test 3a: Maintenance nuclear dialog — zero console errors ──
+  test("maintenance nuclear dialog produces zero console errors", async ({
     page,
   }) => {
     const errors = await collectConsoleErrors(page, async () => {
-      // Test 1: Nuclear dialog in Maintenance
       await navigateToTab(page, "Maintenance");
       await expect(page.locator("#maintenance-panel")).toBeVisible({
         timeout: 15_000,
       });
-
       await page.locator("#reset-all-btn").click();
       const overlay = page.locator("#nuclear-overlay");
       await expect(overlay).toHaveClass(/visible/);
       await page.locator("#nuclear-cancel").click();
       await expect(overlay).not.toHaveClass(/visible/);
+    });
+    expect(filterBenignErrors(errors).length).toBe(0);
+  });
 
-      // Test 2: Gifts — Add and remove a new gift row (no dialog, but tests the confirm overlay)
+  // ── Test 3b: Gifts add/remove row — zero console errors ──
+  test("gifts add and remove row produces zero console errors", async ({
+    page,
+  }) => {
+    const errors = await collectConsoleErrors(page, async () => {
       await navigateToTab(page, "Gifts");
-      await page.waitForTimeout(2_000);
       const addBtn = page.locator("#gift-add-btn");
-      if (await addBtn.isVisible()) {
-        await addBtn.click();
-        const newRow = page.locator("#gifts-tbody tr.gift-new").last();
-        if (await newRow.isVisible()) {
-          const removeBtn = newRow.locator(".gift-remove-btn");
-          if ((await removeBtn.count()) > 0) {
-            await removeBtn.click();
-          }
-        }
-      }
+      await expect(addBtn).toBeVisible({ timeout: 10_000 });
+      await addBtn.click();
+      const newRow = page.locator("#gifts-tbody tr.gift-new").last();
+      await expect(newRow).toBeVisible({ timeout: 5_000 });
+      const removeBtn = newRow.locator(".gift-remove-btn");
+      await expect(removeBtn).toBeVisible({ timeout: 5_000 });
+      // Force click — the button is visible but Playwright considers it
+      // "unstable" due to the table re-rendering with sort animations
+      await removeBtn.click({ force: true });
+    });
+    expect(filterBenignErrors(errors).length).toBe(0);
+  });
 
-      // Test 3: Log settings section expand/collapse
+  // ── Test 3c: Logs settings expand/collapse — zero console errors ──
+  test("logs settings expand and collapse produces zero console errors", async ({
+    page,
+  }) => {
+    const errors = await collectConsoleErrors(page, async () => {
       await navigateToTab(page, "Logs");
-      await page.waitForTimeout(2_000);
       const settingsHeader = page.locator(
         "#logs-settings-section .logs-section-header",
       );
-      if (await settingsHeader.isVisible()) {
-        await settingsHeader.click();
-        await page.waitForTimeout(500);
-        await settingsHeader.click();
-        await page.waitForTimeout(500);
-      }
+      await expect(settingsHeader).toBeVisible({ timeout: 10_000 });
+      await settingsHeader.click();
+      await page.waitForTimeout(500);
+      await settingsHeader.click();
+      await page.waitForTimeout(500);
     });
-
-    const realErrors = filterBenignErrors(errors);
-    if (realErrors.length > 0) {
-      console.log("Console errors during dialog operations:", realErrors);
-    }
-    expect(realErrors.length).toBe(0);
+    expect(filterBenignErrors(errors).length).toBe(0);
   });
 
   // ── Test 4: Trigger and cancel operations — zero console errors ──

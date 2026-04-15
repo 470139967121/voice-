@@ -951,10 +951,12 @@ test.describe('Admin Audit Log (11.18)', () => {
   });
 
   test('pagination works', async ({ page }) => {
-    if (!await page.locator('#audit-log-load-more').isVisible()) { test.skip(true, 'No pagination'); return; }
+    const loadMore = page.locator('#audit-log-load-more');
+    if (!await loadMore.isVisible()) { test.skip(true, 'No pagination'); return; }
     const initial = await page.locator('#audit-log-tbody tr').count();
-    await page.locator('#audit-log-load-more').click();
-    await page.waitForTimeout(3_000);
+    await loadMore.click();
+    // Wait for new rows to appear instead of fixed timeout
+    await expect(page.locator('#audit-log-tbody tr')).not.toHaveCount(initial, { timeout: 10_000 });
     expect(await page.locator('#audit-log-tbody tr').count()).toBeGreaterThan(initial);
   });
 
