@@ -123,28 +123,62 @@ function updatePreview(card) {
     iconHtml = getTemplateIconSvg(template, 80);
   }
 
-  const bgStyle = bgImageUrl
-    ? `background-image:url(${encodeURI(bgImageUrl)});background-size:${bgFit};background-position:center;background-repeat:no-repeat;`
-    : '';
-  const overlay = bgImageUrl
-    ? '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>'
-    : '';
   const textColor = bgImageUrl ? '#fff' : 'var(--text)';
   const subColor = bgImageUrl ? '#ccc' : 'var(--text2)';
   const titleColor = bgImageUrl ? '#fff' : color;
 
-  preview.innerHTML = `
-    <div class="preview-content" style="${bgStyle}">
-      ${overlay}
-      <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;width:100%;">
-        <img src="assets/app-icon.webp" width="48" height="48" style="border-radius:12px;" alt="ShyTalk" />
-        <div style="font-size:18px;font-weight:bold;color:${textColor};">ShyTalk</div>
-        ${iconHtml}
-        <div style="font-size:14px;font-weight:600;text-align:center;color:${titleColor};">${escapeHtml(title || 'Title')}</div>
-        <div style="font-size:12px;color:${subColor};text-align:center;white-space:pre-wrap;word-break:break-word;">${escapeHtml(message || 'Message')}</div>
-        ${dismissable ? '<button style="margin-top:12px;padding:8px 24px;border-radius:8px;background:#007AFF;color:white;border:none;font-size:13px;">Continue</button>' : ''}
-      </div>
-    </div>`;
+  // Build DOM programmatically to avoid innerHTML XSS risk (CodeQL js/xss-through-dom)
+  preview.textContent = '';
+  const content = document.createElement('div');
+  content.className = 'preview-content';
+  if (bgImageUrl) {
+    content.style.backgroundImage = `url(${encodeURI(bgImageUrl)})`;
+    content.style.backgroundSize = bgFit;
+    content.style.backgroundPosition = 'center';
+    content.style.backgroundRepeat = 'no-repeat';
+    const overlayEl = document.createElement('div');
+    overlayEl.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.6);';
+    content.appendChild(overlayEl);
+  }
+  const inner = document.createElement('div');
+  inner.style.cssText = 'position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;width:100%;';
+
+  const appIcon = document.createElement('img');
+  appIcon.src = 'assets/app-icon.webp';
+  appIcon.width = 48;
+  appIcon.height = 48;
+  appIcon.style.borderRadius = '12px';
+  appIcon.alt = 'ShyTalk';
+  inner.appendChild(appIcon);
+
+  const appName = document.createElement('div');
+  appName.style.cssText = `font-size:18px;font-weight:bold;color:${textColor};`;
+  appName.textContent = 'ShyTalk';
+  inner.appendChild(appName);
+
+  // iconHtml is safe (hardcoded SVG or static img tag) — parse via template
+  const iconContainer = document.createElement('div');
+  iconContainer.innerHTML = iconHtml;
+  while (iconContainer.firstChild) inner.appendChild(iconContainer.firstChild);
+
+  const titleEl = document.createElement('div');
+  titleEl.style.cssText = `font-size:14px;font-weight:600;text-align:center;color:${titleColor};`;
+  titleEl.textContent = title || 'Title';
+  inner.appendChild(titleEl);
+
+  const msgEl = document.createElement('div');
+  msgEl.style.cssText = `font-size:12px;text-align:center;white-space:pre-wrap;word-break:break-word;color:${subColor};`;
+  msgEl.textContent = message || 'Message';
+  inner.appendChild(msgEl);
+
+  if (dismissable) {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'margin-top:12px;padding:8px 24px;border-radius:8px;background:#007AFF;color:white;border:none;font-size:13px;';
+    btn.textContent = 'Continue';
+    inner.appendChild(btn);
+  }
+  content.appendChild(inner);
+  preview.appendChild(content);
 }
 
 async function uploadBackgroundImage(card, file) {

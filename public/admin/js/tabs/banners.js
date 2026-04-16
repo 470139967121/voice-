@@ -126,8 +126,11 @@ function onFileChange() {
   const file = fileInput.files[0];
   if (file) {
     const url = URL.createObjectURL(file);
-    preview.src = url;
-    preview.style.display = 'block';
+    // Safe: createObjectURL always returns blob: URLs, but validate for CodeQL
+    if (url.startsWith('blob:')) {
+      preview.src = url;
+      preview.style.display = 'block';
+    }
   }
 }
 
