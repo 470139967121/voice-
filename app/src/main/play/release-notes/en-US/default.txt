@@ -1,8 +1,8 @@
-v0.64.5
+v0.65.0
 
-comprehensive tests for PR A core modules (#290)
+Khmer New Year 2026 celebrations + reusable events system (#302)
 - ## Summary
-- Adds 34 new unit tests + 9 Playwright integration tests for the core ES
-- modules extracted in PR #289 (admin panel restructure PR A).
-- ## New Jest unit tests (52 total, was 18)
-- apiCall happy/error paths, FormData,
+- Adds Khmer New Year (Choul Chnam Thmey) celebrations across all ShyTalk
+- web pages and the Android/iOS app, with a **reusable seasonal events
+- architecture** for future holidays.
+- ### New seasonal events system
