@@ -1,8 +1,4 @@
-v0.65.0
+v0.65.1
 
-Khmer New Year 2026 celebrations + reusable events system (#302)
-- ## Summary
-- Adds Khmer New Year (Choul Chnam Thmey) celebrations across all ShyTalk
-- web pages and the Android/iOS app, with a **reusable seasonal events
-- architecture** for future holidays.
-- ### New seasonal events system
+add release version to job summary for easy visibility
+- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
