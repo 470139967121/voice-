@@ -845,4 +845,10 @@
     <string name="replace_room_title">0625063A064406270642 06270644063A063106410629 06270644062D06270644064A0629061F</string>
     <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
     <string name="replace_room_confirm">Close and create new</string>
+
+    <!-- Seasonal Events -->
+    <string name="seasonal_khmer_new_year_greeting">عيد رأس السنة الخميرية السعيد!</string>
+    <string name="seasonal_khmer_new_year_cta">تعرف على تشول تشنام ثمي</string>
+    <string name="seasonal_event_dismiss">إغلاق</string>
+
 </resources>

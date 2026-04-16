@@ -21,7 +21,7 @@ on:
         type: boolean
         default: true
       playwright:
-        description: 'Run Playwright tests after deploy'
+        description: 'Run sanity checks after deploy (pages load, API responds)'
         type: boolean
         default: true
 
@@ -260,18 +260,31 @@ jobs:
         if: always()
         run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
 
-  playwright-tests:
-    name: Playwright Tests
+  sanity-check:
+    name: Dev Sanity Check
     needs: [deploy-backend-dev, deploy-web-dev]
     if: |
       always() &&
       inputs.playwright &&
       (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped') &&
       (needs.deploy-web-dev.result == 'success' || needs.deploy-web-dev.result == 'skipped')
-    uses: ./.github/workflows/playwright-tests.yml
-    with:
-      web: 'all'
-      parallel: true
-      ref: ${{ github.sha }}
-      report_env: deploy
-    secrets: inherit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run sanity checks against Dev
+        env:
+          WEB_BASE_URL: https://dev.shytalk.shyden.co.uk
+          API_BASE_URL: https://dev-api.shytalk.shyden.co.uk
+        run: npx playwright test tests/web/dev-sanity.spec.ts --project=chromium --reporter=list

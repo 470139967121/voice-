@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-04-11",
+  "lastUpdated": "2026-04-15",
   "phases": [
     {
       "title": "Safety & Compliance",
@@ -523,6 +523,30 @@
               "d": "更新的隐私政策"
             }
           }
+        },
+        {
+          "name": "Inactive account deletion",
+          "description": "automated process to delete accounts inactive for extended period. Needs discussion on retention period, warnings, data handling",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "VPN detection and blocking",
+          "description": "prevent VPN connections. Cascading ban system risks banning innocent users sharing VPN exit nodes",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Account sharing detection & prevention",
+          "description": "detect concurrent sessions from different devices/IPs/geolocations, impossible travel. Alert admin, force re-auth or lock",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Automated content moderation",
+          "description": "AI-powered detection: image nudity, voice toxicity (speech-to-text), text profanity. Auto-flag or auto-action based on severity",
+          "status": "planned",
+          "i18n": {}
         }
       ]
     },
@@ -1600,6 +1624,12 @@
               "d": "排行榜、历史记录、完全自定义"
             }
           }
+        },
+        {
+          "name": "Clans system",
+          "description": "user-created groups with leaders, members, ranks, shared chat, clan-level leaderboards, inter-clan competitions. Clan badges on profiles",
+          "status": "planned",
+          "i18n": {}
         }
       ]
     },
@@ -2374,6 +2404,12 @@
               "d": "跟踪用户举报的准确性"
             }
           }
+        },
+        {
+          "name": "App startup redesign",
+          "description": "prevent login screen flash on auto-login (race condition), improve perceived startup time, better loading states",
+          "status": "planned",
+          "i18n": {}
         }
       ]
     },
@@ -2736,7 +2772,7 @@
         },
         {
           "name": "Website public roadmap",
-          "description": "show upcoming features so users can see what's planned. Keep it high-level (no internal details), update when phases complete",
+          "description": "show upcoming features so usersr can see what's planned. Keep it high-level (no internal details), update when phases complete",
           "status": "done",
           "i18n": {
             "ar": {
@@ -2903,7 +2939,7 @@
         {
           "name": "Web page i18n completion",
           "description": "full translations for all web pages including admin panel, legal pages. Language selector on every page",
-          "status": "planned",
+          "status": "in-progress",
           "i18n": {
             "ar": {
               "n": "ترجمة موقع الويب",
@@ -2982,6 +3018,12 @@
               "d": "所有网页支持19种语言"
             }
           }
+        },
+        {
+          "name": "Portal CSS/i18n unification",
+          "description": "migrate portal from separate portal-translations.js + portal.css to shared language-selector.js + inline styles",
+          "status": "planned",
+          "i18n": {}
         },
         {
           "name": "Admin role-based access control",
@@ -4376,6 +4418,18 @@
               "d": "语言学习专用房间"
             }
           }
+        },
+        {
+          "name": "Contact form",
+          "description": "private feedback/bug reports/safety concerns sent to admin panel. Category dropdown, optional email for replies",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Contact support page for suspended users",
+          "description": "suspended users need a way to reach support even when locked out",
+          "status": "planned",
+          "i18n": {}
         }
       ]
     }

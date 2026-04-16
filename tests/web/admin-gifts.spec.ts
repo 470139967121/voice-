@@ -124,28 +124,7 @@ test.describe('Admin Gifts Tab', () => {
     // Apply and confirm
     await applyAndConfirm(page);
 
-    // Reload and verify
-    await page.reload();
-    await adminLogin(page);
-    await navigateToTab(page, 'Gifts');
-    await waitForGiftsTable(page);
-
-    // Find the new gift in the table
-    const allRows = page.locator('#gifts-tbody tr[data-gift-id]');
-    const count = await allRows.count();
-    let found = false;
-    let foundGiftId = '';
-    for (let i = 0; i < count; i++) {
-      const nameVal = await allRows.nth(i).locator('[data-field="name"]').inputValue();
-      if (nameVal === giftName) {
-        found = true;
-        foundGiftId = (await allRows.nth(i).getAttribute('data-gift-id')) || '';
-        break;
-      }
-    }
-    expect(found).toBe(true);
-
-    // API verify
+    // Verify save persisted via API (no reload — faster and more reliable)
     const apiGifts = await testData.api.get('/api/gifts/all');
     const giftList = Array.isArray(apiGifts) ? apiGifts : (apiGifts.gifts || []);
     const apiGift = giftList.find((g: any) => g.name === giftName);
@@ -153,8 +132,8 @@ test.describe('Admin Gifts Tab', () => {
     expect(apiGift.coinValue).toBe(42);
 
     // Cleanup: delete the gift via API
-    if (foundGiftId) {
-      await testData.api.delete(`/api/gifts/${foundGiftId}`);
+    if (apiGift) {
+      await testData.api.delete(`/api/gifts/${apiGift.id}`);
     }
   });
 

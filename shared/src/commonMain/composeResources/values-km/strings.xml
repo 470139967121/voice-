@@ -1,0 +1,943 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common actions -->
+    <string name="all_caps">ទាំងអស់</string>
+    <string name="back">ថយក្រោយ</string>
+    <string name="cancel">បោះបង់</string>
+    <string name="change">ផ្លាស់ប្តូរ</string>
+    <string name="close">បិទ</string>
+    <string name="confirm">បញ្ជាក់</string>
+    <string name="continue_button">បន្ត</string>
+    <string name="create">បង្កើត</string>
+    <string name="delete">លុប</string>
+    <string name="done">រួចរាល់</string>
+    <string name="edit">កែស្រួល</string>
+    <string name="enable">បើក</string>
+    <string name="error_generic">មានអ្វីមួយខុសប្រក្រតី</string>
+    <string name="got_it">យល់ហើយ</string>
+    <string name="learn_more">ស្វែងយល់បន្ថែម</string>
+    <string name="loading">កំពុងផ្ទុក…</string>
+    <string name="maybe_later">ពេលក្រោយ</string>
+    <string name="message_action">សារ</string>
+    <string name="next">បន្ទាប់</string>
+    <string name="ok">យល់ព្រម</string>
+    <string name="retry">ព្យាយាមម្តងទៀត</string>
+    <string name="save">រក្សាទុក</string>
+    <string name="security">សុវត្ថិភាព</string>
+    <string name="send">ផ្ញើ</string>
+    <string name="sending">កំពុងផ្ញើ...</string>
+    <string name="transfer">ផ្ទេរ</string>
+    <string name="unknown">មិនស្គាល់</string>
+    <string name="using">កំពុងប្រើ...</string>
+    <string name="you">អ្នក</string>
+
+    <!-- Message bubbles -->
+    <string name="edited">បានកែស្រួល</string>
+    <string name="tap_to_join">ចុចដើម្បីចូលរួម</string>
+    <string name="message_recalled_by_you">អ្នកបានដកសារនេះមកវិញ</string>
+    <string name="message_recalled">សារនេះត្រូវបានដកមកវិញ</string>
+    <string name="message_hidden_by_mod">សារនេះត្រូវបានលាក់ដោយអ្នកសម្របសម្រួល</string>
+    <string name="invite_to_mic">អញ្ជើញទៅមីក្រូហ្វូន</string>
+    <string name="closed">បានបិទ</string>
+    <string name="edited_count">បានកែស្រួល (%1)</string>
+    <string name="read">បានអាន</string>
+    <string name="sent">បានផ្ញើ</string>
+    <string name="sticker">ស្ទីកហ្វែ</string>
+    <string name="image">រូបភាព</string>
+
+    <!-- Context menu -->
+    <string name="react">ប្រតិកម្ម</string>
+    <string name="reply">ឆ្លើយតប</string>
+    <string name="copy">ចម្លង</string>
+    <string name="recall">ដកមកវិញ</string>
+    <string name="add_to_stickers">បន្ថែមទៅស្ទីកហ្វែ</string>
+    <string name="hide_message">លាក់សារ</string>
+    <string name="report_message">រាយការណ៍សារ</string>
+
+    <!-- Translation -->
+    <string name="translate">បកប្រែ</string>
+    <string name="translated_from">បកប្រែពី %1$s</string>
+    <string name="show_original">បង្ហាញដើម</string>
+    <string name="translation_limit_reached">ដល់កំណត់ប្រចាំថ្ងែហើយ។ ដំឡើងទៅ SuperShy សម្រាប់ការបកប្រែគ្មានកំណត់។</string>
+    <string name="auto_translate">បកប្រែស្វ័យប្រវត្តិ</string>
+    <string name="auto_translate_description">បកប្រែសារចូលដោយស្វ័យប្រវត្តិទៅជាភាសារបស់អ្នក</string>
+    <string name="translations_remaining">នៅសល់ %1$d ការបកប្រែថ្ងែនេះ</string>
+
+    <!-- Settings -->
+    <string name="settings">ការកំណត់</string>
+    <string name="language">ភាសា</string>
+    <string name="blocked_users">អ្នកប្រើដែលបានរារាំង</string>
+    <string name="account">គណនី</string>
+    <string name="privacy">ឯកជនភាព</string>
+    <string name="notifications">ការជូនដំណឹង</string>
+    <string name="permissions">ការអនុញ្ញាត</string>
+    <string name="about">អំពី</string>
+    <string name="sign_out">ចាកចេញ</string>
+    <string name="sign_out_confirm">តើអ្នកប្រាកដថាចង់ចាកចេញមែនទេ?</string>
+
+    <!-- Home -->
+    <string name="create_room">បង្កើតបន្ទប់</string>
+    <string name="create_room_prompt">ដាក់ឈ្មោះបន្ទប់របស់អ្នក</string>
+    <string name="home">ទំព័រដើម</string>
+    <string name="in_room_count">%1 នៅក្នុងបន្ទប់</string>
+    <string name="join">ចូលរួម</string>
+    <string name="no_active_rooms">គ្មានបន្ទប់សកម្មទេ</string>
+    <string name="no_rooms">គ្មានបន្ទប់ទេ</string>
+    <string name="room_name">ឈ្មោះបន្ទប់</string>
+    <string name="room_name_label">ឈ្មោះបន្ទប់</string>
+    <string name="seats_count">%1/%2 កៅអី</string>
+    <string name="speakers_count">%1/%2 អ្នកនិយាយ</string>
+    <string name="tap_plus_to_create">ចុច + ដើម្បីបង្កើតមួយ</string>
+    <string name="visitors_count">%1 អ្នកទស្សនា</string>
+
+    <!-- Profile -->
+    <string name="connections">ការតភ្ជាប់</string>
+    <string name="display_name">ឈ្មោះបង្ហាញ</string>
+    <string name="dob_privacy_note">ថ្ងែខែឆ្នាំកំណើតរបស់អ្នកត្រូវបានទាមទារ ប៉ុន្តែអ្នកអាចលាក់អាយុក្នុងការកំណត់ឯកជនភាព។</string>
+    <string name="dob_required_subtitle">យើងត្រូវការថ្ងែខែឆ្នាំកំណើតរបស់អ្នកដើម្បីបន្ត។</string>
+    <string name="follow">តាមដាន</string>
+    <string name="follow_back">តាមដានមកវិញ</string>
+    <string name="followers">អ្នកតាមដាន</string>
+    <string name="followers_count">អ្នកតាមដាន (%1)</string>
+    <string name="following">កំពុងតាមដាន</string>
+    <string name="following_count">កំពុងតាមដាន (%1)</string>
+    <string name="following_list_private">បញ្ជីតាមដានរបស់អ្នកប្រើនេះជាឯកជន</string>
+    <string name="get_super_shy">ទទួល Super Shy</string>
+    <string name="getting_ready">កំពុងរៀបចំ…</string>
+    <string name="gift_wall">ជញ្ជាំងអំណោយ</string>
+    <string name="gift_value_coins">តម្លៃ: %1 កាក់</string>
+    <string name="no_followers_yet">មិនទាន់មានអ្នកតាមដានទេ</string>
+    <string name="no_profile_visitors">មិនទាន់មានអ្នកទស្សនាប្រវត្តិរូបទេ</string>
+    <string name="not_following_anyone">មិនទាន់តាមដាននរណាទេ</string>
+    <string name="one_more_step">មួយជំហានទៀត</string>
+    <string name="profile">ប្រវត្តិរូប</string>
+    <string name="profile_setup_subtitle">ជ្រើសរើសឈ្មោះបង្ហាញ និងបញ្ចូលថ្ងែខែឆ្នាំកំណើត</string>
+    <string name="received_times">បានទទួល %1 ដង</string>
+    <string name="remove_follower">ដកអ្នកតាមដាន</string>
+    <string name="report">រាយការណ៍</string>
+    <string name="select_date_of_birth">ជ្រើសរើសថ្ងែខែឆ្នាំកំណើត</string>
+    <string name="select_nationality">ជ្រើសរើសសញ្ជាតិ</string>
+    <string name="search_countries">ស្វែងរកប្រទេស</string>
+    <string name="selected">បានជ្រើសរើស</string>
+    <string name="set_up_your_profile">រៀបចំប្រវត្តិរូបរបស់អ្នក</string>
+    <string name="stalker_visit_info">ចោរមើលអ្នក %1, %2 ដងក្នុងរយៈពេល 3 ខែ</string>
+    <string name="stalkers_count">អ្នកចោរមើល (%1)</string>
+    <string name="stalkers_super_shy_description">មើលនរណាកំពុងចោរមើលប្រវត្តិរូបរបស់អ្នក! អ្នកចោរមើលប្រវត្តិរូបជាមុខងារពិសេស Super Shy។</string>
+    <string name="super_shy_benefit">អត្ថប្រយោជន៍ Super Shy</string>
+    <string name="top_senders">អ្នកផ្ញើកំពូល</string>
+    <string name="block">រារាំង</string>
+    <string name="unblock">ដោះរារាំង</string>
+    <string name="undo_remove">ត្រឡប់ការដក</string>
+    <string name="unfollow">ឈប់តាមដាន</string>
+
+    <!-- Room -->
+    <string name="alias">ឈ្មោះក្រៅ</string>
+    <string name="approve">អនុម័ត</string>
+    <string name="audience">អ្នកស្តាប់</string>
+    <string name="back_to_home">ត្រឡប់ទៅទំព័រដើម</string>
+    <string name="backpack">ក្របាំងស្ពាយ</string>
+    <string name="backpack_empty">ក្របាំងស្ពាយរបស់អ្នកទទេ។
+ប្រើកង់ដើម្បីទទួលអំណោយ!</string>
+    <string name="ban">ហាមចូល</string>
+    <string name="block_user">រារាំងអ្នកប្រើ</string>
+    <string name="block_user_confirm">តើអ្នកប្រាកដថាចង់រារាំង %1$s មែនទេ?</string>
+    <string name="close_room">បិទបន្ទប់</string>
+    <string name="daily">ប្រចាំថ្ងែ</string>
+    <string name="deny">បដិសេធ</string>
+    <string name="empty_seat">កៅអីទំនេរ</string>
+    <string name="filter_gift_animations_description">ច្រោះចេញគំនូរចលនាសម្រាប់អំណោយថោក។</string>
+    <string name="gift">អំណោយ</string>
+    <string name="gift_animations">គំនូរចលនាអំណោយ</string>
+    <string name="host">ម្ចាស់ផ្ទះ</string>
+    <string name="hosts">ម្ចាស់ផ្ទះ</string>
+    <string name="invite_to_seat">អញ្ជើញទៅកៅអី</string>
+    <string name="kick">ដេញចេញ</string>
+    <string name="kick_user">ដេញអ្នកប្រើចេញ</string>
+    <string name="kick_user_confirm">តើអ្នកប្រាកដថាចង់ដេញ %1$s ចេញពីបន្ទប់? ពួកគេនឹងមិនអាចចូលរួមវិញបានទេ។</string>
+    <string name="leave_room">ចាកចេញបន្ទប់</string>
+    <string name="leave_seat">ចាកចេញកៅអី</string>
+    <string name="lock_seating">ចាក់សោកៅអី</string>
+    <string name="lock_seating_description">មានតែម្ចាស់បន្ទប់ដែលអាចអញ្ជើញអ្នកប្រើអង្គុយ</string>
+    <string name="buy_coins">ទិញកាក់</string>
+    <string name="collect_all">ប្រមូលទាំងអស់ (%1$d)</string>
+    <string name="increased_drop_rate">អត្រាដោះកើនឡើង</string>
+    <string name="loading_prices">កំពុងផ្ទុកតម្លៃ…</string>
+    <string name="lucky_spin">ប្រើសំណាង</string>
+    <string name="lucky_spin_title">ប្រើសំណាង</string>
+    <string name="need_more_coins">ត្រូវការកាក់បន្ថែម!</string>
+    <string name="no_packages_available">គ្មានកញ្ចប់ទេ</string>
+    <string name="no_spins_yet">មិនទាន់ប្រើទេ</string>
+    <string name="prizes">រង្វាន់</string>
+    <string name="skip_animation">រំលងគំនូរចលនា</string>
+    <string name="spin">ប្រើ</string>
+    <string name="spin_count">%1$d ការប្រើ</string>
+    <string name="spin_history">ប្រវត្តិការប្រើ</string>
+    <string name="spin_results">លទ្ធផលការប្រើ</string>
+    <string name="message">សារ</string>
+    <string name="move_to_audience">ផ្លាស់ទៅអ្នកស្តាប់</string>
+    <string name="move_to_seat">ផ្លាស់ទៅកៅអី</string>
+    <string name="move_to_which_seat">ផ្លាស់ទៅកៅអីណា?</string>
+    <string name="mute">បិទសំឡេង</string>
+    <string name="no_audience_members">គ្មានអ្នកស្តាប់ទេ</string>
+    <string name="no_pending_requests">គ្មានសំណើកំពុងរង់ចាំទេ</string>
+    <string name="no_reason_given">គ្មានហេតុផល</string>
+    <string name="no_one_on_mic">គ្មាននរណានៅលើមីក្រូហ្វូនទេ</string>
+    <string name="occupied">បានកាន់</string>
+    <string name="open_for_duration">បើករយៈពេល %1$s</string>
+    <string name="owner">ម្ចាស់</string>
+    <string name="reason_optional">ហេតុផល (ជម្រើស)</string>
+    <string name="reject">បដិសេធ</string>
+    <string name="remove">ដក</string>
+    <string name="remove_as_host">ដកជាម្ចាស់ផ្ទះ</string>
+    <string name="remove_from_room">ដកចេញពីបន្ទប់</string>
+    <string name="request">សំណើ</string>
+    <string name="request_a_seat">សំណើកៅអី</string>
+    <string name="request_seat">សំណើកៅអី</string>
+    <string name="requesting">កំពុងសំណើ</string>
+    <string name="room">បន្ទប់</string>
+    <string name="room_closed">បន្ទប់បានបិទ</string>
+    <string name="room_closing_no_super_shy">ម្ចាស់បន្ទប់មិនមាន Super Shy ដូច្នេះបន្ទប់នេះនឹងបិទឆាប់។</string>
+    <string name="room_closing_in">បន្ទប់នឹងបិទក្នុង %1$d:%2$s</string>
+    <string name="room_closing_soon">បន្ទប់នឹងបិទឆាប់</string>
+    <string name="room_settings">ការកំណត់បន្ទប់</string>
+    <string name="rooms">បន្ទប់</string>
+    <string name="seat_requests">សំណើកៅអី</string>
+    <string name="seat_swap_with">កៅអី %1$d (ប្តូរជាមួយ %2$s)</string>
+    <string name="set_alias">កំណត់ឈ្មោះក្រៅ</string>
+    <string name="set_alias_description">កំណត់ឈ្មោះក្រៅផ្ទាល់ខ្លួនសម្រាប់ %1$s។ មានតែអ្នកទេដែលនឹងឃើញ។</string>
+    <string name="set_as_host">កំណត់ជាម្ចាស់ផ្ទះ</string>
+    <string name="showing_all_gift_animations">បង្ហាញគំនូរចលនាអំណោយទាំងអស់</string>
+    <string name="showing_animations_worth">បង្ហាញតែគំនូរចលនាដែលមានតម្លៃ %1$d+ កាក់</string>
+    <string name="speakers">អ្នកនិយាយ</string>
+    <string name="take_a_seat">យកកៅអី</string>
+    <string name="unmute">បើកសំឡេង</string>
+    <string name="unmuted">បានបើកសំឡេង</string>
+    <string name="user">អ្នកប្រើ</string>
+    <string name="user_id">ID: %1$d</string>
+    <string name="visitor_count">%1$d អ្នកទស្សនា</string>
+    <string name="voice">សំឡេង</string>
+    <string name="voice_unavailable">សំឡេងមិនអាចប្រើបាន</string>
+    <string name="you_have_super_shy_room">អ្នកមាន Super Shy! បើកបន្ទប់របស់អ្នករហូតដល់ %1$d ម៉ោង</string>
+    <string name="get_super_shy_rooms">ទទួល Super Shy ដើម្បីរីករាយបន្ទប់រហូតដល់ %1$d ម៉ោង!</string>
+
+    <!-- Room - Notifications -->
+    <string name="accept">យល់ព្រម</string>
+    <string name="decline">បដិសេធ</string>
+    <string name="go_back">ត្រឡប់ក្រោយ</string>
+    <string name="go_to_seat">ទៅកៅអី</string>
+    <string name="invited_to_sit">អ្នកត្រូវបានអញ្ជើញអង្គុយ!</string>
+    <string name="request_accepted">សំណើរបស់អ្នកត្រូវបានយល់ព្រម!</string>
+    <string name="seat_number">កៅអី %1$d</string>
+    <string name="user_wants_to_sit">%1$s ចង់អង្គុយ</string>
+
+    <!-- Room - Chat -->
+    <string name="cancel_edit">បោះបង់ការកែស្រួល</string>
+    <string name="edit_message_placeholder">កែស្រួលសារ...</string>
+    <string name="message_placeholder">សារ...</string>
+    <string name="new_messages">សារថ្មី</string>
+
+    <!-- Room - Backpack -->
+    <string name="action_cannot_be_undone">សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។</string>
+    <string name="confirm_send">បញ្ជាក់ការផ្ញើ</string>
+    <string name="from_backpack_items">ពីក្របាំងស្ពាយ: %1$d ធាតុ</string>
+    <string name="gifts">អំណោយ</string>
+    <string name="send_all">ផ្ញើទាំងអស់</string>
+    <string name="send_all_includes">នេះរួមបញ្ចូលធាតុទាំងអស់ %1$d ក្នុង %2$d អំណោយផ្សេងៗគ្នា។</string>
+    <string name="send_all_warning">អ្នកកំពុងផ្ញើក្របាំងស្ពាយទាំងមូលរបស់អ្នកទៅ %1$s។</string>
+    <string name="send_all_warning_title">⚠️ ការព្រមាន ⚠️</string>
+    <string name="send_all_total_value">តម្លៃសរុប: 🪙 %1$d កាក់</string>
+    <string name="send_everything_confirm">ខ្ញុំយល់ហើយ ផ្ញើទាំងអស់</string>
+    <string name="send_gift_header">ផ្ញើ %1$dx %2$s</string>
+    <string name="send_gift_header_multiple">ផ្ញើ %1$dx %2$s ទៅ %3$d អ្នកប្រើ</string>
+    <string name="to_label">ទៅ</string>
+    <string name="total_cost_coins">តម្លៃសរុប: %1$d កាក់</string>
+    <string name="use_button">ប្រើ</string>
+    <string name="you_have_count">អ្នកមាន: %1$d</string>
+    <string name="your_balance_coins">សមតុល្យ: %1$d កាក់</string>
+
+    <!-- Messaging -->
+    <string name="additional_details_optional">ព័ត៌មានលម្អិត (ជម្រើស)</string>
+    <string name="all_admins_and_mods">អ្នកគ្រប់គ្រង &amp; ម៉ូដ</string>
+    <string name="attach_evidence">ភ្ជាប់ភស្តុតាង</string>
+    <string name="cant_message_user">អ្នកមិនអាចផ្ញើសារទៅអ្នកប្រើនេះ</string>
+    <string name="chat">ជំនួញ</string>
+    <string name="close_group">បិទក្រុម</string>
+    <string name="close_group_warning">នេះនឹងបិទក្រុមសម្រាប់អ្នកទាំងអស់។</string>
+    <string name="compressing">កំពុងប្រែ...</string>
+    <string name="conversation_start_hint">ចាប់ផ្តើមការសន្ទនាពីប្រវត្តិរូប
+ឬបណ្ណអ្នកប្រើក្នុងបន្ទប់</string>
+    <string name="create_group">បង្កើតក្រុម</string>
+    <string name="current_version">បច្ចុប្បន្ន</string>
+    <string name="delete_conversation">លុបការសន្ទនា</string>
+    <string name="delete_conversation_warning">នេះនឹងដកការសន្ទនាចេញពីបញ្ជី។</string>
+    <string name="description_label">ការពិពណ៌នា</string>
+    <string name="description_optional">ការពិពណ៌នា (ជម្រើស)</string>
+    <string name="edit_history">ប្រវត្តិការកែស្រួល</string>
+    <string name="editing_message">កំពុងកែស្រួលសារ</string>
+    <string name="evidence">ភស្តុតាង</string>
+    <string name="evidence_required">ត្រូវការរូបភាពអេក្រង់ឬវីដេអូយ៉ុនតិចមួយ។</string>
+    <string name="general">ទូទៅ</string>
+    <string name="group">ក្រុម</string>
+    <string name="group_chat">ជំនួញក្រុម</string>
+    <string name="group_name_label">ឈ្មោះក្រុម</string>
+    <string name="group_name_required">ឈ្មោះក្រុម *</string>
+    <string name="group_settings">ការកំណត់ក្រុម</string>
+    <string name="invite_to_room">អញ្ជើញទៅបន្ទប់</string>
+    <string name="last_seen">ឃើញចុងក្រោយ %1$s</string>
+    <string name="leave_group">ចាកចេញក្រុម</string>
+    <string name="members">សមាជិក</string>
+    <string name="members_count">%1$d សមាជិក</string>
+    <string name="message_ellipsis">សារ...</string>
+    <string name="message_permissions">ការអនុញ្ញាតសារ</string>
+    <string name="message_preview_image">[រូបភាព]</string>
+    <string name="message_preview_recalled">[សារបានដកមកវិញ]</string>
+    <string name="message_preview_room_invite">[អញ្ជើញបន្ទប់]</string>
+    <string name="message_preview_sticker">[ស្ទីកហ្វែ]</string>
+    <string name="messages">សារ</string>
+    <string name="mod_notifications">ការជូនដំណឹងម៉ូដ</string>
+    <string name="move_to_front">ផ្លាស់ទៅមុខ</string>
+    <string name="mute_notifications">បិទការជូនដំណឹង</string>
+    <string name="mute_reason">. ហេតុផល: %1$s</string>
+    <string name="muted">បានបិទសំឡេង</string>
+    <string name="muted_for_hours_minutes">អ្នកត្រូវបានបិទសំឡេង %1$dម៉ោង %2$dនាទី</string>
+    <string name="muted_for_minutes">អ្នកត្រូវបានបិទសំឡេង %1$dនាទី</string>
+    <string name="muted_indefinitely">អ្នកត្រូវបានបិទសំឡេង</string>
+    <string name="new_group">ក្រុមថ្មី</string>
+    <string name="new_group_selected">ក្រុមថ្មី (%1$d បានជ្រើស)</string>
+    <string name="new_message">សារថ្មី</string>
+    <string name="no_action_needed">មិនត្រូវការសកម្មភាពទេ</string>
+    <string name="no_followers_following_found">មិនរកអ្នកតាមដានទេ</string>
+    <string name="no_matches_found">មិនរកអ្វីត្រូវគ្នាទេ</string>
+    <string name="no_messages">មិនទាន់មានសារទេ</string>
+    <string name="no_pending_reports">គ្មានរាយការណ៍កំពុងរង់ចាំទេ</string>
+    <string name="no_stickers_yet">មិនទាន់មានស្ទីកហ្វែទេ</string>
+    <string name="no_users_found">មិនរកអ្នកប្រើទេ</string>
+    <string name="notify_owner_only">ជូនដំណឹងម្ចាស់តែប៉ុណ្ណោះ</string>
+    <string name="online">សកម្ម</string>
+    <string name="only_admins_can_send">មានតែអ្នកគ្រប់គ្រងនិងម៉ូដដែលអាចផ្ញើសារ</string>
+    <string name="only_owner_can_change_permissions">មានតែម្ចាស់ក្រុមដែលអាចផ្លាស់ប្តូរការអនុញ្ញាត។</string>
+    <string name="owner_only">ម្ចាស់តែប៉ុណ្ណោះ</string>
+    <string name="participants">អ្នកចូលរួម</string>
+    <string name="participants_count">អ្នកចូលរួម (%1$d)</string>
+    <string name="pin">ភ្ជាប់</string>
+    <string name="recent">ថ្មីៗ</string>
+    <string name="replying_to">ឆ្លើយតបទៅ %1$s</string>
+    <string name="report_message_prompt">ហេតុអ្វីដែលអ្នករាយការណ៍សារនេះ?</string>
+    <string name="report_review">ពិនិត្យរាយការណ៍</string>
+    <string name="report_user">រាយការណ៍ %1$s</string>
+    <string name="report_user_prompt">ហេតុអ្វីដែលអ្នករាយការណ៍អ្នកប្រើនេះ?</string>
+    <string name="reset_to_default">កំណត់ដើមវិញ</string>
+    <string name="result_count">%1$d លទ្ធផល</string>
+    <string name="review_report">ពិនិត្យរាយការណ៍</string>
+    <string name="role_admin">អ្នកគ្រប់គ្រង</string>
+    <string name="role_member">សមាជិក</string>
+    <string name="role_mod">ម៉ូដ</string>
+    <string name="role_owner">ម្ចាស់</string>
+    <string name="save_description">រក្សាទុកការពិពណ៌នា</string>
+    <string name="search_all_users">ស្វែងរកអ្នកប្រើទាំងអស់</string>
+    <string name="search_conversations">ស្វែងរកការសន្ទនា...</string>
+    <string name="search_messages">ស្វែងរកសារ...</string>
+    <string name="search_people">ស្វែងរកមនុស្ស...</string>
+    <string name="select_action">ជ្រើសរើសសកម្មភាព:</string>
+    <string name="selected_count">%1$d បានជ្រើស</string>
+    <string name="start_conversation">ចាប់ផ្តើមការសន្ទនា</string>
+    <string name="submit_report">ដាក់ស្នើរាយការណ៍</string>
+    <string name="submitting">កំពុងដាក់ស្នើ...</string>
+    <string name="system_messages">សារប្រព័ន្ធ</string>
+    <string name="transfer_ownership">ផ្ទេរកម្មសិទ្ធិ</string>
+    <string name="transfer_ownership_warning">ជ្រើសរើសសមាជិកដើម្បីផ្ទេរកម្មសិទ្ធិ។</string>
+    <string name="type_message">វាយសារមួយ…</string>
+    <string name="typing">កំពុងវាយ...</string>
+    <string name="unmute_action">បើកសំឡេង</string>
+    <string name="unmute_notifications">បើកការជូនដំណឹង</string>
+    <string name="unpin">ដោះភ្ជាប់</string>
+    <string name="view_profile">មើលប្រវត្តិរូប</string>
+
+    <!-- Messaging - report reasons -->
+    <string name="report_reason_spam">Spam</string>
+    <string name="report_reason_harassment">ការបំភ័យភិត</string>
+    <string name="report_reason_inappropriate">មាតិកាមិនសមរម្យ</string>
+    <string name="report_reason_other">ផ្សេងៗ</string>
+
+    <!-- Messaging - report actions -->
+    <string name="report_action_warning">ចេញការព្រមាន</string>
+    <string name="report_action_temp_suspension">ពំន្យួរជាប្រវក្តិ</string>
+    <string name="report_action_perm_suspension">ពំន្យួរជាអចិន្ត្រៃយ</string>
+    <string name="report_action_pm_ban">ហាមពីសារស្វ័យ</string>
+
+    <!-- Messaging - report details -->
+    <string name="report_reason_prefix">ហេតុផល: %1$s</string>
+    <string name="report_type_prefix">ប្រភេទ: %1$s</string>
+    <string name="report_details_prefix">ព័ត៌មានលម្អិត: %1$s</string>
+    <string name="report_message_prefix">សារ: "%1$s"</string>
+    <string name="report_reporter_reported">អ្នករាយការណ៍: %1$s | ត្រូវបានរាយការណ៍: %2$s</string>
+
+    <!-- Messaging - system message labels -->
+    <string name="sys_member_joins">សមាជិកចូលរួម</string>
+    <string name="sys_member_leaves">សមាជិកចាកចេញ</string>
+    <string name="sys_role_changes">ការផ្លាស់ប្តូរតួនាទី</string>
+    <string name="sys_permission_changes">ការផ្លាស់ប្តូរការអនុញ្ញាត</string>
+
+    <!-- Messaging - permission labels -->
+    <string name="perm_who_can_send">នរណាអាចផ្ញើសារ</string>
+    <string name="perm_who_can_add_members">នរណាអាចបន្ថែមសមាជិក</string>
+    <string name="perm_who_can_edit_info">នរណាអាចកែស្រួលព័ត៌មានក្រុម</string>
+    <string name="perm_who_can_delete_messages">នរណាអាចលុបសារ</string>
+    <string name="perm_who_can_mute_members">នរណាអាចបិទសំឡេងសមាជិក</string>
+    <string name="perm_who_can_remove_members">នរណាអាចដកសមាជិក</string>
+
+    <!-- Messaging - date separators -->
+    <string name="today">ថ្ងែនេះ</string>
+    <string name="yesterday">ម្សិលមិញ</string>
+
+    <!-- Daily Reward -->
+    <string name="awesome">អស្ចារ្យ!</string>
+    <string name="claim_todays_reward">ទាមយករង្វាន់ថ្ងែនេះ</string>
+    <string name="coins">កាក់</string>
+    <string name="day_fri">សុក</string>
+    <string name="day_mon">ច័ន្ទ</string>
+    <string name="day_sat">សៅរ៍</string>
+    <string name="day_streak">%1$d-ថ្ងែជាប់និច្ច</string>
+    <string name="day_sun">អាទិត្យ</string>
+    <string name="day_thu">ព្រហ</string>
+    <string name="day_tue">អង្គារ</string>
+    <string name="day_wed">ពុធ</string>
+    <string name="later">ពេលក្រោយ</string>
+    <string name="milestone">សមិទ្ធផល</string>
+    <string name="milestone_bonus">បោណាសសមិទ្ធផល!</string>
+    <string name="plus_coins">+%1$d កាក់!</string>
+    <string name="reward_claimed">បានទាមយករង្វាន់!</string>
+
+    <!-- Economy -->
+    <string name="bean_redeem_description">1 bean = 1 កាក់។ ដោះ 2,000+ សម្រាប់បោណាស 10%!</string>
+    <string name="bonus_coins">+%1$d បោណាស</string>
+    <string name="buy_shy_coins">ទិញ Shy Coins</string>
+    <string name="confirm_redemption">បញ្ជាក់ការដោះ</string>
+    <string name="daily_reward">រង្វាន់ប្រចាំថ្ងែ</string>
+    <string name="redeem">ដោះ</string>
+    <string name="redeem_all">ដោះទាំងអស់</string>
+    <string name="redeem_beans_for_coins">ដោះ %1$s beans សម្រាប់ %2$s កាក់?</string>
+    <string name="redeem_shy_beans">ដោះ Shy Beans</string>
+    <string name="send_gift">ផ្ញើអំណោយ</string>
+    <string name="shy_beans">ShyBeans</string>
+    <string name="shy_coins">ShyCoins</string>
+    <string name="testing_mode_coins">របើបស្សាកមែ — មិនចំណាយលុយពិតប្រាកដទេ។ ចុចកញ្ចប់ដើម្បីទទួលកាក់ភ្លាម។</string>
+    <string name="filter_all">ទាំងអស់</string>
+    <string name="filter_gacha">Gacha</string>
+    <string name="filter_gifts">អំណោយ</string>
+    <string name="filter_purchases">ការទិញ</string>
+    <string name="filter_redemptions">ការដោះ</string>
+    <string name="filter_rewards">រង្វាន់</string>
+    <string name="no_filtered_transactions">គ្មានប្រតិបត្តិការ %1$s ទេ</string>
+    <string name="no_transactions_yet">មិនទាន់មានប្រតិបត្តិការទេ</string>
+    <string name="transaction_history">ប្រវត្តិប្រតិបត្តិការ</string>
+    <string name="transactions">ប្រតិបត្តិការ</string>
+    <string name="wallet">កាបូបលុយ</string>
+    <string name="wallet_with_balance">កាបូបលុយ · %1$s</string>
+
+    <!-- Super Shy -->
+    <string name="benefit_daily_bonus">+10% កាក់ចូលប្រចាំថ្ងែ (ប៉ុលឡើង)</string>
+    <string name="benefit_extended_room">រយៈពេលបន្ទប់បន្ត (12 ម៉ោង)</string>
+    <string name="benefit_full_room">បន្ទប់ពេញ 8 កៅអី</string>
+    <string name="benefit_gold_name">ឈ្មោះបង្ហាញពណ៌មាស</string>
+    <string name="benefit_profile_frame">ស៊ុមប្រវត្តិរូបពិសេស</string>
+    <string name="benefit_star_badge">សញ្ញាផ្កាយក្បែរឈ្មោះ</string>
+    <string name="benefits">អត្ថប្រយោជន៍</string>
+    <string name="choose_a_plan">ជ្រើសរើសគម្រោង</string>
+    <string name="claim_30_days_free">ទាមយក 30 ថ្ងែប្រើឥតគិតថ្លៃ</string>
+    <string name="claimed">បានទាមយក!</string>
+    <string name="claimed_activate_backpack">ដើម្បីបើកវា រកវាក្នុងក្របាំងស្ពាយនៅពេលក្នុងបន្ទប់ជំនួញ។</string>
+    <string name="claiming">កំពុងទាមយក…</string>
+    <string name="currently_active">សកម្មបច្ចុប្បន្ន</string>
+    <string name="days_remaining">%1$d ថ្ងែនៅសល់</string>
+    <string name="one_time_payment">បង់ម្តង</string>
+    <string name="per_month">ក្នុងមួយខែ</string>
+    <string name="per_year">ក្នុងមួយឆ្នាំ</string>
+    <string name="super_shy">Super Shy</string>
+    <string name="super_shy_lifetime">Super Shy ✦ ពេញជីវិត</string>
+    <string name="super_shy_days">Super Shy ✦ %1$dd</string>
+    <string name="super_shy_for_life">អ្នកជា Super Shy ពេញជីវិត!</string>
+    <string name="tap_to_claim_backpack">ចុចដើម្បីទាមយក — បន្ថែមទៅក្របាំងស្ពាយ</string>
+    <string name="testing_mode_super_shy">របើបស្សាកមែ — មិនចំណាយលុយពិតប្រាកដ។ ចុចគម្រោងដើម្បីបើក Super Shy ភ្លាម។</string>
+    <string name="tier_label">កម្រិត: %1$s</string>
+    <string name="tier_lifetime">ពេញជីវិត</string>
+    <string name="tier_monthly">ប្រចាំខែ</string>
+    <string name="tier_yearly">ប្រចាំឆ្នាំ</string>
+    <string name="upgrade_to_lifetime">ដំឡើងទៅពេញជីវិត</string>
+
+    <!-- Legal -->
+    <string name="accept_all_and_continue">យល់ព្រមទាំងអស់ &amp; បន្ត</string>
+    <string name="community_standards">ស្តង់ដារសហគមន៍</string>
+    <string name="cyber_bullying_policy">គោលនយោបាយប្រឆាំងការបំភ័យភិតតាមអីនធ័ណែត</string>
+    <string name="i_have_read_and_agree">ខ្ញុំបានអាន និងយល់ព្រមនឹង </string>
+    <string name="privacy_policy">គោលនយោបាយឯកជនភាព</string>
+    <string name="review_and_accept_policies">សូមពិនិត្យ និងយល់ព្រមនឹងគោលនយោបាយរបស់យើងដើម្បីបន្ត។</string>
+    <string name="terms_and_conditions">លក្ខខណ្ឌ &amp; លក្ខខណ្ឌ</string>
+    <string name="welcome_to_shytalk">សូមស្វាគមន៍មក ShyTalk</string>
+
+    <!-- Auth -->
+    <string name="sign_in">ចូល</string>
+    <string name="verification_code">លេខកូដផ្ទៀងផ្ទាត់</string>
+    <string name="continue_with_google">បន្តជាមួយ Google</string>
+
+    <!-- Settings dialogs -->
+    <string name="clear">សម្អាត</string>
+    <string name="clear_cache">សម្អាតហ្វែស</string>
+    <string name="clear_cache_confirm">សម្អាត %1$s?</string>
+    <string name="cache_cleared">ហ្វែសបានសម្អាត</string>
+    <string name="cache_cleared_description">ហ្វែសកម្មវិធីត្រូវបានសម្អាត។</string>
+    <string name="check_for_updates">ពិនិត្យការអាប់ដេត</string>
+    <string name="clear_cache_with_size">សម្អាតហ្វែស (%1$s)</string>
+    <string name="up_to_date">ទានសម័យ</string>
+    <string name="up_to_date_description">អ្នកប្រើកំណែថ្មីបំផុត។</string>
+    <string name="update_available">មានការអាប់ដេត</string>
+    <string name="update_available_description">កំណែ %1$s អាចប្រើបាន។</string>
+    <string name="update_available_soft">កំណែថ្មី (%1$s) នៃ ShyTalk អាចប្រើបាន។</string>
+    <string name="download_now">ទាញយកឥឡូវនេះ</string>
+    <string name="update_now">អាប់ដេតឥឡូវនេះ</string>
+    <string name="error_title">កំហុស</string>
+    <string name="delete_account">លុបគណនី</string>
+    <string name="delete_account_description">គណនីនិងទិន្នន័យទាំងអស់នឹងត្រូវបានលុបជាអចិន្ត្រៃយ។</string>
+    <string name="delete_account_scheduled">គណនីរបស់អ្នកត្រូវបានកំណត់លុបនៅ %1$s។</string>
+    <string name="delete_account_cancel">បោះបង់ការលុប</string>
+    <string name="delete_account_continue">បន្តការលុប</string>
+    <string name="delete_account_success">គណនីរបស់អ្នកត្រូវបានកំណត់លុប។</string>
+    <string name="delete_account_pin_required">ផ្ទៀងផ្ទាត់អត្តសញ្ញាណដើម្បីលុបគណនី</string>
+    <string name="delete_account_confirm_title">តើអ្នកប្រាកដមែនទេ?</string>
+    <string name="delete_account_confirm_body">នេះនឹងលុបគណនីនិងទិន្នន័យរបស់អ្នកជាអចិន្ត្រៃយ។</string>
+    <string name="export_data">នាំចេញទិន្នន័យរបស់ខ្ញុំ</string>
+    <string name="export_data_pending">បានសំណើនាំចេញ។ ពិនិត្យអីមែលរបស់អ្នក។</string>
+    <string name="unblock_confirm">ដោះរារាំង %1$s?</string>
+    <string name="unblock_description">ពួកគេនឹងអាចមើលប្រវត្តិរូបរបស់អ្នកវិញ។</string>
+    <string name="dnd_start_time">ពេលចាប់ផ្តើម</string>
+    <string name="dnd_end_time">ពេលបញ្ចប់</string>
+    <string name="not_now">មិនមែនឥឡូវនេះ</string>
+    <string name="allow">អនុញ្ញាត</string>
+
+    <!-- Room dialogs -->
+    <string name="edit_room_name">កែស្រួលឈ្មោះបន្ទប់</string>
+    <string name="removed_from_room">ដកចេញពីបន្ទប់</string>
+    <string name="kicked_by_name">អ្នកត្រូវបានដេញចេញដោយ %1$s។</string>
+    <string name="kicked_from_room">អ្នកត្រូវបានដេញចេញពីបន្ទប់នេះ។</string>
+    <string name="choose_another_room">ជ្រើសរើសបន្ទប់ផ្សេងទៀត</string>
+    <string name="leave">ចាកចេញ</string>
+
+    <!-- Overlay permission -->
+    <string name="display_over_other_apps">បង្ហាញលើកម្មវិធីផ្សេងទៀត</string>
+    <string name="display_over_other_apps_description">អនុញ្ញាត ShyTalk បង្ហាញប៉ូបូលអន្តេតនៅពេលចាកចេញបន្ទប់សំឡេង។</string>
+
+    <!-- Warning screen -->
+    <string name="view_community_standards">មើលស្តង់ដារសហគមន៍</string>
+    <string name="i_understand_and_accept">ខ្ញុំយល់ និងយល់ព្រម</string>
+
+    <!-- Settings - Privacy page -->
+    <string name="hide_following_list">លាក់បញ្ជីតាមដាន</string>
+    <string name="hide_following_description">អ្នកអ្នកផ្សេងនឹងមិនឃើញអ្នកតាមដាន។</string>
+    <string name="hide_online_status">លាក់ស្ថានភាពសកម្ម</string>
+    <string name="hide_online_status_description">អ្នកអ្នកផ្សេងនឹងមិនឃើញនៅពេលអ្នកសកម្ម។</string>
+    <string name="hide_age">លាក់អាយុ</string>
+    <string name="hide_age_description">អ្នកអ្នកផ្សេងនឹងមិនឃើញអាយុរបស់អ្នក។</string>
+    <string name="who_can_message_me">នរណាអាចផ្ញើសារមកខ្ញុំ</string>
+    <string name="who_can_message_description">គ្រប់គ្រងនរណាអាចផ្ញើសារស្វ័យមកអ្នក។</string>
+    <string name="everyone">គ្រប់គ្នា</string>
+    <string name="people_i_follow">មនុស្សដែលខ្ញុំតាមដាន</string>
+    <string name="no_one">គ្មាននរណា</string>
+
+    <!-- Settings - Notifications page -->
+    <string name="private_messages">សារស្វ័យ</string>
+    <string name="pm_notifications">ការជូនដំណឹងសារស្វ័យ</string>
+    <string name="pm_notifications_description">ទទួលការជូនដំណឹងសម្រាប់សារស្វ័យថ្មី។</string>
+    <string name="notification_sound">សំឡេងជូនដំណឹង</string>
+    <string name="notification_sound_description">លេងសំឡេងនៅពេលសារថ្មីមកដល់។</string>
+    <string name="message_preview">ការមើលសារជាមុន</string>
+    <string name="message_preview_description">បង្ហាញអត្ថបទសារក្នុងការជូនដំណឹង។</string>
+    <string name="chat_display">ការបង្ហាញជំនួញ</string>
+    <string name="show_timestamps">បង្ហាញពេលវេលា</string>
+    <string name="show_timestamps_description">បង្ហាញពេលវេលាសារក្នុងជំនួញ។</string>
+    <string name="show_date_separators">បង្ហាញសញ្ញាកាលបរិច្ឆេទ</string>
+    <string name="show_date_separators_description">បង្ហាញស្លាកប័ណ្ណកាលបរិច្ឆេទរវាងសារ។</string>
+    <string name="do_not_disturb">កុំរបាំង</string>
+    <string name="enable_dnd">បើកកុំរបាំង</string>
+    <string name="enable_dnd_description">បិទការជូនដំណឹងសារស្វ័យក្នុងពេលកំណត់។</string>
+    <string name="start">ចាប់ផ្តើម</string>
+    <string name="end">បញ្ចប់</string>
+    <string name="room_alerts">ការជូនដំណឹងបន្ទប់</string>
+    <string name="self_destruct_countdown">រហូតរាប់ស្វ័យបំផ្លាញ</string>
+    <string name="self_destruct_description">លេងសំឡេងប្រកាសនៅពេលកំណត់ពេលបំផ្លាញស្វ័យ 5 នាទី។</string>
+
+    <!-- Settings - Permissions page -->
+    <string name="notifications_permission_description">ទទួលការជូនដំណឹងនៅពេលអ្នកនៅក្នុងបន្ទប់សំឡេងផ្ទៃក្រោយ។</string>
+    <string name="overlay_permission_description">បង្ហាញប៉ូបូលអន្តេតនៅពេលចាកចេញបន្ទប់សំឡេង។</string>
+    <string name="microphone">មីក្រូហ្វូន</string>
+    <string name="microphone_description">ត្រូវការសម្រាប់ជំនួញសំឡេងក្នុងបន្ទប់។</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="bluetooth_description">តភ្ជាប់ទៅឧបករណ៍សំឡេង Bluetooth ក្នុងពេលជំនួញសំឡេង។</string>
+    <string name="allowed">បានអនុញ្ញាត</string>
+    <string name="denied">បានបដិសេធ</string>
+
+    <!-- Settings - Blocked Users page -->
+    <string name="no_blocked_users">គ្មានអ្នកប្រើដែលបានរារាំងទេ</string>
+
+    <!-- Settings - Account page -->
+    <string name="shytalk_id">ShyTalk ID</string>
+    <string name="email">អីមែល</string>
+
+    <!-- Settings - Linked Accounts page -->
+    <string name="linked_accounts">គណនីដែលបានតភ្ជាប់</string>
+    <string name="linked">បានតភ្ជាប់</string>
+    <string name="unlinked">មិនបានតភ្ជាប់</string>
+    <string name="unlink">ដោះតភ្ជាប់</string>
+    <string name="unlink_provider_confirm">ដោះតភ្ជាប់ %1$s?</string>
+    <string name="unlink_provider_description">អ្នកអាចតភ្ជាប់វិញពេលក្រោយ ប៉ុន្តែត្រូវផ្ទៀងផ្ទាត់វិញ។</string>
+    <string name="cannot_unlink_last_provider">អ្នកត្រូវមានគណនីតភ្ជាប់យ៉ាងតិចពីរមុនដោះតភ្ជាប់។</string>
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <string name="provider_email">អីមែល</string>
+    <string name="no_linked_accounts">មិនរកគណនីដែលបានតភ្ជាប់ទេ</string>
+    <string name="unlinking_provider">កំពុងដោះតភ្ជាប់…</string>
+    <string name="connect_account">តភ្ជាប់គណនី</string>
+    <string name="connect">តភ្ជាប់</string>
+    <string name="signed_in_with">ចូលជាមួយ</string>
+
+    <!-- Settings - About page -->
+    <string name="contact_us">ទាក់ទងយើង</string>
+    <string name="shyden_ltd_brand">ShyTalk ជាម៉ាករបស់ Shyden Ltd (Company No. 17110487), 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom.</string>
+
+    <!-- Profile page -->
+    <string name="must_be_13">អ្នកត្រូវមានអាយុយ៉ាងតិច 13 ឆ្នាំ</string>
+    <string name="profile_not_found">រកមិនឃើញប្រវត្តិរូប</string>
+    <string name="description">ការពិពណ៌នា</string>
+    <string name="report_user_generic">រាយការណ៍អ្នកប្រើ</string>
+    <string name="block_confirm">រារាំង %1$s?</string>
+    <string name="block_description">ពួកគេនឹងមិនអាចមើលប្រវត្តិរូបរបស់អ្នក។</string>
+
+    <!-- Room block warnings -->
+    <string name="banned_from_room">ហាមចូលបន្ទប់</string>
+    <string name="you_were_banned">អ្នកត្រូវបានហាមចូលបន្ទប់នេះ។</string>
+    <string name="banned_by">ហាមដោយ: %1$s</string>
+    <string name="cannot_enter_room">មិនអាចចូលបន្ទប់</string>
+    <string name="not_allowed_to_enter">អ្នកមិនត្រូវបានអនុញ្ញាតអោយចូលបន្ទប់នេះ។</string>
+    <string name="blocked_user_in_room">អ្នកប្រើដែលបានរារាំងនៅក្នុងបន្ទប់</string>
+    <string name="blocked_user_in_room_description">អ្នកប្រើដែលអ្នកបានរារាំងនៅក្នុងបន្ទប់។ ចូលទេ?</string>
+    <string name="notice">ការជូនដំណឹង</string>
+    <string name="blocked_by_user_in_room_description">អ្នកប្រើក្នុងបន្ទប់បានរារាំងអ្នក។ ចូលទេ?</string>
+    <string name="enter">ចូល</string>
+    <string name="report_thank_you">អរគុណសម្រាប់រាយការណ៍របស់អ្នក។ យើងនឹងពិនិត្យឆាប់។</string>
+
+    <!-- Room kick dialog -->
+    <string name="kick_reason">ហេតុផល: %1$s</string>
+
+    <!-- Auth / Google Sign-In -->
+    <string name="retrying">កំពុងព្យាយាម…</string>
+    <string name="account_restricted">គណនីត្រូវបានដាក់កម្រិត</string>
+    <string name="device_locked_description">ឧបករណ៍នេះត្រូវបានតភ្ជាប់ទៅគណនីផ្សេង។
+មានតែមួយគណនីក្នុងមួយឧបករណ៍។
+
+សម្រាប់ជំនួយ shytalk.help@gmail.com</string>
+    <string name="contact_support_hint">បើបញ្ហានៅតែមាន សូមទាក់ទង shytalk.help@gmail.com</string>
+    <string name="sign_in_with_google">ចូលជាមួយ Google</string>
+    <string name="sign_in_with_apple">ចូលជាមួយ Apple</string>
+    <string name="sign_in_with_email">ចូលជាមួយអីមែល</string>
+    <string name="email_hint">អាសយដ្ឋានអីមែល</string>
+    <string name="email_link_sent">ពិនិត្យអីមែលរបស់អ្នក</string>
+    <string name="check_your_email_description">យើងបានផ្ញើតំណចូលទៅអីមែលរបស់អ្នក។ ចុចតំណដើម្បីបន្ត។</string>
+    <string name="signing_in">កំពុងចូល…</string>
+    <string name="error_disposable_email">អាសយដ្ឋានអីមែលប្រើម្តងមិនត្រូវបានអនុញ្ញាត។</string>
+    <string name="send_link">ផ្ញើតំណ</string>
+    <string name="paste_link">បិទតំណ</string>
+    <string name="resend_link">ផ្ញើវិញ</string>
+    <string name="use_different_email">ប្រើអីមែលផ្សេងទៀត</string>
+    <string name="email_link_paste_hint">បើកតំណក្នុងអីមែល ប្រើវិញមក ចុចបិទតំណ។</string>
+    <string name="error_invalid_email_link">តំណនេះមិនត្រឹមត្រូវ។ សូមបិទតំណពេញលេញពីអីមែល។</string>
+    <string name="verify">ផ្ទៀងផ្ទាត់</string>
+
+    <!-- Suspension / Ban -->
+    <string name="appeal">អុទ្ធរណ៍</string>
+    <string name="appeal_placeholder">ពន្យល់ហេតុផលដែលការពំន្យួររបស់អ្នកគួរតែដកឡើង…</string>
+    <string name="submit_appeal">ដាក់ស្នើអុទ្ធរណ៍</string>
+    <string name="i_understand">ខ្ញុំយល់</string>
+    <string name="tap_to_return">ចុចដើម្បីត្រឡប់មកវិញ</string>
+
+    <!-- Degraded Mode -->
+    <string name="technical_difficulties">បញ្ហាបេច្ចេកវិទ្យាសាស្ត្រ</string>
+    <string name="technical_difficulties_description">ShyTalk កំពុងជួបប្រទះបញ្ហាបេច្ចេកវិទ្យាសាស្ត្រ។ សេវាកម្មនឹងត្រូវបានស្តារឡើងវិញស្វ័យប្រវត្តិ។</string>
+    <string name="contact_support_help">បើអ្នកត្រូវការជំនួយ shytalk.help@gmail.com</string>
+
+    <!-- Force Update -->
+    <string name="update_required">ត្រូវការអាប់ដេត</string>
+    <string name="update_required_description">កំណែថ្មីនៃ ShyTalk អាចប្រើបាន។ សូមអាប់ដេតដើម្បីបន្ត។</string>
+
+    <!-- Leave/Close room dialog -->
+    <string name="close_room_question">បិទបន្ទប់?</string>
+    <string name="leave_room_question">ចាកចេញបន្ទប់?</string>
+    <string name="close_room_description">នេះនឹងបិទបន្ទប់សម្រាប់អ្នកទាំងអស់។</string>
+    <string name="leave_room_description">អ្នកនឹងចាកចេញបន្ទប់សំឡេង។</string>
+
+    <!-- Misc UI -->
+    <string name="checking_for_updates">កំពុងពិនិត្យការអាប់ដេត…</string>
+    <string name="suspension_reason">ហេតុផល: %1$s</string>
+    <string name="suspension_ends_in">ការពំន្យួររបស់អ្នកនឹងបញ្ចប់ក្នុង:</string>
+    <string name="stalkers">អ្នកចោរមើល</string>
+
+    <!-- Connection / Loading states -->
+    <string name="unable_to_connect">មិនអាចតភ្ជាប់</string>
+    <string name="connection_trouble">ShyTalk កំពុងមានបញ្ហាក្នុងការតភ្ជាប់ម៉ាស៊ីន័រ។ សូមពិនិត្យអីនធ័ណែត រួចព្យាយាមម្តងទៀត។</string>
+    <string name="voice_chat_reimagined">បន្ទប់ជំនួញសំឡេង រៀបចំថ្មី។</string>
+    <string name="profile_not_available">ប្រវត្តិរូបនេះមិនអាចប្រើបាន</string>
+    <string name="blocked_by_user">អ្នកត្រូវបានរារាំងដោយអ្នកប្រើនេះ</string>
+    <string name="account_suspended_label">គណនីត្រូវបានពំន្យួរ</string>
+    <string name="account_suspended_description">គណនីរបស់អ្នកប្រើនេះត្រូវបានពំន្យួរ។</string>
+    <string name="closing">កំពុងបិទ...</string>
+    <string name="connecting">កំពុងតភ្ជាប់...</string>
+    <string name="voice_chat_unavailable">ជំនួញសំឡេងមិនអាចប្រើបានជាប្រវត្តិ</string>
+    <string name="mic_permission_denied">ការអនុញ្ញាតមីក្រូហ្វូនត្រូវបានបដិសេធ។</string>
+    <string name="replace_room_title">បិទបន្ទប់ដែលមានស្រាប់?</string>
+    <string name="replace_room_message">អ្នកមានបន្ទប់សកម្មរួចហើយ។ បើកបន្ទប់ថ្មីនឹងបិទបន្ទប់ចាស់។ ចង់បន្តមែនទេ?</string>
+    <string name="replace_room_confirm">បិទ និងបង្កើតថ្មី</string>
+
+    <!-- Warning screen -->
+    <string name="official_warning">ការព្រមានផ្លូវការ</string>
+    <string name="warning_reviewed">គណនីរបស់អ្នកត្រូវបានពិនិត្យ និងបានចេញការព្រមាន។</string>
+    <string name="warning_reviewed_for_reason">គណនីរបស់អ្នកត្រូវបានពិនិត្យសម្រាប់ %1$s និងបានចេញការព្រមាន។</string>
+    <string name="warning_consequence">ការលំមើសបន្តអាចនាំអោយគណនីរបស់អ្នកត្រូវបានពំន្យួរ។</string>
+
+    <!-- Unsafe device -->
+    <string name="device_not_supported">ឧបករណ៍មិនត្រូវបានគាំទ្រ</string>
+    <string name="device_not_supported_description">ShyTalk មិនអាចដំណើរការលើឧបករណ៍ដែលបាន root ឬ emulator ។</string>
+
+    <!-- Suspension -->
+    <string name="suspension_ends_at">បញ្ចប់: %1$s</string>
+    <string name="suspension_login_again">អ្នកអាចចូលវិញឥឡូវនេះ។
+សូមប្រព្រឹតល្អ!</string>
+    <string name="suspension_permanent">ការពំន្យួរនេះជាអចិន្ត្រៃយ។</string>
+    <string name="appeal_submitted">អុទ្ធរណ៍របស់អ្នកត្រូវបានដាក់ស្នើ និងនឹងត្រូវបានពិនិត្យ។</string>
+    <string name="appeal_unsuccessful">អុទ្ធរណ៍របស់អ្នកមិនបានជោគជ័យ។</string>
+    <string name="appeal_not_eligible">អ្នកមិនមានសិទ្ធិអុទ្ធរណ៍ការពំន្យួរនេះ។</string>
+
+    <!-- Ban screen -->
+    <string name="ban_reason">ហេតុផល: %1$s</string>
+    <string name="ban_expires">ផុតកំណត់: %1$s</string>
+    <string name="ban_permanent">ការហាមនេះជាអចិន្ត្រៃយ។</string>
+
+    <!-- Ban info on suspension screen -->
+    <string name="suspension_also_device_banned">ឧបករណ៍របស់អ្នកក្ត្រូវបានហាមផងដែរ។</string>
+    <string name="suspension_also_network_banned">បណ្តាញរបស់អ្នកក្ត្រូវបានហាមផងដែរ។</string>
+    <string name="suspension_also_device_and_network_banned">ឧបករណ៍និងបណ្តាញរបស់អ្នកក្ត្រូវបានហាមផងដែរ។</string>
+
+    <!-- Support -->
+    <string name="support_contact">សម្រាប់ជំនួយ shytalk.help@gmail.com</string>
+
+    <!-- ViewModel error messages (localized via UiText) -->
+    <string name="error_submit_appeal">បរាជ័យក្នុងការដាក់ស្នើអុទ្ធរណ៍</string>
+    <string name="error_block_user">បរាជ័យក្នុងការរារាំងអ្នកប្រើ</string>
+    <string name="error_unblock_user">បរាជ័យក្នុងការដោះរារាំង</string>
+    <string name="error_follow_user">បរាជ័យក្នុងការតាមដាន</string>
+    <string name="error_unfollow_user">បរាជ័យក្នុងការឈប់តាមដាន</string>
+    <string name="error_submit_report">បរាជ័យក្នុងការដាក់ស្នើរាយការណ៍</string>
+    <string name="error_could_not_submit_report">មិនអាចដាក់ស្នើរាយការណ៍</string>
+    <string name="error_upload_evidence">បរាជ័យក្នុងការអាប់ឡូតភស្តុតាង</string>
+    <string name="error_load_user_data">បរាជ័យក្នុងការផ្ទុកទិន្នន័យអ្នកប្រើ</string>
+    <string name="error_load_users">បរាជ័យក្នុងការផ្ទុកអ្នកប្រើ</string>
+    <string name="error_max_participants">អតិបរមា %1$d អ្នកចូលរួម</string>
+    <string name="error_no_users_selected">មិនបានជ្រើសអ្នកប្រើទេ</string>
+    <string name="error_max_groups">អ្នកអាចមានអតិបរមា %1$d ក្រុម</string>
+    <string name="error_upload_group_photo">បរាជ័យក្នុងការអាប់ឡូតរូបភាពក្រុម</string>
+    <string name="error_update_privacy">បរាជ័យក្នុងការអាប់ដេតឯកជនភាព</string>
+    <string name="error_check_updates">បរាជ័យក្នុងការពិនិត្យការអាប់ដេត</string>
+    <string name="error_not_enough_coins">កាក់មិនគ្រប់គ្រាន់</string>
+    <string name="error_prices_changed">តម្លៃបានផ្លាស់ប្តូរ! សូមពិនិត្យតម្លៃថ្មី រួចព្យាយាមម្តងទៀត។</string>
+    <string name="error_not_enough_beans">បីនស៍មិនគ្រប់គ្រាន់</string>
+    <string name="error_save_dob">បរាជ័យក្នុងការរក្សាទុកថ្ងែខែឆ្នាំកំណើត</string>
+    <string name="error_resolve_report">បរាជ័យក្នុងការដោះស្រាយរាយការណ៍</string>
+
+    <!-- ViewModel success/status messages (localized via UiText) -->
+    <string name="success_purchase">ការទិញជោគជ័យ!</string>
+    <string name="success_redeemed_beans">បានដោះ %1$s beans</string>
+    <string name="success_redeemed_beans_bonus">បានដោះ %1$s beans (បោណាស 10%%!)</string>
+    <string name="success_coins_added">+%1$s កាក់បានបន្ថែម!</string>
+    <string name="success_report_resolved">រាយការណ៍បានដោះស្រាយ</string>
+    <string name="success_super_shy_activated">Super Shy បានបើក! +30 ថ្ងែ</string>
+    <string name="success_sent_backpack">ក្របាំងស្ពាយទាំងមូល (%1$d ធាតុ)</string>
+
+    <!-- Last active time labels -->
+    <string name="active_just_now">សកម្មឥឡូវនេះ</string>
+    <string name="active_minutes_ago">សកម្ម %1$dនាទីមុន</string>
+    <string name="active_hours_ago">សកម្ម %1$dម៉ោងមុន</string>
+    <string name="active_days_ago">សកម្ម %1$dថ្ងែមុន</string>
+    <string name="active_long_ago">សកម្ម 30+ ថ្ងែមុន</string>
+
+    <!-- Room owner away banner -->
+    <string name="owner_away_banner">ម្ចាស់អវត្តមាន - បន្ទប់បិទក្នុង %1$s</string>
+
+    <!-- Messaging -->
+    <string name="messages_title">សារ</string>
+    <string name="no_conversations_yet">មិនទាន់មានការសន្ទនាទេ</string>
+
+    <!-- Gacha / Lucky Spin -->
+    <string name="spin_again_with_cost">%1$s ប្រើម្តងទៀត · 🪙%2$d</string>
+
+    <!-- Profile -->
+    <string name="age_years_old">%1$d ឆ្នាំ</string>
+    <string name="show_less">តិច</string>
+    <string name="show_more">ច្រើន</string>
+
+    <!-- Evidence / Upload errors -->
+    <string name="video_too_large">វីដេអូធំពេក។</string>
+    <string name="file_too_large">ហ្វែលធំពេក។ អតិបរមា 10 MB។</string>
+
+    <!-- Fallback -->
+    <string name="this_user">អ្នកប្រើនេះ</string>
+
+    <!-- Degraded Mode Banner -->
+    <string name="reduced_functionality">មុខងារកំណត់ — មុខងារមួយចំនួនអាចមិនអាចប្រើបាន</string>
+
+    <!-- Fullscreen Image Viewer -->
+    <string name="image_number">រូបភាព %1$d</string>
+    <string name="page_indicator">%1$d / %2$d</string>
+
+    <!-- Broadcast Banner -->
+    <string name="broadcast_gacha_win">%1$s ឈ្នះ %2$s%3$s%4$s ពីប្រើសំណាង!</string>
+    <string name="broadcast_gift_sent">%1$s ផ្ញើ %2$s%3$s%4$s ទៅ %5$s!</string>
+
+    <!-- Gift Preview -->
+    <string name="play_effect">លេងផ្ល</string>
+
+    <!-- Suspension / Ban -->
+    <string name="account_unlocked">គណនីបានដោះសោ</string>
+    <string name="account_suspended">គណនីត្រូវបានពំន្យួរ</string>
+    <string name="police_duck_description">ទាព៉ូលីស</string>
+    <string name="device_banned_title">ឧបករណ៍ត្រូវបានហាម</string>
+    <string name="network_banned_title">បណ្តាញត្រូវបានហាម</string>
+    <string name="device_banned_description">ឧបករណ៍នេះត្រូវបានហាមពីការប្រើ ShyTalk។</string>
+    <string name="network_banned_description">បណ្តាញរបស់អ្នកត្រូវបានហាម។ សូមប្រើបណ្តាញផ្សេង។</string>
+
+    <!-- Profile accessibility -->
+    <string name="full_screen_photo">រូបភាពពេញអេក្រង់</string>
+    <string name="cover_photo">រូបភាពគម្រប</string>
+    <string name="change_cover_photo">ផ្លាស់ប្តូររូបភាពគម្រប</string>
+    <string name="profile_photo">រូបភាពប្រវត្តិរូប</string>
+    <string name="change_profile_photo">ផ្លាស់ប្តូររូបភាពប្រវត្តិរូប</string>
+    <string name="edit_profile">កែស្រួលប្រវត្តិរូប</string>
+    <string name="app_name_label">ShyTalk</string>
+
+    <!-- Countdown time units -->
+    <string name="time_unit_day">ថ្ងែ</string>
+    <string name="time_unit_hour">ម៉ោង</string>
+    <string name="time_unit_minute">នាទី</string>
+    <string name="time_unit_second">វិនាទី</string>
+    <string name="time_unit_millisecond">MS</string>
+
+    <!-- Run 5 strings -->
+    <string name="splash_tagline">បន្ទប់ជំនួញសំឡេង រៀបចំថ្មី។</string>
+    <string name="quantity_all">ទាំងអស់ (%1$d)</string>
+    <string name="english_language">English</string>
+    <string name="google_sign_in_failed">ការចូលជាមួយ Google បរាជ័យ</string>
+
+    <!-- PIN & Security -->
+    <string name="enter_pin">បញ្ចូលលេខកូដ PIN</string>
+    <string name="pin_mismatch">PIN មិនត្រូវគ្នា។ សូមព្យាយាមម្តងទៀត។</string>
+    <string name="pin_locked">ព្យាយាមច្រើនពេក។ សូមព្យាយាមក្នុង %1$d នាទី។</string>
+    <string name="pin_locked_reauth">គណនីបានចាក់សោ។ សូមចូលវិញដើម្បីកំណត់ PIN ឡើងវិញ។</string>
+    <string name="reset_pin">កំណត់ PIN ឡើងវិញ</string>
+    <string name="account_locked">គណនីបានចាក់សោ</string>
+    <string name="unlock">ដោះសោ</string>
+
+    <string name="too_many_requests">សំណើច្រើនពេក។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។</string>
+
+    <!-- Starting Screens -->
+    <string name="starting_screen_pre_launch_title">ShyTalk មិនទាន់អាចប្រើបាននៅឡើយទេ</string>
+    <string name="starting_screen_pre_launch_message">ShyTalk មិនទាន់ចេញផ្សាយនៅឡើយទេ។ ដើម្បីស្មែសំស្សាកម្មវិធី សូមទាក់ទង Shyden។</string>
+    <string name="starting_screen_dismiss">បន្ត</string>
+    <string name="starting_screen_police_duck_description">រូបភាពការព្រមាន</string>
+    <string name="starting_screen_loading">កំពុងផ្ទុក…</string>
+
+    <!-- Security Settings Screen -->
+    <string name="security_title">សុវត្ថិភាព</string>
+    <string name="security_app_lock">ចាក់សោកម្មវិធី</string>
+    <string name="security_app_lock_desc">ត្រូវការ PIN ឬជីវមាត្រដើម្បីដោះសោ</string>
+    <string name="security_lock_timeout">រយៈពេលចាក់សោ</string>
+    <string name="security_timeout_1min">1 នាទី</string>
+    <string name="security_timeout_5min">5 នាទី</string>
+    <string name="security_timeout_15min">15 នាទី</string>
+    <string name="security_timeout_30min">30 នាទី</string>
+    <string name="security_timeout_never">កុំចាក់សោ</string>
+    <string name="security_biometric_login">ចូលជាមួយជីវមាត្រ</string>
+    <string name="security_biometric_desc">ប្រើស្នាមដៃ ឬមុខដើម្បីដោះសោ</string>
+    <string name="security_biometric_unavailable">មិនអាចប្រើបានលើឧបករណ៍នេះ</string>
+    <string name="security_reset_pin">កំណត់ PIN ឡើងវិញ</string>
+    <string name="security_reset_pin_desc">ផ្ទៀងផ្ទាត់អត្តសញ្ញាណដើម្បីកំណត់ PIN ថ្មី</string>
+    <string name="security_linked_accounts">គណនីដែលបានតភ្ជាប់</string>
+    <string name="security_linked_accounts_desc">គ្រប់គ្រងវិធីសាស្ត្រចូល</string>
+
+    <!-- Email OTP Screen -->
+    <string name="email_sign_in_title">ចូលជាមួយអីមែល</string>
+    <string name="email_enter_address">បញ្ចូលអាសយដ្ឋានអីមែល</string>
+    <string name="email_label">អីមែល</string>
+    <string name="email_send_code">ផ្ញើលេខកូដ</string>
+    <string name="email_code_sent_to">លេខកូដបានផ្ញើទៅ</string>
+    <string name="email_code_label">លេខកូដ 6 ខ្ទ</string>
+    <string name="email_verify">ផ្ទៀងផ្ទាត់</string>
+    <string name="email_resend_in">ផ្ញើវិញក្នុង %1$ds</string>
+    <string name="email_resend_code">ផ្ញើលេខកូដវិញ</string>
+    <string name="email_code_expires">លេខកូដផុតកំណត់ក្នុង 10 នាទី</string>
+    <string name="email_invalid_address">បញ្ចូលអាសយដ្ឋានអីមែលត្រឹមត្រូវ</string>
+    <string name="email_disposable_blocked">អាសយដ្ឋានអីមែលប្រើម្តងមិនត្រូវបានអនុញ្ញាត</string>
+    <string name="email_send_failed">បរាជ័យក្នុងការផ្ញើលេខកូដ</string>
+    <string name="email_enter_code">បញ្ចូលលេខកូដ 6 ខ្ទ</string>
+    <string name="email_invalid_code">លេខកូដមិនត្រឹមត្រូវ</string>
+    <string name="email_resend_failed">បរាជ័យក្នុងការផ្ញើវិញ</string>
+
+    <!-- PIN Setup Screen -->
+    <string name="pin_create_title">បង្កើត PIN</string>
+    <string name="pin_confirm_title">បញ្ជាក់ PIN របស់អ្នក</string>
+    <string name="pin_enable_biometric_title">បើកការចូលជីវមាត្រ?</string>
+    <string name="pin_enable_biometric_desc">ប្រើស្នាមដៃ ឬមុខដើម្បីដោះសោ ShyTalk ល្អ។</string>
+    <string name="pin_enable">បើក</string>
+    <string name="pin_not_now">មិនមែនឥឡូវនេះ</string>
+    <string name="pin_change_hint">អ្នកអាចផ្លាស់ប្តូរ ឬបិទក្នុងការកំណត់សុវត្ថិភាព</string>
+    <string name="pin_choose_length">ជ្រើសរើសប្រវែង PIN</string>
+    <string name="pin_digits">ខ្ទ</string>
+    <string name="pin_confirm">បញ្ជាក់</string>
+    <string name="pin_next">បន្ទាប់</string>
+    <string name="pin_enter_digits">បញ្ចូល %1$d ខ្ទ</string>
+    <string name="pin_device_not_registered">ឧបករណ៍មិនបានចុះឈ្មោះ។ សូមចូលវិញ។</string>
+    <string name="pin_setup_failed">បរាជ័យក្នុងការកំណត់ PIN</string>
+    <string name="pin_too_short">PIN ខ្លីពេក</string>
+
+    <!-- PIN Verify / Lock Screen -->
+    <string name="pin_verify_title">ផ្ទៀងផ្ទាត់អត្តសញ្ញាណរបស់អ្នក</string>
+    <string name="pin_verify_subtitle">បញ្ចូល PIN របស់អ្នកដើម្បីបន្ត</string>
+    <string name="pin_verifying">កំពុងផ្ទៀងផ្ទាត់…</string>
+    <string name="pin_wrong_attempts">PIN ខុស។ %1$d ដងនៅសល់។</string>
+    <string name="pin_account_locked">គណនីបានចាក់សោ</string>
+    <string name="pin_verify_failed">ការផ្ទៀងផ្ទាត់បរាជ័យ</string>
+    <string name="pin_session_expired">វគ្គបានផុតកំណត់។ សូមចូលវិញ។</string>
+    <string name="pin_use_biometric">ប្រើជីវមាត្រ</string>
+    <string name="pin_delete">លុប</string>
+    <string name="biometric_unlock_title">ដោះសោ ShyTalk</string>
+    <string name="biometric_unlock_desc">ប្រើស្នាមដៃ ឬមុខដើម្បីដោះសោ</string>
+    <string name="biometric_sign_failed">ការចុះឈ្មោះបរាជ័យ</string>
+    <string name="biometric_verify_failed">ការផ្ទៀងផ្ទាត់ជីវមាត្របរាជ័យ</string>
+    <string name="biometric_start_failed">មិនអាចចាប់ផ្តើមការផ្ទៀងផ្ទាត់ជីវមាត្រ</string>
+
+    <!-- Sign-in loading states -->
+    <string name="signing_in_loading">កំពុងចូល…</string>
+
+    <!-- Date/Time (DateUtils) -->
+    <string name="time_just_now">ឥឡូវនេះ</string>
+    <string name="time_minutes_ago">%1$d នាទីមុន</string>
+    <string name="time_hours_ago">%1$d ម៉ោងមុន</string>
+    <string name="time_days_ago">%1$d ថ្ងែមុន</string>
+    <string name="time_expired">ផុតកំណត់</string>
+    <string name="time_days">%1$d ថ្ងែ</string>
+    <string name="time_hours">%1$d ម៉ោង</string>
+    <string name="time_minutes">%1$d នាទី</string>
+    <string name="time_less_than_minute">តិចជាង 1 នាទី</string>
+    <string name="pin_dots_state">%1$d នៃ %2$d ខ្ទបានបញ្ចូល</string>
+
+    <!-- Seasonal Events -->
+    <string name="seasonal_khmer_new_year_greeting">សួស្តីឆ្នាំថ្មីខ្មែរ!</string>
+    <string name="seasonal_khmer_new_year_cta">ស្វែងយល់អំពីចូលឆ្នាំថ្មើ</string>
+    <string name="seasonal_event_dismiss">បដិសេធ</string>
+
+</resources>

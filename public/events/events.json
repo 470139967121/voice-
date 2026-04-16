@@ -1,0 +1,23 @@
+{
+  "events": [
+    {
+      "slug": "khmer-new-year-2026",
+      "name": "Khmer New Year 2026",
+      "startDate": "2026-04-13",
+      "endDate": "2026-04-17",
+      "pageUrl": "/events/khmer-new-year.html",
+      "bannerImage": "/events/assets/khmer-new-year-banner.svg",
+      "favicon": "/events/assets/khmer-new-year-favicon.svg",
+      "ribbonText": "Happy Khmer New Year! Learn about Choul Chnam Thmey",
+      "theme": {
+        "primary": "#d4a017",
+        "primaryGlow": "#f0c246",
+        "accent": "#e67e22",
+        "surface": "#1a1510",
+        "surfaceHover": "#252015",
+        "border": "#3a3020",
+        "bg": "#0f0d08"
+      }
+    }
+  ]
+}

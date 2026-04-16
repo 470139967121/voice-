@@ -23,11 +23,11 @@ test.describe('Language Selector', () => {
     await expect(page.locator('.stl-lang-search')).toBeFocused();
   });
 
-  test('modal shows all 20 languages', async ({ page }) => {
+  test('modal shows all 21 languages', async ({ page }) => {
     await page.goto('/');
     await page.locator('.stl-lang-btn').click();
     const items = page.locator('.stl-lang-item');
-    await expect(items).toHaveCount(20);
+    await expect(items).toHaveCount(21);
   });
 
   test('search filters languages', async ({ page }) => {

@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -47,6 +48,7 @@ import com.shyden.shytalk.feature.suspension.SuspensionScreen
 import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -310,6 +312,33 @@ fun SignInScreen(
             // Email Sign-In hidden — pending self-hosted mail server implementation
             // Spacer(modifier = Modifier.height(12.dp))
             // EmailSignInButton(onClick = onNavigateToEmail)
+
+            // Dev-only sign-in for local emulator testing
+            if (BuildConfig.FLAVOR == "local") {
+                Spacer(modifier = Modifier.height(24.dp))
+                TextButton(
+                    onClick = {
+                        if (isBusy) return@TextButton
+                        signingInProvider = "dev"
+                        scope.launch {
+                            try {
+                                com.google.firebase.auth.FirebaseAuth
+                                    .getInstance()
+                                    .signInWithEmailAndPassword("claude-test@shytalk.dev", "localdev123")
+                                    .await()
+                                viewModel.resolveAfterExternalSignIn("email", "claude-test@shytalk.dev")
+                            } catch (e: Exception) {
+                                signingInProvider = null
+                                snackbarHostState.showSnackbar(e.message ?: "Dev sign-in failed")
+                            }
+                        }
+                    },
+                    enabled = !isBusy,
+                    modifier = Modifier.testTag("dev_sign_in"),
+                ) {
+                    Text("Dev Sign-In (local only)", color = MaterialTheme.colorScheme.tertiary)
+                }
+            }
         }
     }
 }

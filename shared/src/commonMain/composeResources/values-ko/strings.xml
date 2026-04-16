@@ -845,4 +845,10 @@
     <string name="replace_room_title">AE30C874 BC29C744 B2EBC73CC2DCACA0C2B5B2C8AE4C?</string>
     <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
     <string name="replace_room_confirm">Close and create new</string>
+
+    <!-- Seasonal Events -->
+    <string name="seasonal_khmer_new_year_greeting">크메르 새해 복 많이 받으세요!</string>
+    <string name="seasonal_khmer_new_year_cta">쫄 츠남 트메이에 대해 알아보기</string>
+    <string name="seasonal_event_dismiss">닫기</string>
+
 </resources>

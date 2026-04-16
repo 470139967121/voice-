@@ -5,7 +5,7 @@ services:
       - "7880:7880"
       - "7881:7881"
       - "7882:7882"
-      - "50000-50100:50000-50100/udp"
+      - "52000-52100:52000-52100/udp"
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
     command: --config /etc/livekit.yaml

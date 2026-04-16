@@ -516,6 +516,17 @@ class AuthViewModel(
         }
     }
 
+    /** Called after external sign-in (e.g. dev email/password on local builds). */
+    fun resolveAfterExternalSignIn(
+        provider: String,
+        email: String,
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            resolveIdentityAndProceed(provider, email)
+        }
+    }
+
     fun signOut() {
         logI(TAG, "User signed out")
         viewModelScope.launch {
