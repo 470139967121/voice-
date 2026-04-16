@@ -209,6 +209,18 @@ jobs:
             --notes-file "${{ steps.notes.outputs.notes_file }}"
           echo "Created release v${VERSION} at ${COMMIT_SHA}"
 
+          # Job summary for easy copy-paste
+          {
+            echo "## Release v${VERSION}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Version** | \`v${VERSION}\` |"
+            echo "| **Bump** | ${{ steps.bump.outputs.type }} |"
+            echo "| **Commit** | \`${COMMIT_SHA:0:10}\` |"
+            echo "| **Release** | [v${VERSION}](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${VERSION}) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # Run SonarCloud on main branch so the dashboard stays up to date
   sonarcloud:
     needs: [check-skip, detect-changes]
