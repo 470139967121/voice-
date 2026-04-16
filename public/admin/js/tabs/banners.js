@@ -124,14 +124,13 @@ function onActionTypeChange() {
 
 function onFileChange() {
   const file = fileInput.files[0];
-  if (file) {
-    const url = URL.createObjectURL(file);
-    // Safe: createObjectURL always returns blob: URLs, but validate for CodeQL
-    if (url.startsWith('blob:')) {
-      preview.src = url;
-      preview.style.display = 'block';
-    }
-  }
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    preview.src = reader.result;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
 }
 
 async function loadBanners() {
