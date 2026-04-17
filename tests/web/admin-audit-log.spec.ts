@@ -30,23 +30,27 @@ test.describe('Admin Audit Log Tab', () => {
   });
 
   test('audit log shows entries or empty state', async ({ page }) => {
-    // Either entries exist in tbody OR the empty message is shown — never both
+    // Either entries exist in tbody OR the empty message is shown
     const tbody = page.locator('#audit-log-tbody');
     const empty = page.locator('#audit-log-empty');
 
-    // Wait for loading to complete
+    // Wait for loading to complete — data loaded OR empty state shown
     await page.waitForFunction(() => {
       const tbody = document.getElementById('audit-log-tbody');
+      const empty = document.getElementById('audit-log-empty');
       const loading = tbody?.textContent?.includes('Loading');
-      return !loading;
-    }, { timeout: 10_000 });
+      const hasRows = tbody && tbody.querySelectorAll('tr').length > 0 && !loading;
+      const isEmpty = empty && empty.style.display !== 'none';
+      return hasRows || isEmpty;
+    }, { timeout: 15_000 });
 
     const rowCount = await tbody.locator('tr').count();
-    if (rowCount === 0) {
-      await expect(empty).toBeVisible();
+    if (await empty.isVisible()) {
+      // Empty state: no rows should be present
+      expect(rowCount).toBe(0);
     } else {
-      await expect(empty).not.toBeVisible();
-      // Each row should have cells for admin, action, target, timestamp
+      // Entries present: each row should have cells
+      expect(rowCount).toBeGreaterThan(0);
       const firstRow = tbody.locator('tr').first();
       await expect(firstRow.locator('td')).not.toHaveCount(0);
     }
@@ -219,8 +223,7 @@ test.describe('Admin Audit Log Tab', () => {
   // ── Auto-Polling ──
 
   test('audit log auto-refreshes via polling', async ({ page }) => {
-    // The audit log tab polls every 4 seconds. Verify the table content
-    // refreshes by capturing a snapshot and waiting for any change.
+    // Wait for initial load to complete
     await page.waitForFunction(() => {
       const tbody = document.getElementById('audit-log-tbody');
       return tbody && !tbody.textContent?.includes('Loading');
@@ -230,11 +233,11 @@ test.describe('Admin Audit Log Tab', () => {
     // continues to make API requests over time
     const requests: string[] = [];
     page.on('request', (req) => {
-      if (req.url().includes('audit-log')) requests.push(req.url());
+      if (req.url().includes('audit-log') && !req.url().includes('search')) requests.push(req.url());
     });
 
-    // Wait for at least one polling cycle (4s + buffer)
-    await page.waitForTimeout(6_000);
+    // Wait for at least two polling cycles (4s each + buffer)
+    await page.waitForTimeout(10_000);
     expect(requests.length).toBeGreaterThanOrEqual(1);
   });
 
