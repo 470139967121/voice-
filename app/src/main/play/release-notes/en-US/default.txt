@@ -1,4 +1,8 @@
-v0.65.1
+v0.65.2
 
-add release version to job summary for easy visibility
-- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+extract 15 tab modules from inline script (PR B) (#301)
+- ## Summary
+- Extract all 15 admin panel tab modules from the 14,493-line inline
+- `<script>` block in `public/admin/index.html` into separate ES modules
+- in `public/admin/js/tabs/`.
+- This is **PR B** of the admin panel restructure (roadmap item #41). PR A
