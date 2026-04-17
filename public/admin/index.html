@@ -5087,9 +5087,9 @@
       firestoreFns: { collection, query, orderBy, limit, where, onSnapshot, getDocs, doc },
       getCurrentTab: () => currentTab,
       getPityHardLimit: () => cachedPityHardLimit,
-      searchUserByUniqueId: (uid) => { searchUid.value = uid; doSearchFinal(); },
-      renderEvidence: (urls) => renderEvidence(urls),
-      openEvidenceLightbox: (url, type) => openEvidenceLightbox(url, type),
+      searchUserByUniqueId: (uid) => TAB_MODULES['users']?.searchUserByUniqueId?.(uid),
+      renderEvidence: (urls) => TAB_MODULES['users']?.renderEvidence?.(urls) ?? '',
+      openEvidenceLightbox: (url, type) => TAB_MODULES['users']?.openEvidenceLightbox?.(url, type),
     };
     async function activateTabModule(tabId) {
       let mod = TAB_MODULES[tabId];
@@ -5177,11 +5177,7 @@
     // saveBtn and saveInfo removed — replaced by per-field auto-save
     const toast = $("#toast");
 
-    // Programmatic user search — used by identity links on suggestion cards
-    async function searchUserByUniqueId(uid) {
-      searchUid.value = uid;
-      searchBtn.click();
-    }
+    // searchUserByUniqueId — REMOVED (now in users.js module, PR C)
 
     // --- State ---
     let currentUser = null;    // Firebase auth user
@@ -5192,58 +5188,7 @@
     let listWidgetData = {};   // Current items for each list widget: { field: ["123 (Name)", ...] }
     let emailRevealed = false; // Whether email field is unmasked
 
-    // --- Evidence helpers ---
-    function isVideoUrl(url) {
-      return /\.(mp4|mov|webm|avi|mkv|3gp)(\?|$)/i.test(url) ||
-        url.toLowerCase().includes("content-type%3dvideo") ||
-        url.toLowerCase().includes("contenttype%3dvideo");
-    }
-
-    function renderEvidence(evidenceUrls) {
-      if (!evidenceUrls || evidenceUrls.length === 0) return "";
-      const thumbs = evidenceUrls.map(url => {
-        const escaped = escapeHtml(url);
-        if (isVideoUrl(url)) {
-          return `<div class="evidence-thumb" data-evidence-url="${escaped}" data-evidence-type="video">
-            <video src="${escaped}" muted preload="metadata"></video>
-            <span class="video-badge">&#9654;</span>
-          </div>`;
-        }
-        return `<div class="evidence-thumb" data-evidence-url="${escaped}" data-evidence-type="image">
-          <img src="${escaped}" alt="Evidence">
-        </div>`;
-      }).join("");
-      return `<div class="evidence-grid">${thumbs}</div>`;
-    }
-
-    function openEvidenceLightbox(url, type) {
-      const existing = document.querySelector(".evidence-lightbox");
-      if (existing) existing.remove();
-      const overlay = document.createElement("div");
-      overlay.className = "evidence-lightbox";
-      const content = type === "video"
-        ? `<video src="${escapeHtml(url)}" controls autoplay style="max-width:90vw;max-height:90vh;border-radius:8px;"></video>`
-        : `<img src="${escapeHtml(url)}" style="max-width:90vw;max-height:90vh;border-radius:8px;" alt="Evidence">`;
-      overlay.innerHTML = `<button class="evidence-lightbox-close" aria-label="Close">&times;</button>${content}`;
-      document.body.appendChild(overlay);
-      const onKey = (e) => { if (e.key === "Escape") close(); };
-      const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
-      overlay.querySelector(".evidence-lightbox-close").addEventListener("click", close);
-      overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
-      document.addEventListener("keydown", onKey);
-      // Video error fallback — show message + open-in-new-tab link for broken uploads
-      if (type === "video") {
-        const video = overlay.querySelector("video");
-        if (video) {
-          video.addEventListener("error", () => {
-            video.replaceWith(Object.assign(document.createElement("div"), {
-              style: "color:#fff;text-align:center;padding:32px;",
-              innerHTML: `<p style="margin-bottom:12px;">This video could not be played.</p><a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="color:#4fc3f7;">Open in new tab</a>`
-            }));
-          });
-        }
-      }
-    }
+    // --- Evidence helpers --- REMOVED (now in users.js module, PR C)
 
     // --- Screens ---
     function showScreen(name) {
