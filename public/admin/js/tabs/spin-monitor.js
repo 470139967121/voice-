@@ -184,6 +184,14 @@ export function init(deps) {
 /** Called every time the Monitor tab is activated. */
 export function activate() {
   populateGuaranteeGiftDropdown();
+  // Restore monitoring from session if not already active
+  const savedUid = sessionStorage.getItem('admin_monitor_uid');
+  if (savedUid && !monitorUid) {
+    monitorUidInput.value = savedUid;
+    startMonitoring(savedUid);
+  } else if (monitorUidInput) {
+    monitorUidInput.focus();
+  }
 }
 
 /** Called when leaving the Monitor tab. */
