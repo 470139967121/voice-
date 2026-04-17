@@ -142,9 +142,12 @@ async function load() {
       $('#eco-dropRateExponent-val').textContent =
         dropEl.value || '1.5';
 
-    // Cache pity hard limit
+    // Cache pity hard limit (also update inline shim for spin monitor)
     if (config.pityHardLimit) {
       cachedPityHardLimit = config.pityHardLimit;
+      if (typeof window._updatePityHardLimit === 'function') {
+        window._updatePityHardLimit(cachedPityHardLimit);
+      }
       const pityInput = $('#eco-pity');
       if (pityInput) {
         pityInput.max = cachedPityHardLimit;
