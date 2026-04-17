@@ -5359,7 +5359,7 @@
     signoutBtn.addEventListener("click", async () => {
       TAB_MODULES['monitor']?.stopMonitoring?.();
       TAB_MODULES['logs']?.stopAll?.();
-      if (reportsPollInterval) { clearInterval(reportsPollInterval); reportsPollInterval = null; }
+      TAB_MODULES['reports']?.deactivate?.();
       sessionStorage.clear();
       await signOut(auth);
       userForm.classList.remove("visible");
@@ -6091,7 +6091,7 @@
     const tabAuditLog = $("#tab-audit-log");
     let currentTab = "users";
 
-    function switchTab(tab) {
+    async function switchTab(tab) {
       // Abort in-flight tab-specific API requests from the previous tab
       tabAbortController.abort();
       tabAbortController = new AbortController();
@@ -6132,26 +6132,20 @@
       suggestionsPanel.classList.toggle("visible", tab === "suggestions");
       auditLogPanel.style.display = tab === "audit-log" ? "block" : "none";
 
-      if (tab === "devices") activateTabModule("devices");
-      if (tab === "backups") activateTabModule("backups");
-      if (tab === "appeals") activateTabModule("appeals");
-      if (tab === "maintenance") activateTabModule("maintenance");
-      if (tab === "reports") activateTabModule("reports");
-      if (tab === "gifts") activateTabModule("gifts");
-      if (tab === "economy") activateTabModule("economy");
-      if (tab === "logs") activateTabModule("logs");
+      // Deactivate modules no longer active
       if (tab !== "logs") deactivateTabModule("logs");
-      if (tab === "monitor") activateTabModule("monitor");
-      if (tab === "banners") activateTabModule("banners");
-      if (tab === "funfacts") activateTabModule("funfacts");
-      if (tab === "starting-screens") activateTabModule("starting-screens");
-      if (tab === "suggestions") activateTabModule("suggestions");
-      // Audit Log: delegated to module (PR C wiring)
-      if (tab === "audit-log") {
-        activateTabModule('audit-log');
-      } else {
-        deactivateTabModule('audit-log');
-      }
+      if (tab !== "audit-log") deactivateTabModule("audit-log");
+
+      // Activate the selected tab's module (await ensures data loads before tests assert)
+      const tabModuleMap = {
+        devices: "devices", backups: "backups", appeals: "appeals",
+        maintenance: "maintenance", reports: "reports", gifts: "gifts",
+        economy: "economy", logs: "logs", monitor: "monitor",
+        banners: "banners", funfacts: "funfacts",
+        "starting-screens": "starting-screens",
+        suggestions: "suggestions", "audit-log": "audit-log",
+      };
+      if (tabModuleMap[tab]) await activateTabModule(tabModuleMap[tab]);
     }
 
     // startAuditLogPolling/stopAuditLogPolling: removed — now in audit-log.js module
