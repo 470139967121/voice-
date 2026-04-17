@@ -3989,7 +3989,7 @@
                 <div class="maintenance-card">
                     <h3>Appeals</h3>
                     <p>Delete all suspension appeals (pending, approved, denied).</p>
-                    <button id="clear-appeals-btn">Delete All Appeals</button>
+                    <button id="clear-appeals-btn" data-maintenance-action="all-appeals" data-result-id="clear-appeals-result" data-confirm-msg="Delete ALL suspension appeals? This cannot be undone.">Delete All Appeals</button>
                     <div class="maintenance-result" id="clear-appeals-result"></div>
                 </div>
                 <div class="maintenance-card">
@@ -4005,122 +4005,122 @@
                     <h3>Backpacks</h3>
                     <p>Empty every user's backpack. This removes all gifts from all backpacks
                         permanently.</p>
-                    <button id="clear-backpacks-btn">Empty All Backpacks</button>
+                    <button id="clear-backpacks-btn" data-maintenance-action="all-backpacks" data-result-id="clear-backpacks-result" data-confirm-msg="Empty EVERY user's backpack? This cannot be undone.">Empty All Backpacks</button>
                     <div class="maintenance-result" id="clear-backpacks-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Gift Walls</h3>
                     <p>Reset all gift walls. This removes all received gift records from every
                         user.</p>
-                    <button id="clear-giftwalls-btn">Empty All Gift Walls</button>
+                    <button id="clear-giftwalls-btn" data-maintenance-action="all-giftwalls" data-result-id="clear-giftwalls-result" data-confirm-msg="Reset ALL gift walls? This removes all received gift records. This cannot be undone.">Empty All Gift Walls</button>
                     <div class="maintenance-result" id="clear-giftwalls-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Coins</h3>
                     <p>Set shyCoins to 0 for all users.</p>
-                    <button id="clear-coins-btn">Empty All Coins</button>
+                    <button id="clear-coins-btn" data-maintenance-action="all-coins" data-result-id="clear-coins-result" data-confirm-msg="Set shyCoins to 0 for ALL users? This cannot be undone.">Empty All Coins</button>
                     <div class="maintenance-result" id="clear-coins-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Beans</h3>
                     <p>Set shyBeans to 0 for all users.</p>
-                    <button id="clear-beans-btn">Empty All Beans</button>
+                    <button id="clear-beans-btn" data-maintenance-action="all-beans" data-result-id="clear-beans-result" data-confirm-msg="Set shyBeans to 0 for ALL users? This cannot be undone.">Empty All Beans</button>
                     <div class="maintenance-result" id="clear-beans-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Spin History</h3>
                     <p>Delete all gacha spin transaction records and reset pity counters for all users.</p>
-                    <button id="clear-spin-history-btn">Clear All Spin History</button>
+                    <button id="clear-spin-history-btn" data-maintenance-action="all-spin-history" data-result-id="clear-spin-history-result" data-confirm-msg="Delete ALL gacha spin records and reset pity counters? This cannot be undone.">Clear All Spin History</button>
                     <div class="maintenance-result" id="clear-spin-history-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>All Transactions</h3>
                     <p>Delete ALL transaction records (gacha, gifts, purchases, etc.) for all users. Processes 30 users per call.</p>
-                    <button id="clear-all-transactions-btn">Clear All Transactions</button>
+                    <button id="clear-all-transactions-btn" data-maintenance-action="all-transactions" data-result-id="clear-all-transactions-result" data-confirm-msg="Delete ALL transaction records? This cannot be undone.">Clear All Transactions</button>
                     <div class="maintenance-result" id="clear-all-transactions-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Super Shy</h3>
                     <p>Remove Super Shy status from all users (sets isSuperShy=false, clears expiry and tier).</p>
-                    <button id="clear-supershy-btn">Remove All Super Shy</button>
+                    <button id="clear-supershy-btn" data-maintenance-action="all-supershy" data-result-id="clear-supershy-result" data-confirm-msg="Remove Super Shy from ALL users? This cannot be undone.">Remove All Super Shy</button>
                     <div class="maintenance-result" id="clear-supershy-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Destroyed Users</h3>
                     <p>Remove user docs corrupted by the batch update bug (missing createdAt). These users can then re-register fresh.</p>
-                    <button id="clean-destroyed-btn">Clean Destroyed Users</button>
+                    <button id="clean-destroyed-btn" data-maintenance-action="destroyed-users" data-result-id="clean-destroyed-result" data-confirm-msg="Remove corrupted user docs (missing createdAt)? This cannot be undone.">Clean Destroyed Users</button>
                     <div class="maintenance-result" id="clean-destroyed-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Device Bindings</h3>
                     <p>Delete all device-to-user bindings. Allows any user to sign in from any device.</p>
-                    <button id="clear-device-bindings-btn">Clear All Device Bindings</button>
+                    <button id="clear-device-bindings-btn" data-maintenance-action="all-device-bindings" data-result-id="clear-device-bindings-result" data-confirm-msg="Delete ALL device-to-user bindings? This cannot be undone.">Clear All Device Bindings</button>
                     <div class="maintenance-result" id="clear-device-bindings-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Backfill User Types</h3>
                     <p>Set userType to "MEMBER" for all users that are missing it. Safe to run multiple times.</p>
-                    <button id="backfill-user-type-btn">Backfill User Types</button>
+                    <button id="backfill-user-type-btn" data-maintenance-action="backfill-user-type" data-result-id="backfill-user-type-result" data-confirm-msg="Set userType=MEMBER for all users missing it? Safe to run multiple times.">Backfill User Types</button>
                     <div class="maintenance-result" id="backfill-user-type-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Private Messages</h3>
                     <p>Delete all 1-on-1 private message conversations and their associated images from storage.</p>
-                    <button id="clear-pms-btn">Delete All Private Messages</button>
+                    <button id="clear-pms-btn" data-maintenance-action="all-private-messages" data-result-id="clear-pms-result" data-confirm-msg="Delete ALL 1-on-1 private message conversations? This cannot be undone.">Delete All Private Messages</button>
                     <div class="maintenance-result" id="clear-pms-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Group Chats</h3>
                     <p>Delete all group chat conversations, their messages, and associated media (group photos, images).</p>
-                    <button id="clear-groups-btn">Delete All Group Chats</button>
+                    <button id="clear-groups-btn" data-maintenance-action="all-group-chats" data-result-id="clear-groups-result" data-confirm-msg="Delete ALL group chat conversations? This cannot be undone.">Delete All Group Chats</button>
                     <div class="maintenance-result" id="clear-groups-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Closed Rooms</h3>
                     <p>Delete all closed rooms and their messages/seat requests. Active and owner-away rooms are preserved. Also runs automatically daily (rooms closed &gt; 7 days).</p>
-                    <button id="clear-rooms-btn">Delete All Closed Rooms</button>
+                    <button id="clear-rooms-btn" data-maintenance-action="all-rooms" data-result-id="clear-rooms-result" data-confirm-msg="Delete ALL closed rooms? This cannot be undone.">Delete All Closed Rooms</button>
                     <div class="maintenance-result" id="clear-rooms-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Broadcasts</h3>
                     <p>Delete all gift send and gacha win broadcast records.</p>
-                    <button id="clear-broadcasts-btn">Delete All Broadcasts</button>
+                    <button id="clear-broadcasts-btn" data-maintenance-action="all-broadcasts" data-result-id="clear-broadcasts-result" data-confirm-msg="Delete ALL gift/gacha broadcasts? This cannot be undone.">Delete All Broadcasts</button>
                     <div class="maintenance-result" id="clear-broadcasts-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Audit Logs</h3>
                     <p>Delete all admin audit log entries.</p>
-                    <button id="clear-audit-logs-btn">Delete All Audit Logs</button>
+                    <button id="clear-audit-logs-btn" data-maintenance-action="all-audit-logs" data-result-id="clear-audit-logs-result" data-confirm-msg="Delete ALL admin audit log entries? This cannot be undone.">Delete All Audit Logs</button>
                     <div class="maintenance-result" id="clear-audit-logs-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Stalkers</h3>
                     <p>Delete all profile visitor (stalker) records from all users and reset stalkerCount and newStalkerCount to 0.</p>
-                    <button id="clear-stalkers-btn">Clear All Stalkers</button>
+                    <button id="clear-stalkers-btn" data-maintenance-action="all-stalkers" data-result-id="clear-stalkers-result" data-confirm-msg="Delete ALL stalker tracking records? This cannot be undone.">Clear All Stalkers</button>
                     <div class="maintenance-result" id="clear-stalkers-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Suggestions</h3>
                     <p>Delete all suggestions (pending, approved, rejected, merged) and their dispute records.</p>
-                    <button id="clear-suggestions-btn">Clear All Suggestions</button>
+                    <button id="clear-suggestions-btn" data-maintenance-action="/api/admin/maintenance/clear-suggestions" data-result-id="clear-suggestions-result" data-confirm-msg="Delete ALL suggestions and disputes? This cannot be undone.">Clear All Suggestions</button>
                     <div class="maintenance-result" id="clear-suggestions-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Subscriptions</h3>
                     <p>Delete all subscription records and remove active subscription status from all users.</p>
-                    <button id="clear-subscriptions-btn">Clear All Subscriptions</button>
+                    <button id="clear-subscriptions-btn" data-maintenance-action="/api/admin/maintenance/clear-subscriptions" data-result-id="clear-subscriptions-result" data-confirm-msg="Delete ALL roadmap subscriptions? This cannot be undone.">Clear All Subscriptions</button>
                     <div class="maintenance-result" id="clear-subscriptions-result"></div>
                 </div>
                 <div class="maintenance-card">
                     <h3>Notifications</h3>
                     <p>Delete all notification records from all users.</p>
-                    <button id="clear-notifications-btn">Clear All Notifications</button>
+                    <button id="clear-notifications-btn" data-maintenance-action="/api/admin/maintenance/clear-notifications" data-result-id="clear-notifications-result" data-confirm-msg="Delete ALL user notifications? This cannot be undone.">Clear All Notifications</button>
                     <div class="maintenance-result" id="clear-notifications-result"></div>
                 </div>
                 <div class="maintenance-card nuclear">
                     <h3>&#9762; Identity Graphs</h3>
                     <p>Delete ALL identity graph data including linked identifiers, device fingerprints, and network associations. This will break all identity-based suspensions and cannot be undone.</p>
-                    <button id="clear-identity-graphs-btn">Clear All Identity Graphs</button>
+                    <button id="clear-identity-graphs-btn" data-maintenance-action="/api/admin/maintenance/clear-identity-graphs" data-result-id="clear-identity-graphs-result" data-confirm-msg="Delete ALL identity graph records? This cannot be undone.">Clear All Identity Graphs</button>
                     <div class="maintenance-result" id="clear-identity-graphs-result"></div>
                 </div>
                 <div class="maintenance-card nuclear" id="migrate-prod-card" style="display:none;">
@@ -6098,6 +6098,7 @@
       if (tab === "devices") loadDevices();
       if (tab === "backups") activateTabModule("backups");
       if (tab === "appeals") activateTabModule("appeals");
+      if (tab === "maintenance") activateTabModule("maintenance");
       if (tab === "reports") { loadReports(); loadReportStats(); }
       if (tab === "gifts") loadGifts();
       if (tab === "economy") loadEconomyConfig();
@@ -8106,126 +8107,7 @@
       }
     });
 
-    // --- Maintenance actions ---
-    async function runMaintenanceAction(btnId, resultId, endpoint, confirmMsg) {
-      const btn = $(`#${btnId}`);
-      const result = $(`#${resultId}`);
-      if (!confirm(confirmMsg)) return;
-
-      btn.disabled = true;
-      btn.textContent = "Processing...";
-      result.className = "maintenance-result";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/${endpoint}`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = JSON.stringify(data, null, 2);
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = btn.dataset.label || "Run";
-    }
-
-    // Store original labels
-    for (const btn of $$("#maintenance-panel button")) {
-      btn.dataset.label = btn.textContent;
-    }
-
-    $("#clear-system-msgs-btn").addEventListener("click", () =>
-      runMaintenanceAction("clear-system-msgs-btn", "clear-system-msgs-result",
-        "all-system-conversations", "Delete ALL system message conversations? This cannot be undone."));
-
-    $("#clear-reports-btn").addEventListener("click", () =>
-      runMaintenanceAction("clear-reports-btn", "clear-reports-result",
-        "all-reports", "Delete ALL reports (pending, resolved, archived) and locks? This cannot be undone."));
-
-    $("#clear-warnings-btn").addEventListener("click", () =>
-      runMaintenanceAction("clear-warnings-btn", "clear-warnings-result",
-        "all-warnings", "Reset warnings and GCS for ALL users? This cannot be undone."));
-
-    // --- Storage audit ---
-    function formatBytes(bytes) {
-      if (bytes === 0) return "0 B";
-      const units = ["B", "KB", "MB", "GB"];
-      const i = Math.floor(Math.log(bytes) / Math.log(1024));
-      return (bytes / Math.pow(1024, i)).toFixed(1) + " " + units[i];
-    }
-
-    $("#audit-storage-btn").addEventListener("click", async () => {
-      const btn = $("#audit-storage-btn");
-      const result = $("#storage-result");
-      btn.disabled = true;
-      btn.textContent = "Auditing...";
-      result.className = "maintenance-result";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/storage/audit`, {
-          headers: { "Authorization": `Bearer ${token}` },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-
-        const folders = data.folders || {};
-        const lines = Object.entries(folders)
-          .map(([folder, info]) => `${folder}: ${info.count} files (${formatBytes(info.bytes)})`);
-        lines.push(`Total: ${data.totalFiles} files (${formatBytes(data.totalBytes)})`);
-        result.className = "maintenance-result success";
-        result.textContent = lines.join("\n");
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Audit Storage";
-    });
-
-    // --- Storage purge ---
-    $("#purge-storage-btn").addEventListener("click", async () => {
-      const btn = $("#purge-storage-btn");
-      const result = $("#storage-result");
-      const folders = ["pm_images/", "stickers/", "report_evidence/"];
-      if (!confirm(`Purge ALL files from:\n- ${folders.join("\n- ")}\n\nProfile and cover photos will NOT be affected. This cannot be undone.`)) return;
-
-      btn.disabled = true;
-      btn.textContent = "Purging...";
-      result.className = "maintenance-result";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/orphaned-storage`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ folders }),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = JSON.stringify(data, null, 2);
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Purge Orphaned Files";
-    });
+    // --- Maintenance actions --- REMOVED (now in maintenance.js module)
 
     // --- Economy Admin ---
     let _ecoCoins = 0;
@@ -9287,504 +9169,7 @@
       btn.textContent = "Save Economy Config";
     });
 
-    // --- Additional Maintenance Buttons ---
-
-    // Empty All Backpacks
-    $("#clear-backpacks-btn").addEventListener("click", async () => {
-      const btn = $("#clear-backpacks-btn");
-      const result = $("#clear-backpacks-result");
-      if (!confirm("Empty EVERY user's backpack? This cannot be undone.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Clearing...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-backpacks`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Cleared ${data.deleted} backpack items`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Empty All Backpacks";
-    });
-
-    // Empty All Gift Walls
-    $("#clear-giftwalls-btn").addEventListener("click", async () => {
-      const btn = $("#clear-giftwalls-btn");
-      const result = $("#clear-giftwalls-result");
-      if (!confirm("Reset ALL gift walls? This removes all received gift records. This cannot be undone.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Clearing...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-giftwalls`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Cleared ${data.deleted} gift wall entries`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Empty All Gift Walls";
-    });
-
-    // Empty All Coins
-    $("#clear-coins-btn").addEventListener("click", async () => {
-      const btn = $("#clear-coins-btn");
-      const result = $("#clear-coins-result");
-      if (!confirm("Set shyCoins to 0 for ALL users? This cannot be undone.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Clearing...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-coins`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Reset coins for ${data.affected} users`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Empty All Coins";
-    });
-
-    // Empty All Beans
-    $("#clear-beans-btn").addEventListener("click", async () => {
-      const btn = $("#clear-beans-btn");
-      const result = $("#clear-beans-result");
-      if (!confirm("Set shyBeans to 0 for ALL users? This cannot be undone.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Clearing...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-beans`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Reset beans for ${data.affected} users`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Empty All Beans";
-    });
-
-    // Clear All Spin History
-    $("#clear-spin-history-btn").addEventListener("click", async () => {
-      const btn = $("#clear-spin-history-btn");
-      const result = $("#clear-spin-history-result");
-      if (!confirm("Delete ALL gacha spin history and reset pity counters for ALL users? This cannot be undone.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Clearing...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-spin-history`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Cleared ${data.txDeleted} transactions, reset ${data.pityReset} pity counters`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clear All Spin History";
-    });
-
-    // Clear All Transactions
-    $("#clear-all-transactions-btn").addEventListener("click", async () => {
-      const btn = $("#clear-all-transactions-btn");
-      const result = $("#clear-all-transactions-result");
-      if (!confirm("Delete ALL transaction records for ALL users? This cannot be undone.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Clearing...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-transactions`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.deleted} transactions across ${data.usersProcessed} users`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clear All Transactions";
-    });
-
-    // Clear All Super Shy
-    $("#clear-supershy-btn").addEventListener("click", async () => {
-      const btn = $("#clear-supershy-btn");
-      const result = $("#clear-supershy-result");
-      if (!confirm("Remove Super Shy from ALL users? This cannot be undone.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Removing...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-supershy`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Removed Super Shy from ${data.affected} users`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Remove All Super Shy";
-    });
-
-    // Clear All Appeals
-    $("#clear-appeals-btn").addEventListener("click", async () => {
-      const btn = $("#clear-appeals-btn");
-      const result = $("#clear-appeals-result");
-      if (!confirm("Delete ALL suspension appeals? This cannot be undone.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-appeals`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.deleted} appeals`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Delete All Appeals";
-    });
-
-    // Clean Destroyed Users
-    $("#clean-destroyed-btn").addEventListener("click", async () => {
-      const btn = $("#clean-destroyed-btn");
-      const result = $("#clean-destroyed-result");
-      if (!confirm("Delete all corrupted user docs (missing createdAt)? These users can then re-register.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Scanning...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/destroyed-users`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.destroyed} destroyed users, ${data.intact} intact users preserved`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clean Destroyed Users";
-    });
-
-    // Clear All Device Bindings
-    $("#clear-device-bindings-btn").addEventListener("click", async () => {
-      const btn = $("#clear-device-bindings-btn");
-      const result = $("#clear-device-bindings-result");
-      if (!confirm("Delete ALL device bindings? Every user will need to re-bind on next sign-in.")) return;
-
-      btn.disabled = true;
-      btn.textContent = "Clearing...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-device-bindings`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.deleted} device binding(s)`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clear All Device Bindings";
-    });
-
-    $("#backfill-user-type-btn").addEventListener("click", async () => {
-      const btn = $("#backfill-user-type-btn");
-      const result = $("#backfill-user-type-result");
-
-      btn.disabled = true;
-      btn.textContent = "Backfilling...";
-      result.style.display = "none";
-
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/backfill-user-type`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = data.updated > 0
-          ? `Set userType to MEMBER for ${data.updated} user(s)`
-          : data.message;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Backfill User Types";
-    });
-
-    // ── Delete all private messages ──
-    $("#clear-pms-btn").addEventListener("click", async () => {
-      const btn = $("#clear-pms-btn");
-      const result = $("#clear-pms-result");
-      if (!confirm("Delete ALL private message conversations and their images? This cannot be undone.")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-private-messages`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.deleted} conversation(s), ${data.mediaDeleted} media file(s)`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Delete All Private Messages";
-    });
-
-    // ── Delete all group chats ──
-    $("#clear-groups-btn").addEventListener("click", async () => {
-      const btn = $("#clear-groups-btn");
-      const result = $("#clear-groups-result");
-      if (!confirm("Delete ALL group chats, their messages, and associated media? This cannot be undone.")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-group-chats`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.deleted} group chat(s), ${data.mediaDeleted} media file(s)`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Delete All Group Chats";
-    });
-
-    // ── Delete all closed rooms ──
-    $("#clear-rooms-btn").addEventListener("click", async () => {
-      const btn = $("#clear-rooms-btn");
-      const result = $("#clear-rooms-result");
-      if (!confirm("Delete ALL closed rooms and their messages? Active rooms will not be affected.")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-rooms`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.deleted} closed room(s)`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Delete All Closed Rooms";
-    });
-
-    // ── Delete all broadcasts ──
-    $("#clear-broadcasts-btn").addEventListener("click", async () => {
-      const btn = $("#clear-broadcasts-btn");
-      const result = $("#clear-broadcasts-result");
-      if (!confirm("Delete ALL broadcast records?")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-broadcasts`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.deleted} broadcast(s)`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Delete All Broadcasts";
-    });
-
-    // ── Delete all audit logs ──
-    $("#clear-audit-logs-btn").addEventListener("click", async () => {
-      const btn = $("#clear-audit-logs-btn");
-      const result = $("#clear-audit-logs-result");
-      if (!confirm("Delete ALL admin audit log entries?")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-audit-logs`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.deleted} audit log(s)`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Delete All Audit Logs";
-    });
-
-    $("#clear-stalkers-btn").addEventListener("click", async () => {
-      const btn = $("#clear-stalkers-btn");
-      const result = $("#clear-stalkers-result");
-      if (!confirm("Delete ALL stalker records from ALL users and reset stalker counts to 0? This cannot be undone.")) return;
-      btn.disabled = true;
-      btn.textContent = "Clearing...";
-      result.style.display = "none";
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const resp = await fetch(`${API_BASE}/api/cleanup/all-stalkers`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Request failed");
-        result.className = "maintenance-result success";
-        result.textContent = `Deleted ${data.stalkersDeleted} stalker record(s), reset ${data.usersReset} user(s)`;
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clear All Stalkers";
-    });
+    // --- Additional Maintenance Buttons --- REMOVED (now handled via data attributes + maintenance.js module)
 
     // --- Sync from Production (dev only) ---
     {
@@ -13858,94 +13243,7 @@
       }
     });
 
-    // ══════════════════════════════════════════════════════════════
-    // NEW MAINTENANCE CARDS
-    // ══════════════════════════════════════════════════════════════
-
-    $("#clear-suggestions-btn").addEventListener("click", async () => {
-      const btn = $("#clear-suggestions-btn");
-      const result = $("#clear-suggestions-result");
-      if (!confirm("Delete ALL suggestions (pending, approved, rejected, merged) and disputes? This cannot be undone.")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const data = await apiCall("POST", "/api/admin/maintenance/clear-suggestions");
-        result.className = "maintenance-result success";
-        result.textContent = JSON.stringify(data, null, 2);
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clear All Suggestions";
-    });
-
-    $("#clear-subscriptions-btn").addEventListener("click", async () => {
-      const btn = $("#clear-subscriptions-btn");
-      const result = $("#clear-subscriptions-result");
-      if (!confirm("Delete ALL subscription records? This cannot be undone.")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const data = await apiCall("POST", "/api/admin/maintenance/clear-subscriptions");
-        result.className = "maintenance-result success";
-        result.textContent = JSON.stringify(data, null, 2);
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clear All Subscriptions";
-    });
-
-    $("#clear-notifications-btn").addEventListener("click", async () => {
-      const btn = $("#clear-notifications-btn");
-      const result = $("#clear-notifications-result");
-      if (!confirm("Delete ALL notification records? This cannot be undone.")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const data = await apiCall("POST", "/api/admin/maintenance/clear-notifications");
-        result.className = "maintenance-result success";
-        result.textContent = JSON.stringify(data, null, 2);
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clear All Notifications";
-    });
-
-    $("#clear-identity-graphs-btn").addEventListener("click", async () => {
-      const btn = $("#clear-identity-graphs-btn");
-      const result = $("#clear-identity-graphs-result");
-      if (!confirm("WARNING: This will delete ALL identity graph data.\n\nThis breaks all identity-based suspensions and cross-device/network tracking. This CANNOT be undone.\n\nAre you absolutely sure?")) return;
-      if (!confirm("FINAL CONFIRMATION: Delete ALL identity graphs? Type OK to confirm.")) return;
-      btn.disabled = true;
-      btn.textContent = "Deleting...";
-      result.style.display = "none";
-      try {
-        const data = await apiCall("POST", "/api/admin/maintenance/clear-identity-graphs");
-        result.className = "maintenance-result success";
-        result.textContent = JSON.stringify(data, null, 2);
-        result.style.display = "block";
-      } catch (err) {
-        result.className = "maintenance-result error";
-        result.textContent = err.message;
-        result.style.display = "block";
-      }
-      btn.disabled = false;
-      btn.textContent = "Clear All Identity Graphs";
-    });
+    // NEW MAINTENANCE CARDS — REMOVED (now handled via data attributes + maintenance.js module)
 </script>
 <script src="/js/language-selector.js"></script>
 <script src="/admin/translations.js"></script>

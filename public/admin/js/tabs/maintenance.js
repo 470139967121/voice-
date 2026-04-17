@@ -98,7 +98,10 @@ async function runAction(btnId, resultId, endpoint, confirmMsg) {
 
   try {
     const token = await _getToken();
-    const resp = await fetch(`${_apiBase}/api/cleanup/${endpoint}`, {
+    // Support both short names (e.g. "all-backpacks" → /api/cleanup/all-backpacks)
+    // and full paths (e.g. "/api/admin/maintenance/clear-suggestions")
+    const url = endpoint.startsWith('/') ? `${_apiBase}${endpoint}` : `${_apiBase}/api/cleanup/${endpoint}`;
+    const resp = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
