@@ -7269,14 +7269,8 @@
         const data = await apiCall("GET", `/api/admin/identity-graph/${uid}`);
         renderIdentitySubtabGraph(data);
       } catch (err) {
-        // Try bans/graph endpoint as fallback
-        try {
-          const data = await apiCall("GET", `/api/admin/bans/graph/${uid}`);
-          renderIdentitySubtabGraph(data);
-        } catch (err2) {
-          container.style.display = "none";
-          empty.style.display = "block";
-        }
+        container.style.display = "none";
+        empty.style.display = "block";
       }
     }
 
@@ -14167,7 +14161,7 @@
       cascadePreview.classList.remove("visible");
 
       try {
-        const data = await apiCall("GET", `/api/admin/bans/graph/${uid}`);
+        const data = await apiCall("GET", `/api/admin/identity-graph/${uid}`);
         const identifiers = data.identifiers || [];
 
         if (identifiers.length === 0) {
