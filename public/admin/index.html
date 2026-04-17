@@ -5288,6 +5288,9 @@
         }
         // Eagerly load economy config so pity limit is available for spin monitor
         activateTabModule("economy");
+        // Start alert bell badge refresh + logs auto-refresh
+        await initTabModule('logs');
+        TAB_MODULES['logs']?.startGlobalRefresh?.();
         // Update the Suggestions tab badge on page load (without navigating to
         // the tab) so admins see the pending count immediately on login.
         // Await it so the badge text is populated before tests read it.
