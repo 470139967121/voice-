@@ -6097,7 +6097,7 @@
 
       if (tab === "devices") loadDevices();
       if (tab === "backups") activateTabModule("backups");
-      if (tab === "appeals") loadAppeals("pending");
+      if (tab === "appeals") activateTabModule("appeals");
       if (tab === "reports") { loadReports(); loadReportStats(); }
       if (tab === "gifts") loadGifts();
       if (tab === "economy") loadEconomyConfig();
@@ -6826,153 +6826,8 @@
     // (doSearch / doSearchUpdated removed — doSearchFinal is the authoritative handler)
 
     // --- Appeals ---
-    const appealsList = $("#appeals-list");
-    let currentAppealFilter = "pending";
-
-    for (const btn of $$("[data-appeal-filter]")) {
-      btn.addEventListener("click", () => {
-        for (const b of $$("[data-appeal-filter]")) b.classList.remove("active");
-        btn.classList.add("active");
-        currentAppealFilter = btn.dataset.appealFilter;
-        loadAppeals(currentAppealFilter);
-      });
-    }
-
-    async function loadAppeals(status) {
-      appealsList.innerHTML = '<div style="color:var(--text2);font-size:13px;">Loading...</div>';
-      try {
-        const raw = await apiCall("GET", `/api/appeals?status=${status}`);
-        const appeals = Array.isArray(raw) ? raw : (raw.appeals || []);
-        if (appeals.length === 0) {
-          appealsList.innerHTML = '<div style="color:var(--text2);font-size:13px;font-style:italic;">No appeals found</div>';
-          return;
-        }
-        appealsList.innerHTML = "";
-        for (const appeal of appeals) {
-          const card = document.createElement("div");
-          card.className = "appeal-card";
-          const date = appeal.submittedAt ? new Date(appeal.submittedAt).toLocaleString() : "";
-          const userInfo = appeal.userInfo || {};
-          const originalName = appeal.originalDisplayName || appeal.userDisplayName || userInfo.displayName || "Unknown";
-          const originalPhoto = appeal.originalProfilePhotoUrl || null;
-          const uniqueId = appeal.userUniqueId || userInfo.uniqueId || "?";
-
-          // Profile section with original name/photo
-          const profileHtml = `
-            <div class="appeal-profile">
-              ${originalPhoto
-                ? `<img src="${escapeHtml(originalPhoto)}" alt="${escapeHtml(originalName)}">`
-                : `<div class="placeholder-avatar">?</div>`}
-              <div>
-                <div style="font-weight:600;font-size:14px;">#${uniqueId} — ${escapeHtml(originalName)}</div>
-                ${userInfo.displayName && userInfo.displayName !== originalName
-                  ? `<div style="font-size:11px;color:var(--text2);">Current name: ${escapeHtml(userInfo.displayName)}</div>`
-                  : ""}
-              </div>
-            </div>`;
-
-          // Suspension info section
-          let suspensionHtml = "";
-          if (userInfo.suspensionReason) {
-            const since = userInfo.suspensionStartDate ? new Date(userInfo.suspensionStartDate).toLocaleString() : "unknown";
-            const until = userInfo.suspensionEndDate ? new Date(userInfo.suspensionEndDate).toLocaleString() : "permanent";
-            suspensionHtml = `
-              <div class="appeal-suspension-info">
-                <strong>Reason:</strong> ${escapeHtml(userInfo.suspensionReason)}<br>
-                <strong>Since:</strong> ${since}<br>
-                <strong>Until:</strong> ${until}
-              </div>`;
-          }
-
-          // Reports section
-          const reports = appeal.reports || [];
-          let reportsHtml = "";
-          if (reports.length > 0) {
-            const reportItems = reports.map((r) => {
-              const reportDate = r.timestamp ? new Date(r.timestamp).toLocaleString() : "";
-              const reporterName = r.reporterName || "Unknown";
-              const reporterUid = r.reporterUniqueId || "";
-              const reportStatus = r.status === "resolved" ? `(${escapeHtml(r.resolvedAction || "resolved")})` : `(${escapeHtml(r.status)})`;
-              return `
-                <div class="appeal-report-item">
-                  <div class="report-reason">${escapeHtml(r.reason || "Unknown reason")} ${reportStatus}</div>
-                  <div class="report-meta">
-                    Reported by: #${reporterUid} ${escapeHtml(reporterName)} | ${reportDate}
-                    ${r.type === "message" ? " | Type: Message report" : ""}
-                  </div>
-                  ${r.description ? `<div class="report-description">${escapeHtml(r.description)}</div>` : ""}
-                  ${r.messageText ? `<div class="report-evidence">Reported message: "${escapeHtml(r.messageText)}"</div>` : ""}
-                  ${renderEvidence(r.evidenceUrls)}
-                  ${r.adminNote ? `<div style="margin-top:4px;font-size:11px;color:var(--text2);">Admin note: ${escapeHtml(r.adminNote)}</div>` : ""}
-                </div>`;
-            }).join("");
-
-            reportsHtml = `
-              <div class="appeal-reports">
-                <details>
-                  <summary>Reports & Evidence (${reports.length})</summary>
-                  ${reportItems}
-                </details>
-              </div>`;
-          }
-
-          card.innerHTML = `
-            ${profileHtml}
-            ${suspensionHtml}
-            <div class="appeal-text">${escapeHtml(appeal.appealText || "")}</div>
-            <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">Submitted: ${date}</div>
-            ${status === "pending" ? `
-            <div class="appeal-actions">
-              <input type="text" placeholder="Admin note (optional)" data-note-for="${escapeHtml(appeal.id)}">
-              <button class="btn-approve" data-resolve="${escapeHtml(appeal.id)}" data-status="approved">Approve</button>
-              <button class="btn-deny" data-resolve="${escapeHtml(appeal.id)}" data-status="denied">Deny</button>
-            </div>` : `
-            <div style="font-size:12px;color:var(--text2);">
-              ${appeal.adminNote ? `Note: ${escapeHtml(appeal.adminNote)}` : ""}
-              ${appeal.reviewedAt ? `Reviewed: ${escapeHtml(new Date(appeal.reviewedAt).toLocaleString())}` : ""}
-            </div>`}
-            ${reportsHtml}
-          `;
-          appealsList.appendChild(card);
-        }
-
-        // Bind resolve buttons
-        for (const btn of appealsList.querySelectorAll("[data-resolve]")) {
-          btn.addEventListener("click", async () => {
-            const appealId = btn.dataset.resolve;
-            const newStatus = btn.dataset.status;
-            const noteInput = appealsList.querySelector(`[data-note-for="${appealId}"]`);
-            const adminNote = noteInput ? noteInput.value.trim() : "";
-            btn.disabled = true;
-            try {
-              await apiCall("PATCH", `/api/appeals/${appealId}`, {
-                status: newStatus,
-                ...(adminNote ? { adminNote } : {}),
-              });
-              showToast(`Appeal ${newStatus}`);
-              loadAppeals(currentAppealFilter);
-            } catch (err) {
-              showToast(err.message, "error");
-            }
-            btn.disabled = false;
-          });
-        }
-
-        // Wire up evidence thumbnail clicks in appeals
-        for (const thumb of appealsList.querySelectorAll(".evidence-thumb:not([data-wired])")) {
-          thumb.dataset.wired = "1";
-          thumb.addEventListener("click", () => {
-            openEvidenceLightbox(thumb.dataset.evidenceUrl, thumb.dataset.evidenceType);
-          });
-        }
-      } catch (err) {
-        appealsList.textContent = '';
-        const errDiv = document.createElement('div');
-        errDiv.style.cssText = 'color:var(--danger);font-size:13px;';
-        errDiv.textContent = err.message;
-        appealsList.appendChild(errDiv);
-      }
-    }
+    // REMOVED: loadAppeals, appeal filter listeners, appeal card rendering
+    // — now in /admin/js/tabs/appeals.js module (PR C)
 
     function escapeHtml(str) {
       if (str == null) return '';
