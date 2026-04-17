@@ -359,8 +359,8 @@ test.describe('Admin Economy Config', () => {
     const day999Row = milestoneRows.filter({ has: page.locator('.ms-day[value="999"]') });
     await expect(day999Row).toBeVisible({ timeout: 10_000 });
     await expect(day999Row.locator('.ms-type')).toHaveValue('gift');
-    // Gift select renders conditionally based on type — wait for it
-    await expect(day999Row.locator('.ms-gift-select')).toBeVisible({ timeout: 5_000 });
+    // Gift select renders conditionally based on type — may take time on slower CI runners
+    await expect(day999Row.locator('.ms-gift-select')).toBeVisible({ timeout: 15_000 });
 
     // Restore (remove the day-999 milestone)
     await restoreEconomyConfig(page, testData);

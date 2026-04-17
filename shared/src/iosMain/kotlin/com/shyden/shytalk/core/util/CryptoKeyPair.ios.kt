@@ -33,7 +33,7 @@ import platform.Security.kSecMatchLimitOne
 import platform.Security.kSecPrivateKeyAttrs
 import platform.Security.kSecReturnRef
 
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "CAST_NEVER_SUCCEEDS")
 actual class CryptoKeyPair {
     private var currentTag: String? = null
 
@@ -43,7 +43,7 @@ actual class CryptoKeyPair {
         if (getPrivateKeyRef(alias) != null) return true
 
         // Generate new keypair
-        val tagData = alias.encodeToByteArray().toNSData() ?: return false
+        val tagData = alias.encodeToByteArray().toNSData()
         val attributes =
             mapOf<Any?, Any?>(
                 kSecAttrKeyType to kSecAttrKeyTypeECSECPrimeRandom,
@@ -84,7 +84,7 @@ actual class CryptoKeyPair {
     }
 
     actual fun delete(alias: String) {
-        val tagData = alias.encodeToByteArray().toNSData() ?: return
+        val tagData = alias.encodeToByteArray().toNSData()
         val query =
             mapOf<Any?, Any?>(
                 kSecClass to kSecClassKey,
@@ -95,7 +95,7 @@ actual class CryptoKeyPair {
     }
 
     private fun getPrivateKeyRef(alias: String): platform.Security.SecKeyRef? {
-        val tagData = alias.encodeToByteArray().toNSData() ?: return null
+        val tagData = alias.encodeToByteArray().toNSData()
         val query =
             mapOf<Any?, Any?>(
                 kSecClass to kSecClassKey,

@@ -3,7 +3,6 @@
 package com.shyden.shytalk.core.util
 
 import kotlinx.coroutines.suspendCancellableCoroutine
-import platform.Foundation.NSError
 import platform.LocalAuthentication.LAContext
 import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthenticationWithBiometrics
 import kotlin.coroutines.resume
@@ -33,7 +32,7 @@ actual class BiometricAuth {
                 if (success) {
                     continuation.resume(BiometricResult.Success)
                 } else {
-                    val nsError = error as? NSError
+                    val nsError = error
                     val code = nsError?.code ?: -1
                     // LAError.userCancel = -2, LAError.userFallback = -3
                     if (code == -2L || code == -3L) {

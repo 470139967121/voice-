@@ -40,7 +40,7 @@ private val ALL_KEYS =
         "localPinHash",
     )
 
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "CAST_NEVER_SUCCEEDS")
 actual class SecureStorage {
     actual fun getString(key: String): String? {
         val query =

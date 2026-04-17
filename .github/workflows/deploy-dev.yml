@@ -24,6 +24,10 @@ on:
         description: 'Run sanity checks after deploy (pages load, API responds)'
         type: boolean
         default: true
+      release-notes:
+        description: 'Firebase App Distribution release notes (what to test)'
+        type: string
+        default: ''
 
 permissions:
   contents: write       # needed by playwright-tests.yml allure-report (gh-pages deploy)
@@ -179,17 +183,15 @@ jobs:
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
           groups: internal-testers
           file: ${{ steps.find-apk.outputs.apk_path }}
-          releaseNotes: "Dev build from ${{ github.ref_name }} (${{ github.sha }})"
+          releaseNotes: ${{ inputs.release-notes != '' && inputs.release-notes || format('Dev build from {0} ({1})', github.ref_name, github.sha) }}
 
   distribute-ios:
     name: Distribute iOS to TestFlight
     if: inputs.ios-testers
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
 
       - uses: ./.github/actions/setup-jdk-gradle
 
@@ -216,6 +218,13 @@ jobs:
         if: steps.kmp-cache.outputs.cache-hit != 'true'
         run: ./gradlew :shared:linkReleaseFrameworkIosArm64
 
+      - name: Cache Xcode derived data
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: xcode-derived-${{ hashFiles('iosApp/**', 'shared/build/bin/iosArm64/releaseFramework/**') }}
+          restore-keys: xcode-derived-
+
       - name: Build, archive, and export iOS app
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -229,6 +238,7 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -parallelizeTargets \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="ShyTalk App Store Distribution" \

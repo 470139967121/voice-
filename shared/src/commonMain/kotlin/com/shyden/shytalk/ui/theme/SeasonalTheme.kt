@@ -1,10 +1,9 @@
 package com.shyden.shytalk.ui.theme
 
 import androidx.compose.ui.graphics.Color
-import com.shyden.shytalk.core.util.currentTimeMillis
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 
 data class SeasonalEvent(
     val slug: String,
@@ -54,9 +53,12 @@ object SeasonalTheme {
      * Returns null when no event is active — the default theme should be used.
      */
     fun activeEvent(): SeasonalEvent? {
-        val tz = TimeZone.currentSystemDefault()
-        val now = Instant.fromEpochMilliseconds(currentTimeMillis()).toLocalDateTime(tz).date
-        return activeEventForDate(now.year, now.monthNumber, now.dayOfMonth)
+        val now =
+            Clock.System
+                .now()
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .date
+        return activeEventForDate(now.year, now.month.ordinal + 1, now.day)
     }
 
     private fun dayOfYear(

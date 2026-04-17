@@ -223,12 +223,15 @@ test.describe('Admin Users - Moderation Subtab', () => {
     await expect(deviceBindingSection).toBeVisible({ timeout: 15_000 });
 
     // Wait for the device binding API response to populate the cards.
-    // In CI the API can be slow — poll until the cards div has child content.
+    // The cards div shows "Loading..." while fetching — wait until that clears
+    // and actual device data appears (not just any child element).
     const deviceCards = page.locator('#device-binding-cards');
     await page.waitForFunction(
       (sel) => {
         const el = document.querySelector(sel);
-        return el && el.children.length > 0;
+        if (!el || el.children.length === 0) return false;
+        const text = el.textContent || '';
+        return !text.includes('Loading') && text.length > 0;
       },
       '#device-binding-cards',
       { timeout: 30_000 },
