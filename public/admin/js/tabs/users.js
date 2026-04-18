@@ -846,3 +846,240 @@ export function wireEmailAndClearButtons() {
     addInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doAdd(); });
   }
 }
+
+// ===============================================================
+// CHUNK 3: Moderation subtab - suspension, GCS, warnings, deletion
+// ===============================================================
+
+// -- GCS helpers ------------------------------------------------
+
+export function gcsClass(score) {
+  if (score >= 80) return "gcs-green";
+  if (score >= 60) return "gcs-yellow";
+  if (score >= 40) return "gcs-orange";
+  if (score >= 20) return "gcs-red";
+  return "gcs-darkred";
+}
+
+export function gcsEmoji(score) {
+  if (score >= 80) return "\u{1F60A}";
+  if (score >= 60) return "\u{1F610}";
+  if (score >= 40) return "\u{1F61F}";
+  if (score >= 20) return "\u{1F620}";
+  return "\u{1F621}";
+}
+
+function computeDisplayScore(floor, lastDeductionAt) {
+  if (!lastDeductionAt) return Math.min(100, floor);
+  const deductionTime = new Date(lastDeductionAt).getTime();
+  const monthsSince = (Date.now() - deductionTime) / (30 * 24 * 60 * 60 * 1000);
+  return Math.min(100, Math.floor(floor + 2 * monthsSince));
+}
+
+// -- Suspension section -----------------------------------------
+
+export function populateSuspensionSection(data) {
+  const suspensionSection = $("#suspension-section");
+  const suspensionStatus = $("#suspension-status");
+  const suspendBtn = $("#suspend-btn");
+  const unsuspendBtn = $("#unsuspend-btn");
+  if (suspensionSection) suspensionSection.style.display = "block";
+  if (data.isSuspended) {
+    const since = data.suspensionStartDate ? new Date(data.suspensionStartDate).toLocaleString() : "unknown";
+    const until = data.suspensionEndDate ? new Date(data.suspensionEndDate).toLocaleString() : "permanent";
+    if (suspensionStatus) { suspensionStatus.className = "suspension-status suspended"; suspensionStatus.textContent = "Suspended since " + since + ", until " + until + ". Reason: " + (data.suspensionReason || "No reason provided"); }
+    if (suspendBtn) suspendBtn.style.display = "none";
+    if (unsuspendBtn) unsuspendBtn.style.display = "";
+    const preSuspensionInfo = $("#pre-suspension-info");
+    if (data._preSuspension && preSuspensionInfo) preSuspensionInfo.style.display = "block";
+    else if (preSuspensionInfo) preSuspensionInfo.style.display = "none";
+  } else {
+    if (suspensionStatus) { suspensionStatus.className = "suspension-status not-suspended"; suspensionStatus.textContent = "Not Suspended"; }
+    if (suspendBtn) suspendBtn.style.display = "";
+    if (unsuspendBtn) unsuspendBtn.style.display = "none";
+    const preSuspensionInfo = $("#pre-suspension-info");
+    if (preSuspensionInfo) preSuspensionInfo.style.display = "none";
+  }
+  const suspendReason = $("#suspend-reason"); if (suspendReason) suspendReason.value = "";
+  const suspendEndDate = $("#suspend-end-date"); if (suspendEndDate) suspendEndDate.value = "";
+  const suspendCanAppeal = $("#suspend-can-appeal"); if (suspendCanAppeal) suspendCanAppeal.checked = false;
+}
+
+// -- Deletion section -------------------------------------------
+
+export function populateDeletionSection(data) {
+  const deletionStatusBadge = $("#deletion-status-badge");
+  const deletionNotScheduled = $("#deletion-not-scheduled");
+  const scheduleDeletionBtn = $("#schedule-deletion-btn");
+  const cancelDeletionBtn = $("#cancel-deletion-btn");
+  if (data.deletionScheduledAt) {
+    const executeDate = new Date(data.deletionExecuteAt).toLocaleDateString();
+    const msRemaining = data.deletionExecuteAt - Date.now();
+    const daysRemaining = Math.max(0, Math.ceil(msRemaining / 86400000));
+    if (deletionStatusBadge) { deletionStatusBadge.textContent = "Deletion scheduled \u2014 " + daysRemaining + " days remaining (" + executeDate + ")"; deletionStatusBadge.style.display = "block"; }
+    if (deletionNotScheduled) deletionNotScheduled.style.display = "none";
+    if (scheduleDeletionBtn) scheduleDeletionBtn.style.display = "none";
+    if (cancelDeletionBtn) cancelDeletionBtn.style.display = "";
+  } else {
+    if (deletionStatusBadge) deletionStatusBadge.style.display = "none";
+    if (deletionNotScheduled) deletionNotScheduled.style.display = "block";
+    if (scheduleDeletionBtn) scheduleDeletionBtn.style.display = "";
+    if (cancelDeletionBtn) cancelDeletionBtn.style.display = "none";
+  }
+}
+
+// -- GCS section ------------------------------------------------
+
+export function populateGcsSection(data) {
+  const gcsSection = $("#gcs-section");
+  const gcsBadgeUser = $("#gcs-badge-user");
+  const gcsFloor = $("#gcs-floor");
+  const gcsWarnings = $("#gcs-warnings");
+  const gcsLastDeduction = $("#gcs-last-deduction");
+  if (gcsSection) gcsSection.style.display = "block";
+  const floor = data.gcsScore ?? data.goodCharacterScore ?? 100;
+  const lastDeduction = data.gcsLastDeductionAt ?? data.goodCharacterLastDeductionAt ?? null;
+  const display = data.gcsDisplayScore ?? computeDisplayScore(floor, lastDeduction);
+  if (gcsBadgeUser) { gcsBadgeUser.className = "gcs-badge " + gcsClass(display); gcsBadgeUser.textContent = gcsEmoji(display) + " " + display; }
+  if (gcsFloor) gcsFloor.textContent = floor;
+  if (gcsWarnings) gcsWarnings.textContent = data.warningCount || 0;
+  if (gcsLastDeduction) gcsLastDeduction.textContent = lastDeduction ? new Date(lastDeduction).toLocaleString() : "Never";
+}
+
+// -- Report history ---------------------------------------------
+
+export async function loadReportHistory(uid) {
+  if (!uid || uid === "undefined" || uid === "null") return;
+  const reportHistorySection = $("#report-history-section");
+  const reportHistoryList = $("#report-history-list");
+  if (reportHistorySection) reportHistorySection.style.display = "block";
+  if (!reportHistoryList) return;
+  reportHistoryList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+  try {
+    const result = await apiCall("GET", "/api/reports?status=resolved&userId=" + uid);
+    const allReports = Array.isArray(result) ? result : (result.users ? result.users.flatMap((u) => u.reports) : []);
+    if (allReports.length === 0) { reportHistoryList.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;">No report history</div>'; return; }
+    reportHistoryList.innerHTML = "";
+    for (const r of allReports.slice(0, 10)) {
+      const div = document.createElement("div");
+      div.className = "report-history-item";
+      div.innerHTML = "<strong>" + escapeHtml(r.reason || "Unknown") + "</strong> \u2014 " + escapeHtml(r.resolvedAction || "?") + (r.severity ? " (Severity: " + r.severity + ")" : "") + "<br><span style=\"color:var(--text2)\">" + (r.adminNote ? escapeHtml(r.adminNote) : "") + "</span><br><span style=\"color:var(--text2);font-size:11px\">" + (r.resolvedAt ? escapeHtml(new Date(r.resolvedAt).toLocaleString()) : "") + "</span>";
+      reportHistoryList.appendChild(div);
+    }
+  } catch (err) {
+    reportHistoryList.innerHTML = '<div style="color:var(--danger);font-size:12px;">' + escapeHtml(err.message) + "</div>";
+  }
+}
+
+// -- Warning system ---------------------------------------------
+
+let _warningLastTimestamp = null;
+
+export function resetWarningForm() {
+  const directWarnReason = $("#direct-warn-reason");
+  const directWarnNote = $("#direct-warn-note");
+  if (directWarnReason) directWarnReason.value = "";
+  if (directWarnNote) directWarnNote.value = "";
+  const defaultSev = document.querySelector('input[name="direct-warn-severity"][value="3"]');
+  if (defaultSev) defaultSev.checked = true;
+}
+
+export async function loadWarningHistory(uid, append) {
+  const warningHistoryList = document.getElementById("warning-history-list");
+  const warningLoadMoreBtn = document.getElementById("warning-load-more-btn");
+  if (!warningHistoryList) return;
+  if (!append) {
+    warningHistoryList.textContent = "";
+    _warningLastTimestamp = null;
+    const ld = document.createElement("div");
+    ld.style.cssText = "color:var(--text2);font-size:13px;font-style:italic;";
+    ld.textContent = "Loading...";
+    warningHistoryList.appendChild(ld);
+  }
+  try {
+    let url = "/api/user/" + uid + "/warnings?limit=20";
+    if (_warningLastTimestamp) url += "&startAfter=" + _warningLastTimestamp;
+    const data = await apiCall("GET", url);
+    const warnings = data.warnings || [];
+    if (!append) warningHistoryList.textContent = "";
+    if (warnings.length === 0 && !append) {
+      const ed = document.createElement("div");
+      ed.style.cssText = "color:var(--text2);font-size:13px;font-style:italic;";
+      ed.textContent = "No warnings";
+      warningHistoryList.appendChild(ed);
+      if (warningLoadMoreBtn) warningLoadMoreBtn.style.display = "none";
+      return;
+    }
+    for (const w of warnings) {
+      warningHistoryList.appendChild(renderWarningItem(w, uid));
+      _warningLastTimestamp = w.createdAt;
+    }
+    if (warningLoadMoreBtn) warningLoadMoreBtn.style.display = data.hasMore ? "block" : "none";
+  } catch (err) {
+    if (!append) warningHistoryList.textContent = "";
+    const ed = document.createElement("div");
+    ed.style.cssText = "color:var(--danger);font-size:12px;";
+    ed.textContent = err.message;
+    warningHistoryList.appendChild(ed);
+    if (warningLoadMoreBtn) warningLoadMoreBtn.style.display = "none";
+  }
+}
+
+function renderWarningItem(w, uid) {
+  const item = document.createElement("div");
+  item.className = "warning-item" + (w.revoked ? " revoked" : "");
+  item.dataset.warningId = w.id;
+  const header = document.createElement("div"); header.className = "warning-item-header";
+  const left = document.createElement("div");
+  const badge = document.createElement("span"); badge.className = "warning-source-badge " + (w.source || "direct"); badge.textContent = w.source || "direct"; left.appendChild(badge);
+  const sev = document.createElement("span"); sev.style.cssText = "margin-left:8px;color:var(--text2);font-size:12px;"; sev.textContent = "Severity " + w.severity + " (-" + (w.gcsDeduction || 0) + " GCS)"; left.appendChild(sev);
+  header.appendChild(left);
+  const right = document.createElement("div"); right.style.cssText = "display:flex;align-items:center;gap:6px;";
+  const dateSpan = document.createElement("span"); dateSpan.style.cssText = "color:var(--text2);font-size:11px;"; dateSpan.textContent = w.createdAt ? new Date(w.createdAt).toLocaleString() : ""; right.appendChild(dateSpan);
+  if (!w.revoked) { const rb = document.createElement("button"); rb.className = "btn-revoke-warning"; rb.textContent = "Revoke"; rb.addEventListener("click", () => revokeWarning(uid, w.id, w.gcsDeduction || 0, rb)); right.appendChild(rb); }
+  else { const rs = document.createElement("span"); rs.style.cssText = "color:var(--text2);font-size:11px;font-style:italic;"; rs.textContent = "Revoked"; right.appendChild(rs); }
+  header.appendChild(right); item.appendChild(header);
+  const reason = document.createElement("div"); reason.style.marginTop = "4px"; reason.textContent = w.reason || ""; item.appendChild(reason);
+  if (w.adminNote) { const note = document.createElement("div"); note.style.cssText = "color:var(--text2);font-size:12px;margin-top:2px;font-style:italic;"; note.textContent = "Note: " + w.adminNote; item.appendChild(note); }
+  const meta = document.createElement("div"); meta.style.cssText = "color:var(--text2);font-size:11px;margin-top:2px;"; meta.textContent = "By: " + (w.issuedByName || w.issuedBy || "System") + " | GCS: " + (w.gcsBefore || "?") + " \u2192 " + (w.gcsAfter ?? "?"); item.appendChild(meta);
+  return item;
+}
+
+export async function revokeWarning(uid, warningId, deduction, btn) {
+  if (!confirm("Revoke this warning? +" + deduction + " GCS will be restored.")) return;
+  btn.disabled = true; btn.textContent = "...";
+  try {
+    await apiCall("POST", "/api/user/" + uid + "/warnings/" + warningId + "/revoke");
+    showToast("Warning revoked, +" + deduction + " GCS restored");
+    const data = await apiCall("GET", "/api/user/" + uid);
+    populateGcsSection(data);
+    loadWarningHistory(uid, false);
+  } catch (err) { showToast(err.message, "error"); btn.disabled = false; btn.textContent = "Revoke"; }
+}
+
+// -- populateFormFull - master form populator --------------------
+
+export async function populateFormFull(data) {
+  await populateForm(data);
+  populateSuspensionSection(data);
+  populateGcsSection(data);
+  resetWarningForm();
+  loadWarningHistory(String(data.uniqueId || data.uid), false);
+  loadReportHistory(String(data.uniqueId || data.uid));
+  populateDeletionSection(data);
+  const banner = document.getElementById("suspended-banner");
+  if (window._suspensionTimer) { clearTimeout(window._suspensionTimer); window._suspensionTimer = null; }
+  if (data.isSuspended) {
+    if (banner) banner.style.display = "block";
+    if (data.suspensionEndDate) {
+      const msLeft = new Date(data.suspensionEndDate).getTime() - Date.now();
+      if (msLeft <= 0) { if (banner) banner.style.display = "none"; }
+      else { window._suspensionTimer = setTimeout(() => { if (banner) banner.style.display = "none"; }, msLeft); }
+    }
+  } else { if (banner) banner.style.display = "none"; }
+  document.getElementById("user-subtabs").style.display = "flex";
+  switchUserSubtab("profile");
+}
+
+// Wire populateFormFull into the forward declaration
+_register("populateFormFull", populateFormFull);
