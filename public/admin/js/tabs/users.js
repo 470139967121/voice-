@@ -257,6 +257,9 @@ export function init(deps) {
   wireSecurityGlobals();
   wireEconomyListeners();
   wireIdentityListeners();
+  wireBansListeners();
+  wireTempIdListeners();
+  wirePreviewListeners();
   attachAutoSaveListeners();
 }
 
@@ -1083,8 +1086,21 @@ export async function populateFormFull(data) {
   populateEconomySection(data);
   await populateGiftSelect();
   await loadBackpack(String(data.uniqueId || data.uid));
-  // Bans, device binding, temp ID, preview, stalkers — still inline (Chunk 7b)
-  // These are called via the inline populateFormFull hook chain until migrated.
+  // Bans, device binding, temp ID, preview, stalkers
+  const uid = String(data.uniqueId || data.uid);
+  populateBansSection(uid);
+  populateDeviceBindingCard(uid);
+  populateTempId(data);
+  updateCurrentPreview();
+  updateDraftPreview();
+  loadStalkers(currentUid);
+  const profilePreview = document.getElementById("profile-preview");
+  if (profilePreview) profilePreview.style.display = "flex";
+  // Update character counters
+  Object.keys(CHAR_LIMITS).forEach(function(field) {
+    const el = document.querySelector('[data-field="' + field + '"]');
+    if (el) updateCharCounter(field, (el.value || "").length);
+  });
   // Suspended banner — auto-hide when timed suspension expires
   const banner = document.getElementById("suspended-banner");
   if (window._suspensionTimer) { clearTimeout(window._suspensionTimer); window._suspensionTimer = null; }
@@ -1424,3 +1440,183 @@ export function wireIdentityListeners() {
 
 // Wire forward declarations
 _register("loadIdentitySubtabGraph", loadIdentitySubtabGraph);
+
+// ===============================================================
+// CHUNK 7a: Bans, device binding, temp ID, preview, stalkers, identity graph tabular
+// ===============================================================
+
+export async function populateBansSection(uid) {
+  const bansDeviceList = $("#bans-device-list");
+  const bansNetworkList = $("#bans-network-list");
+  const bansDevicesBoundList = $("#bans-devices-bound-list");
+  if (bansDeviceList) bansDeviceList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+  if (bansNetworkList) bansNetworkList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+  if (bansDevicesBoundList) bansDevicesBoundList.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+  try {
+    const [bansData, devicesData] = await Promise.all([
+      apiCall("GET", `/api/admin/bans/user/${uid}`),
+      apiCall("GET", `/api/admin/devices/user/${uid}`),
+    ]);
+    // Device bans
+    const deviceBans = bansData.deviceBans || [];
+    if (bansDeviceList) {
+      if (deviceBans.length === 0) { bansDeviceList.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;">No device bans</div>'; }
+      else { bansDeviceList.textContent = ""; deviceBans.forEach(b => { const item = document.createElement("div"); item.className = "ban-item"; item.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;"; const info = document.createElement("div"); info.className = "ban-item-info"; info.style.flex = "1"; const idSpan = document.createElement("span"); idSpan.textContent = b.deviceId || b.id; const detailSpan = document.createElement("span"); detailSpan.className = "ban-item-type"; detailSpan.textContent = (b.reason || "No reason") + " | " + (b.duration || "permanent") + (b.autoApplied ? " (auto)" : ""); info.appendChild(idSpan); info.appendChild(detailSpan); item.appendChild(info); const removeBtn = document.createElement("button"); removeBtn.textContent = "Remove"; removeBtn.style.cssText = "padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;background:var(--danger);color:#fff;white-space:nowrap;"; removeBtn.addEventListener("click", async () => { if (!confirm("Remove this device ban?")) return; try { await apiCall("DELETE", "/api/admin/bans/device/" + encodeURIComponent(b.deviceId || b.id)); showToast("Device ban removed", "success"); populateBansSection(currentUid); } catch (err) { showToast(err.message, "error"); } }); item.appendChild(removeBtn); bansDeviceList.appendChild(item); }); }
+    }
+    // Network bans
+    const networkBans = bansData.networkBans || [];
+    if (bansNetworkList) {
+      if (networkBans.length === 0) { bansNetworkList.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;">No network bans</div>'; }
+      else { bansNetworkList.textContent = ""; networkBans.forEach(b => { const item = document.createElement("div"); item.className = "ban-item"; item.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;"; const info = document.createElement("div"); info.className = "ban-item-info"; info.style.flex = "1"; const valSpan = document.createElement("span"); valSpan.textContent = (b.value || b.id) + " (" + (b.type || "ip") + ")"; const detailSpan = document.createElement("span"); detailSpan.className = "ban-item-type"; detailSpan.textContent = (b.reason || "No reason") + " | " + (b.duration || "permanent") + (b.autoApplied ? " (auto)" : ""); info.appendChild(valSpan); info.appendChild(detailSpan); item.appendChild(info); const removeBtn = document.createElement("button"); removeBtn.textContent = "Remove"; removeBtn.style.cssText = "padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;background:var(--danger);color:#fff;white-space:nowrap;"; removeBtn.addEventListener("click", async () => { if (!confirm("Remove this network ban?")) return; try { await apiCall("DELETE", "/api/admin/bans/network/" + encodeURIComponent(b.id)); showToast("Network ban removed", "success"); populateBansSection(currentUid); } catch (err) { showToast(err.message, "error"); } }); item.appendChild(removeBtn); bansNetworkList.appendChild(item); }); }
+    }
+    // Bound devices
+    const devices = devicesData.devices || [];
+    const bannedDeviceIds = new Set(deviceBans.map(b => b.deviceId || b.id));
+    if (bansDevicesBoundList) {
+      if (devices.length === 0) { bansDevicesBoundList.textContent = ""; const emptyMsg = document.createElement("div"); emptyMsg.style.cssText = "color:var(--text2);font-size:12px;font-style:italic;"; emptyMsg.textContent = "No bound devices"; bansDevicesBoundList.appendChild(emptyMsg); }
+      else { bansDevicesBoundList.textContent = ""; devices.forEach(d => { const isBanned = bannedDeviceIds.has(d.id); const ban = isBanned ? deviceBans.find(b => (b.deviceId || b.id) === d.id) : null; const deviceLabel = (d.manufacturer ? d.manufacturer + " " : "") + (d.model || d.id); const card = document.createElement("div"); card.className = "device-card" + (isBanned ? " banned" : ""); const header = document.createElement("div"); header.className = "device-card-header"; const chevron = document.createElement("span"); chevron.className = "chevron"; chevron.style.cssText = "font-size:10px;color:var(--text2);"; chevron.textContent = "\u25B6"; const labelSpan = document.createElement("span"); labelSpan.style.flex = "1"; labelSpan.textContent = deviceLabel; const badge = document.createElement("span"); badge.className = "device-ban-badge " + (isBanned ? "banned" : "active"); badge.textContent = isBanned ? "BANNED" : "Active"; header.appendChild(chevron); header.appendChild(labelSpan); header.appendChild(badge); const body = document.createElement("div"); body.className = "device-card-body"; body.style.display = "none"; const grid = document.createElement("div"); grid.className = "device-info-grid"; [["Manufacturer", d.manufacturer],["Model", d.model],["OS", d.osVersion],["App Version", d.appVersion],["Screen", d.screenResolution],["Density", d.density],["Network", d.networkType],["Carrier", d.carrier],["Last IP", d.lastIp],["ISP", d.isp],["ASN", d.asn],["Country", d.country],["Region", d.region],["First Seen", d.firstSeen ? new Date(d.firstSeen).toLocaleString() : null],["Last Seen", d.lastSeen ? new Date(d.lastSeen).toLocaleString() : null],["Device ID", d.id]].forEach(([label, value]) => { if (value == null || value === "") return; const item = document.createElement("div"); item.className = "device-info-item"; const lbl = document.createElement("span"); lbl.className = "label"; lbl.textContent = label + ": "; const val = document.createElement("span"); val.className = "value"; val.textContent = String(value); item.appendChild(lbl); item.appendChild(val); grid.appendChild(item); }); body.appendChild(grid); if (isBanned && ban) { const banInfo = document.createElement("div"); banInfo.style.cssText = "margin-top:8px;padding:8px;background:rgba(231,76,60,0.1);border-radius:6px;font-size:12px;"; banInfo.innerHTML = "<div><strong>Reason: </strong>" + escapeHtml(ban.reason || "No reason") + "</div><div><strong>Duration: </strong>" + escapeHtml(ban.duration || "Permanent") + "</div>" + (ban.createdAt ? "<div><strong>Banned: </strong>" + escapeHtml(new Date(ban.createdAt).toLocaleString()) + "</div>" : ""); body.appendChild(banInfo); const unbanBtn = document.createElement("button"); unbanBtn.setAttribute("data-ban-action", "unban"); unbanBtn.setAttribute("data-device-id", d.id); unbanBtn.style.cssText = "margin-top:8px;padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:#2ecc71;color:#fff;"; unbanBtn.textContent = "Unban This Device"; body.appendChild(unbanBtn); } else if (!isBanned) { const actionRow = document.createElement("div"); actionRow.style.cssText = "margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;"; const reasonInput = document.createElement("input"); reasonInput.type = "text"; reasonInput.className = "ban-reason-input"; reasonInput.placeholder = "Reason (optional)..."; reasonInput.style.cssText = "flex:1;min-width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface1);color:var(--text);font-size:12px;"; const durationSelect = document.createElement("select"); durationSelect.className = "ban-duration-select"; durationSelect.style.cssText = "padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface1);color:var(--text);font-size:12px;"; [["", "Permanent"], ["1h", "1 Hour"], ["24h", "24 Hours"], ["7d", "7 Days"], ["30d", "30 Days"]].forEach(([val, txt]) => { const opt = document.createElement("option"); opt.value = val; opt.textContent = txt; durationSelect.appendChild(opt); }); const banBtn = document.createElement("button"); banBtn.setAttribute("data-ban-action", "ban"); banBtn.setAttribute("data-device-id", d.id); banBtn.style.cssText = "padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:var(--danger);color:#fff;"; banBtn.textContent = "Ban This Device"; actionRow.appendChild(reasonInput); actionRow.appendChild(durationSelect); actionRow.appendChild(banBtn); body.appendChild(actionRow); } card.appendChild(header); card.appendChild(body); bansDevicesBoundList.appendChild(card); }); }
+    }
+    // Also load identity graph tabular view
+    loadIdentityGraphTabular(uid);
+  } catch (err) {
+    if (bansDeviceList) bansDeviceList.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load</div>';
+    if (bansNetworkList) bansNetworkList.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load</div>';
+    if (bansDevicesBoundList) bansDevicesBoundList.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load</div>';
+  }
+}
+
+export async function populateDeviceBindingCard(uid) {
+  const section = $("#device-binding-section");
+  const emptyEl = $("#device-binding-empty");
+  const cardsEl = $("#device-binding-cards");
+  if (section) section.style.display = "block";
+  if (cardsEl) cardsEl.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading...</div>';
+  if (emptyEl) emptyEl.style.display = "none";
+  try {
+    const data = await apiCall("GET", `/api/admin/devices/user/${uid}`);
+    const devices = data.devices || [];
+    if (devices.length === 0) { if (emptyEl) emptyEl.style.display = "block"; if (cardsEl) cardsEl.innerHTML = ""; return; }
+    if (cardsEl) cardsEl.innerHTML = devices.map(d => { const rows = [["Manufacturer", d.manufacturer || "Unknown"],["Model", d.model || "Unknown"],["OS Version", d.osVersion || "N/A"],["App Version", (d.appVersion || "N/A") + (d.buildNumber ? " (" + d.buildNumber + ")" : "")],["Screen", d.screenResolution || "N/A"],["Density", d.screenDensity || "N/A"],["Network Type", d.networkType || "N/A"],["Carrier", d.carrier || "N/A"],["Last IP", d.lastIp || "N/A"],["ISP", d.isp || "N/A"],["ASN", d.asn || "N/A"],["Country", d.country || "N/A"],["Region", d.region || "N/A"],["First Seen", d.firstSeen ? new Date(d.firstSeen).toLocaleString() : "N/A"],["Last Seen", d.lastSeen ? new Date(d.lastSeen).toLocaleString() : "N/A"]]; return '<div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:8px;"><div style="font-weight:600;font-size:14px;margin-bottom:8px;color:var(--text);">' + escapeHtml((d.manufacturer || "") + " " + (d.model || d.id)) + '</div><div style="display:grid;grid-template-columns:140px 1fr;gap:4px 12px;font-size:12px;">' + rows.map(([label, val]) => '<div style="color:var(--text2);font-weight:500;">' + label + '</div><div style="color:var(--text);">' + escapeHtml(String(val)) + '</div>').join("") + '</div><div style="margin-top:8px;font-size:11px;color:var(--text2);">Device ID: ' + escapeHtml(d.id) + '</div></div>'; }).join("");
+  } catch (err) { if (cardsEl) cardsEl.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load: ' + escapeHtml(err.message) + '</div>'; }
+}
+
+export function populateTempId(data) {
+  const currentEl = document.getElementById("temp-id-current");
+  const inputEl = document.getElementById("temp-id-input");
+  const expiryEl = document.getElementById("temp-id-expiry");
+  const resultEl = document.getElementById("temp-id-check-result");
+  if (resultEl) resultEl.textContent = "";
+  if (data.tempUniqueId && data.tempUniqueIdExpiry && data.tempUniqueIdExpiry > Date.now()) {
+    if (inputEl) inputEl.value = data.tempUniqueId;
+    const d = new Date(data.tempUniqueIdExpiry);
+    const pad = n => String(n).padStart(2, "0");
+    if (expiryEl) expiryEl.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    if (currentEl) currentEl.innerHTML = "Active temp ID: <strong>" + escapeHtml(String(data.tempUniqueId)) + "</strong> (expires " + escapeHtml(d.toLocaleString()) + ")";
+  } else {
+    if (inputEl) inputEl.value = "";
+    if (expiryEl) expiryEl.value = "";
+    if (currentEl) currentEl.textContent = data.tempUniqueId ? "Temp ID expired" : "No temporary ID set";
+  }
+}
+
+// Profile preview helpers
+const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
+
+export function updateCurrentPreview() {
+  if (!currentUid) return;
+  const u = loadedData;
+  const pcName = document.getElementById("pc-name"); if (pcName) pcName.textContent = u.displayName || "";
+  const pcId = document.getElementById("pc-id"); if (pcId) pcId.textContent = u.uniqueId ? "#" + u.uniqueId : "";
+  const pcBadge = document.getElementById("pc-badge"); if (pcBadge) pcBadge.textContent = u.userType || "";
+  const pcDesc = document.getElementById("pc-desc"); if (pcDesc) pcDesc.textContent = u.description || "";
+  setPreviewFlag("pc-flag", u.nationality);
+  setPreviewImage("pc-avatar", u.profilePhotoUrl);
+  setPreviewCoverImage("pc-cover", u.coverPhotoUrl);
+  setPreviewCounts("pc-counts", u);
+}
+
+export function updateDraftPreview() {
+  if (!currentUid) return;
+  const getVal = function(sel) { const el = document.querySelector(sel); return el ? (el.type === "checkbox" ? el.checked : el.value) : ""; };
+  const pdName = document.getElementById("pd-name"); if (pdName) pdName.textContent = getVal('[data-field="displayName"]') || "";
+  const pdId = document.getElementById("pd-id"); if (pdId) pdId.textContent = loadedData.uniqueId ? "#" + loadedData.uniqueId : "";
+  const pdBadge = document.getElementById("pd-badge"); if (pdBadge) pdBadge.textContent = getVal('[data-field="userType"]') || "";
+  const pdDesc = document.getElementById("pd-desc"); if (pdDesc) pdDesc.textContent = getVal('[data-field="description"]') || "";
+  setPreviewFlag("pd-flag", getVal('[data-field="nationality"]'));
+  setPreviewImage("pd-avatar", getVal('[data-field="profilePhotoUrl"]'));
+  setPreviewCoverImage("pd-cover", getVal('[data-field="coverPhotoUrl"]'));
+  setPreviewCounts("pd-counts", loadedData);
+}
+
+function setPreviewFlag(id, nationality) {
+  const el = document.getElementById(id); if (!el) return;
+  el.textContent = nationality ? codeToFlag(nationality) + " " + (countryNames.of(nationality) || nationality) : "";
+}
+function setPreviewImage(id, url) { const el = document.getElementById(id); if (!el) return; el.src = url || ""; el.style.display = url ? "inline-block" : "none"; }
+function setPreviewCoverImage(id, url) { const el = document.getElementById(id); if (!el) return; el.style.backgroundImage = url ? "url(" + url + ")" : ""; el.style.backgroundColor = url ? "" : "#333"; }
+function setPreviewCounts(id, data) { const el = document.getElementById(id); if (!el) return; const following = Array.isArray(data.followingIds) ? data.followingIds.length : 0; const followers = Array.isArray(data.followerIds) ? data.followerIds.length : 0; const stalkers = data._stalkerCount !== undefined ? data._stalkerCount : "..."; el.textContent = "Following: " + following + " | Followers: " + followers + " | Stalkers: " + stalkers; }
+
+export async function loadStalkers(uid) {
+  try {
+    const data = await apiCall("GET", "/api/user/" + uid + "/stalkers");
+    loadedData._stalkerCount = data.count;
+    const container = document.getElementById("stalkers-list"); if (!container) return;
+    while (container.firstChild) container.removeChild(container.firstChild);
+    if (data.stalkers.length === 0) { const empty = document.createElement("span"); empty.style.cssText = "color:var(--text2);font-style:italic;"; empty.textContent = "No stalkers"; container.appendChild(empty); }
+    else { data.stalkers.forEach(function(id) { const tag = document.createElement("span"); tag.style.cssText = "display:inline-block;padding:2px 8px;margin:2px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:12px;color:var(--text);"; tag.textContent = id; container.appendChild(tag); }); }
+    updateCurrentPreview(); updateDraftPreview();
+  } catch (err) { console.error("Failed to load stalkers:", err); }
+}
+
+// Identity graph tabular view (inside Bans section, distinct from subtab graph)
+async function loadIdentityGraphTabular(uid) {
+  const card = $("#identity-graph-card");
+  const tbody = $("#ig-table-body");
+  const cascadePreview = $("#ig-cascade-preview");
+  if (!card || !tbody) return;
+  card.style.display = "block";
+  tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text2);font-size:12px;">Loading...</td></tr>';
+  if (cascadePreview) cascadePreview.classList.remove("visible");
+  try {
+    const data = await apiCall("GET", `/api/admin/identity-graph/${uid}`);
+    const identifiers = data.identifiers || [];
+    if (identifiers.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text2);font-size:12px;font-style:italic;">No identity graph data</td></tr>'; }
+    else { tbody.textContent = ""; identifiers.forEach(ident => { const tr = document.createElement("tr"); const tdType = document.createElement("td"); tdType.textContent = ident.type || "unknown"; tr.appendChild(tdType); const tdValue = document.createElement("td"); tdValue.textContent = ident.value || ""; tdValue.style.cssText = "font-family:monospace;font-size:11px;word-break:break-all;"; tr.appendChild(tdValue); const tdMeta = document.createElement("td"); tdMeta.textContent = ident.metadata || ""; tdMeta.style.cssText = "font-size:11px;color:var(--text2);"; tr.appendChild(tdMeta); const tdStatus = document.createElement("td"); if (ident.suspended) { tdStatus.className = "ig-suspended"; tdStatus.textContent = "Suspended" + (ident.suspendedUntil ? " until " + new Date(ident.suspendedUntil).toLocaleDateString() : " (permanent)"); } else { tdStatus.className = "ig-active"; tdStatus.textContent = "Active"; } tr.appendChild(tdStatus); tbody.appendChild(tr); }); }
+    if (data.cascadeInfo && cascadePreview) { cascadePreview.textContent = "This will also affect: " + (data.cascadeInfo.devices || 0) + " devices, " + (data.cascadeInfo.networks || 0) + " networks, " + (data.cascadeInfo.accounts || 0) + " accounts"; cascadePreview.classList.add("visible"); }
+  } catch (err) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);font-size:12px;">Failed to load: ' + escapeHtml(err.message) + '</td></tr>'; }
+}
+
+// Wire remaining event listeners
+export function wireBansListeners() {
+  const bansDevicesBoundList = $("#bans-devices-bound-list");
+  if (bansDevicesBoundList) {
+    bansDevicesBoundList.addEventListener("click", (e) => { const header = e.target.closest(".device-card-header"); if (!header) return; const body = header.nextElementSibling; const chevron = header.querySelector(".chevron"); if (body) { body.style.display = body.style.display === "none" ? "block" : "none"; if (chevron) chevron.textContent = body.style.display === "none" ? "\u25B6" : "\u25BC"; } });
+    bansDevicesBoundList.addEventListener("click", async (e) => { const btn = e.target.closest("[data-ban-action]"); if (!btn) return; const action = btn.dataset.banAction; const deviceId = btn.dataset.deviceId; if (action === "ban") { const reasonInput = btn.closest(".device-card-body")?.querySelector(".ban-reason-input"); const durationSelect = btn.closest(".device-card-body")?.querySelector(".ban-duration-select"); try { await apiCall("POST", "/api/admin/bans/device", { deviceId, reason: reasonInput?.value?.trim() || null, duration: durationSelect?.value || null, linkedUniqueId: currentUid }); showToast("Device banned", "success"); populateBansSection(currentUid); } catch (err) { showToast(err.message, "error"); } } else if (action === "unban") { if (!confirm("Unban this device?")) return; try { await apiCall("DELETE", `/api/admin/bans/device/${deviceId}`); showToast("Device unbanned", "success"); populateBansSection(currentUid); } catch (err) { showToast(err.message, "error"); } } });
+  }
+  const banAllBtn = $("#bans-ban-all-devices");
+  if (banAllBtn) banAllBtn.addEventListener("click", async () => { if (!currentUid) return; if (!confirm("Ban all devices for this user?")) return; const reason = prompt("Reason (optional):") || ""; try { const devicesData = await apiCall("GET", `/api/admin/devices/user/${currentUid}`); const devices = devicesData.devices || []; if (devices.length === 0) { showToast("No devices to ban", "error"); return; } await Promise.all(devices.map(d => apiCall("POST", "/api/admin/bans/device", { deviceId: d.id, reason, linkedUniqueId: currentUid }))); showToast("Banned " + devices.length + " device(s)", "success"); populateBansSection(currentUid); } catch (err) { showToast("Failed: " + err.message, "error"); } });
+  const banIpBtn = $("#bans-ban-last-ip");
+  if (banIpBtn) banIpBtn.addEventListener("click", async () => { if (!currentUid) return; try { const devicesData = await apiCall("GET", `/api/admin/devices/user/${currentUid}`); const devices = devicesData.devices || []; const lastDevice = devices.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0))[0]; if (!lastDevice || !lastDevice.lastIp) { showToast("No IP address found", "error"); return; } if (!confirm("Ban IP " + lastDevice.lastIp + "?")) return; const reason = prompt("Reason (optional):") || ""; await apiCall("POST", "/api/admin/bans/network", { type: "ip", value: lastDevice.lastIp, reason, linkedUniqueId: currentUid }); showToast("IP banned", "success"); populateBansSection(currentUid); } catch (err) { showToast("Failed: " + err.message, "error"); } });
+  const unbanAllBtn = $("#bans-unban-all");
+  if (unbanAllBtn) unbanAllBtn.addEventListener("click", async () => { if (!currentUid) return; if (!confirm("Remove all bans for this user?")) return; try { const result = await apiCall("POST", `/api/admin/bans/unban-all/${currentUid}`); showToast("Removed " + (result.removed || 0) + " ban(s)", "success"); populateBansSection(currentUid); } catch (err) { showToast("Failed: " + err.message, "error"); } });
+  const viewLogsBtn = $("#bans-view-logs");
+  if (viewLogsBtn) viewLogsBtn.addEventListener("click", () => { if (!currentUid) return; const logsUserFilter = $("#log-filter-userId"); if (logsUserFilter) logsUserFilter.value = currentUid; _switchTab("logs"); });
+  // Identity graph suspend/unsuspend (tabular version)
+  const igSuspendBtn = $("#ig-suspend-btn");
+  if (igSuspendBtn) igSuspendBtn.addEventListener("click", async () => { if (!currentUid) return; const duration = $("#ig-duration-picker")?.value; const scope = $("#ig-scope-picker")?.value; if (!confirm("Suspend identity graph for this user (" + duration + ", " + scope + ")?")) return; try { await apiCall("PUT", `/api/admin/bans/graph/${currentUid}`, { action: "suspend", duration, scope }); showToast("Identity graph suspended", "success"); populateBansSection(currentUid); } catch (err) { showToast(err.message, "error"); } });
+  const igUnsuspendBtn = $("#ig-unsuspend-btn");
+  if (igUnsuspendBtn) igUnsuspendBtn.addEventListener("click", async () => { if (!currentUid) return; if (!confirm("Unsuspend identity graph for this user?")) return; try { await apiCall("PUT", `/api/admin/bans/graph/${currentUid}`, { action: "unsuspend" }); showToast("Identity graph unsuspended", "success"); populateBansSection(currentUid); } catch (err) { showToast(err.message, "error"); } });
+}
+
+export function wireTempIdListeners() {
+  const checkBtn = document.getElementById("temp-id-check");
+  if (checkBtn) checkBtn.addEventListener("click", async () => { const id = parseInt(document.getElementById("temp-id-input")?.value); const resultEl = document.getElementById("temp-id-check-result"); if (!id || id < 10000000) { if (resultEl) resultEl.innerHTML = '<span style="color:var(--danger);">ID must be at least 10000000</span>'; return; } try { const data = await apiCall("GET", `/api/admin/users/check-id/${id}`); if (resultEl) resultEl.innerHTML = data.available ? '<span style="color:#2ecc71;">&#10003; Available</span>' : '<span style="color:var(--danger);">\u2717 This ID is already in use</span>'; } catch (err) { if (resultEl) resultEl.innerHTML = '<span style="color:var(--danger);">Error: ' + escapeHtml(err.message) + '</span>'; } });
+  const applyBtn = document.getElementById("temp-id-apply");
+  if (applyBtn) applyBtn.addEventListener("click", async () => { if (!currentUid) return; const id = parseInt(document.getElementById("temp-id-input")?.value); const expiryVal = document.getElementById("temp-id-expiry")?.value; if (!id || id < 10000000) { showToast("ID must be at least 10000000", "error"); return; } if (!expiryVal) { showToast("Set an expiry date", "error"); return; } const expiryDate = new Date(expiryVal).getTime(); if (expiryDate <= Date.now()) { showToast("Expiry must be in the future", "error"); return; } try { await apiCall("POST", `/api/admin/users/${currentUid}/temp-id`, { tempUniqueId: id, expiryDate }); showToast("Temporary ID applied", "success"); const currentEl = document.getElementById("temp-id-current"); if (currentEl) currentEl.innerHTML = "Active temp ID: <strong>" + escapeHtml(String(id)) + "</strong> (expires " + escapeHtml(new Date(expiryDate).toLocaleString()) + ")"; const resultEl = document.getElementById("temp-id-check-result"); if (resultEl) resultEl.textContent = ""; } catch (err) { showToast(err.message || "Failed to apply temp ID", "error"); } });
+  const clearBtn = document.getElementById("temp-id-clear");
+  if (clearBtn) clearBtn.addEventListener("click", async () => { if (!currentUid) return; if (!confirm("Clear the temporary ID?")) return; try { await apiCall("DELETE", `/api/admin/users/${currentUid}/temp-id`); showToast("Temporary ID cleared", "success"); const inputEl = document.getElementById("temp-id-input"); if (inputEl) inputEl.value = ""; const expiryEl = document.getElementById("temp-id-expiry"); if (expiryEl) expiryEl.value = ""; const currentEl = document.getElementById("temp-id-current"); if (currentEl) currentEl.textContent = "No temporary ID set"; const resultEl = document.getElementById("temp-id-check-result"); if (resultEl) resultEl.textContent = ""; } catch (err) { showToast(err.message || "Failed to clear temp ID", "error"); } });
+}
+
+export function wirePreviewListeners() {
+  document.querySelectorAll('[data-field="displayName"], [data-field="description"], [data-field="userType"], [data-field="nationality"], [data-field="profilePhotoUrl"], [data-field="coverPhotoUrl"]').forEach(function(el) { el.addEventListener("input", updateDraftPreview); el.addEventListener("change", updateDraftPreview); });
+}
