@@ -120,7 +120,7 @@ const _tabPaths = {
   'audit-log': '/admin/js/tabs/audit-log.js',
 };
 for (const [key, path] of Object.entries(_tabPaths)) {
-  import(path).then(m => { TAB_MODULES[key] = m; }).catch(() => {});
+  import(path).then(m => { TAB_MODULES[key] = m; }).catch(err => { console.warn(`Tab module ${key} failed to load:`, err); });
 }
 
 export const authHandler = createAuthStateHandler({

@@ -1203,6 +1203,93 @@ export async function revokeBiometricKey(uniqueId, deviceId) {
 _register("loadSecurityPanel", loadSecurityPanel);
 
 // Expose for inline onclick attributes
+
+
+// Wire moderation event listeners (was missing from chunk 3)
+export function wireModerationListeners() {
+  // Suspend
+  const suspendBtn = $("#suspend-btn");
+  if (suspendBtn) suspendBtn.addEventListener("click", async () => {
+    const reason = $("#suspend-reason")?.value?.trim();
+    if (!reason) { showToast("Reason is required", "error"); return; }
+    const endDateVal = $("#suspend-end-date")?.value;
+    const endDate = endDateVal ? new Date(endDateVal).toISOString() : null;
+    const canAppeal = $("#suspend-can-appeal")?.checked;
+    suspendBtn.disabled = true;
+    try { await apiCall("POST", `/api/user/${currentUid}/suspend`, { reason, endDate, canAppeal }); showToast("User suspended"); const data = await apiCall("GET", `/api/user/${currentUid}`); await populateFormFull(data); }
+    catch (err) { showToast(err.message, "error"); }
+    suspendBtn.disabled = false;
+  });
+  // Unsuspend
+  const unsuspendBtn = $("#unsuspend-btn");
+  if (unsuspendBtn) unsuspendBtn.addEventListener("click", async () => {
+    unsuspendBtn.disabled = true;
+    try { await apiCall("POST", `/api/user/${currentUid}/unsuspend`); showToast("User unsuspended"); const data = await apiCall("GET", `/api/user/${currentUid}`); await populateFormFull(data); }
+    catch (err) { showToast(err.message, "error"); }
+    unsuspendBtn.disabled = false;
+  });
+  // Duration presets
+  for (const btn of document.querySelectorAll(".duration-presets button")) {
+    btn.addEventListener("click", () => {
+      const days = Number(btn.dataset.days);
+      const suspendEndDate = $("#suspend-end-date"); if (!suspendEndDate) return;
+      if (days === 0) { suspendEndDate.value = ""; return; }
+      const d = new Date(Date.now() + days * 86400000);
+      const pad = (n) => String(n).padStart(2, "0");
+      suspendEndDate.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    });
+  }
+  // GCS reset
+  const resetGcsBtn = $("#reset-gcs-btn");
+  if (resetGcsBtn) resetGcsBtn.addEventListener("click", async () => {
+    if (!currentUid || !confirm("Reset this user's GCS to 100 and clear all warnings?")) return;
+    resetGcsBtn.disabled = true;
+    try { await apiCall("POST", `/api/user/${currentUid}/reset-gcs`); showToast("GCS reset to 100"); const data = await apiCall("GET", `/api/user/${currentUid}`); populateGcsSection(data); }
+    catch (err) { showToast(err.message, "error"); }
+    finally { resetGcsBtn.disabled = false; }
+  });
+  // Warning load more
+  const warningLoadMoreBtn = document.getElementById("warning-load-more-btn");
+  if (warningLoadMoreBtn) warningLoadMoreBtn.addEventListener("click", () => { if (currentUid) loadWarningHistory(currentUid, true); });
+  // Direct warning
+  const directWarnBtn = $("#direct-warn-btn");
+  if (directWarnBtn) directWarnBtn.addEventListener("click", async () => {
+    if (!currentUid) return;
+    const reason = $("#direct-warn-reason")?.value;
+    if (!reason) { showToast("Select a reason", "error"); return; }
+    const severity = parseInt(document.querySelector('input[name="direct-warn-severity"]:checked')?.value || "3");
+    const adminNote = $("#direct-warn-note")?.value?.trim() || undefined;
+    if (!confirm("Issue a warning for \"" + reason + "\" (severity " + severity + ", -" + severity * 5 + " GCS)?")) return;
+    directWarnBtn.disabled = true; directWarnBtn.textContent = "Issuing...";
+    try { const result = await apiCall("POST", `/api/user/${currentUid}/warn`, { reason, severity, adminNote }); showToast("Warning issued successfully"); if (result.autoEscalateSuggested) showToast("This user has 5+ warnings. Consider suspending.", "error"); const data = await apiCall("GET", `/api/user/${currentUid}`); populateGcsSection(data); loadWarningHistory(currentUid, false); loadReportHistory(currentUid); if ($("#direct-warn-reason")) $("#direct-warn-reason").value = ""; if ($("#direct-warn-note")) $("#direct-warn-note").value = ""; }
+    catch (err) { showToast(err.message, "error"); }
+    finally { directWarnBtn.disabled = false; directWarnBtn.textContent = "Issue Warning"; }
+  });
+  // Account deletion
+  const scheduleDeletionBtn = $("#schedule-deletion-btn");
+  if (scheduleDeletionBtn) scheduleDeletionBtn.addEventListener("click", async () => {
+    const reason = prompt("Enter reason for account deletion (optional):"); if (reason === null) return;
+    if (!confirm("Are you sure you want to schedule this account for deletion?")) return;
+    try { await apiCall("POST", `/api/user/${currentUid}/delete`, { reason }); alert("Account deletion scheduled."); const freshData = await apiCall("GET", `/api/user/${currentUid}`); populateDeletionSection(freshData); }
+    catch (err) { alert("Failed to schedule deletion: " + (err.message || err)); }
+  });
+  const cancelDeletionBtn = $("#cancel-deletion-btn");
+  if (cancelDeletionBtn) cancelDeletionBtn.addEventListener("click", async () => {
+    if (!confirm("Cancel the scheduled account deletion?")) return;
+    try { await apiCall("POST", `/api/user/${currentUid}/cancel-delete`); alert("Account deletion cancelled."); const freshData = await apiCall("GET", `/api/user/${currentUid}`); populateDeletionSection(freshData); }
+    catch (err) { alert("Failed to cancel deletion: " + (err.message || err)); }
+  });
+  // Reset device binding
+  const resetDeviceBtn = document.getElementById("reset-device-binding-btn");
+  if (resetDeviceBtn) resetDeviceBtn.addEventListener("click", async () => {
+    if (!currentUid) { showToast("No user loaded", "error"); return; }
+    if (!confirm("Remove all device bindings for this user?")) return;
+    resetDeviceBtn.disabled = true; resetDeviceBtn.textContent = "Resetting...";
+    try { const result = await apiCall("POST", `/api/cleanup/device-binding/${currentUid}`); showToast("Removed " + (result.deleted || 0) + " device binding(s)", "success"); }
+    catch (err) { showToast("Failed: " + err.message, "error"); }
+    finally { resetDeviceBtn.disabled = false; resetDeviceBtn.textContent = "Reset Device Binding"; }
+  });
+}
 export function wireSecurityGlobals() {
   window.resetPinLockout = resetPinLockout;
   window.revokeBiometricKey = revokeBiometricKey;
