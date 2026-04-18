@@ -250,11 +250,23 @@ export function init(deps) {
 
   // Build nationality dropdown
   buildNationalityDropdown();
+
+  // Wire all subtab listeners
+  wireEmailAndClearButtons();
+  wireModerationListeners();
+  wireSecurityGlobals();
+  wireEconomyListeners();
+  wireIdentityListeners();
+  attachAutoSaveListeners();
 }
 
 export function activate() {
-  // No-op for now — inline code still handles tab activation.
-  // Will restore saved search when inline code is removed.
+  // Restore saved search from session
+  const savedSearch = sessionStorage.getItem("admin_user_search");
+  if (savedSearch && searchUidEl) {
+    searchUidEl.value = savedSearch;
+    doSearchFinal();
+  }
 }
 
 export function deactivate() {
@@ -1067,6 +1079,13 @@ export async function populateFormFull(data) {
   loadWarningHistory(String(data.uniqueId || data.uid), false);
   loadReportHistory(String(data.uniqueId || data.uid));
   populateDeletionSection(data);
+  // Economy subtab population
+  populateEconomySection(data);
+  await populateGiftSelect();
+  await loadBackpack(String(data.uniqueId || data.uid));
+  // Bans, device binding, temp ID, preview, stalkers — still inline (Chunk 7b)
+  // These are called via the inline populateFormFull hook chain until migrated.
+  // Suspended banner — auto-hide when timed suspension expires
   const banner = document.getElementById("suspended-banner");
   if (window._suspensionTimer) { clearTimeout(window._suspensionTimer); window._suspensionTimer = null; }
   if (data.isSuspended) {
