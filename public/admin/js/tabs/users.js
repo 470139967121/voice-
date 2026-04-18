@@ -1083,3 +1083,92 @@ export async function populateFormFull(data) {
 
 // Wire populateFormFull into the forward declaration
 _register("populateFormFull", populateFormFull);
+
+// ===============================================================
+// CHUNK 4: Security subtab
+// ===============================================================
+
+export async function loadSecurityPanel() {
+  const uid = currentUid;
+  if (!uid) return;
+  try {
+    const [authRes, otpRes] = await Promise.all([
+      apiCall("GET", `/api/user/${uid}/auth-status`),
+      apiCall("GET", "/api/metrics/otp"),
+    ]);
+    // PIN status
+    const pinSet = document.getElementById("pin-set");
+    if (pinSet) pinSet.textContent = authRes.pinSet ? "Yes" : "No";
+    const pinSetAt = document.getElementById("pin-set-at");
+    if (pinSetAt) pinSetAt.textContent = authRes.pinSetAt ? new Date(authRes.pinSetAt).toLocaleString() : "\u2014";
+    const pinAttempts = document.getElementById("pin-attempts");
+    if (pinAttempts) pinAttempts.textContent = authRes.pinAttempts;
+    const pinLockedUntil = document.getElementById("pin-locked-until");
+    if (pinLockedUntil) pinLockedUntil.textContent = authRes.pinLockedUntil ? new Date(authRes.pinLockedUntil).toLocaleString() : "\u2014";
+    const pinLockoutCount = document.getElementById("pin-lockout-count");
+    if (pinLockoutCount) pinLockoutCount.textContent = authRes.pinLockoutCount;
+    const pinIsLocked = document.getElementById("pin-is-locked");
+    if (pinIsLocked) { pinIsLocked.textContent = authRes.isLocked ? "YES" : "No"; pinIsLocked.style.color = authRes.isLocked ? "var(--danger, #f44)" : "inherit"; }
+    const resetBtn = document.getElementById("reset-pin-lockout-btn");
+    if (resetBtn) resetBtn.style.display = (authRes.pinAttempts > 0 || authRes.isLocked) ? "inline-block" : "none";
+
+    // Biometric keys
+    const keysList = document.getElementById("biometric-keys-list");
+    if (keysList) {
+      if (authRes.biometricKeys.length === 0) {
+        keysList.innerHTML = '<p style="color:var(--text2)">No biometric keys registered</p>';
+      } else {
+        keysList.innerHTML = authRes.biometricKeys.map(k => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <strong>Device:</strong> ${escapeHtml(k.deviceId)}<br>
+              <small style="color:var(--text2)">Registered: ${escapeHtml(new Date(k.createdAt).toLocaleString())}</small>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="revokeBiometricKey('${escapeHtml(uid)}','${escapeHtml(k.deviceId)}')">Revoke</button>
+          </div>
+        `).join("");
+      }
+    }
+
+    // OTP metrics
+    const otpCount = document.getElementById("otp-count");
+    if (otpCount) otpCount.textContent = otpRes.count;
+    const otpDate = document.getElementById("otp-date");
+    if (otpDate) otpDate.textContent = otpRes.date || "\u2014";
+    const otpLimit = document.getElementById("otp-limit");
+    if (otpLimit) otpLimit.textContent = otpRes.limit;
+  } catch (err) {
+    console.error("Failed to load security panel:", err);
+  }
+}
+
+export async function resetPinLockout() {
+  if (!currentUid || !confirm("Reset PIN lockout for this user?")) return;
+  try {
+    await apiCall("POST", `/api/user/${currentUid}/reset-pin-lockout`);
+    showToast("PIN lockout reset");
+    loadSecurityPanel();
+  } catch (err) {
+    showToast("Failed: " + err.message, "error");
+  }
+}
+
+export async function revokeBiometricKey(uniqueId, deviceId) {
+  if (!confirm("Revoke biometric key for device " + deviceId + "?")) return;
+  try {
+    await apiCall("DELETE", `/api/user/${uniqueId}/biometric-keys/${deviceId}`);
+    showToast("Biometric key revoked");
+    loadSecurityPanel();
+  } catch (err) {
+    showToast("Failed: " + err.message, "error");
+  }
+}
+
+// Wire loadSecurityPanel into the forward declaration
+_register("loadSecurityPanel", loadSecurityPanel);
+
+// Expose for inline onclick attributes
+export function wireSecurityGlobals() {
+  window.resetPinLockout = resetPinLockout;
+  window.revokeBiometricKey = revokeBiometricKey;
+}
