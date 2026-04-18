@@ -236,7 +236,6 @@ test.describe('Admin Users - Economy Subtab', () => {
   test('transaction history shows admin adjustments', async ({ page, testData }) => {
     // Skip in emulator mode — subcollection queries (users/{uid}/transactions)
     // are unreliable in the Firebase emulator
-    test.skip(!!process.env.API_BASE_URL?.includes('localhost'), 'Subcollection queries unreliable in emulator');
     const uid = String(testData.user.uniqueId);
 
     // Create a transaction directly via API (reliable, avoids UI timing issues)
@@ -249,7 +248,7 @@ test.describe('Admin Users - Economy Subtab', () => {
 
     // Verify the transaction list contains an ADMIN_ADJUSTMENT entry
     const txList = page.locator('#tx-list');
-    await expect(txList.locator('text=ADMIN_ADJUSTMENT')).toBeVisible();
+    await expect(txList.locator('text=ADMIN_ADJUSTMENT').first()).toBeVisible();
 
     // Restore: deduct 100 via API
     await testData.api.post(`/api/users/${uid}/adjust-balance`, {
@@ -259,7 +258,6 @@ test.describe('Admin Users - Economy Subtab', () => {
 
   // ── Test 8: Transaction type filter works ──
   test('transaction type filter works', async ({ page, testData }) => {
-    test.skip(!!process.env.API_BASE_URL?.includes('localhost'), 'Subcollection queries unreliable in emulator');
     const uid = String(testData.user.uniqueId);
 
     // Ensure we have at least one ADMIN_ADJUSTMENT transaction by adding 50 coins
@@ -274,7 +272,7 @@ test.describe('Admin Users - Economy Subtab', () => {
 
     // Verify only ADMIN_ADJUSTMENT entries are shown
     const txList = page.locator('#tx-list');
-    await expect(txList.locator('text=ADMIN_ADJUSTMENT')).toBeVisible();
+    await expect(txList.locator('text=ADMIN_ADJUSTMENT').first()).toBeVisible();
 
     // Verify all entries in the list are ADMIN_ADJUSTMENT
     const entries = txList.locator('div[style*="border-bottom"] span[style*="accent"]');
