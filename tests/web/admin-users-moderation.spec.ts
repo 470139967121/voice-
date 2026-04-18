@@ -304,7 +304,9 @@ test.describe('Admin Users - Moderation Subtab', () => {
   test('reset device binding', async ({ page, testData }) => {
     const uid = String(testData.user.uniqueId);
 
-    // Verify binding is visible before reset
+    // Verify binding is visible before reset — re-search to refresh data
+    await searchUser(page, uid);
+    await switchUserSubtab(page, 'moderation');
     const deviceCards = page.locator('#device-binding-cards');
     await expect(deviceCards).toContainText('Pixel 6', { timeout: 15_000 });
 
