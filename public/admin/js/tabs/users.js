@@ -1172,3 +1172,236 @@ export function wireSecurityGlobals() {
   window.resetPinLockout = resetPinLockout;
   window.revokeBiometricKey = revokeBiometricKey;
 }
+
+// ===============================================================
+// CHUNK 5: Economy subtab - coins, beans, backpack, transactions
+// ===============================================================
+
+let _ecoCoins = 0;
+let _ecoBeans = 0;
+let _backpackItems = [];
+let _giftCatalog = [];
+let _backpackEdits = {};
+let _prevExpiryValue = "";
+
+export function populateEconomySection(data) {
+  _ecoCoins = data.shyCoins || 0;
+  _ecoBeans = data.shyBeans || 0;
+  const cd = $("#eco-coins-display"); if (cd) cd.textContent = _ecoCoins;
+  const bd = $("#eco-beans-display"); if (bd) bd.textContent = _ecoBeans;
+  const ca = $("#eco-coins-amount"); if (ca) ca.value = "";
+  const ba = $("#eco-beans-amount"); if (ba) ba.value = "";
+  const ss = $("#eco-super-shy"); if (ss) ss.value = data.isSuperShy ? "true" : "false";
+  const isSuperShy = data.isSuperShy === true;
+  const isUnlimited = isSuperShy && !data.superShyExpiry;
+  const ul = $("#eco-super-shy-unlimited"); if (ul) { ul.checked = isUnlimited; ul.disabled = !isSuperShy; }
+  const ex = $("#eco-super-shy-expiry"); if (ex) { ex.disabled = !isSuperShy || isUnlimited; }
+  if (isSuperShy && data.superShyExpiry) {
+    const d = new Date(data.superShyExpiry);
+    const pad = n => String(n).padStart(2, "0");
+    if (ex) ex.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } else { if (ex) ex.value = ""; }
+  const st = $("#eco-streak"); if (st) st.value = data.loginStreak || 0;
+  const pt = $("#eco-pity"); if (pt) pt.value = data.pityCounter || 0;
+}
+
+export async function loadBackpack(uid) {
+  const container = document.getElementById("backpack-grid");
+  if (!container) return;
+  while (container.firstChild) container.removeChild(container.firstChild);
+  const loading = document.createElement("p");
+  loading.style.cssText = "color:var(--text2);grid-column:1/-1;text-align:center;";
+  loading.textContent = "Loading backpack...";
+  container.appendChild(loading);
+  _backpackEdits = {};
+  try {
+    const data = await apiCall("GET", "/api/users/" + uid + "/backpack");
+    _backpackItems = Array.isArray(data) ? data : (data.items || []);
+    renderBackpack();
+    populateCategoryFilter();
+  } catch (err) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+    const errEl = document.createElement("p");
+    errEl.style.color = "var(--danger)";
+    errEl.textContent = err.message;
+    container.appendChild(errEl);
+  }
+}
+
+export function renderBackpack() {
+  const container = document.getElementById("backpack-grid");
+  if (!container) return;
+  while (container.firstChild) container.removeChild(container.firstChild);
+  const searchText = (document.getElementById("backpack-search")?.value || "").toLowerCase();
+  const catFilter = document.getElementById("backpack-category-filter")?.value || "";
+  const catalogMap = {};
+  _giftCatalog.forEach(function(g) { catalogMap[g.id] = g; });
+  let filtered = _backpackItems;
+  if (searchText) { filtered = filtered.filter(function(item) { const gift = catalogMap[item.giftId] || {}; const name = (gift.name || item.giftName || item.giftId || "").toLowerCase(); return name.includes(searchText) || (item.giftId || "").toLowerCase().includes(searchText); }); }
+  if (catFilter) { filtered = filtered.filter(function(item) { const gift = catalogMap[item.giftId] || {}; return gift.category === catFilter; }); }
+  if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "grid-column:1/-1;text-align:center;color:var(--text2);padding:24px;";
+    empty.textContent = _backpackItems.length === 0 ? "Backpack is empty" : "No matching gifts";
+    container.appendChild(empty); return;
+  }
+  filtered.forEach(function(item) {
+    const gift = catalogMap[item.giftId] || {};
+    const editedQty = _backpackEdits[item.giftId];
+    const displayQty = editedQty !== undefined ? editedQty : item.quantity;
+    if (displayQty <= 0 && editedQty === undefined) return;
+    const card = document.createElement("div"); card.className = "backpack-item"; card.dataset.giftId = item.giftId;
+    const removeBtn = document.createElement("button"); removeBtn.className = "backpack-remove-btn"; removeBtn.textContent = "\u00D7"; removeBtn.title = "Remove"; removeBtn.setAttribute("aria-label", "Remove item");
+    removeBtn.addEventListener("click", function(e) { e.stopPropagation(); autoSaveBackpackItem(item.giftId, 0, item.quantity); });
+    card.appendChild(removeBtn);
+    const badge = document.createElement("span"); badge.className = "backpack-qty-badge"; badge.textContent = String(displayQty); card.appendChild(badge);
+    const img = document.createElement("img"); img.src = gift.iconUrl || ""; img.alt = gift.name || item.giftName || item.giftId; img.loading = "lazy"; img.onerror = function() { this.style.display = "none"; }; card.appendChild(img);
+    const nameEl = document.createElement("div"); nameEl.className = "backpack-item-name"; nameEl.textContent = gift.name || item.giftName || item.giftId; nameEl.title = gift.name || item.giftName || item.giftId; card.appendChild(nameEl);
+    const overlay = document.createElement("div"); overlay.className = "backpack-edit-overlay";
+    const qtyInput = document.createElement("input"); qtyInput.type = "number"; qtyInput.min = "0"; qtyInput.value = String(displayQty);
+    qtyInput.style.cssText = "width:100%;text-align:center;padding:4px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;";
+    qtyInput.addEventListener("blur", function() { const newQty = Math.max(0, parseInt(qtyInput.value, 10) || 0); card.classList.remove("editing"); if (newQty !== item.quantity) autoSaveBackpackItem(item.giftId, newQty, item.quantity); });
+    qtyInput.addEventListener("keydown", function(e) { if (e.key === "Enter") qtyInput.blur(); if (e.key === "Escape") card.classList.remove("editing"); });
+    overlay.appendChild(qtyInput); card.appendChild(overlay);
+    card.addEventListener("click", function(e) { if (e.target === removeBtn) return; document.querySelectorAll(".backpack-item.editing").forEach(function(other) { if (other !== card) other.classList.remove("editing"); }); card.classList.toggle("editing"); if (card.classList.contains("editing")) { qtyInput.focus(); qtyInput.select(); } });
+    container.appendChild(card);
+  });
+}
+
+export async function autoSaveBackpackItem(giftId, newQty, originalQty) {
+  try {
+    const gift = _giftCatalog.find(function(g) { return g.id === giftId; });
+    await apiCall("POST", "/api/users/" + currentUid + "/backpack", { giftId: giftId, quantity: newQty, giftName: gift ? gift.name : giftId });
+    const item = _backpackItems.find(function(i) { return i.giftId === giftId; });
+    if (item) { if (newQty <= 0) { _backpackItems = _backpackItems.filter(function(i) { return i.giftId !== giftId; }); } else { item.quantity = newQty; } }
+    delete _backpackEdits[giftId]; renderBackpack();
+    const name = gift ? gift.name : giftId;
+    if (newQty <= 0) showToast(name + " removed (was " + originalQty + ")"); else showToast(name + ": " + originalQty + " \u2192 " + newQty);
+  } catch (err) { showToast("Failed to save: " + err.message, "error"); }
+}
+
+export function populateCategoryFilter() {
+  const select = document.getElementById("backpack-category-filter"); if (!select) return;
+  while (select.options.length > 1) select.remove(1);
+  const categories = new Set(); _giftCatalog.forEach(function(g) { if (g.category) categories.add(g.category); });
+  [...categories].sort().forEach(function(cat) { const opt = document.createElement("option"); opt.value = cat; opt.textContent = cat; select.appendChild(opt); });
+}
+
+export async function populateGiftSelect() {
+  const select = document.getElementById("backpack-gift-select"); if (!select) return;
+  try { const raw = await apiCall("GET", "/api/gifts/all"); _giftCatalog = Array.isArray(raw) ? raw : (raw.gifts || []); while (select.options.length > 1) select.remove(1); _giftCatalog.forEach(function(g) { const opt = document.createElement("option"); opt.value = g.id; opt.textContent = g.name || g.id; select.appendChild(opt); }); }
+  catch (err) { /* Gift catalog not available */ }
+}
+
+function showClearAllConfirmation() {
+  const overlay = document.createElement("div"); overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;";
+  const dialog = document.createElement("div"); dialog.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:400px;width:90%;text-align:center;";
+  const title = document.createElement("h3"); title.style.cssText = "color:var(--danger);margin:0 0 12px 0;"; title.textContent = "Clear All Items?"; dialog.appendChild(title);
+  const warning = document.createElement("p"); warning.style.cssText = "color:var(--text2);margin:0 0 20px 0;font-size:14px;"; warning.textContent = "This will permanently remove all items from this user's backpack. This action cannot be undone."; dialog.appendChild(warning);
+  const btnRow = document.createElement("div"); btnRow.style.cssText = "display:flex;gap:12px;justify-content:center;";
+  const cancelBtn = document.createElement("button"); cancelBtn.style.cssText = "padding:8px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:14px;"; cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", function() { document.body.removeChild(overlay); }); btnRow.appendChild(cancelBtn);
+  const confirmBtn = document.createElement("button"); confirmBtn.style.cssText = "padding:8px 20px;background:var(--danger);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;opacity:0.5;"; confirmBtn.disabled = true;
+  let countdown = 5; confirmBtn.textContent = "Confirm (" + countdown + ")";
+  const timer = setInterval(function() { countdown--; if (countdown <= 0) { clearInterval(timer); confirmBtn.disabled = false; confirmBtn.style.opacity = "1"; confirmBtn.textContent = "Confirm Clear All"; } else { confirmBtn.textContent = "Confirm (" + countdown + ")"; } }, 1000);
+  confirmBtn.addEventListener("click", async function() { if (confirmBtn.disabled) return; clearInterval(timer); confirmBtn.disabled = true; confirmBtn.textContent = "Clearing..."; await clearAllBackpack(); document.body.removeChild(overlay); });
+  btnRow.appendChild(confirmBtn); dialog.appendChild(btnRow); overlay.appendChild(dialog);
+  overlay.addEventListener("click", function(e) { if (e.target === overlay) { clearInterval(timer); document.body.removeChild(overlay); } });
+  document.body.appendChild(overlay);
+}
+
+async function clearAllBackpack() {
+  let cleared = 0, errors = 0;
+  for (const item of _backpackItems) { try { await apiCall("POST", "/api/users/" + currentUid + "/backpack", { giftId: item.giftId, quantity: 0, silent: true }); cleared++; } catch (err) { errors++; } }
+  _backpackItems = []; _backpackEdits = {}; renderBackpack();
+  if (errors > 0) showToast("Cleared " + cleared + ", failed " + errors, "error"); else showToast("Backpack cleared (" + cleared + " items removed)");
+}
+
+export function wireEconomyListeners() {
+  const ecoSuperShy = $("#eco-super-shy");
+  if (ecoSuperShy) ecoSuperShy.addEventListener("change", () => { const isSS = ecoSuperShy.value === "true"; const ul = $("#eco-super-shy-unlimited"); if (ul) ul.disabled = !isSS; if (!isSS) { if (ul) ul.checked = false; const ex = $("#eco-super-shy-expiry"); if (ex) { ex.value = ""; ex.disabled = true; } } else { const ex = $("#eco-super-shy-expiry"); if (ex && ul) ex.disabled = ul.checked; } });
+  const unlimitedCb = $("#eco-super-shy-unlimited");
+  if (unlimitedCb) unlimitedCb.addEventListener("change", () => { const unlimited = unlimitedCb.checked; const expiryEl = $("#eco-super-shy-expiry"); if (!expiryEl) return; if (unlimited) { _prevExpiryValue = expiryEl.value; expiryEl.value = ""; expiryEl.disabled = true; autoSaveEconomyField("superShyExpiry"); } else { expiryEl.disabled = false; expiryEl.value = _prevExpiryValue || "1970-01-01T00:00"; autoSaveEconomyField("superShyExpiry"); } });
+  const coinsApply = $("#eco-coins-apply");
+  if (coinsApply) coinsApply.addEventListener("click", async () => { if (!currentUid) return; const op = $("#eco-coins-op")?.value; const amount = parseInt($("#eco-coins-amount")?.value) || 0; if (amount <= 0) { showToast("Enter a positive amount", "error"); return; } try { const result = await apiCall("POST", `/api/users/${currentUid}/adjust-balance`, { currency: "COINS", amount, operation: op }); _ecoCoins = result.newBalance; const cd = $("#eco-coins-display"); if (cd) cd.textContent = _ecoCoins; const ca = $("#eco-coins-amount"); if (ca) ca.value = ""; showToast((op === "add" ? "Added" : "Deducted") + " " + amount + " coins (now " + _ecoCoins + ")"); } catch (err) { showToast(err.message, "error"); } });
+  const beansApply = $("#eco-beans-apply");
+  if (beansApply) beansApply.addEventListener("click", async () => { if (!currentUid) return; const op = $("#eco-beans-op")?.value; const amount = parseInt($("#eco-beans-amount")?.value) || 0; if (amount <= 0) { showToast("Enter a positive amount", "error"); return; } try { const result = await apiCall("POST", `/api/users/${currentUid}/adjust-balance`, { currency: "BEANS", amount, operation: op }); _ecoBeans = result.newBalance; const bd = $("#eco-beans-display"); if (bd) bd.textContent = _ecoBeans; const ba = $("#eco-beans-amount"); if (ba) ba.value = ""; showToast((op === "add" ? "Added" : "Deducted") + " " + amount + " beans (now " + _ecoBeans + ")"); } catch (err) { showToast(err.message, "error"); } });
+  const bpSearch = document.getElementById("backpack-search"); if (bpSearch) bpSearch.addEventListener("input", renderBackpack);
+  const bpCatFilter = document.getElementById("backpack-category-filter"); if (bpCatFilter) bpCatFilter.addEventListener("change", renderBackpack);
+  const addBtn = $("#backpack-add-btn");
+  if (addBtn) addBtn.addEventListener("click", async () => { const giftId = $("#backpack-gift-select")?.value; const qty = parseInt($("#backpack-qty")?.value) || 0; if (!giftId || !currentUid || qty <= 0) { showToast("Select a gift and enter a quantity", "error"); return; } try { const existing = _backpackItems.find(i => i.giftId === giftId); const newQty = (existing ? existing.quantity : 0) + qty; const giftInfo = _giftCatalog.find(g => g.id === giftId); await apiCall("POST", `/api/users/${currentUid}/backpack`, { giftId, quantity: newQty, giftName: giftInfo ? giftInfo.name : giftId }); showToast("Added " + qty + " (total now " + newQty + ")"); loadBackpack(currentUid); const bpQty = $("#backpack-qty"); if (bpQty) bpQty.value = "1"; const bpSel = $("#backpack-gift-select"); if (bpSel) bpSel.value = ""; } catch (err) { showToast(err.message, "error"); } });
+  const clearBtn = $("#backpack-clear-btn");
+  if (clearBtn) clearBtn.addEventListener("click", () => { if (_backpackItems.length === 0) { showToast("Backpack is already empty", "error"); return; } showClearAllConfirmation(); });
+  const txLoadBtn = $("#tx-load-btn");
+  if (txLoadBtn) txLoadBtn.addEventListener("click", async () => { if (!currentUid) return; const typeFilter = $("#tx-type-filter")?.value; const txList = $("#tx-list"); if (!txList) return; txList.innerHTML = '<p style="color:var(--text2)">Loading...</p>'; try { const url = typeFilter ? `/api/users/${currentUid}/transactions?type=${typeFilter}` : `/api/users/${currentUid}/transactions`; const data = await apiCall("GET", url); const txs = Array.isArray(data) ? data : (data.transactions || []); if (txs.length === 0) { txList.innerHTML = '<p style="color:var(--text2)">No transactions found</p>'; } else { txList.innerHTML = txs.map(tx => { const date = tx.timestamp ? escapeHtml(new Date(tx.timestamp).toLocaleString()) : "\u2014"; const details = tx.details || tx.giftName || ""; return '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><div style="display:flex;justify-content:space-between"><span style="color:var(--accent)">' + escapeHtml(tx.type) + '</span><span style="color:var(--text2)">' + date + '</span></div><div>' + (tx.amount > 0 ? "+" : "") + escapeHtml(String(tx.amount)) + " " + escapeHtml(tx.currency || "COINS") + " \u2192 Balance: " + escapeHtml(String(tx.balanceAfter ?? "?")) + "</div>" + (details ? '<div style="color:var(--text2)">' + escapeHtml(details) + "</div>" : "") + "</div>"; }).join(""); } } catch (err) { txList.innerHTML = '<p style="color:var(--danger)">' + escapeHtml(err.message) + "</p>"; } });
+}
+
+// ===============================================================
+// CHUNK 6: Identity Graph subtab
+// ===============================================================
+
+export async function loadIdentitySubtabGraph() {
+  const uid = currentUid;
+  if (!uid) return;
+  const container = document.getElementById("identity-graph-container");
+  const empty = document.getElementById("identity-graph-empty");
+  if (!container) return;
+  container.innerHTML = '<div style="color:var(--text2);font-size:12px;">Loading identity graph\u2026</div>';
+  container.style.display = "block";
+  if (empty) empty.style.display = "none";
+  try { const data = await apiCall("GET", `/api/admin/identity-graph/${uid}`); renderIdentitySubtabGraph(data); }
+  catch (err) { container.style.display = "none"; if (empty) empty.style.display = "block"; }
+}
+
+function renderIdentitySubtabGraph(data) {
+  const container = document.getElementById("identity-graph-container");
+  const empty = document.getElementById("identity-graph-empty");
+  const nodes = (data && data.nodes) || [];
+  const edges = (data && data.edges) || [];
+  if (nodes.length === 0) { if (container) container.style.display = "none"; if (empty) empty.style.display = "block"; return; }
+  if (container) { container.style.display = "block"; container.innerHTML = ""; }
+  if (empty) empty.style.display = "none";
+  const NODE_COLORS = { account: "#7c5cfc", device: "#3498db", network: "#27ae60" };
+  const SVG_W = Math.max(800, nodes.length * 140); const SVG_H = 400;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", String(SVG_W)); svg.setAttribute("height", String(SVG_H)); svg.style.display = "block"; svg.style.minWidth = SVG_W + "px";
+  const positions = {}; const COLS = Math.ceil(Math.sqrt(nodes.length));
+  nodes.forEach((n, i) => { const col = i % COLS; const row = Math.floor(i / COLS); positions[n.id] = { x: 80 + col * 140, y: 80 + row * 120 }; });
+  edges.forEach((e) => { const a = positions[e.source]; const b = positions[e.target]; if (!a || !b) return; const line = document.createElementNS("http://www.w3.org/2000/svg", "line"); line.setAttribute("x1", String(a.x)); line.setAttribute("y1", String(a.y)); line.setAttribute("x2", String(b.x)); line.setAttribute("y2", String(b.y)); line.setAttribute("stroke", "#666"); line.setAttribute("stroke-width", "2"); line.setAttribute("class", "graph-edge graph-link"); line.setAttribute("data-type", e.type || "link"); svg.appendChild(line); });
+  nodes.forEach((n) => {
+    const pos = positions[n.id]; const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "graph-node" + (n.suspended ? " suspended" : "")); g.setAttribute("data-type", n.type || "unknown"); g.setAttribute("data-id", n.id); g.style.cursor = "pointer";
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect"); rect.setAttribute("x", String(pos.x - 50)); rect.setAttribute("y", String(pos.y - 20)); rect.setAttribute("width", "100"); rect.setAttribute("height", "40"); rect.setAttribute("rx", "6"); rect.setAttribute("fill", NODE_COLORS[n.type] || "#888"); rect.setAttribute("stroke", n.suspended ? "#e74c3c" : "#333"); rect.setAttribute("stroke-width", n.suspended ? "3" : "1"); g.appendChild(rect);
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text"); text.setAttribute("x", String(pos.x)); text.setAttribute("y", String(pos.y + 5)); text.setAttribute("text-anchor", "middle"); text.setAttribute("fill", "#fff"); text.setAttribute("font-size", "12"); text.textContent = (n.label || n.id || "").toString().slice(0, 12); g.appendChild(text);
+    if (n.type === "device" && n.linkedAccounts && n.linkedAccounts.length > 1) { const warn = document.createElementNS("http://www.w3.org/2000/svg", "text"); warn.setAttribute("class", "warning-icon"); warn.setAttribute("x", String(pos.x + 40)); warn.setAttribute("y", String(pos.y - 10)); warn.setAttribute("font-size", "16"); warn.textContent = "\u26A0"; g.appendChild(warn); }
+    g.addEventListener("click", () => { const panel = document.getElementById("node-metadata-panel"); const titleEl = document.getElementById("node-metadata-title"); const body = document.getElementById("node-metadata-body"); if (titleEl) titleEl.textContent = (n.type || "node") + ": " + (n.label || n.id); if (body) body.textContent = JSON.stringify(n.metadata || n, null, 2); if (panel) { panel.style.display = "block"; panel.dataset.nodeId = n.id; } });
+    svg.appendChild(g);
+  });
+  container.appendChild(svg);
+  const multiDevices = nodes.filter((n) => n.type === "device" && n.linkedAccounts && n.linkedAccounts.length > 1);
+  if (multiDevices.length > 0) { const alert = document.createElement("div"); alert.className = "multi-account-alert"; alert.style.cssText = "margin-top:12px;padding:10px 14px;background:rgba(231,76,60,0.1);border:1px solid #e74c3c;border-radius:6px;color:#e74c3c;font-size:13px;"; alert.textContent = "\u26A0 This device is linked to multiple accounts (" + multiDevices[0].linkedAccounts.length + ")"; container.appendChild(alert); }
+}
+
+function showIdentitySuspendDialog() { const d = document.getElementById("identity-suspend-dialog"); if (d) { d.style.display = "flex"; updateCascadePreview(); } }
+function hideIdentitySuspendDialog() { const d = document.getElementById("identity-suspend-dialog"); if (d) d.style.display = "none"; }
+function updateCascadePreview() {
+  const preview = document.querySelector("#identity-suspend-dialog .cascade-preview"); if (!preview) return;
+  const container = document.getElementById("identity-graph-container"); const nodes = container ? container.querySelectorAll(".graph-node") : [];
+  const counts = { account: 0, device: 0, network: 0 }; nodes.forEach((n) => { const type = n.getAttribute("data-type"); if (type && counts[type] !== undefined) counts[type]++; });
+  preview.textContent = "This will also affect " + counts.account + " account(s), " + counts.device + " device(s), and " + counts.network + " network(s).";
+}
+
+export function wireIdentityListeners() {
+  const suspendBtn = document.getElementById("identity-suspend-btn"); if (suspendBtn) suspendBtn.addEventListener("click", showIdentitySuspendDialog);
+  const cancelBtn = document.querySelector("#identity-suspend-dialog .btn-cancel-suspend"); if (cancelBtn) cancelBtn.addEventListener("click", hideIdentitySuspendDialog);
+  const confirmBtn = document.querySelector("#identity-suspend-dialog .btn-confirm-suspend");
+  if (confirmBtn) confirmBtn.addEventListener("click", async () => { const uid = currentUid; if (!uid) { hideIdentitySuspendDialog(); return; } const duration = document.getElementById("identity-suspend-duration")?.value; const scope = document.getElementById("identity-suspend-scope")?.value; const reason = document.getElementById("identity-suspend-reason")?.value || "Admin suspend"; try { await apiCall("POST", `/api/admin/identity-graph/${uid}/suspend-all`, { duration, scope, reason }); showToast("Identity suspended"); hideIdentitySuspendDialog(); loadIdentitySubtabGraph(); } catch (err) { showToast("Suspend failed: " + err.message, "error"); } });
+  const unsuspendAll = document.getElementById("identity-unsuspend-all-btn");
+  if (unsuspendAll) unsuspendAll.addEventListener("click", async () => { const uid = currentUid; if (!uid) return; try { await apiCall("POST", `/api/admin/identity-graph/${uid}/unsuspend-all`, {}); showToast("Identity unsuspended"); loadIdentitySubtabGraph(); } catch (err) { showToast("Unsuspend failed: " + err.message, "error"); } });
+  const nodeUnsuspend = document.getElementById("node-unsuspend-btn");
+  if (nodeUnsuspend) nodeUnsuspend.addEventListener("click", async () => { const uid = currentUid; const panel = document.getElementById("node-metadata-panel"); const nodeId = panel && panel.dataset.nodeId; if (!uid || !nodeId) return; try { await apiCall("POST", `/api/admin/identity-graph/${uid}/node/${nodeId}/unsuspend`, {}); showToast("Node unsuspended"); const container = document.getElementById("identity-graph-container"); if (container) { const nodeEl = container.querySelector('.graph-node[data-id="' + nodeId + '"]'); if (nodeEl) { nodeEl.classList.remove("suspended"); const rect = nodeEl.querySelector("rect"); if (rect) { rect.setAttribute("stroke", "#333"); rect.setAttribute("stroke-width", "1"); } } } } catch (err) { showToast("Unsuspend failed: " + err.message, "error"); } });
+  const durationSel = document.getElementById("identity-suspend-duration"); if (durationSel) durationSel.addEventListener("change", updateCascadePreview);
+}
+
+// Wire forward declarations
+_register("loadIdentitySubtabGraph", loadIdentitySubtabGraph);
