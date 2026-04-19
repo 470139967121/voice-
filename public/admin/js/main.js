@@ -120,7 +120,7 @@ async function waitForModule(tabId) {
     const check = setInterval(() => {
       if (TAB_MODULES[tabId]) { clearInterval(check); resolve(); }
     }, 50);
-    setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+    setTimeout(() => { clearInterval(check); resolve(); }, 15000);
   });
   return TAB_MODULES[tabId];
 }
@@ -133,6 +133,12 @@ async function activateTabModule(tabId) {
     _moduleInitialised.add(tabId);
   }
   if (typeof mod.activate === 'function') mod.activate(_moduleDeps);
+  // Signal that the module is ready for interaction (used by Playwright tests)
+  const panelId = PANEL_MAP[tabId];
+  if (panelId) {
+    const panel = document.getElementById(panelId);
+    if (panel) panel.dataset.moduleReady = 'true';
+  }
 }
 
 function deactivateTabModule(tabId) {
@@ -284,7 +290,7 @@ onAuthStateChanged(auth, async (user) => {
     nuclearReset.init(maintenanceDeps);
 
     // Eagerly load economy config so pity limit is available for spin monitor
-    activateTabModule('economy');
+    await activateTabModule('economy');
     // Start alert bell badge refresh + logs auto-refresh
     await initTabModule('logs');
     TAB_MODULES['logs']?.startGlobalRefresh?.();
