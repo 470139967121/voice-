@@ -122,10 +122,14 @@ class AuthViewModel(
                     }
                     resolveIdentityAndProceed("google", email)
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -147,10 +151,14 @@ class AuthViewModel(
                     }
                     resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -169,10 +177,14 @@ class AuthViewModel(
                     }
                     resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -213,8 +225,12 @@ class AuthViewModel(
                                         deviceRepository.bindDevice(deviceId, uniqueIdStr)
                                     }
                                 }
+
                                 is Resource.Error -> { /* lenient */ }
-                                is Resource.Loading -> Unit
+
+                                is Resource.Loading -> {
+                                    Unit
+                                }
                             }
                             checkAndApplyBan()
                         } else {
@@ -236,8 +252,12 @@ class AuthViewModel(
                                         return
                                     }
                                 }
+
                                 is Resource.Error -> { /* lenient */ }
-                                is Resource.Loading -> Unit
+
+                                is Resource.Loading -> {
+                                    Unit
+                                }
                             }
                             checkAndApplyBan()
                         }
@@ -268,11 +288,15 @@ class AuthViewModel(
                     }
                 }
             }
+
             is Resource.Error -> {
                 logE(TAG, "Identity resolution failed: ${result.message}")
                 _uiState.update { it.copy(isLoading = false, isBackendUnreachable = true) }
             }
-            is Resource.Loading -> Unit
+
+            is Resource.Loading -> {
+                Unit
+            }
         }
     }
 
@@ -299,10 +323,14 @@ class AuthViewModel(
                     }
                 }
             }
+
             is Resource.Error -> {
                 // Lenient: let user through on ban check failure
             }
-            is Resource.Loading -> Unit
+
+            is Resource.Loading -> {
+                Unit
+            }
         }
     }
 
@@ -364,6 +392,7 @@ class AuthViewModel(
                                 )
                             }
                         }
+
                         else -> {
                             _uiState.update {
                                 it.copy(isLoading = false, isBackendUnreachable = true)
@@ -382,12 +411,16 @@ class AuthViewModel(
                     }
                 }
             }
+
             is Resource.Error -> {
                 _uiState.update {
                     it.copy(isLoading = false, isBackendUnreachable = true)
                 }
             }
-            is Resource.Loading -> Unit
+
+            is Resource.Loading -> {
+                Unit
+            }
         }
     }
 
@@ -410,11 +443,15 @@ class AuthViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     logE(TAG, "Failed to send sign-in link: ${result.message}")
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -436,10 +473,14 @@ class AuthViewModel(
                     }
                     resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -470,10 +511,14 @@ class AuthViewModel(
                 is Resource.Success -> {
                     _uiState.update { it.copy(isLoading = false, suspensionCanAppeal = false, suspensionAppealStatus = "pending") }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_submit_appeal)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -508,10 +553,14 @@ class AuthViewModel(
                         }
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }

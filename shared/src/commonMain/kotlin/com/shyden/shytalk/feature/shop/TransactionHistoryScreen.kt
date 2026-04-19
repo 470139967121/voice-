@@ -110,6 +110,7 @@ fun TransactionHistoryScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 state.transactions.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -129,6 +130,7 @@ fun TransactionHistoryScreen(
                         )
                     }
                 }
+
                 else -> {
                     LazyColumn(
                         modifier =

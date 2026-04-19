@@ -111,12 +111,18 @@ class ConversationListViewModel(
         // Get current user's blocked list
         val currentUser =
             when (val result = userRepository.getUser(currentUserId)) {
-                is Resource.Success -> result.data
+                is Resource.Success -> {
+                    result.data
+                }
+
                 is Resource.Error -> {
                     logW(TAG, "Failed to fetch current user for blocklist: ${result.message}")
                     null
                 }
-                else -> null
+
+                else -> {
+                    null
+                }
             }
         val blockedByMe = currentUser?.blockedUserIds ?: emptySet()
 
@@ -130,10 +136,14 @@ class ConversationListViewModel(
                 is Resource.Success -> {
                     result.data.forEach { user -> userCache[user.uid] = user }
                 }
+
                 is Resource.Error -> {
                     logW(TAG, "Failed to batch-fetch users: ${result.message}")
                 }
-                else -> Unit
+
+                else -> {
+                    Unit
+                }
             }
         }
 

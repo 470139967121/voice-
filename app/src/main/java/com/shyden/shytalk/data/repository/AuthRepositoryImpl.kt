@@ -34,9 +34,11 @@ class AuthRepositoryImpl(
                     val email = profile.email ?: continue
                     return "google" to email
                 }
+
                 "apple.com" -> {
                     return "apple" to profile.uid
                 }
+
                 "password" -> {
                     val email = profile.email ?: continue
                     return "email" to email

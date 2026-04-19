@@ -79,8 +79,14 @@ class WalletViewModel(
                     )
                 }
             }
-            is Resource.Error -> _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
-            is Resource.Loading -> Unit
+
+            is Resource.Error -> {
+                _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
+            }
+
+            is Resource.Loading -> {
+                Unit
+            }
         }
     }
 
@@ -102,10 +108,14 @@ class WalletViewModel(
                     _uiState.update { it.copy(isPurchasing = false, successMessage = UiText.res(Res.string.success_purchase)) }
                     refreshBalance()
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -134,10 +144,14 @@ class WalletViewModel(
                     }
                     refreshBalance()
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -155,10 +169,14 @@ class WalletViewModel(
                     }
                     refreshBalance()
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }

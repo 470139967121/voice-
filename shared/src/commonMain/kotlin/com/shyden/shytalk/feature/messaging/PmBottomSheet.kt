@@ -72,6 +72,7 @@ fun PmBottomSheet(
                     activeRoomName = activeRoomName,
                 )
             }
+
             chatUserId != null -> {
                 // 1-on-1 chat view
                 PmSheetChatView(
@@ -84,6 +85,7 @@ fun PmBottomSheet(
                     activeRoomName = activeRoomName,
                 )
             }
+
             else -> {
                 // Conversation list view
                 PmSheetListView(

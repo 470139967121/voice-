@@ -146,6 +146,7 @@ fun MainScreen(
                         Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.create_room))
                     }
                 }
+
                 BottomNavTab.Messages -> {
                     FloatingActionButton(
                         onClick = onNavigateToNewMessage,
@@ -155,7 +156,10 @@ fun MainScreen(
                         Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.new_message))
                     }
                 }
-                else -> Unit
+
+                else -> {
+                    Unit
+                }
             }
         },
     ) { padding ->
@@ -172,15 +176,25 @@ fun MainScreen(
                             onBannerAction = { banner ->
                                 val value = banner.actionValue ?: return@RoomListContent
                                 when (banner.actionType) {
-                                    BannerActionType.URL -> onNavigateToUrl(value)
-                                    BannerActionType.ROOM -> onNavigateToRoom(value)
-                                    BannerActionType.SCREEN ->
+                                    BannerActionType.URL -> {
+                                        onNavigateToUrl(value)
+                                    }
+
+                                    BannerActionType.ROOM -> {
+                                        onNavigateToRoom(value)
+                                    }
+
+                                    BannerActionType.SCREEN -> {
                                         when (value) {
                                             "wallet" -> onNavigateToWallet()
                                             "settings" -> onNavigateToSettings()
                                             else -> Unit
                                         }
-                                    BannerActionType.NONE -> Unit
+                                    }
+
+                                    BannerActionType.NONE -> {
+                                        Unit
+                                    }
                                 }
                             },
                             snackbarHostState = snackbarHostState,
@@ -189,9 +203,11 @@ fun MainScreen(
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
+
                     BottomNavTab.Messages -> {
                         messagesContent(Modifier.fillMaxSize())
                     }
+
                     BottomNavTab.Profile -> {
                         profileContent(Modifier.fillMaxSize())
                     }

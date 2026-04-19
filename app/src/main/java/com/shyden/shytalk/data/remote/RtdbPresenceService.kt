@@ -115,14 +115,27 @@ class RtdbPresenceService(
 
                     val event =
                         when (type) {
-                            "room_updated" -> RoomEvent.RoomUpdated
-                            "new_message" -> RoomEvent.NewMessage
-                            "seat_request_updated" -> RoomEvent.SeatRequestUpdated
-                            "room_closed" -> RoomEvent.RoomClosed
+                            "room_updated" -> {
+                                RoomEvent.RoomUpdated
+                            }
+
+                            "new_message" -> {
+                                RoomEvent.NewMessage
+                            }
+
+                            "seat_request_updated" -> {
+                                RoomEvent.SeatRequestUpdated
+                            }
+
+                            "room_closed" -> {
+                                RoomEvent.RoomClosed
+                            }
+
                             "kicked" -> {
                                 val kickedId = eventUserId ?: return
                                 RoomEvent.UserKicked(kickedId)
                             }
+
                             else -> {
                                 Log.d(TAG, "Unknown room event type: $type")
                                 return

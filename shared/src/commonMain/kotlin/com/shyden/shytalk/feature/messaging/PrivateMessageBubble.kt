@@ -654,6 +654,7 @@ private fun LocalImageGrid(
                 contentScale = ContentScale.Crop,
             )
         }
+
         2 -> {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -677,6 +678,7 @@ private fun LocalImageGrid(
                 }
             }
         }
+
         else -> {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 localImageData.chunked(2).forEach { row ->
@@ -734,6 +736,7 @@ private fun ImageGrid(
                 contentScale = ContentScale.Crop,
             )
         }
+
         2 -> {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -757,6 +760,7 @@ private fun ImageGrid(
                 }
             }
         }
+
         else -> {
             // Grid layout for 3+ images
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -300,6 +300,7 @@ fun SuperShyBottomSheet(
                                         textAlign = TextAlign.Center,
                                     )
                                 }
+
                                 claiming -> {
                                     Text(
                                         stringResource(Res.string.claiming),
@@ -308,6 +309,7 @@ fun SuperShyBottomSheet(
                                         color = SuperShyGold,
                                     )
                                 }
+
                                 else -> {
                                     Text(
                                         stringResource(Res.string.claim_30_days_free),

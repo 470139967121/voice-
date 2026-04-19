@@ -94,6 +94,7 @@ fun RoomNotificationOverlay(
                                 }
                             }
                         }
+
                         is RoomNotification.RequestApproved -> {
                             Text(
                                 text = stringResource(Res.string.request_accepted),
@@ -114,6 +115,7 @@ fun RoomNotificationOverlay(
                                 }
                             }
                         }
+
                         is RoomNotification.InviteReceived -> {
                             Text(
                                 text = stringResource(Res.string.invited_to_sit),

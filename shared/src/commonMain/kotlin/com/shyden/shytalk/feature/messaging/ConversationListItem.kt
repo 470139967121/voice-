@@ -150,25 +150,33 @@ fun ConversationListItem(
                 if (isGroup && currentUserRole != GroupRole.MEMBER) {
                     val (badgeColor, badgeLabel) =
                         when (currentUserRole) {
-                            GroupRole.OWNER ->
+                            GroupRole.OWNER -> {
                                 Pair(
                                     androidx.compose.ui.graphics
                                         .Color(0xFFFFD700),
                                     stringResource(Res.string.role_owner),
                                 )
-                            GroupRole.ADMIN ->
+                            }
+
+                            GroupRole.ADMIN -> {
                                 Pair(
                                     androidx.compose.ui.graphics
                                         .Color(0xFFFFC107),
                                     stringResource(Res.string.role_admin),
                                 )
-                            GroupRole.MOD ->
+                            }
+
+                            GroupRole.MOD -> {
                                 Pair(
                                     androidx.compose.ui.graphics
                                         .Color(0xFF009688),
                                     stringResource(Res.string.role_mod),
                                 )
-                            GroupRole.MEMBER -> Pair(MaterialTheme.colorScheme.outline, "")
+                            }
+
+                            GroupRole.MEMBER -> {
+                                Pair(MaterialTheme.colorScheme.outline, "")
+                            }
                         }
                     if (badgeLabel.isNotEmpty()) {
                         Text(

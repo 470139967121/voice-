@@ -51,6 +51,7 @@ class PinRepositoryImpl(
                         }
                     Result.success(PinVerifyResult(attemptsRemaining = remaining))
                 }
+
                 423 -> {
                     // Locked out — default requiresReauth to true (fail-secure)
                     val body =
@@ -68,7 +69,10 @@ class PinRepositoryImpl(
                         ),
                     )
                 }
-                else -> Result.failure(e)
+
+                else -> {
+                    Result.failure(e)
+                }
             }
         } catch (e: Exception) {
             Result.failure(e)

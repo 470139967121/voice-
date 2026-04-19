@@ -295,7 +295,10 @@ class ActiveRoomManager(
 
     private suspend fun loadUserName() {
         when (val result = userRepository.getUser(currentUserId)) {
-            is Resource.Success -> currentUserName = result.data.displayName
+            is Resource.Success -> {
+                currentUserName = result.data.displayName
+            }
+
             else -> {}
         }
     }
@@ -410,6 +413,7 @@ class ActiveRoomManager(
                             wasEverConnected = true
                             graceJob?.cancel()
                         }
+
                         VoiceConnectionState.DISCONNECTED -> {
                             if (!wasEverConnected) return@collect
 
@@ -436,6 +440,7 @@ class ActiveRoomManager(
                                     }
                                 }
                         }
+
                         VoiceConnectionState.RECONNECTING -> {
                             // Wait — LiveKit is trying to reconnect
                         }

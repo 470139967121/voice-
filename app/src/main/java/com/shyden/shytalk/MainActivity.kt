@@ -153,11 +153,13 @@ class MainActivity : AppCompatActivity() {
                                         .filter { it.frequency != "once" || !cache.isDismissed(it.screenId) }
                             }
                         }
+
                         is Resource.Error -> {
                             if (cached != null) {
                                 blockingScreen = cached.toStartingScreen()
                             }
                         }
+
                         is Resource.Loading -> { /* wait */ }
                     }
                     startingScreenCheckDone = true
@@ -178,15 +180,18 @@ class MainActivity : AppCompatActivity() {
                                 softUpdateAvailable = latestVersionName.ifEmpty { "v$latestVersionCode" }
                             }
                         }
+
                         is Resource.Error -> {
                             updateRequired = false
                         }
+
                         is Resource.Loading -> { /* wait */ }
                     }
                     when (val healthResult = appConfigService.checkBackendHealth()) {
                         is Resource.Success -> {
                             backendDegraded = healthResult.data.status == "degraded"
                         }
+
                         else -> {}
                     }
                     checkComplete = true
@@ -204,6 +209,7 @@ class MainActivity : AppCompatActivity() {
                                     return@LaunchedEffect
                                 }
                             }
+
                             else -> {} // still degraded
                         }
                     }
@@ -235,6 +241,7 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     }
+
                     blockingScreen != null && !blockingScreenDismissed -> {
                         // Blocking screen — STOPS all further loading
                         StartingScreenComposable(
@@ -242,6 +249,7 @@ class MainActivity : AppCompatActivity() {
                             onDismiss = { blockingScreenDismissed = true },
                         )
                     }
+
                     !checkComplete -> {
                         Surface(
                             color = MaterialTheme.colorScheme.background,
@@ -266,37 +274,49 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     }
+
                     isUnsafe -> {
                         UnsafeDeviceScreen()
                     }
+
                     updateRequired -> {
                         ForceUpdateScreen()
                     }
+
                     backendDegraded && !degradedAcknowledged -> {
                         DegradedModeScreen(onAcknowledge = { degradedAcknowledged = true })
                     }
+
                     !legalAccepted -> {
                         when (viewingLegalDoc) {
-                            "privacy" ->
+                            "privacy" -> {
                                 PrivacyPolicyScreen(
                                     onAccept = {},
                                     onDecline = {},
                                     onNavigateBack = { viewingLegalDoc = null },
                                     showActions = false,
                                 )
-                            "community" ->
+                            }
+
+                            "community" -> {
                                 CommunityStandardsScreen(
                                     onNavigateBack = { viewingLegalDoc = null },
                                 )
-                            "terms" ->
+                            }
+
+                            "terms" -> {
                                 TermsAndConditionsScreen(
                                     onNavigateBack = { viewingLegalDoc = null },
                                 )
-                            "cyberbullying" ->
+                            }
+
+                            "cyberbullying" -> {
                                 CyberBullyingPolicyScreen(
                                     onNavigateBack = { viewingLegalDoc = null },
                                 )
-                            else ->
+                            }
+
+                            else -> {
                                 LegalAcceptanceScreen(
                                     onAccept = {
                                         LanguagePreference.setAcceptedLegalVersion(CURRENT_LEGAL_VERSION)
@@ -307,8 +327,10 @@ class MainActivity : AppCompatActivity() {
                                     onViewTerms = { viewingLegalDoc = "terms" },
                                     onViewCyberBullyingPolicy = { viewingLegalDoc = "cyberbullying" },
                                 )
+                            }
                         }
                     }
+
                     dismissableScreens.isNotEmpty() && dismissableScreenIndex < dismissableScreens.size -> {
                         val currentScreen = dismissableScreens[dismissableScreenIndex]
                         StartingScreenComposable(
@@ -321,6 +343,7 @@ class MainActivity : AppCompatActivity() {
                             },
                         )
                     }
+
                     else -> {
                         val navController = rememberNavController()
                         val navigateToRoomId by navigateToRoomState
@@ -540,6 +563,7 @@ class MainActivity : AppCompatActivity() {
                     navigateToRoomState.value = roomId
                 }
             }
+
             "CONFIRM_LEAVE_ROOM" -> {
                 showLeaveConfirmationState.value = true
             }

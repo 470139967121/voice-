@@ -136,6 +136,7 @@ fun MessageBubble(
                         .padding(vertical = 4.dp),
             )
         }
+
         MessageType.JOIN -> {
             Row(
                 modifier =
@@ -189,6 +190,7 @@ fun MessageBubble(
                 }
             }
         }
+
         MessageType.TEXT -> {
             val resolvedName = aliases[message.senderId] ?: message.senderName
             Row(
@@ -288,6 +290,7 @@ fun MessageBubble(
                 }
             }
         }
+
         MessageType.GIFT -> {
             Row(
                 modifier =

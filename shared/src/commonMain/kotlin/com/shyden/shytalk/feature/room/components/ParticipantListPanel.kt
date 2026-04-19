@@ -272,6 +272,7 @@ private fun ParticipantRow(
                     )
                 }
             }
+
             pendingRequest != null -> {
                 Text(
                     text = stringResource(Res.string.requesting),
@@ -279,6 +280,7 @@ private fun ParticipantRow(
                     color = MaterialTheme.colorScheme.tertiary,
                 )
             }
+
             onInvite != null -> {
                 IconButton(onClick = onInvite, modifier = Modifier.size(32.dp)) {
                     Icon(

@@ -1320,7 +1320,7 @@ private fun ProfileContent(
                     }
 
                     when (selectedTab) {
-                        0 ->
+                        0 -> {
                             GiftWallContent(
                                 state = giftWallState,
                                 onSelectGift = { giftWallViewModel.selectGift(it) },
@@ -1330,7 +1330,9 @@ private fun ProfileContent(
                                         .fillMaxWidth()
                                         .heightIn(max = 400.dp),
                             )
-                        1 ->
+                        }
+
+                        1 -> {
                             if (isOwn && giftingState != null) {
                                 BackpackContent(
                                     backpackItems = giftingState.value.backpackItems,
@@ -1341,6 +1343,7 @@ private fun ProfileContent(
                                             .heightIn(max = 400.dp),
                                 )
                             }
+                        }
                     }
                 }
             }

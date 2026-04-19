@@ -182,24 +182,30 @@ fun NavGraph(
                     },
                     onAuthSuccess = { hasProfile, hasDOB, needsLegalAcceptance ->
                         when {
-                            !hasProfile ->
+                            !hasProfile -> {
                                 navController.navigate(Screen.ProfileSetup.route) {
                                     popUpTo(Screen.SignIn.route) { inclusive = true }
                                 }
-                            !hasDOB ->
+                            }
+
+                            !hasDOB -> {
                                 navController.navigate(Screen.RequiredDOB.route) {
                                     popUpTo(Screen.SignIn.route) { inclusive = true }
                                 }
+                            }
+
                             needsLegalAcceptance -> {
                                 navController.navigate(Screen.Splash.route) {
                                     popUpTo(Screen.SignIn.route) { inclusive = true }
                                 }
                                 navController.navigate(Screen.LegalAcceptance.route)
                             }
-                            else ->
+
+                            else -> {
                                 navController.navigate(Screen.Splash.route) {
                                     popUpTo(Screen.SignIn.route) { inclusive = true }
                                 }
+                            }
                         }
                     },
                 )
@@ -354,7 +360,10 @@ fun NavGraph(
                 LaunchedEffect(Unit) {
                     val userId = authRepository.currentUserId ?: return@LaunchedEffect
                     when (val result = userRepository.getUser(userId)) {
-                        is Resource.Success -> dailyRewardViewModel.checkAndShowDialog(result.data)
+                        is Resource.Success -> {
+                            dailyRewardViewModel.checkAndShowDialog(result.data)
+                        }
+
                         else -> {}
                     }
                 }
@@ -930,7 +939,10 @@ fun NavGraph(
                 LaunchedEffect(Unit) {
                     val userId = authRepository.currentUserId ?: return@LaunchedEffect
                     when (val result = warningUserRepo.getWarningReason(userId)) {
-                        is Resource.Success -> warningReason = result.data
+                        is Resource.Success -> {
+                            warningReason = result.data
+                        }
+
                         else -> {}
                     }
                 }

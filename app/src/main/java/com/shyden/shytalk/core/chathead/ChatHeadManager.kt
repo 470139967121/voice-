@@ -249,7 +249,9 @@ class ChatHeadManager(
                     true
                 }
 
-                else -> false
+                else -> {
+                    false
+                }
             }
         }
     }

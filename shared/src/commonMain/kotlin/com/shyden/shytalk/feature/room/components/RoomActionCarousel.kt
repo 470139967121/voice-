@@ -81,14 +81,16 @@ fun RoomActionCarousel(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 when (page) {
-                    0 ->
+                    0 -> {
                         SquareCarouselBanner(
                             icon = { MiniLuckySpinIcon(modifier = Modifier.size(28.dp)) },
                             title = stringResource(Res.string.lucky_spin),
                             gradientColors = listOf(Color(0xFFE53935), Color(0xFFFF6B35)),
                             onClick = onOpenGacha,
                         )
-                    1 ->
+                    }
+
+                    1 -> {
                         SquareCarouselBanner(
                             icon = {
                                 Icon(
@@ -102,6 +104,7 @@ fun RoomActionCarousel(
                             gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFFD700)),
                             onClick = onOpenDailyReward,
                         )
+                    }
                 }
             }
 

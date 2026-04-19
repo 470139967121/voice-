@@ -132,19 +132,22 @@ fun WalletScreen(
                 }
 
                 when (selectedTab) {
-                    0 ->
+                    0 -> {
                         CoinsTab(
                             coinBalance = state.coinBalance,
                             coinPackages = state.coinPackages,
                             isPurchasing = state.isPurchasing,
                             onTestPurchase = { coins -> viewModel.testPurchaseCoins(coins) },
                         )
-                    1 ->
+                    }
+
+                    1 -> {
                         BeansTab(
                             beanBalance = state.beanBalance,
                             isPurchasing = state.isPurchasing,
                             onRedeem = { amount -> viewModel.redeemBeans(amount) },
                         )
+                    }
                 }
             }
         }

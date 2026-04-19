@@ -71,7 +71,10 @@ class RoomSettingsViewModel(
                             )
                         }
                     }
-                    else -> Unit
+
+                    else -> {
+                        Unit
+                    }
                 }
             }
         }
@@ -186,10 +189,14 @@ class RoomSettingsViewModel(
                         roomRepository.takeSeat(currentRoomId, approved.seatIndex, approved.userId)
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(error = result.message) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }
@@ -244,11 +251,15 @@ class RoomSettingsViewModel(
                 is Resource.Success -> {
                     logI("RoomSettingsVM", "Room closed: $currentRoomId")
                 }
+
                 is Resource.Error -> {
                     logE("RoomSettingsVM", "Failed to close room: ${result.message}")
                     _uiState.update { it.copy(error = result.message) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }

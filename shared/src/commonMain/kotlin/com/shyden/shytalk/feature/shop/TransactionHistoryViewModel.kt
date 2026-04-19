@@ -49,11 +49,17 @@ class TransactionHistoryViewModel(
             // "Gifts" is a client-side composite filter for GIFT_SENT + GIFT_RECEIVED
             val serverFilter =
                 when (filter) {
-                    "Gifts" -> null // load all, filter client-side
+                    "Gifts" -> null
+
+                    // load all, filter client-side
                     "Purchases" -> TransactionType.PURCHASE.name
+
                     "Gacha" -> TransactionType.GACHA_PULL.name
+
                     "Rewards" -> TransactionType.DAILY_REWARD.name
+
                     "Redemptions" -> TransactionType.BEAN_REDEEM.name
+
                     else -> null // "All"
                 }
 
@@ -69,10 +75,14 @@ class TransactionHistoryViewModel(
                         }
                     _uiState.update { it.copy(transactions = transactions, isLoading = false) }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
-                is Resource.Loading -> Unit
+
+                is Resource.Loading -> {
+                    Unit
+                }
             }
         }
     }

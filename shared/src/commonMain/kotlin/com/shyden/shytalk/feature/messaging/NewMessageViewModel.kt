@@ -61,7 +61,10 @@ class NewMessageViewModel(
 
             val currentUser =
                 when (val result = userRepository.getUser(currentUserId)) {
-                    is Resource.Success -> result.data
+                    is Resource.Success -> {
+                        result.data
+                    }
+
                     else -> {
                         _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_load_user_data)) }
                         return@launch
@@ -87,6 +90,7 @@ class NewMessageViewModel(
                         )
                     }
                 }
+
                 else -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_load_users)) }
                 }
@@ -114,7 +118,10 @@ class NewMessageViewModel(
                             val ordered = recentUserIds.mapNotNull { usersMap[it] }
                             _uiState.update { it.copy(recentUsers = ordered) }
                         }
-                        else -> Unit
+
+                        else -> {
+                            Unit
+                        }
                     }
                 }
             }
@@ -127,7 +134,10 @@ class NewMessageViewModel(
                 is Resource.Success -> {
                     _uiState.update { it.copy(ownedGroupCount = result.data) }
                 }
-                else -> Unit
+
+                else -> {
+                    Unit
+                }
             }
         }
     }
@@ -183,12 +193,16 @@ class NewMessageViewModel(
                             )
                         }
                     }
+
                     is Resource.Error -> {
                         _uiState.update {
                             it.copy(isSearchingAll = false, error = UiText.plain(result.message))
                         }
                     }
-                    is Resource.Loading -> Unit
+
+                    is Resource.Loading -> {
+                        Unit
+                    }
                 }
             }
     }

@@ -233,6 +233,7 @@ fun SuspensionScreen(
                             }
                         }
                     }
+
                     // Just submitted or pending review
                     appealSubmitted || appealStatus == "pending" -> {
                         Text(
@@ -242,6 +243,7 @@ fun SuspensionScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
+
                     // Denied
                     appealStatus == "denied" -> {
                         Text(
@@ -251,6 +253,7 @@ fun SuspensionScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
+
                     // Not eligible (no canAppeal, no appeal status) — hide after countdown expires
                     !countdownExpired -> {
                         Text(
