@@ -23,33 +23,27 @@ sealed class UiText {
     @Composable
     fun resolve(): String =
         when (this) {
-            is Res -> {
+            is Res ->
                 if (args.isEmpty()) {
                     stringResource(resource)
                 } else {
                     stringResource(resource, *args.toTypedArray())
                 }
-            }
 
-            is Plain -> {
-                text
-            }
+            is Plain -> text
         }
 
     /** Resolve inside a suspend scope (e.g. LaunchedEffect). */
     suspend fun resolveAsync(): String =
         when (this) {
-            is Res -> {
+            is Res ->
                 if (args.isEmpty()) {
                     getString(resource)
                 } else {
                     getString(resource, *args.toTypedArray())
                 }
-            }
 
-            is Plain -> {
-                text
-            }
+            is Plain -> text
         }
 
     companion object {

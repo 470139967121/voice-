@@ -226,9 +226,7 @@ class GachaViewModel(
                     _uiState.update { it.copy(isPulling = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
             loadSpinHistory()
         }

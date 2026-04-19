@@ -111,29 +111,26 @@ fun LuckySpinConfetti(
             val py = particle.y * h
             val pSize = particle.particleSize
             when (particle.shape) {
-                0 -> {
+                0 ->
                     drawRect(
                         color = particle.color.copy(alpha = particle.opacity.coerceIn(0f, 1f)),
                         topLeft = Offset(px - pSize / 2, py - pSize * 0.3f),
                         size = Size(pSize, pSize * 0.6f),
                     )
-                }
 
-                1 -> {
+                1 ->
                     drawCircle(
                         color = particle.color.copy(alpha = particle.opacity.coerceIn(0f, 1f)),
                         radius = pSize / 2,
                         center = Offset(px, py),
                     )
-                }
 
-                else -> {
+                else ->
                     drawRect(
                         color = particle.color.copy(alpha = particle.opacity.coerceIn(0f, 1f)),
                         topLeft = Offset(px - pSize / 2, py - 1f),
                         size = Size(pSize, 2.5f),
                     )
-                }
             }
         }
     }

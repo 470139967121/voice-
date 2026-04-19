@@ -118,7 +118,7 @@ fun GroupSettingsSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             when (selectedTab) {
-                0 -> {
+                0 ->
                     GeneralTab(
                         conversation = conversation,
                         conversationName = conversationName,
@@ -131,9 +131,8 @@ fun GroupSettingsSheet(
                         onLeaveGroup = onLeaveGroup,
                         onDismiss = onDismiss,
                     )
-                }
 
-                1 -> {
+                1 ->
                     MembersTab(
                         conversation = conversation,
                         participants = participants,
@@ -145,9 +144,8 @@ fun GroupSettingsSheet(
                         onUpdateGroupRoles = onUpdateGroupRoles,
                         onUnmuteMember = onUnmuteMember,
                     )
-                }
 
-                2 -> {
+                2 ->
                     PermissionsTab(
                         conversation = conversation,
                         isOwner = isOwner,
@@ -158,7 +156,6 @@ fun GroupSettingsSheet(
                         onUpdateModNotifyMode = onUpdateModNotifyMode,
                         onTransferOwnership = onTransferOwnership,
                     )
-                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -393,9 +390,7 @@ private fun MembersTab(
                                         currentAdmins.remove(user.uid)
                                     }
 
-                                    GroupRole.OWNER -> {
-                                        Unit
-                                    }
+                                    GroupRole.OWNER -> Unit
                                 }
                                 onUpdateGroupRoles(currentAdmins, currentMods)
                             },

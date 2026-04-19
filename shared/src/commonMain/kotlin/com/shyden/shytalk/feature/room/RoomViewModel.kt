@@ -347,9 +347,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(currentUserName = result.data.displayName) }
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
         }
     }
@@ -717,9 +715,7 @@ class RoomViewModel(
                         result.data
                     }
 
-                    else -> {
-                        null
-                    }
+                    else -> null
                 }
             if (ownerUser != null && userId in ownerUser.blockedUserIds) {
                 _uiState.update { it.copy(blockWarning = BlockWarning.BlockedByRoomOwner) }
@@ -873,9 +869,7 @@ class RoomViewModel(
                         _uiState.update { it.copy(currentUserName = result.data.displayName) }
                     }
 
-                    else -> {
-                        Unit
-                    }
+                    else -> Unit
                 }
             }
             val userName = _uiState.value.currentUserName
@@ -1056,9 +1050,7 @@ class RoomViewModel(
                         _uiState.update { it.copy(seatActionStatus = SeatActionStatus.Idle, error = result.message) }
                     }
 
-                    is Resource.Loading -> {
-                        Unit
-                    }
+                    is Resource.Loading -> Unit
                 }
             } catch (e: Exception) {
                 logE(TAG, "Seat action failed", e)
@@ -1537,9 +1529,7 @@ class RoomViewModel(
                     roomLifecycleManager.updateSharedUserCache(userCache)
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
             val filtered = userCache.filterKeys { it in userIds }
             onLoaded(filtered)
@@ -1570,9 +1560,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(aliases = result.data) }
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
         }
     }
@@ -1585,9 +1573,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(blockedUserIds = result.data) }
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
         }
     }
@@ -1604,9 +1590,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(error = "Failed to block user") }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -1623,9 +1607,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(error = "Failed to unblock user") }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -1700,9 +1682,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(error = "Failed to set alias") }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -1719,9 +1699,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(error = "Failed to remove alias") }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -1775,18 +1753,14 @@ class RoomViewModel(
                             mimeType,
                         )
                 ) {
-                    is Resource.Success -> {
-                        evidenceUrls.add(result.data)
-                    }
+                    is Resource.Success -> evidenceUrls.add(result.data)
 
                     is Resource.Error -> {
                         _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to upload evidence") }
                         return@launch
                     }
 
-                    is Resource.Loading -> {
-                        Unit
-                    }
+                    is Resource.Loading -> Unit
                 }
             }
 
@@ -1812,9 +1786,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to submit report") }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -1827,9 +1799,8 @@ class RoomViewModel(
 
     private fun enqueueNotification(notification: RoomNotification) {
         when (notification) {
-            is RoomNotification.SeatRequestReceived -> {
+            is RoomNotification.SeatRequestReceived ->
                 if (notification.request.requestId in processedRequestIds) return
-            }
 
             is RoomNotification.RequestApproved -> {
                 if (notification.request.requestId in processedApprovalIds) return
@@ -1871,17 +1842,13 @@ class RoomViewModel(
         val current = _uiState.value.activeNotification
         if (current != null) {
             when (current) {
-                is RoomNotification.SeatRequestReceived -> {
+                is RoomNotification.SeatRequestReceived ->
                     processedRequestIds.add(current.request.requestId)
-                }
 
-                is RoomNotification.RequestApproved -> {
+                is RoomNotification.RequestApproved ->
                     processedApprovalIds.add(current.request.requestId)
-                }
 
-                is RoomNotification.InviteReceived -> {
-                    Unit
-                }
+                is RoomNotification.InviteReceived -> Unit
             }
         }
         autoDismissJob?.cancel()
@@ -2005,9 +1972,7 @@ class RoomViewModel(
                     _uiState.update { it.copy(error = result.message) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -2090,11 +2055,10 @@ class RoomViewModel(
             autoTranslatedMessageIds.add(msg.messageId)
             viewModelScope.launch {
                 when (val result = repo.translate(msg.text, targetLang, "rooms/$roomId/messages/${msg.messageId}")) {
-                    is Resource.Success -> {
+                    is Resource.Success ->
                         _uiState.update {
                             it.copy(translations = it.translations + (msg.messageId to result.data.translatedText))
                         }
-                    }
 
                     else -> { /* ignore errors for auto-translate */ }
                 }
@@ -2111,11 +2075,10 @@ class RoomViewModel(
                 .get()
         viewModelScope.launch {
             when (val result = repo.translate(message.text, targetLang, "rooms/$roomId/messages/$messageId")) {
-                is Resource.Success -> {
+                is Resource.Success ->
                     _uiState.update {
                         it.copy(translations = it.translations + (messageId to result.data.translatedText))
                     }
-                }
 
                 else -> { /* Loading or Error */ }
             }

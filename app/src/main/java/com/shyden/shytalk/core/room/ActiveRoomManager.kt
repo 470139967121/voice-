@@ -295,10 +295,7 @@ class ActiveRoomManager(
 
     private suspend fun loadUserName() {
         when (val result = userRepository.getUser(currentUserId)) {
-            is Resource.Success -> {
-                currentUserName = result.data.displayName
-            }
-
+            is Resource.Success -> currentUserName = result.data.displayName
             else -> {}
         }
     }

@@ -70,9 +70,7 @@ class PinRepositoryImpl(
                     )
                 }
 
-                else -> {
-                    Result.failure(e)
-                }
+                else -> Result.failure(e)
             }
         } catch (e: Exception) {
             Result.failure(e)

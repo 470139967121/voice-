@@ -150,9 +150,7 @@ class AppSettingsViewModel(
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -176,9 +174,7 @@ class AppSettingsViewModel(
                     _uiState.update { it.copy(error = UiText.res(Res.string.error_unblock_user)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -202,17 +198,13 @@ class AppSettingsViewModel(
         _uiState.update { it.copy(pmPrivacy = privacy) }
         viewModelScope.launch {
             when (userRepository.updateProfile(currentUserId, mapOf("pmPrivacy" to privacy.name))) {
-                is Resource.Success -> {
-                    Unit
-                }
+                is Resource.Success -> Unit
 
                 is Resource.Error -> {
                     _uiState.update { it.copy(pmPrivacy = oldValue, error = UiText.res(Res.string.error_update_privacy)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -233,18 +225,14 @@ class AppSettingsViewModel(
         applyOptimistic(newValue)
         viewModelScope.launch {
             when (userRepository.updateProfile(currentUserId, mapOf(key to newValue))) {
-                is Resource.Success -> {
-                    Unit
-                }
+                is Resource.Success -> Unit
 
                 is Resource.Error -> {
                     applyOptimistic(currentValue)
                     _uiState.update { it.copy(error = UiText.res(Res.string.error_update_privacy)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -386,9 +374,7 @@ class AppSettingsViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -435,9 +421,7 @@ class AppSettingsViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -475,9 +459,7 @@ class AppSettingsViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -505,9 +487,7 @@ class AppSettingsViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -531,9 +511,7 @@ class AppSettingsViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -560,9 +538,7 @@ class AppSettingsViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }

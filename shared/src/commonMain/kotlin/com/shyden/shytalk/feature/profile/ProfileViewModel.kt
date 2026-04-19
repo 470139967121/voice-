@@ -232,9 +232,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -298,9 +296,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -316,9 +312,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -338,9 +332,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -382,9 +374,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -431,9 +421,7 @@ class ProfileViewModel(
                             }
                         }
 
-                        is Resource.Loading -> {
-                            Unit
-                        }
+                        is Resource.Loading -> Unit
                     }
                 }
 
@@ -442,9 +430,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isUploadingPhoto = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -471,9 +457,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(error = UiText.res(Res.string.error_block_user)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -490,9 +474,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(error = UiText.res(Res.string.error_unblock_user)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -503,9 +485,7 @@ class ProfileViewModel(
         _uiState.update { it.copy(isFollowingTarget = true, followerCount = it.followerCount + 1) }
         viewModelScope.launch {
             when (userRepository.followUser(userId, targetUserId)) {
-                is Resource.Success -> {
-                    Unit
-                }
+                is Resource.Success -> Unit
 
                 is Resource.Error -> {
                     _uiState.update {
@@ -517,9 +497,7 @@ class ProfileViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -529,9 +507,7 @@ class ProfileViewModel(
         _uiState.update { it.copy(isFollowingTarget = false, followerCount = it.followerCount - 1) }
         viewModelScope.launch {
             when (userRepository.unfollowUser(userId, targetUserId)) {
-                is Resource.Success -> {
-                    Unit
-                }
+                is Resource.Success -> Unit
 
                 is Resource.Error -> {
                     _uiState.update {
@@ -543,9 +519,7 @@ class ProfileViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -566,9 +540,7 @@ class ProfileViewModel(
 
             val currentUser =
                 when (val result = userRepository.getUser(currentUid)) {
-                    is Resource.Success -> {
-                        result.data
-                    }
+                    is Resource.Success -> result.data
 
                     else -> {
                         _uiState.update {
@@ -593,18 +565,14 @@ class ProfileViewModel(
                             mimeType,
                         )
                 ) {
-                    is Resource.Success -> {
-                        evidenceUrls.add(result.data)
-                    }
+                    is Resource.Success -> evidenceUrls.add(result.data)
 
                     is Resource.Error -> {
                         _uiState.update { it.copy(isSubmittingReport = false, reportError = UiText.res(Res.string.error_upload_evidence)) }
                         return@launch
                     }
 
-                    is Resource.Loading -> {
-                        Unit
-                    }
+                    is Resource.Loading -> Unit
                 }
             }
 
@@ -630,9 +598,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isSubmittingReport = false, reportError = UiText.res(Res.string.error_submit_report)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -656,9 +622,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -676,9 +640,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -696,9 +658,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isPurchasingSuperShy = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }

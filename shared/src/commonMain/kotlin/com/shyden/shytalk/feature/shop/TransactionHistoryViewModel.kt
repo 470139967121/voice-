@@ -80,9 +80,7 @@ class TransactionHistoryViewModel(
                     _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }

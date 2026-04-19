@@ -157,9 +157,7 @@ fun MainScreen(
                     }
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
         },
     ) { padding ->
@@ -176,25 +174,18 @@ fun MainScreen(
                             onBannerAction = { banner ->
                                 val value = banner.actionValue ?: return@RoomListContent
                                 when (banner.actionType) {
-                                    BannerActionType.URL -> {
-                                        onNavigateToUrl(value)
-                                    }
+                                    BannerActionType.URL -> onNavigateToUrl(value)
 
-                                    BannerActionType.ROOM -> {
-                                        onNavigateToRoom(value)
-                                    }
+                                    BannerActionType.ROOM -> onNavigateToRoom(value)
 
-                                    BannerActionType.SCREEN -> {
+                                    BannerActionType.SCREEN ->
                                         when (value) {
                                             "wallet" -> onNavigateToWallet()
                                             "settings" -> onNavigateToSettings()
                                             else -> Unit
                                         }
-                                    }
 
-                                    BannerActionType.NONE -> {
-                                        Unit
-                                    }
+                                    BannerActionType.NONE -> Unit
                                 }
                             },
                             snackbarHostState = snackbarHostState,

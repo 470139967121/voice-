@@ -407,9 +407,7 @@ private fun FollowUserRow(
                     }
                 }
 
-                FollowTab.STALKERS -> {
-                    Unit
-                }
+                FollowTab.STALKERS -> Unit
             }
         }
     }

@@ -71,9 +71,7 @@ class ReportReviewViewModel(
                     }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -97,9 +95,7 @@ class ReportReviewViewModel(
                     _uiState.update { it.copy(message = UiText.res(Res.string.error_resolve_report)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }

@@ -61,14 +61,13 @@ fun PinSetupScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         when (state.step) {
-            PinSetupStep.ChooseLength -> {
+            PinSetupStep.ChooseLength ->
                 PinLengthChooser(
                     selected = state.pinLength,
                     onSelect = { viewModel.selectPinLength(it) },
                 )
-            }
 
-            PinSetupStep.Enter -> {
+            PinSetupStep.Enter ->
                 PinEntryStep(
                     title = stringResource(Res.string.pin_create_title),
                     isConfirmStep = false,
@@ -80,9 +79,8 @@ fun PinSetupScreen(
                     onBackspace = { viewModel.onBackspace() },
                     onSubmit = { viewModel.submit() },
                 )
-            }
 
-            PinSetupStep.Confirm -> {
+            PinSetupStep.Confirm ->
                 PinEntryStep(
                     title = stringResource(Res.string.pin_confirm_title),
                     isConfirmStep = true,
@@ -94,7 +92,6 @@ fun PinSetupScreen(
                     onBackspace = { viewModel.onBackspace() },
                     onSubmit = { viewModel.submit() },
                 )
-            }
         }
 
         // Biometric offer dialog

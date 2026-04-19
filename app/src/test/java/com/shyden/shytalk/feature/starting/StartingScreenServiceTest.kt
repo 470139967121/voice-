@@ -67,9 +67,7 @@ class StartingScreenServiceTest {
                 }
             }
 
-            is Resource.Loading -> {
-                StartupState.LOADING
-            }
+            is Resource.Loading -> StartupState.LOADING
         }
 
     enum class StartupState { LOADING, BLOCKED, DISMISSABLE_SCREENS, PROCEED }

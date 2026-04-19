@@ -105,9 +105,7 @@ class HomeViewModel(
                     }
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
         }
     }
@@ -121,9 +119,7 @@ class HomeViewModel(
                     filterAndEmitRooms()
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
         }
     }
@@ -170,9 +166,7 @@ class HomeViewModel(
                     myBlockedUserIds = result.data
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
             userCache.clear()
             filterAndEmitRooms()
@@ -208,9 +202,7 @@ class HomeViewModel(
                 myBlockedUserIds = result.data
             }
 
-            else -> {
-                Unit
-            }
+            else -> Unit
         }
         // Evict stale cache entries instead of clearing everything
         val cutoff = currentTimeMillis() - REFRESH_INTERVAL_MS
@@ -247,9 +239,7 @@ class HomeViewModel(
                     result.data.forEach { user -> cacheUser(user.uid, user) }
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
         }
 
@@ -341,9 +331,7 @@ class HomeViewModel(
                 _uiState.update { it.copy(isLoading = false, error = result.message) }
             }
 
-            is Resource.Loading -> {
-                Unit
-            }
+            is Resource.Loading -> Unit
         }
     }
 

@@ -181,9 +181,7 @@ class GiftingViewModel(
                     _uiState.update { it.copy(isSending = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -219,9 +217,7 @@ class GiftingViewModel(
                     _uiState.update { it.copy(isSending = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -256,9 +252,7 @@ class GiftingViewModel(
                     _uiState.update { it.copy(isSending = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -281,9 +275,7 @@ class GiftingViewModel(
                     _uiState.update { it.copy(isSending = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }

@@ -72,9 +72,7 @@ class RoomSettingsViewModel(
                         }
                     }
 
-                    else -> {
-                        Unit
-                    }
+                    else -> Unit
                 }
             }
         }
@@ -194,9 +192,7 @@ class RoomSettingsViewModel(
                     _uiState.update { it.copy(error = result.message) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -257,9 +253,7 @@ class RoomSettingsViewModel(
                     _uiState.update { it.copy(error = result.message) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }

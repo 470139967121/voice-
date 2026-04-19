@@ -35,48 +35,43 @@ data class RarityConfig(
 /** Coin-value-based celebration configs — effects scale with value. */
 fun rarityConfigForCoinValue(coinValue: Int): RarityConfig =
     when {
-        coinValue < 50 -> {
+        coinValue < 50 ->
             RarityConfig(
                 glowColor = Color.White,
                 burstCount = 40,
                 shakeIntensity = 0f,
                 flash = false,
             )
-        }
 
-        coinValue < 200 -> {
+        coinValue < 200 ->
             RarityConfig(
                 glowColor = Color.White,
                 burstCount = 70,
                 shakeIntensity = 3f,
                 flash = false,
             )
-        }
 
-        coinValue < 2000 -> {
+        coinValue < 2000 ->
             RarityConfig(
                 glowColor = Color.White,
                 burstCount = 130,
                 shakeIntensity = 5f,
                 flash = true,
             )
-        }
 
-        coinValue < 10000 -> {
+        coinValue < 10000 ->
             RarityConfig(
                 glowColor = Color.White,
                 burstCount = 180,
                 shakeIntensity = 7f,
                 flash = true,
             )
-        }
 
-        else -> {
+        else ->
             RarityConfig(
                 glowColor = Color.White,
                 burstCount = 220,
                 shakeIntensity = 10f,
                 flash = true,
             )
-        }
     }

@@ -132,7 +132,7 @@ fun AppSettingsScreen(
         }
     } else {
         when (currentPage) {
-            SettingsPage.Main -> {
+            SettingsPage.Main ->
                 SettingsMainPage(
                     uiState = uiState,
                     onNavigateBack = onNavigateBack,
@@ -144,18 +144,16 @@ fun AppSettingsScreen(
                     onSignOut = { showSignOutDialog = true },
                     snackbarHostState = snackbarHostState,
                 )
-            }
 
-            SettingsPage.BlockedUsers -> {
+            SettingsPage.BlockedUsers ->
                 BlockedUsersPage(
                     uiState = uiState,
                     onBack = { currentPageName = SettingsPage.Main.name },
                     onUnblockUser = { viewModel.unblockUser(it) },
                     snackbarHostState = snackbarHostState,
                 )
-            }
 
-            SettingsPage.Account -> {
+            SettingsPage.Account ->
                 AccountPage(
                     uiState = uiState,
                     onBack = { currentPageName = SettingsPage.Main.name },
@@ -165,9 +163,8 @@ fun AppSettingsScreen(
                     onRequestExport = { viewModel.requestDataExport() },
                     snackbarHostState = snackbarHostState,
                 )
-            }
 
-            SettingsPage.LinkedAccounts -> {
+            SettingsPage.LinkedAccounts ->
                 LinkedAccountsPage(
                     uiState = uiState,
                     onBack = { currentPageName = SettingsPage.Account.name },
@@ -175,9 +172,8 @@ fun AppSettingsScreen(
                     onLinkProvider = { type -> viewModel.linkProvider(type, "") },
                     snackbarHostState = snackbarHostState,
                 )
-            }
 
-            SettingsPage.Privacy -> {
+            SettingsPage.Privacy ->
                 PrivacyPage(
                     uiState = uiState,
                     onBack = { currentPageName = SettingsPage.Main.name },
@@ -187,9 +183,8 @@ fun AppSettingsScreen(
                     onSetPmPrivacy = { viewModel.setPmPrivacy(it) },
                     snackbarHostState = snackbarHostState,
                 )
-            }
 
-            SettingsPage.Notifications -> {
+            SettingsPage.Notifications ->
                 NotificationsPage(
                     uiState = uiState,
                     onBack = { currentPageName = SettingsPage.Main.name },
@@ -206,16 +201,14 @@ fun AppSettingsScreen(
                     onToggleSelfDestructAlert = { viewModel.toggleSelfDestructAlert() },
                     snackbarHostState = snackbarHostState,
                 )
-            }
 
-            SettingsPage.Permissions -> {
+            SettingsPage.Permissions ->
                 PermissionsPage(
                     onBack = { currentPageName = SettingsPage.Main.name },
                     snackbarHostState = snackbarHostState,
                 )
-            }
 
-            SettingsPage.About -> {
+            SettingsPage.About ->
                 AboutPage(
                     uiState = uiState,
                     onBack = { currentPageName = SettingsPage.Main.name },
@@ -227,7 +220,6 @@ fun AppSettingsScreen(
                     onClearCache = { viewModel.requestClearCache() },
                     snackbarHostState = snackbarHostState,
                 )
-            }
         }
     }
 

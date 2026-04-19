@@ -80,13 +80,9 @@ class WalletViewModel(
                 }
             }
 
-            is Resource.Error -> {
-                _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
-            }
+            is Resource.Error -> _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
 
-            is Resource.Loading -> {
-                Unit
-            }
+            is Resource.Loading -> Unit
         }
     }
 
@@ -113,9 +109,7 @@ class WalletViewModel(
                     _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -149,9 +143,7 @@ class WalletViewModel(
                     _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }
@@ -174,9 +166,7 @@ class WalletViewModel(
                     _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }

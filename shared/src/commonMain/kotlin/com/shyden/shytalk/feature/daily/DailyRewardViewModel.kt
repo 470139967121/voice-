@@ -132,9 +132,7 @@ class DailyRewardViewModel(
                     _uiState.update { it.copy(isClaiming = false, error = result.message) }
                 }
 
-                is Resource.Loading -> {
-                    Unit
-                }
+                is Resource.Loading -> Unit
             }
         }
     }

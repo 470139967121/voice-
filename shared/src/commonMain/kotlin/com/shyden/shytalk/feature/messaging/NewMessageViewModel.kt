@@ -61,9 +61,7 @@ class NewMessageViewModel(
 
             val currentUser =
                 when (val result = userRepository.getUser(currentUserId)) {
-                    is Resource.Success -> {
-                        result.data
-                    }
+                    is Resource.Success -> result.data
 
                     else -> {
                         _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_load_user_data)) }
@@ -119,9 +117,7 @@ class NewMessageViewModel(
                             _uiState.update { it.copy(recentUsers = ordered) }
                         }
 
-                        else -> {
-                            Unit
-                        }
+                        else -> Unit
                     }
                 }
             }
@@ -135,9 +131,7 @@ class NewMessageViewModel(
                     _uiState.update { it.copy(ownedGroupCount = result.data) }
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> Unit
             }
         }
     }
@@ -200,9 +194,7 @@ class NewMessageViewModel(
                         }
                     }
 
-                    is Resource.Loading -> {
-                        Unit
-                    }
+                    is Resource.Loading -> Unit
                 }
             }
     }

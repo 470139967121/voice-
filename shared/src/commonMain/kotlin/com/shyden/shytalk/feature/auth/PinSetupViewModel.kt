@@ -64,9 +64,7 @@ class PinSetupViewModel(
         }
 
         when (current.step) {
-            PinSetupStep.ChooseLength -> {
-                Unit
-            }
+            PinSetupStep.ChooseLength -> Unit
 
             // shouldn't happen
             PinSetupStep.Enter -> {

@@ -167,16 +167,12 @@ class FollowListViewModel(
                                     stalkerUserMap = usersResult.data.associateBy { it.uid }
                                 }
 
-                                else -> {
-                                    Unit
-                                }
+                                else -> Unit
                             }
                         }
                     }
 
-                    else -> {
-                        Unit
-                    }
+                    else -> Unit
                 }
             }
 

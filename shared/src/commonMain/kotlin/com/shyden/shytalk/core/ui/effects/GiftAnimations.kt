@@ -214,9 +214,7 @@ private fun DrawScope.drawRareEffect(
             }
         }
 
-        else -> {
-            Unit
-        } // Default rare effect (burst + orbiting particles) is enough
+        else -> Unit // Default rare effect (burst + orbiting particles) is enough
     }
 }
 
@@ -387,7 +385,7 @@ private fun DrawScope.drawLegendaryEffect(
 
 private fun randomValueColor(coinValue: Int): Color =
     when {
-        coinValue < 50 -> {
+        coinValue < 50 ->
             listOf(
                 Color(0xFFFFB6C1),
                 Color(0xFFFF69B4),
@@ -395,9 +393,8 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFFFFDAB9),
                 Color(0xFFFFE4E1),
             ).random()
-        }
 
-        coinValue < 200 -> {
+        coinValue < 200 ->
             listOf(
                 Color(0xFF4CAF50),
                 Color(0xFF81C784),
@@ -405,9 +402,8 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFF66BB6A),
                 Color(0xFF43A047),
             ).random()
-        }
 
-        coinValue < 2000 -> {
+        coinValue < 2000 ->
             listOf(
                 Color(0xFF2196F3),
                 Color(0xFF42A5F5),
@@ -415,9 +411,8 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFF64B5F6),
                 Color(0xFF1E88E5),
             ).random()
-        }
 
-        coinValue < 10000 -> {
+        coinValue < 10000 ->
             listOf(
                 Color(0xFF9C27B0),
                 Color(0xFFAB47BC),
@@ -425,9 +420,8 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFF7B1FA2),
                 Color(0xFFE040FB),
             ).random()
-        }
 
-        else -> {
+        else ->
             listOf(
                 Color(0xFFFFD700),
                 Color(0xFFFF6B00),
@@ -435,5 +429,4 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFFFFAB00),
                 Color(0xFFFFC107),
             ).random()
-        }
     }

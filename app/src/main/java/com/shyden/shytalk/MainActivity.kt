@@ -289,34 +289,30 @@ class MainActivity : AppCompatActivity() {
 
                     !legalAccepted -> {
                         when (viewingLegalDoc) {
-                            "privacy" -> {
+                            "privacy" ->
                                 PrivacyPolicyScreen(
                                     onAccept = {},
                                     onDecline = {},
                                     onNavigateBack = { viewingLegalDoc = null },
                                     showActions = false,
                                 )
-                            }
 
-                            "community" -> {
+                            "community" ->
                                 CommunityStandardsScreen(
                                     onNavigateBack = { viewingLegalDoc = null },
                                 )
-                            }
 
-                            "terms" -> {
+                            "terms" ->
                                 TermsAndConditionsScreen(
                                     onNavigateBack = { viewingLegalDoc = null },
                                 )
-                            }
 
-                            "cyberbullying" -> {
+                            "cyberbullying" ->
                                 CyberBullyingPolicyScreen(
                                     onNavigateBack = { viewingLegalDoc = null },
                                 )
-                            }
 
-                            else -> {
+                            else ->
                                 LegalAcceptanceScreen(
                                     onAccept = {
                                         LanguagePreference.setAcceptedLegalVersion(CURRENT_LEGAL_VERSION)
@@ -327,7 +323,6 @@ class MainActivity : AppCompatActivity() {
                                     onViewTerms = { viewingLegalDoc = "terms" },
                                     onViewCyberBullyingPolicy = { viewingLegalDoc = "cyberbullying" },
                                 )
-                            }
                         }
                     }
 

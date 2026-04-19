@@ -97,16 +97,15 @@ fun EmailOtpScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             when (state.step) {
-                EmailOtpStep.EnterEmail -> {
+                EmailOtpStep.EnterEmail ->
                     EmailStep(
                         email = state.email,
                         isLoading = state.isLoading,
                         onEmailChange = { viewModel.updateEmail(it) },
                         onSubmit = { viewModel.sendOtp() },
                     )
-                }
 
-                EmailOtpStep.EnterCode -> {
+                EmailOtpStep.EnterCode ->
                     CodeStep(
                         email = state.email,
                         code = state.code,
@@ -116,7 +115,6 @@ fun EmailOtpScreen(
                         onSubmit = { viewModel.verifyOtp() },
                         onResend = { viewModel.resendOtp() },
                     )
-                }
             }
         }
     }
