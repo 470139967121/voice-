@@ -287,7 +287,7 @@ test.describe('Admin Users - Economy Subtab', () => {
     await page.locator('#tx-load-btn').click();
 
     // Wait for results to load
-    await expect(txList.locator('div[style*="border-bottom"]')).toBeVisible();
+    await expect(txList.locator('div[style*="border-bottom"]').first()).toBeVisible();
 
     // Restore: deduct 50 via API
     await testData.api.post(`/api/users/${uid}/adjust-balance`, {

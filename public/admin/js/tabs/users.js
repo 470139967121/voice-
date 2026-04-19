@@ -906,8 +906,20 @@ export function populateSuspensionSection(data) {
     if (suspendBtn) suspendBtn.style.display = "none";
     if (unsuspendBtn) unsuspendBtn.style.display = "";
     const preSuspensionInfo = $("#pre-suspension-info");
-    if (data._preSuspension && preSuspensionInfo) preSuspensionInfo.style.display = "block";
-    else if (preSuspensionInfo) preSuspensionInfo.style.display = "none";
+    const preSuspensionPhoto = $("#pre-suspension-photo");
+    const preSuspensionName = $("#pre-suspension-name");
+    const preSuspensionCover = $("#pre-suspension-cover");
+    if (data._preSuspension && preSuspensionInfo) {
+      preSuspensionInfo.style.display = "block";
+      if (preSuspensionName) preSuspensionName.textContent = data._preSuspension.displayName || "Unknown";
+      if (data._preSuspension.profilePhotoUrl && preSuspensionPhoto) {
+        preSuspensionPhoto.src = data._preSuspension.profilePhotoUrl;
+        preSuspensionPhoto.style.display = "block";
+      } else if (preSuspensionPhoto) { preSuspensionPhoto.style.display = "none"; }
+      if (data._preSuspension.coverPhotoUrl && preSuspensionCover) {
+        preSuspensionCover.style.display = "block";
+      } else if (preSuspensionCover) { preSuspensionCover.style.display = "none"; }
+    } else if (preSuspensionInfo) { preSuspensionInfo.style.display = "none"; }
   } else {
     if (suspensionStatus) { suspensionStatus.className = "suspension-status not-suspended"; suspensionStatus.textContent = "Not Suspended"; }
     if (suspendBtn) suspendBtn.style.display = "";
@@ -1285,7 +1297,7 @@ export function wireModerationListeners() {
     if (!currentUid) { showToast("No user loaded", "error"); return; }
     if (!confirm("Remove all device bindings for this user?")) return;
     resetDeviceBtn.disabled = true; resetDeviceBtn.textContent = "Resetting...";
-    try { const result = await apiCall("POST", `/api/cleanup/device-binding/${currentUid}`); showToast("Removed " + (result.deleted || 0) + " device binding(s)", "success"); }
+    try { const result = await apiCall("POST", `/api/cleanup/device-binding/${currentUid}`); showToast("Removed " + (result.deleted || 0) + " device binding(s)", "success"); populateDeviceBindingCard(currentUid); }
     catch (err) { showToast("Failed: " + err.message, "error"); }
     finally { resetDeviceBtn.disabled = false; resetDeviceBtn.textContent = "Reset Device Binding"; }
   });

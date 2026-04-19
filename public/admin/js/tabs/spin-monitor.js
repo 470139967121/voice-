@@ -555,14 +555,14 @@ export function stopMonitoring() {
   monitorUid = null;
   sessionStorage.removeItem("admin_monitor_uid");
 
-  // Update status
-  monitorDot.classList.remove("live");
-  monitorStatusText.textContent = "Disconnected";
-  monitorStartBtn.style.display = "";
-  monitorStopBtn.style.display = "none";
+  // Update status (guard: init() may not have run if tab was never visited)
+  if (monitorDot) monitorDot.classList.remove("live");
+  if (monitorStatusText) monitorStatusText.textContent = "Disconnected";
+  if (monitorStartBtn) monitorStartBtn.style.display = "";
+  if (monitorStopBtn) monitorStopBtn.style.display = "none";
 
   // Remove live dot from tab
-  const liveDot = tabMonitor.querySelector(".tab-live-dot");
+  const liveDot = tabMonitor?.querySelector(".tab-live-dot");
   if (liveDot) liveDot.remove();
 }
 

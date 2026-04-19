@@ -24,13 +24,13 @@ async function filterPendingReports(page: Page): Promise<void> {
   await waitForReportsLoaded(page);
 }
 
-/** Seed a report via API. */
+/** Seed a report via API — reports secondUser (not the fixture user) to create a new card. */
 async function seedReport(testData: TestData): Promise<string> {
   const result = await testData.api.post('/api/reports', {
-    reportedUserId: testData.user.uid,
-    reportedUserUniqueId: testData.user.uniqueId,
-    reporterId: testData.secondUser.uid,
-    reporterUniqueId: testData.secondUser.uniqueId,
+    reportedUserId: testData.secondUser.uid,
+    reportedUserUniqueId: testData.secondUser.uniqueId,
+    reporterId: testData.user.uid,
+    reporterUniqueId: testData.user.uniqueId,
     reason: 'Spam',
     description: 'E2E realtime test',
   });

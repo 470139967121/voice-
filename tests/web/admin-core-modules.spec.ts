@@ -32,7 +32,7 @@ test.describe('Admin Core Modules Integration', () => {
   test('core/ui.js showToast is used (not inline version)', async ({ page }) => {
     // Verify the import statement exists at the top of the inline block
     const html = await page.content();
-    expect(html).toContain("import { showToast, showConfirm } from '/js/core/ui.js'");
+    expect(html).toContain("import { showToast, showConfirm, escapeHtml } from '/js/core/ui.js'");
   });
 
   test('Firebase getApp() works (no duplicate init error)', async ({ page }) => {

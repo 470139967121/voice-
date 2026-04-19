@@ -5089,6 +5089,7 @@
       get clientDb() { return clientDb; },
       firestoreFns: { collection, query, orderBy, limit, where, onSnapshot, getDocs, doc },
       getCurrentTab: () => currentTab,
+      currentTab: () => currentTab,
       getPityHardLimit: () => cachedPityHardLimit,
       searchUserByUniqueId: (uid) => TAB_MODULES['users']?.searchUserByUniqueId?.(uid),
       renderEvidence: (urls) => TAB_MODULES['users']?.renderEvidence?.(urls) ?? '',
