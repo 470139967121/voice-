@@ -3,8 +3,12 @@
 ## Project Overview
 Social chat app with voice rooms. Kotlin Multiplatform (Android + iOS), Firebase backend, LiveKit voice, $0 hosting cost.
 
+## Tri-Platform Policy
+**ALL work must ship on desktop (web), iOS, and Android simultaneously.** No platform can fall behind. Every feature implemented in shared/commonMain must compile for both Android and iOS. Verify with `./gradlew :shared:compileKotlinIosArm64` after any shared code change.
+
 ## Build & Test Commands
-- **Build**: `./gradlew assembleDevDebug`
+- **Build (Android)**: `./gradlew assembleDevDebug`
+- **Build (iOS shared)**: `./gradlew :shared:compileKotlinIosArm64`
 - **Unit tests**: `./gradlew test`
 - **E2E tests**: `./gradlew connectedDebugAndroidTest`
 - **Install on device**: `./gradlew installDebug`
@@ -60,14 +64,15 @@ Social chat app with voice rooms. Kotlin Multiplatform (Android + iOS), Firebase
 1. **Kotlin lint**: `ktlint --relative` (~1s, requires standalone ktlint 1.5.0)
 2. **Express tests**: `cd express-api && npm test` (~10s)
 3. **Kotlin tests + detekt**: `./gradlew testDevDebugUnitTest :shared:jvmTest detekt` (~2min)
-4. **Playwright tests**: `npx playwright test` (~5min, requires local stack)
-5. **E2E smoke tests**: `./gradlew connectedDevDebugAndroidTest` (requires emulator + local stack)
+4. **iOS compilation**: `./gradlew :shared:compileKotlinIosArm64` (~1min, mandatory for shared code changes)
+5. **Playwright tests**: `npx playwright test` (~5min, requires local stack)
+6. **E2E smoke tests**: `./gradlew connectedDevDebugAndroidTest` (requires emulator + local stack)
 
-### Local stack prerequisite (for steps 4-5):
+### Local stack prerequisite (for steps 5-6):
 - Start Docker Desktop
 - Run `bash local/start.sh` (Firebase Emulators + LiveKit + MinIO + Mailpit)
 - Run `cd express-api && npm run local` (Express API against emulators)
-- Android emulator for step 5
+- Android emulator for step 6
 
 ### Additional checks:
 - Code review agent on the diff

@@ -30,7 +30,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.5",
     "otplib": "^13.4.0",
-    "sharp": "0.34.5"
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
