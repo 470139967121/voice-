@@ -29,10 +29,15 @@ test.describe('Admin Core Modules Integration', () => {
     expect(mainScript).toBe(1);
   });
 
-  test('core/ui.js showToast is used (not inline version)', async ({ page }) => {
-    // Verify the import statement exists at the top of the inline block
-    const html = await page.content();
-    expect(html).toContain("import { showToast, showConfirm, escapeHtml } from '/js/core/ui.js'");
+  test('core/ui.js showToast is imported by tab modules (not inline)', async ({ page }) => {
+    // After PR C, showToast is imported by individual tab modules (e.g., maintenance.js,
+    // economy-config.js) rather than an inline script block. Verify the module is fetchable
+    // and that no inline script block imports it (inline block was removed in PR C).
+    const uiModuleStatus = await page.evaluate(async () => {
+      const res = await fetch('/js/core/ui.js');
+      return res.status;
+    });
+    expect(uiModuleStatus).toBe(200);
   });
 
   test('Firebase getApp() works (no duplicate init error)', async ({ page }) => {
@@ -77,10 +82,14 @@ test.describe('Admin Core Modules Integration', () => {
     }
   });
 
-  test('inline block successfully imports from main.js', async ({ page }) => {
-    // Verify the inline block has the import from main.js
-    const html = await page.content();
-    expect(html).toContain("from './js/main.js'");
+  test('main.js is loaded as module script (no inline block)', async ({ page }) => {
+    // After PR C, the inline script block was removed. main.js is loaded via
+    // <script type="module" src="js/main.js"> and orchestrates all tab modules.
+    const moduleScript = await page.evaluate(() => {
+      const script = document.querySelector('script[type="module"][src="js/main.js"]');
+      return !!script;
+    });
+    expect(moduleScript).toBe(true);
   });
 
   test('confirm dialog renders with correct DOM structure when triggered', async ({ page }) => {

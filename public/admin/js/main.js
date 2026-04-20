@@ -85,11 +85,19 @@ const _tabPaths = {
   suggestions: '/admin/js/tabs/suggestions.js',
   'audit-log': '/admin/js/tabs/audit-log.js',
 };
-for (const [key, path] of Object.entries(_tabPaths)) {
-  import(path).then(m => { TAB_MODULES[key] = m; }).catch(err => {
-    console.warn(`Tab module ${key} failed to load:`, err);
-  });
-}
+// Load all tab modules in parallel and register them once loaded.
+// Using Promise.allSettled ensures all modules are available before
+// login completes, preventing race conditions with waitForModule().
+const _moduleLoadPromise = Promise.allSettled(
+  Object.entries(_tabPaths).map(async ([key, path]) => {
+    try {
+      const m = await import(path);
+      TAB_MODULES[key] = m;
+    } catch (err) {
+      console.warn(`Tab module ${key} failed to load:`, err);
+    }
+  }),
+);
 
 // ── Module lifecycle ────────────────────────────────────────────
 let cachedPityHardLimit = 120;
@@ -276,6 +284,9 @@ onAuthStateChanged(auth, async (user) => {
       });
     }
     showScreen('dashboard');
+
+    // Ensure all tab modules are loaded before proceeding
+    await _moduleLoadPromise;
 
     // Init maintenance sub-features (sync from prod, nuclear reset)
     const maintenanceDeps = {
