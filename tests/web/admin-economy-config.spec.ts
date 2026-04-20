@@ -328,7 +328,11 @@ test.describe('Admin Economy Config', () => {
 
   // ── Test 14: Milestone type toggle ──
   test('milestone type toggle — gift type shows gift select', async ({ page, testData }) => {
-    // Always restore config first (removes leftover day-999 from previous failed run)
+    // Use a unique day per test run to avoid cross-browser contention
+    // (all 5 Playwright browsers run in parallel against same dev Firestore)
+    const uniqueDay = 900 + Math.floor(Math.random() * 99);
+
+    // Always restore config first (removes leftover test milestones from previous failed run)
     await restoreEconomyConfig(page, testData);
 
     // Get a gift ID from the API
@@ -337,10 +341,10 @@ test.describe('Admin Economy Config', () => {
     expect(giftList.length).toBeGreaterThan(0);
     const giftId = giftList[0].id;
 
-    // Add a gift-type milestone at day 999 (guaranteed to sort last)
+    // Add a gift-type milestone at a unique high day number
     const currentConfig = await testData.api.get('/api/config/economy');
     const milestones = { ...(currentConfig.milestoneRewards || {}) };
-    milestones['999'] = { type: 'gift', giftId, quantity: 1 };
+    milestones[String(uniqueDay)] = { type: 'gift', giftId, quantity: 1 };
     await page.request.put(`${API_BASE}/api/config/economy`, {
       headers: {
         Authorization: `Bearer ${await testData.api.waitForToken()}`,
@@ -350,21 +354,20 @@ test.describe('Admin Economy Config', () => {
     });
 
     // Brief wait for API write to propagate before reload
-    await page.waitForTimeout(1_000);
+    await page.waitForTimeout(2_000);
     // Reload and verify the gift milestone renders correctly
-    // Day 999 is guaranteed to sort last (milestones are sorted by day ascending)
     await reloadAndNavigateToEconomy(page);
-    // Wait for milestone rows to render before checking the last one
+    // Wait for milestone rows to render before checking
     const milestoneRows = page.locator('#milestone-rows .milestone-row');
     await expect(milestoneRows.first()).toBeVisible({ timeout: 10_000 });
-    // Wait for day-999 row specifically (it may take a moment to sort/render all rows)
-    const day999Row = milestoneRows.filter({ has: page.locator('.ms-day[value="999"]') });
-    await expect(day999Row).toBeVisible({ timeout: 10_000 });
-    await expect(day999Row.locator('.ms-type')).toHaveValue('gift');
-    // Gift select renders conditionally based on type — may take time on slower CI runners
-    await expect(day999Row.locator('.ms-gift-select')).toBeVisible({ timeout: 15_000 });
+    // Wait for the unique-day row specifically
+    const targetRow = milestoneRows.filter({ has: page.locator(`.ms-day[value="${uniqueDay}"]`) });
+    await expect(targetRow).toBeVisible({ timeout: 15_000 });
+    await expect(targetRow.locator('.ms-type')).toHaveValue('gift');
+    // Gift select renders conditionally based on type
+    await expect(targetRow.locator('.ms-gift-select')).toBeVisible({ timeout: 15_000 });
 
-    // Restore (remove the day-999 milestone)
+    // Restore (remove the test milestone)
     await restoreEconomyConfig(page, testData);
   });
 
