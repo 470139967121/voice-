@@ -89,8 +89,9 @@ test.describe('Admin Maintenance Tab', () => {
     const btn = page.locator('#clear-reports-btn');
     await btn.click();
 
-    // Button should show processing state
-    await expect(btn).toHaveText('Processing...');
+    // Skip transient "Processing..." text assertion — the API can complete
+    // before Playwright observes it, causing a race condition on fast CI.
+    // Instead, just wait for the result to appear.
 
     // Result should show success
     await expectMaintenanceSuccess(page, 'clear-reports-result');

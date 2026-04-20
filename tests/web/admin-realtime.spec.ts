@@ -172,7 +172,9 @@ test.describe('Admin Realtime Features', () => {
     const badge = page.locator('#alert-bell-badge');
 
     if (apiCount > 0) {
-      await expect(badge).toBeVisible({ timeout: 10_000 });
+      // Badge is updated by loadUnresolvedCount() which runs after login.
+      // On slow CI, module loading (up to 15s) + two API calls can take time.
+      await expect(badge).toBeVisible({ timeout: 30_000 });
       const badgeText = await badge.textContent();
       const badgeCount = Number(badgeText);
       // Badge must show a positive count since API confirms alerts exist

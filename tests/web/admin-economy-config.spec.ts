@@ -349,6 +349,8 @@ test.describe('Admin Economy Config', () => {
       data: { milestoneRewards: milestones },
     });
 
+    // Brief wait for API write to propagate before reload
+    await page.waitForTimeout(1_000);
     // Reload and verify the gift milestone renders correctly
     // Day 999 is guaranteed to sort last (milestones are sorted by day ascending)
     await reloadAndNavigateToEconomy(page);
