@@ -162,12 +162,12 @@ test.describe('Admin Keyboard Shortcuts', () => {
     // Press Enter instead of clicking Search
     await searchInput.press('Enter');
 
-    // Verify user data loaded
+    // Verify user data loaded (dev API on Oracle free tier can be slow under load)
     const subtab = page.locator('.user-subtab[data-subtab="profile"]');
-    await expect(subtab).toBeVisible({ timeout: 15_000 });
+    await expect(subtab).toBeVisible({ timeout: 30_000 });
 
     const displayNameInput = page.locator('[data-field="displayName"]');
-    await expect(displayNameInput).toHaveValue(testData.user.displayName, { timeout: 15_000 });
+    await expect(displayNameInput).toHaveValue(testData.user.displayName, { timeout: 30_000 });
   });
 
   // ── Test 6: Lightbox — Esc key closes evidence lightbox ──
