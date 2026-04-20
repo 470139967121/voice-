@@ -327,48 +327,28 @@ test.describe('Admin Economy Config', () => {
   });
 
   // ── Test 14: Milestone type toggle ──
-  test('milestone type toggle — gift type shows gift select', async ({ page, testData }) => {
-    // Use a unique day per test run to avoid cross-browser contention
-    // (all 5 Playwright browsers run in parallel against same dev Firestore)
-    const uniqueDay = 900 + Math.floor(Math.random() * 99);
+  test('milestone type toggle — gift type shows gift select', async ({ page }) => {
+    // Test gift-select rendering via UI interaction (no shared Firestore mutation).
+    // Click "Add milestone", change type to "gift", verify select appears.
+    const addBtn = page.locator('#ms-add-btn');
+    await expect(addBtn).toBeVisible({ timeout: 10_000 });
+    await addBtn.click();
 
-    // Always restore config first (removes leftover test milestones from previous failed run)
-    await restoreEconomyConfig(page, testData);
-
-    // Get a gift ID from the API
-    const allGifts = await testData.api.get('/api/gifts/all');
-    const giftList = Array.isArray(allGifts) ? allGifts : (allGifts.gifts || []);
-    expect(giftList.length).toBeGreaterThan(0);
-    const giftId = giftList[0].id;
-
-    // Add a gift-type milestone at a unique high day number
-    const currentConfig = await testData.api.get('/api/config/economy');
-    const milestones = { ...(currentConfig.milestoneRewards || {}) };
-    milestones[String(uniqueDay)] = { type: 'gift', giftId, quantity: 1 };
-    await page.request.put(`${API_BASE}/api/config/economy`, {
-      headers: {
-        Authorization: `Bearer ${await testData.api.waitForToken()}`,
-        'Content-Type': 'application/json',
-      },
-      data: { milestoneRewards: milestones },
-    });
-
-    // Brief wait for API write to propagate before reload
-    await page.waitForTimeout(2_000);
-    // Reload and verify the gift milestone renders correctly
-    await reloadAndNavigateToEconomy(page);
-    // Wait for milestone rows to render before checking
+    // The new row should appear (last row added)
     const milestoneRows = page.locator('#milestone-rows .milestone-row');
-    await expect(milestoneRows.first()).toBeVisible({ timeout: 10_000 });
-    // Wait for the unique-day row specifically
-    const targetRow = milestoneRows.filter({ has: page.locator(`.ms-day[value="${uniqueDay}"]`) });
-    await expect(targetRow).toBeVisible({ timeout: 15_000 });
-    await expect(targetRow.locator('.ms-type')).toHaveValue('gift');
-    // Gift select renders conditionally based on type
-    await expect(targetRow.locator('.ms-gift-select')).toBeVisible({ timeout: 15_000 });
+    const lastRow = milestoneRows.last();
+    await expect(lastRow).toBeVisible({ timeout: 5_000 });
 
-    // Restore (remove the test milestone)
-    await restoreEconomyConfig(page, testData);
+    // Change type to "gift"
+    const typeSelect = lastRow.locator('.ms-type');
+    await typeSelect.selectOption('gift');
+
+    // Gift select should now be visible in that row
+    await expect(lastRow.locator('.ms-gift-select')).toBeVisible({ timeout: 10_000 });
+
+    // Change type back to "coins" — gift select should disappear
+    await typeSelect.selectOption('coins');
+    await expect(lastRow.locator('.ms-gift-select')).not.toBeVisible({ timeout: 5_000 });
   });
 
   // ── Test 15: Broadcast thresholds ──

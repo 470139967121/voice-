@@ -155,32 +155,32 @@ test.describe('Admin Realtime Features', () => {
     await expect(liveToggle).not.toHaveClass(/active/, { timeout: 3_000 });
   });
 
-  // ── Test 4: Alert bell badge reflects API state on load ──
+  // ── Test 4: Alert bell badge updates after login ──
   test('alert bell badge count matches API alert count on load', async ({ page, testData }) => {
-    // Get alert count from API
+    // Get alert count from API (new + acknowledged, same as loadUnresolvedCount)
     let apiCount = 0;
     try {
-      const alertsData = await testData.api.get('/api/admin/alerts?status=new');
-      const alerts = Array.isArray(alertsData) ? alertsData : (alertsData.alerts || []);
-      apiCount = alerts.length;
+      const newAlerts = await testData.api.get('/api/admin/alerts?status=new&limit=100');
+      const ackAlerts = await testData.api.get('/api/admin/alerts?status=acknowledged&limit=100');
+      const newList = Array.isArray(newAlerts) ? newAlerts : (newAlerts.alerts || []);
+      const ackList = Array.isArray(ackAlerts) ? ackAlerts : (ackAlerts.alerts || []);
+      apiCount = newList.length + ackList.length;
     } catch {
       test.skip(true, 'Alerts API not available');
       return;
     }
 
-    // Check the badge
+    // Check the badge — wait for it to stabilize after loadUnresolvedCount() runs
     const badge = page.locator('#alert-bell-badge');
 
     if (apiCount > 0) {
       // Badge is updated by loadUnresolvedCount() which runs after login.
-      // On slow CI, module loading (up to 15s) + two API calls can take time.
-      await expect(badge).toBeVisible({ timeout: 30_000 });
-      const badgeText = await badge.textContent();
-      const badgeCount = Number(badgeText);
-      // Badge must show a positive count since API confirms alerts exist
-      expect(badgeCount).toBeGreaterThan(0);
+      // Wait for badge text to become non-zero (not just visible — it starts as "0" hidden)
+      await expect(badge).toHaveText(/[1-9]/, { timeout: 30_000 });
     } else {
-      // Badge may be hidden or show 0
+      // No alerts — badge should be hidden or show 0
+      // Wait briefly for loadUnresolvedCount to complete
+      await page.waitForTimeout(5_000);
       const isVisible = await badge.isVisible();
       if (isVisible) {
         const badgeText = await badge.textContent();
