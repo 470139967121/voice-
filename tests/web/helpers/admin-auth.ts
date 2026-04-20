@@ -47,35 +47,28 @@ export async function goToAdmin(page: Page): Promise<void> {
  * The admin panel sets data-module-ready="true" on the panel element
  * once the ES module's init() + activate() have completed.
  */
+const TAB_PANEL_MAP: Record<string, string> = {
+  Users: 'user-form', Appeals: 'appeals-panel', Reports: 'reports-panel',
+  Gifts: 'gifts-panel', Economy: 'economy-panel', Maintenance: 'maintenance-panel',
+  Monitor: 'monitor-panel', Banners: 'banners-panel', 'Fun Facts': 'funfacts-panel',
+  Backups: 'backups-panel', Logs: 'logs-panel', Devices: 'devices-panel',
+  'Starting Screens': 'starting-screens-panel', Suggestions: 'suggestions-panel',
+  'Audit Log': 'audit-log-panel',
+};
+
 export async function navigateToTab(page: Page, tabName: string): Promise<void> {
   const tabBtn = page.getByRole('button', { name: tabName, exact: true });
   await tabBtn.click();
   await expect(tabBtn).toHaveClass(/active/);
   // Wait for the module to finish init/activate (signalled via data-module-ready)
-  await page.waitForFunction(
-    (name) => {
-      const btn = [...document.querySelectorAll('#sidebar button')].find(
-        (b) => b.textContent?.trim() === name,
-      );
-      if (!btn) return false;
-      const tabId = btn.id?.replace('tab-', '');
-      if (!tabId) return true; // no tab ID — skip module wait
-      const panelMap: Record<string, string> = {
-        users: 'user-form', appeals: 'appeals-panel', reports: 'reports-panel',
-        gifts: 'gifts-panel', economy: 'economy-panel', maintenance: 'maintenance-panel',
-        monitor: 'monitor-panel', banners: 'banners-panel', funfacts: 'funfacts-panel',
-        backups: 'backups-panel', logs: 'logs-panel', devices: 'devices-panel',
-        'starting-screens': 'starting-screens-panel', suggestions: 'suggestions-panel',
-        'audit-log': 'audit-log-panel',
-      };
-      const panelId = panelMap[tabId];
-      if (!panelId) return true;
-      const panel = document.getElementById(panelId);
-      return panel?.dataset.moduleReady === 'true';
-    },
-    tabName,
-    { timeout: 10_000 },
-  );
+  const panelId = TAB_PANEL_MAP[tabName];
+  if (panelId) {
+    await page.waitForFunction(
+      (id) => document.getElementById(id)?.dataset.moduleReady === 'true',
+      panelId,
+      { timeout: 15_000 },
+    );
+  }
 }
 
 /**
