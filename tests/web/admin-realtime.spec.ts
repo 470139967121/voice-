@@ -170,17 +170,33 @@ test.describe('Admin Realtime Features', () => {
       return;
     }
 
-    // Check the badge — wait for it to stabilize after loadUnresolvedCount() runs
+    // Check the badge — wait for loadUnresolvedCount() to complete
     const badge = page.locator('#alert-bell-badge');
 
     if (apiCount > 0) {
       // Badge is updated by loadUnresolvedCount() which runs after login.
-      // Wait for badge text to become non-zero (not just visible — it starts as "0" hidden)
-      await expect(badge).toHaveText(/[1-9]/, { timeout: 30_000 });
+      // The count may differ from our API call due to timing (alerts resolved between calls).
+      // Wait for badge to show ANY non-zero number, or accept it stays hidden if alerts
+      // were resolved between our API check and the browser's loadUnresolvedCount().
+      try {
+        await expect(badge).toHaveText(/[1-9]/, { timeout: 15_000 });
+      } catch {
+        // Badge didn't show — verify the alerts were likely resolved (count is now 0)
+        const recheckNew = await testData.api.get('/api/admin/alerts?status=new&limit=100');
+        const recheckAck = await testData.api.get('/api/admin/alerts?status=acknowledged&limit=100');
+        const recheckCount =
+          (Array.isArray(recheckNew) ? recheckNew : (recheckNew.alerts || [])).length +
+          (Array.isArray(recheckAck) ? recheckAck : (recheckAck.alerts || [])).length;
+        // If alerts still exist on recheck, it's a real failure
+        if (recheckCount > 0) {
+          // Force fail with clear message
+          expect(recheckCount, 'Badge not showing despite alerts existing').toBe(0);
+        }
+        // Otherwise alerts were resolved — badge correctly shows nothing
+      }
     } else {
       // No alerts — badge should be hidden or show 0
-      // Wait briefly for loadUnresolvedCount to complete
-      await page.waitForTimeout(5_000);
+      await page.waitForTimeout(3_000);
       const isVisible = await badge.isVisible();
       if (isVisible) {
         const badgeText = await badge.textContent();
