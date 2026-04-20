@@ -168,12 +168,14 @@ test.describe('Admin Keyboard Shortcuts', () => {
     // Press Enter instead of clicking Search
     await searchInput.press('Enter');
 
-    // Verify user data loaded
-    const subtab = page.locator('.user-subtab[data-subtab="profile"]');
-    await expect(subtab).toBeVisible({ timeout: 15_000 });
+    // Button changes to "Searching..." then back to "Search" when complete.
+    // Wait for the full round-trip (guarantees populateFormFull finished).
+    await expect(searchBtn).not.toHaveText('Search', { timeout: 5_000 }).catch(() => {});
+    await expect(searchBtn).toHaveText('Search', { timeout: 15_000 });
 
+    // Verify user data loaded — form must be fully populated by now
     const displayNameInput = page.locator('[data-field="displayName"]');
-    await expect(displayNameInput).toHaveValue(testData.user.displayName, { timeout: 15_000 });
+    await expect(displayNameInput).toHaveValue(testData.user.displayName, { timeout: 5_000 });
   });
 
   // ── Test 6: Lightbox — Esc key closes evidence lightbox ──
