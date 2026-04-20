@@ -154,7 +154,13 @@ test.describe('Admin Keyboard Shortcuts', () => {
 
   // ── Test 5: Search — Enter key triggers search ──
   test('Enter key triggers user search', async ({ page, testData }) => {
+    // Clear saved search so activate() doesn't trigger a concurrent search
+    await page.evaluate(() => sessionStorage.removeItem('admin_user_search'));
     await navigateToTab(page, 'Users');
+
+    // Wait for any in-flight search from activate() to complete
+    const searchBtn = page.locator('#search-btn');
+    await expect(searchBtn).toHaveText('Search', { timeout: 15_000 });
 
     const searchInput = page.getByRole('spinbutton', { name: 'ShyTalk User ID' });
     await searchInput.fill(String(testData.user.uniqueId));
@@ -162,12 +168,12 @@ test.describe('Admin Keyboard Shortcuts', () => {
     // Press Enter instead of clicking Search
     await searchInput.press('Enter');
 
-    // Verify user data loaded (dev API on Oracle free tier can be slow under load)
+    // Verify user data loaded
     const subtab = page.locator('.user-subtab[data-subtab="profile"]');
-    await expect(subtab).toBeVisible({ timeout: 30_000 });
+    await expect(subtab).toBeVisible({ timeout: 15_000 });
 
     const displayNameInput = page.locator('[data-field="displayName"]');
-    await expect(displayNameInput).toHaveValue(testData.user.displayName, { timeout: 30_000 });
+    await expect(displayNameInput).toHaveValue(testData.user.displayName, { timeout: 15_000 });
   });
 
   // ── Test 6: Lightbox — Esc key closes evidence lightbox ──
