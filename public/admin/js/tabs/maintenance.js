@@ -89,6 +89,7 @@ function wire(btnId, resultId, endpoint, confirmMsg) {
 async function runAction(btnId, resultId, endpoint, confirmMsg) {
   const btn = document.getElementById(btnId);
   const result = document.getElementById(resultId);
+  if (!btn || !result) return;
   if (!confirm(confirmMsg)) return;
 
   btn.disabled = true;

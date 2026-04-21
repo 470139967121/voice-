@@ -158,7 +158,8 @@ export function activate() {
   loadQuotaStats();
   loadLogs();
   loadLogConfig();
-  startAutoRefresh();
+  // Note: startAutoRefresh is called once globally by startGlobalRefresh() after login.
+  // Do NOT call it here — would create duplicate interval if deactivate ever clears it.
 }
 
 export function deactivate() {
@@ -308,14 +309,10 @@ function filterLogsByTrace(traceId) {
 
 async function loadUnresolvedCount() {
   try {
-    const data = await apiCall(
-      'GET',
-      '/api/admin/alerts?status=new&limit=100',
-    );
-    const data2 = await apiCall(
-      'GET',
-      '/api/admin/alerts?status=acknowledged&limit=100',
-    );
+    const [data, data2] = await Promise.all([
+      apiCall('GET', '/api/admin/alerts?status=new&limit=100'),
+      apiCall('GET', '/api/admin/alerts?status=acknowledged&limit=100'),
+    ]);
     const count =
       (data.alerts || []).length + (data2.alerts || []).length;
     const badge = document.getElementById('alert-bell-badge');

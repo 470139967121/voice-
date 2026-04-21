@@ -750,9 +750,10 @@ export function updateCharCounter(field, len) {
 
 // ── Auto-save listener attachment ──────────────────────────────────
 
+let _autoSaveAttached = false;
 export function attachAutoSaveListeners() {
-  if (window._autoSaveListenersAttached) return;
-  window._autoSaveListenersAttached = true;
+  if (_autoSaveAttached) return;
+  _autoSaveAttached = true;
 
   document.addEventListener("blur", (e) => {
     const el = e.target;

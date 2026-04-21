@@ -209,7 +209,7 @@ async function switchTab(tab) {
   }
   // Force synchronous layout flush — WebKit batches classList mutations,
   // which can cause automated tests to read stale class values.
-  void document.getElementById('tab-users').offsetHeight;
+  void document.getElementById('tab-users')?.offsetHeight;
 
   // Users tab has special visibility (search bar + form, not a panel with .visible class)
   const searchBar = document.querySelector('.search-bar');
