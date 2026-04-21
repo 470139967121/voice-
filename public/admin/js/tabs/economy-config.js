@@ -44,8 +44,6 @@ export function init(deps) {
   _apiBase = deps.apiBase;
   _getToken = deps.getToken;
 
-  const $ = (sel) => document.querySelector(sel);
-
   // Slider labels
   const shiftSlider = $('#eco-pitySoftMaxShift');
   if (shiftSlider) {

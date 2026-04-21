@@ -1089,24 +1089,26 @@ export async function revokeWarning(uid, warningId, deduction, btn) {
 
 export async function populateFormFull(data) {
   await populateForm(data);
+  const uid = String(data.uniqueId || data.uid);
+  // Synchronous DOM population (no API calls)
   populateSuspensionSection(data);
   populateGcsSection(data);
   resetWarningForm();
-  loadWarningHistory(String(data.uniqueId || data.uid), false);
-  loadReportHistory(String(data.uniqueId || data.uid));
   populateDeletionSection(data);
-  // Economy subtab population
   populateEconomySection(data);
-  await populateGiftSelect();
-  await loadBackpack(String(data.uniqueId || data.uid));
-  // Bans, device binding, temp ID, preview, stalkers
-  const uid = String(data.uniqueId || data.uid);
-  populateBansSection(uid);
-  populateDeviceBindingCard(uid);
   populateTempId(data);
   updateCurrentPreview();
   updateDraftPreview();
-  loadStalkers(currentUid);
+  // Parallel async operations (independent API calls)
+  await Promise.all([
+    loadWarningHistory(uid, false),
+    loadReportHistory(uid),
+    populateGiftSelect(),
+    loadBackpack(uid),
+    populateBansSection(uid),
+    populateDeviceBindingCard(uid),
+    loadStalkers(currentUid),
+  ]);
   const profilePreview = document.getElementById("profile-preview");
   if (profilePreview) profilePreview.style.display = "flex";
   // Update character counters
