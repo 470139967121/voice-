@@ -22,7 +22,7 @@ function requireAdmin(req, res) {
 }
 
 function normaliseIp(ip) {
-  if (!ip) return null;
+  if (!ip || typeof ip !== 'string') return null;
   // Convert IPv4-mapped IPv6 to IPv4
   if (ip.startsWith('::ffff:')) return ip.slice(7);
   return ip;
