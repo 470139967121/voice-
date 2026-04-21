@@ -193,12 +193,17 @@ const PANEL_MAP = {
 
 let currentTab = 'users';
 let tabAbortController = new AbortController();
+let _firstTabSwitch = true;
 
 async function switchTab(tab) {
-  // Abort in-flight tab-specific API requests from the previous tab
-  tabAbortController.abort();
-  tabAbortController = new AbortController();
-  api.resetAbortController();
+  // Abort in-flight tab-specific API requests from the previous tab.
+  // Skip on first switch (during login) to avoid cancelling init requests.
+  if (!_firstTabSwitch) {
+    tabAbortController.abort();
+    tabAbortController = new AbortController();
+    api.resetAbortController();
+  }
+  _firstTabSwitch = false;
   currentTab = tab;
   sessionStorage.setItem('admin_tab', tab);
 
