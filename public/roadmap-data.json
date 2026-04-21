@@ -571,7 +571,8 @@
         "tr": "Platform ve iOS",
         "uk": "Платформа та iOS",
         "vi": "Nền tảng và iOS",
-        "zh": "平台与iOS"
+        "zh": "平台与iOS",
+        "km": "វេទិកា និង iOS"
       },
       "status": "active",
       "features": [
@@ -655,6 +656,10 @@
             "zh": {
               "n": "iOS功能对等",
               "d": "使iOS应用达到Android同等水平"
+            },
+            "km": {
+              "n": "សមភាពមុខងារ iOS",
+              "d": "នាំកម្មវិធី iOS ឱ្យស្មើ Android"
             }
           }
         },
