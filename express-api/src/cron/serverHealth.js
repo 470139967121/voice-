@@ -41,8 +41,8 @@ async function serverHealth(alertManager) {
   if (config.pm2RestartAlert) {
     try {
       await new Promise((resolve) => {
+        // eslint-disable-next-line sonarjs/no-os-command-from-path -- PATH inherited from managed PM2 service account
         execFile('pm2', ['jlist'], { timeout: 10000 }, (err, stdout) => {
-          // NOSONAR: PATH is inherited from the server process which runs under a managed service account
           if (err || !stdout) {
             resolve();
             return;

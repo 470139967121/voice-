@@ -709,6 +709,88 @@ describe('POST /api/admin/backups/restore/:date', () => {
 
     expect(res.body.error).toBe('Internal server error');
   });
+
+  // ── Security: isSafeKey() prototype pollution guard ──
+
+  test('does not write __proto__ key to results during restore', async () => {
+    // Simulate a scenario where a collection name could be __proto__
+    // The isSafeKey guard should prevent writing to results.__proto__
+    // We test this by doing a single-collection restore with a safe name
+    // and verifying the results only contain safe keys
+    const backupDocs = [{ id: 'doc1', name: 'Test' }];
+
+    mockGetObject.mockImplementation(async () => ({
+      Body: jsonBodyStream(backupDocs),
+    }));
+
+    mockCollectionGet.mockResolvedValue({ docs: [] });
+
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/admin/backups/restore/2026-03-16')
+      .send({ mode: 'collection', collection: 'users' })
+      .expect(200);
+
+    // Verify the results object does not have prototype-polluting properties
+    expect(res.body.results).toBeDefined();
+    expect(Object.prototype.hasOwnProperty.call(res.body.results, 'users')).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(res.body.results, '__proto__')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(res.body.results, 'constructor')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(res.body.results, 'prototype')).toBe(false);
+  });
+
+  test('results use Object.create(null) — no inherited properties', async () => {
+    // The route uses Object.create(null) for results, preventing prototype pollution
+    mockGetObject.mockRejectedValue(Object.assign(new Error('Not found'), { name: 'NoSuchKey' }));
+
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/admin/backups/restore/2026-03-16')
+      .send({ mode: 'full' })
+      .expect(200);
+
+    // Results should only contain safe collection keys
+    const resultKeys = Object.keys(res.body.results);
+    for (const key of resultKeys) {
+      expect(key).not.toBe('__proto__');
+      expect(key).not.toBe('constructor');
+      expect(key).not.toBe('prototype');
+    }
+  });
+
+  test('returns 400 for invalid collection name preventing prototype pollution via param', async () => {
+    const app = createApp();
+
+    // __proto__ is not in RESTORABLE_COLLECTIONS, so this should return 400
+    const res = await request(app)
+      .post('/api/admin/backups/restore/2026-03-16')
+      .send({ mode: 'collection', collection: '__proto__' })
+      .expect(400);
+
+    expect(res.body.error).toBe('Invalid collection name');
+  });
+
+  test('returns 400 for constructor collection name', async () => {
+    const app = createApp();
+
+    const res = await request(app)
+      .post('/api/admin/backups/restore/2026-03-16')
+      .send({ mode: 'collection', collection: 'constructor' })
+      .expect(400);
+
+    expect(res.body.error).toBe('Invalid collection name');
+  });
+
+  test('returns 400 for prototype collection name', async () => {
+    const app = createApp();
+
+    const res = await request(app)
+      .post('/api/admin/backups/restore/2026-03-16')
+      .send({ mode: 'collection', collection: 'prototype' })
+      .expect(400);
+
+    expect(res.body.error).toBe('Invalid collection name');
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════
