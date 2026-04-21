@@ -1,0 +1,11 @@
+name: ShyTalk CodeQL Config
+
+# Exclude test files and tooling scripts from analysis.
+# These directories contain:
+#   - Express test apps without rate limiting (intentional in test harnesses)
+#   - Playwright URL assertions using .includes() (not URL sanitization)
+#   - One-off infra scripts (not production code)
+paths-ignore:
+  - express-api/tests
+  - tests
+  - scripts

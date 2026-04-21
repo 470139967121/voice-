@@ -11,7 +11,7 @@
  */
 
 import { apiCall } from '/js/core/api.js';
-import { showToast, escapeHtml } from '/js/core/ui.js';
+import { showToast, escapeHtml, sanitizeImageUrl } from '/js/core/ui.js';
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -914,7 +914,7 @@ export function populateSuspensionSection(data) {
       preSuspensionInfo.style.display = "block";
       if (preSuspensionName) preSuspensionName.textContent = data._preSuspension.displayName || "Unknown";
       if (data._preSuspension.profilePhotoUrl && preSuspensionPhoto) {
-        preSuspensionPhoto.src = data._preSuspension.profilePhotoUrl;
+        preSuspensionPhoto.src = sanitizeImageUrl(data._preSuspension.profilePhotoUrl);
         preSuspensionPhoto.style.display = "block";
       } else if (preSuspensionPhoto) { preSuspensionPhoto.style.display = "none"; }
       if (data._preSuspension.coverPhotoUrl && preSuspensionCover) {
@@ -1392,7 +1392,7 @@ export function renderBackpack() {
     removeBtn.addEventListener("click", function(e) { e.stopPropagation(); autoSaveBackpackItem(item.giftId, 0, item.quantity); });
     card.appendChild(removeBtn);
     const badge = document.createElement("span"); badge.className = "backpack-qty-badge"; badge.textContent = String(displayQty); card.appendChild(badge);
-    const img = document.createElement("img"); img.src = gift.iconUrl || ""; img.alt = gift.name || item.giftName || item.giftId; img.loading = "lazy"; img.onerror = function() { this.style.display = "none"; }; card.appendChild(img);
+    const img = document.createElement("img"); img.src = sanitizeImageUrl(gift.iconUrl); img.alt = gift.name || item.giftName || item.giftId; img.loading = "lazy"; img.onerror = function() { this.style.display = "none"; }; card.appendChild(img);
     const nameEl = document.createElement("div"); nameEl.className = "backpack-item-name"; nameEl.textContent = gift.name || item.giftName || item.giftId; nameEl.title = gift.name || item.giftName || item.giftId; card.appendChild(nameEl);
     const overlay = document.createElement("div"); overlay.className = "backpack-edit-overlay";
     const qtyInput = document.createElement("input"); qtyInput.type = "number"; qtyInput.min = "0"; qtyInput.value = String(displayQty);
@@ -1654,8 +1654,8 @@ function setPreviewFlag(id, nationality) {
   const el = document.getElementById(id); if (!el) return;
   el.textContent = nationality ? codeToFlag(nationality) + " " + (countryNames.of(nationality) || nationality) : "";
 }
-function setPreviewImage(id, url) { const el = document.getElementById(id); if (!el) return; el.src = url || ""; el.style.display = url ? "inline-block" : "none"; }
-function setPreviewCoverImage(id, url) { const el = document.getElementById(id); if (!el) return; el.style.backgroundImage = url ? "url(" + url + ")" : ""; el.style.backgroundColor = url ? "" : "#333"; }
+function setPreviewImage(id, url) { const el = document.getElementById(id); if (!el) return; const safe = sanitizeImageUrl(url); el.src = safe; el.style.display = safe ? "inline-block" : "none"; }
+function setPreviewCoverImage(id, url) { const el = document.getElementById(id); if (!el) return; const safe = sanitizeImageUrl(url); el.style.backgroundImage = safe ? "url(" + safe + ")" : ""; el.style.backgroundColor = safe ? "" : "#333"; }
 function setPreviewCounts(id, data) { const el = document.getElementById(id); if (!el) return; const following = Array.isArray(data.followingIds) ? data.followingIds.length : 0; const followers = Array.isArray(data.followerIds) ? data.followerIds.length : 0; const stalkers = data._stalkerCount !== undefined ? data._stalkerCount : "..."; el.textContent = "Following: " + following + " | Followers: " + followers + " | Stalkers: " + stalkers; }
 
 export async function loadStalkers(uid) {

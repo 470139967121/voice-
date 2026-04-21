@@ -81,6 +81,25 @@ export function showConfirm(title, message) {
   });
 }
 
+/**
+ * Sanitize a URL for use in image `src` or CSS `background-image`.
+ * Only allows http:, https:, data:image/, and blob: schemes.
+ * Returns empty string for anything else (prevents javascript: or data:text/html injection).
+ */
+export function sanitizeImageUrl(url) {
+  if (!url) return '';
+  const s = String(url).trim();
+  if (
+    s.startsWith('https://') ||
+    s.startsWith('http://') ||
+    s.startsWith('data:image/') ||
+    s.startsWith('blob:')
+  ) {
+    return s;
+  }
+  return '';
+}
+
 const _screens = new Map();
 
 /**

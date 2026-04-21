@@ -7,7 +7,7 @@
  */
 
 import { apiCall } from '/js/core/api.js';
-import { showToast, escapeHtml } from '/js/core/ui.js';
+import { showToast, escapeHtml, sanitizeImageUrl } from '/js/core/ui.js';
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -215,13 +215,14 @@ function updateMonitorStats(userData) {
   // User card — always update or remove avatar
   const userCard = $("#monitor-user-card");
   const prevAvatar = userCard.querySelector(".user-avatar");
-  if (avatar) {
+  const safeAvatar = sanitizeImageUrl(avatar);
+  if (safeAvatar) {
     if (prevAvatar) {
-      prevAvatar.src = avatar;
+      prevAvatar.src = safeAvatar;
     } else {
       const img = document.createElement("img");
       img.className = "user-avatar";
-      img.src = avatar;
+      img.src = safeAvatar;
       img.alt = "";
       userCard.insertBefore(img, userCard.firstChild);
     }

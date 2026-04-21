@@ -45,6 +45,11 @@ async function readR2Json(key) {
 // All collections that can be restored (matches backups.js)
 const RESTORABLE_COLLECTIONS = backupFn.TOP_LEVEL_COLLECTIONS;
 
+/** Guard against prototype-polluting keys. */
+function isSafeKey(key) {
+  return key !== '__proto__' && key !== 'constructor' && key !== 'prototype';
+}
+
 // ── List available backups (full backup dates with manifests) ──
 router.get('/admin/backups', async (req, res) => {
   try {
@@ -236,7 +241,9 @@ async function restoreCollection(date, collName, mode, results) {
   const backupDocs = await readR2Json(key);
 
   if (backupDocs === null) {
-    results[collName] = { status: 'skipped', reason: 'no backup file found' };
+    if (isSafeKey(collName)) {
+      results[collName] = { status: 'skipped', reason: 'no backup file found' };
+    }
     return null;
   }
 
@@ -245,7 +252,9 @@ async function restoreCollection(date, collName, mode, results) {
       ? await restoreFullCollection(collName, backupDocs)
       : await restoreMissingOnly(collName, backupDocs);
 
-  results[collName] = { status: 'restored', restoredCount, totalInBackup: backupDocs.length };
+  if (isSafeKey(collName)) {
+    results[collName] = { status: 'restored', restoredCount, totalInBackup: backupDocs.length };
+  }
   return restoredCount;
 }
 
@@ -288,7 +297,7 @@ router.post('/admin/backups/restore/:date', async (req, res) => {
 
     for (const collName of collectionsToRestore) {
       const restoredCount = await restoreCollection(date, collName, mode, results);
-      if (restoredCount !== null) {
+      if (restoredCount !== null && isSafeKey(collName) && results[collName]) {
         results[collName].restoredCount = restoredCount;
       }
     }

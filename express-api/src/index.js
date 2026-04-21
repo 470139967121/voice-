@@ -35,6 +35,15 @@ const logger = require('./utils/loggerInstance');
 const { createRequestLogger } = require('./middleware/requestLogger');
 app.use(createRequestLogger(logger));
 
+// General rate limit on all API routes (except /test/* in non-prod)
+// Applied first so every route — including health, auth, and portal — is rate-limited.
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/test/') && process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+  return generalLimiter(req, res, next);
+});
+
 // Health check (no auth)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
@@ -69,14 +78,6 @@ app.use('/api', (req, res, next) => {
   )
     return next();
   authMiddleware(req, res, next);
-});
-
-// General rate limit on all API routes (except /test/* in non-prod)
-app.use('/api', (req, res, next) => {
-  if (req.path.startsWith('/test/') && process.env.NODE_ENV !== 'production') {
-    return next();
-  }
-  return generalLimiter(req, res, next);
 });
 
 // Stricter limits on write-heavy routes

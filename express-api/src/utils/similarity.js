@@ -26,6 +26,9 @@ function normalise(text) {
 const MAX_EDIT_DISTANCE_LEN = 500;
 
 function editDistance(a, b) {
+  // Coerce to strings to prevent type confusion if called with non-string input
+  a = typeof a === 'string' ? a : String(a ?? '');
+  b = typeof b === 'string' ? b : String(b ?? '');
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
   // Prevent CPU exhaustion with very long strings (O(n*m) algorithm)

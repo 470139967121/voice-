@@ -92,6 +92,37 @@ test.describe('Admin Core Modules Integration', () => {
     expect(moduleScript).toBe(true);
   });
 
+  test('sanitizeImageUrl blocks dangerous schemes and allows safe URLs', async ({ page }) => {
+    const results = await page.evaluate(async () => {
+      const mod = await import('/js/core/ui.js');
+      const fn = mod.sanitizeImageUrl;
+      return {
+        https: fn('https://example.com/photo.jpg'),
+        http: fn('http://example.com/photo.jpg'),
+        dataImage: fn('data:image/png;base64,iVBOR'),
+        blob: fn('blob:http://localhost:4000/abc-123'),
+        javascript: fn('javascript:alert(1)'),
+        dataHtml: fn('data:text/html,<script>alert(1)</script>'),
+        empty: fn(''),
+        nullVal: fn(null),
+        undefinedVal: fn(undefined),
+        plainText: fn('not-a-url'),
+        ftpScheme: fn('ftp://example.com/file'),
+      };
+    });
+    expect(results.https).toBe('https://example.com/photo.jpg');
+    expect(results.http).toBe('http://example.com/photo.jpg');
+    expect(results.dataImage).toBe('data:image/png;base64,iVBOR');
+    expect(results.blob).toBe('blob:http://localhost:4000/abc-123');
+    expect(results.javascript).toBe('');
+    expect(results.dataHtml).toBe('');
+    expect(results.empty).toBe('');
+    expect(results.nullVal).toBe('');
+    expect(results.undefinedVal).toBe('');
+    expect(results.plainText).toBe('');
+    expect(results.ftpScheme).toBe('');
+  });
+
   test('confirm dialog renders with correct DOM structure when triggered', async ({ page }) => {
     // Login first to access the dashboard
     const dashboard = page.locator('#dashboard-screen');
