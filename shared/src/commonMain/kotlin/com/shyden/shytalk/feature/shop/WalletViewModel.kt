@@ -148,29 +148,6 @@ class WalletViewModel(
         }
     }
 
-    fun testPurchaseCoins(coins: Int) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isPurchasing = true) }
-            when (val result = economyRepository.addTestCoins(coins)) {
-                is Resource.Success -> {
-                    _uiState.update {
-                        it.copy(
-                            isPurchasing = false,
-                            successMessage = UiText.res(Res.string.success_coins_added, formatNumber(coins.toLong())),
-                        )
-                    }
-                    refreshBalance()
-                }
-
-                is Resource.Error -> {
-                    _uiState.update { it.copy(isPurchasing = false, error = UiText.plain(result.message)) }
-                }
-
-                is Resource.Loading -> Unit
-            }
-        }
-    }
-
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
