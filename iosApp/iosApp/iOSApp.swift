@@ -1,8 +1,13 @@
 import SwiftUI
+import shared
 
 @main
 struct iOSApp: App {
     @StateObject private var coordinator = StartingScreenCoordinator()
+
+    init() {
+        KoinHelperKt.doInitKoin()
+    }
 
     var body: some Scene {
         WindowGroup {
