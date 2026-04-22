@@ -30,6 +30,8 @@ import com.shyden.shytalk.core.di.stubs.IosUserRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosVoiceServiceStub
 import com.shyden.shytalk.core.di.stubs.IosWebContentPreloaderStub
 import com.shyden.shytalk.core.room.RoomLifecycleManager
+import com.shyden.shytalk.core.util.BiometricAuth
+import com.shyden.shytalk.core.util.CryptoKeyPair
 import com.shyden.shytalk.data.local.StickerStorage
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.remote.ConversationWebSocketService
@@ -65,11 +67,13 @@ import org.koin.dsl.module
 val iosPlatformModule =
     module {
         // Named qualifiers required by AuthViewModel
-        single(named("deviceId")) { "ios-device" }
-        single(named("bypassDeviceChecks")) { true }
+        single(named("deviceId")) { "ios-device" } // TODO(Phase 3): Replace with UIDevice.current.identifierForVendor
+        single(named("bypassDeviceChecks")) { true } // TODO(Phase 3): Set to false once real DeviceRepository is implemented
 
-        // StickerStorage (actual class already exists in iosMain)
+        // Platform utilities (actual classes already exist in iosMain)
         single { StickerStorage() }
+        single { BiometricAuth() }
+        single { CryptoKeyPair() }
 
         // Repositories
         single<AuthRepository> { IosAuthRepositoryStub() }
