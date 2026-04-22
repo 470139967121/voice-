@@ -211,7 +211,10 @@ if (fs.existsSync(OUTPUT_PATH)) {
   const existingWithoutDate = { ...existing, lastUpdated: '' };
   const newWithoutDate = { ...output, lastUpdated: '' };
   if (JSON.stringify(existingWithoutDate) === JSON.stringify(newWithoutDate)) {
-    console.log('Roadmap unchanged — skipping write');
+    console.log(
+      'Roadmap markdown changed but public JSON is identical — internal details ' +
+      '(PR numbers, step counts) don\'t affect the public output. Skipping write.',
+    );
     if (require.main === module) process.exit(0);
   }
 }
