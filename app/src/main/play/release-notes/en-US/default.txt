@@ -1,8 +1,8 @@
-v0.69.0
+v0.70.0
 
-create SharedNavGraph in shared/commonMain (#315)
+add iOS PlatformNavCallbacks and placeholder screens (#316)
 - ## Summary
-- - Create `SharedNavGraph` — the core cross-platform navigation
-- composable
-- - Replace ALL Android-specific code with `PlatformNavCallbacks` +
-- `PlatformScreens` injections
+- No-op stubs for FCM, permissions, billing,
+- sync; real URL encoding via Foundation
+- Placeholder composables for 5 platform-specific
+- screens (SignIn, Settings, Warning, Profile, Room) with testTags
