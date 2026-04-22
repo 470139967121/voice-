@@ -61,7 +61,7 @@ Social chat app with voice rooms. Kotlin Multiplatform (Android + iOS), Firebase
 **Run ALL tests locally before pushing.** CI should be a safety net, not the first time tests run.
 
 ### Local test sequence (run before every push):
-1. **Kotlin lint**: `ktlint --relative` (~1s, requires standalone ktlint 1.5.0)
+1. **Kotlin lint**: `ktlint --relative` (~1s, requires standalone ktlint 1.8.0)
 2. **Express tests**: `cd express-api && npm test` (~10s)
 3. **Kotlin tests + detekt**: `./gradlew testDevDebugUnitTest :shared:jvmTest detekt` (~2min)
 4. **iOS compilation**: `./gradlew :shared:compileKotlinIosArm64` (~1min, mandatory for shared code changes)
