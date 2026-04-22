@@ -1,1 +1,4 @@
-Internal improvements to the admin panel — restructured from a single large file into modular components for better maintainability. No user-facing changes. Added rate limiting to additional authentication endpoints and improved API response times through parallelized requests.
+v0.65.3
+
+wire 14 tab modules, remove ~5,400 lines of inline JS (PR C) (#304)
+- All 26 CI checks pass. Admin panel restructure PR C complete.
