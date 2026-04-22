@@ -55,6 +55,7 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.coil3.compose)
             implementation(libs.coil3.network.ktor)
+            implementation(libs.jetbrains.navigation.compose)
         }
 
         androidMain.dependencies {
