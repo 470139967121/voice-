@@ -410,6 +410,7 @@ class ActiveRoomManager(
                             wasEverConnected = true
                             graceJob?.cancel()
                         }
+
                         VoiceConnectionState.DISCONNECTED -> {
                             if (!wasEverConnected) return@collect
 
@@ -436,6 +437,7 @@ class ActiveRoomManager(
                                     }
                                 }
                         }
+
                         VoiceConnectionState.RECONNECTING -> {
                             // Wait — LiveKit is trying to reconnect
                         }

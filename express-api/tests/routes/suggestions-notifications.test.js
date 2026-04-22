@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars, no-undef */
+/* eslint-disable no-unused-vars */
 /**
  * Tests for suggestion notification routes and dispatch logic.
  *

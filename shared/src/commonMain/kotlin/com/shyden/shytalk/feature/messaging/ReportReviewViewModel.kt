@@ -64,11 +64,13 @@ class ReportReviewViewModel(
                         it.copy(isLoading = false, reports = result.data)
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update {
                         it.copy(isLoading = false, message = UiText.plain(result.message))
                     }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -88,9 +90,11 @@ class ReportReviewViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(message = UiText.res(Res.string.error_resolve_report)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }

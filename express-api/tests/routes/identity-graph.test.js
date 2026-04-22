@@ -861,6 +861,50 @@ describe('POST /api/admin/bans/graph — validation', () => {
       .expect(201);
     expect(res.body).toHaveProperty('graphId');
   });
+
+  test('handles non-string IP value in identifier (normaliseIp type guard)', async () => {
+    const app = createApp();
+    // Send numeric IP value — normaliseIp should handle non-string gracefully
+    const res = await request(app)
+      .post('/api/admin/bans/graph')
+      .send({
+        identifiers: [
+          { type: 'ip', value: 12345 },
+          { type: 'uid', value: '1001' },
+        ],
+      })
+      .expect(201);
+    // The numeric IP should be normalised to null and filtered (isPrivateIp(null) returns true)
+    expect(res.body).toHaveProperty('graphId');
+  });
+
+  test('handles null IP value in identifier', async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/admin/bans/graph')
+      .send({
+        identifiers: [
+          { type: 'ip', value: null },
+          { type: 'uid', value: '2002' },
+        ],
+      })
+      .expect(201);
+    expect(res.body).toHaveProperty('graphId');
+  });
+
+  test('handles array IP value in identifier (type confusion)', async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/admin/bans/graph')
+      .send({
+        identifiers: [
+          { type: 'ip', value: ['1.2.3.4', '5.6.7.8'] },
+          { type: 'uid', value: '3003' },
+        ],
+      })
+      .expect(201);
+    expect(res.body).toHaveProperty('graphId');
+  });
 });
 
 describe('Admin auth — all graph routes', () => {
@@ -1129,5 +1173,71 @@ describe('Error handling — 500 responses', () => {
     const app = createApp();
     const res = await request(app).get('/api/admin/bans/check?ip=1.2.3.4').expect(500);
     expect(res.body.error).toBe('Internal server error');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Security: Query param type coercion (CodeQL type confusion fix)
+// ═══════════════════════════════════════════════════════════════
+
+describe('GET /api/admin/bans/check — array query param coercion', () => {
+  test('handles duplicate ip params (array) by using first value', async () => {
+    // Express parses ?ip=1.2.3.4&ip=5.6.7.8 as ip: ['1.2.3.4', '5.6.7.8']
+    mockCollectionGet.mockResolvedValueOnce({
+      empty: false,
+      docs: [
+        makeGraphDoc('graph-1', {
+          identifiers: [makeSuspendedIdentifier('ip', '1.2.3.4')],
+        }),
+      ],
+    });
+    const app = createApp();
+    const res = await request(app).get('/api/admin/bans/check?ip=1.2.3.4&ip=5.6.7.8').expect(200);
+    // Should use the first value and find the ban
+    expect(res.body.isBanned).toBe(true);
+  });
+
+  test('handles duplicate fingerprint params (array) by using first value', async () => {
+    mockCollectionGet.mockResolvedValueOnce({
+      empty: false,
+      docs: [
+        makeGraphDoc('graph-1', {
+          identifiers: [makeSuspendedIdentifier('fingerprint', 'fp-first')],
+        }),
+      ],
+    });
+    const app = createApp();
+    const res = await request(app)
+      .get('/api/admin/bans/check?fingerprint=fp-first&fingerprint=fp-second')
+      .expect(200);
+    expect(res.body.isBanned).toBe(true);
+  });
+
+  test('handles duplicate uid params (array) by using first value', async () => {
+    mockCollectionGet.mockResolvedValueOnce({
+      empty: false,
+      docs: [
+        makeGraphDoc('graph-1', {
+          identifiers: [makeSuspendedIdentifier('uid', '1001')],
+        }),
+      ],
+    });
+    const app = createApp();
+    const res = await request(app).get('/api/admin/bans/check?uid=1001&uid=2002').expect(200);
+    expect(res.body.isBanned).toBe(true);
+  });
+
+  test('returns 400 when all params are empty after coercion', async () => {
+    const app = createApp();
+    // No params at all
+    const res = await request(app).get('/api/admin/bans/check').expect(400);
+    expect(res.body.error).toMatch(/At least one identifier required/);
+  });
+
+  test('handles single string ip param normally (no coercion needed)', async () => {
+    mockCollectionGet.mockResolvedValueOnce({ empty: true, docs: [] });
+    const app = createApp();
+    const res = await request(app).get('/api/admin/bans/check?ip=9.9.9.9').expect(200);
+    expect(res.body.isBanned).toBe(false);
   });
 });

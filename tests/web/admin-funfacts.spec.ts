@@ -71,10 +71,12 @@ test.describe('Admin Fun Facts', () => {
 
   // ── Test 1: Seeded fact appears in list — API verify ──
   test('seeded fact appears in list with API verification', async ({ page, testData }) => {
-    // The seeded fact text should be visible in the list.
-    // Use .first() because previous test runs may have left duplicate entries
-    // with the same prefix pattern (the emulator accumulates across runs).
-    const card = factCard(page, testData.funFact.text);
+    // testData fixture is lazy — accessing it triggers setup, which creates the fun fact.
+    // Re-navigate to refresh the list with the newly created data.
+    const factText = testData.funFact.text;
+    await goToFunFacts(page);
+
+    const card = factCard(page, factText);
     await expect(card).toBeVisible({ timeout: 15_000 });
 
     // Card should show category badge "Science" and emoji

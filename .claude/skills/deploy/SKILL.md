@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Deploy Express API, Firestore rules, or web pages to dev or prod environment
+description: Deploy Express API, Firestore rules, web pages, or iOS build to dev or prod environment
 disable-model-invocation: true
 ---
 
@@ -11,7 +11,7 @@ Deploy ShyTalk components to dev or prod environments.
 ## Arguments
 
 The user specifies:
-- **Target**: `api`, `rules`, `web`, or `all`
+- **Target**: `api`, `rules`, `web`, `ios`, or `all`
 - **Environment**: `dev` or `prod` (default: `dev`)
 
 ## Targets
@@ -62,9 +62,24 @@ npx wrangler pages deploy public --project-name shytalk-site-dev
 npx wrangler pages deploy public --project-name shytalk-site
 ```
 
+### iOS Build (`ios`)
+
+**Dev (TestFlight internal testing):**
+```bash
+# Build iOS shared framework
+./gradlew :shared:compileKotlinIosArm64
+# Then build via Xcode:
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug archive
+```
+
+**Prod:** Not yet configured — TestFlight production release requires App Store Connect setup.
+
+**Note:** iOS deployment via TestFlight requires Xcode and Apple Developer credentials. Confirm the signing configuration is set up before attempting.
+
 ## Safety Checks
 
 - **Always deploy to dev first** — if user asks for prod directly, confirm intent
-- **Run ALL tests before deploying** (Kotlin unit tests + Express tests)
+- **Run ALL tests before deploying** (Kotlin unit tests + iOS compilation + Express tests)
+- **Verify iOS compilation** before any deploy that touches shared code: `./gradlew :shared:compileKotlinIosArm64`
 - **For prod API**: Confirm with user before executing
 - **Check PM2 logs after API deploy**: `ssh ... "pm2 logs shytalk-api --lines 20"`

@@ -104,6 +104,7 @@ class HomeViewModel(
                         _uiState.update { it.copy(lastRoomName = name) }
                     }
                 }
+
                 else -> Unit
             }
         }
@@ -117,6 +118,7 @@ class HomeViewModel(
                     myBlockedUserIds = result.data
                     filterAndEmitRooms()
                 }
+
                 else -> Unit
             }
         }
@@ -163,6 +165,7 @@ class HomeViewModel(
                 is Resource.Success -> {
                     myBlockedUserIds = result.data
                 }
+
                 else -> Unit
             }
             userCache.clear()
@@ -198,6 +201,7 @@ class HomeViewModel(
             is Resource.Success -> {
                 myBlockedUserIds = result.data
             }
+
             else -> Unit
         }
         // Evict stale cache entries instead of clearing everything
@@ -234,6 +238,7 @@ class HomeViewModel(
                 is Resource.Success -> {
                     result.data.forEach { user -> cacheUser(user.uid, user) }
                 }
+
                 else -> Unit
             }
         }
@@ -320,10 +325,12 @@ class HomeViewModel(
                 logI(TAG, "Room created: id=${result.data}")
                 _uiState.update { it.copy(isLoading = false, createdRoomId = result.data) }
             }
+
             is Resource.Error -> {
                 logE(TAG, "Room creation failed: ${result.message}")
                 _uiState.update { it.copy(isLoading = false, error = result.message) }
             }
+
             is Resource.Loading -> Unit
         }
     }

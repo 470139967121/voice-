@@ -42,6 +42,7 @@ fun rarityConfigForCoinValue(coinValue: Int): RarityConfig =
                 shakeIntensity = 0f,
                 flash = false,
             )
+
         coinValue < 200 ->
             RarityConfig(
                 glowColor = Color.White,
@@ -49,6 +50,7 @@ fun rarityConfigForCoinValue(coinValue: Int): RarityConfig =
                 shakeIntensity = 3f,
                 flash = false,
             )
+
         coinValue < 2000 ->
             RarityConfig(
                 glowColor = Color.White,
@@ -56,6 +58,7 @@ fun rarityConfigForCoinValue(coinValue: Int): RarityConfig =
                 shakeIntensity = 5f,
                 flash = true,
             )
+
         coinValue < 10000 ->
             RarityConfig(
                 glowColor = Color.White,
@@ -63,6 +66,7 @@ fun rarityConfigForCoinValue(coinValue: Int): RarityConfig =
                 shakeIntensity = 7f,
                 flash = true,
             )
+
         else ->
             RarityConfig(
                 glowColor = Color.White,

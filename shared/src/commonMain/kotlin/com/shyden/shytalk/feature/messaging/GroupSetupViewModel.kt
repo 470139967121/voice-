@@ -79,6 +79,7 @@ class GroupSetupViewModel(
                         )
                     }
                 }
+
                 else -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_load_users)) }
                 }
@@ -92,6 +93,7 @@ class GroupSetupViewModel(
                 is Resource.Success -> {
                     _uiState.update { it.copy(ownedGroupCount = result.data) }
                 }
+
                 else -> Unit
             }
         }
@@ -186,10 +188,12 @@ class GroupSetupViewModel(
                         )
                 ) {
                     is Resource.Success -> photoUrl = uploadResult.data
+
                     is Resource.Error -> {
                         _uiState.update { it.copy(isCreating = false, error = UiText.res(Res.string.error_upload_group_photo)) }
                         return@launch
                     }
+
                     is Resource.Loading -> Unit
                 }
             }
@@ -224,9 +228,11 @@ class GroupSetupViewModel(
                         it.copy(isCreating = false, createdConversationId = result.data.conversationId)
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isCreating = false, error = UiText.plain(result.message)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }

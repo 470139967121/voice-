@@ -139,6 +139,7 @@ fun WalletScreen(
                             isPurchasing = state.isPurchasing,
                             onTestPurchase = { coins -> viewModel.testPurchaseCoins(coins) },
                         )
+
                     1 ->
                         BeansTab(
                             beanBalance = state.beanBalance,

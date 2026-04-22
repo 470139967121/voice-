@@ -6,7 +6,7 @@
  */
 
 import { apiCall } from '/js/core/api.js';
-import { showToast } from '/js/core/ui.js';
+import { showToast, escapeHtml } from '/js/core/ui.js';
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -15,6 +15,11 @@ let logsCursor = null;
 let liveUnsub = null;
 let quotaInterval = null;
 let alertBellInterval = null;
+
+// ── Injected dependencies ─────────────────────────────────────────
+
+let _apiBase = '';
+let _getToken = () => Promise.resolve(null);
 
 // ── Firestore refs (injected) ──────────────────────────────────────
 
@@ -36,6 +41,8 @@ let _getCurrentTab = () => '';
  * @param deps.getCurrentTab — returns current tab name
  */
 export function init(deps) {
+  _apiBase = deps.apiBase || '';
+  _getToken = deps.getToken || _getToken;
   _clientDb = deps.clientDb;
   if (deps.firestoreFns) {
     _collection = deps.firestoreFns.collection;
@@ -126,6 +133,24 @@ export function init(deps) {
   document
     .getElementById('log-settings-save-btn')
     .addEventListener('click', saveLogConfig);
+
+  // Inline audit log section (inside Logs panel)
+  const auditSearchBtn = document.getElementById('audit-search-btn');
+  if (auditSearchBtn) auditSearchBtn.addEventListener('click', () => {
+    _auditCurrentPage = 1;
+    _auditPageTokens = [null];
+    loadInlineAuditLog(1);
+  });
+  const auditPrevBtn = document.getElementById('audit-prev-btn');
+  if (auditPrevBtn) auditPrevBtn.addEventListener('click', () => {
+    if (_auditCurrentPage > 1) loadInlineAuditLog(_auditCurrentPage - 1);
+  });
+  const auditNextBtn = document.getElementById('audit-next-btn');
+  if (auditNextBtn) auditNextBtn.addEventListener('click', () => {
+    if (_auditLastPageToken) loadInlineAuditLog(_auditCurrentPage + 1);
+  });
+  const auditExportBtn = document.getElementById('audit-export-csv-btn');
+  if (auditExportBtn) auditExportBtn.addEventListener('click', exportInlineAuditCsv);
 }
 
 export function activate() {
@@ -133,7 +158,8 @@ export function activate() {
   loadQuotaStats();
   loadLogs();
   loadLogConfig();
-  startAutoRefresh();
+  // Note: startAutoRefresh is called once globally by startGlobalRefresh() after login.
+  // Do NOT call it here — would create duplicate interval if deactivate ever clears it.
 }
 
 export function deactivate() {
@@ -283,14 +309,10 @@ function filterLogsByTrace(traceId) {
 
 async function loadUnresolvedCount() {
   try {
-    const data = await apiCall(
-      'GET',
-      '/api/admin/alerts?status=new&limit=100',
-    );
-    const data2 = await apiCall(
-      'GET',
-      '/api/admin/alerts?status=acknowledged&limit=100',
-    );
+    const [data, data2] = await Promise.all([
+      apiCall('GET', '/api/admin/alerts?status=new&limit=100'),
+      apiCall('GET', '/api/admin/alerts?status=acknowledged&limit=100'),
+    ]);
     const count =
       (data.alerts || []).length + (data2.alerts || []).length;
     const badge = document.getElementById('alert-bell-badge');
@@ -822,4 +844,128 @@ function startAlertBellRefresh() {
   if (alertBellInterval) return;
   loadUnresolvedCount();
   alertBellInterval = setInterval(() => loadUnresolvedCount(), 60000);
+}
+
+// ── Inline Audit Log (section inside Logs panel) ──────────────────
+
+let _auditCurrentPage = 1;
+const _AUDIT_PAGE_SIZE = 25;
+let _auditLastPageToken = null;
+let _auditPageTokens = [null];
+
+async function loadInlineAuditLog(page) {
+  const tbody = document.getElementById('audit-tbody');
+  const emptyMsg = document.getElementById('audit-empty');
+  const pagination = document.getElementById('audit-pagination');
+  const pageInfo = document.getElementById('audit-page-info');
+
+  tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text2);font-size:12px;">Loading...</td></tr>';
+  emptyMsg.style.display = 'none';
+
+  const params = new URLSearchParams();
+  params.set('limit', _AUDIT_PAGE_SIZE);
+  if (page > 1 && _auditPageTokens[page - 1]) {
+    params.set('pageToken', _auditPageTokens[page - 1]);
+  }
+
+  const admin = document.getElementById('audit-filter-admin').value.trim();
+  const action = document.getElementById('audit-filter-action').value;
+  const target = document.getElementById('audit-filter-target').value.trim();
+  const from = document.getElementById('audit-filter-from').value;
+  const to = document.getElementById('audit-filter-to').value;
+
+  if (admin) params.set('admin', admin);
+  if (action) params.set('action', action);
+  if (target) params.set('target', target);
+  if (from) params.set('from', new Date(from).toISOString());
+  if (to) params.set('to', new Date(to).toISOString());
+
+  try {
+    const data = await apiCall('GET', `/api/admin/audit-log?${params.toString()}`);
+    const entries = data.entries || [];
+
+    if (entries.length === 0 && page === 1) {
+      tbody.textContent = '';
+      emptyMsg.style.display = 'block';
+      pagination.style.display = 'none';
+      return;
+    }
+
+    emptyMsg.style.display = 'none';
+    tbody.textContent = '';
+
+    entries.forEach(entry => {
+      const tr = document.createElement('tr');
+
+      const tdAdmin = document.createElement('td');
+      tdAdmin.textContent = entry.adminName || entry.adminId || 'Unknown';
+      tr.appendChild(tdAdmin);
+
+      const tdAction = document.createElement('td');
+      tdAction.textContent = entry.action || '';
+      tr.appendChild(tdAction);
+
+      const tdTarget = document.createElement('td');
+      tdTarget.textContent = entry.target || '';
+      tdTarget.style.cssText = 'font-family:monospace;font-size:11px;';
+      tr.appendChild(tdTarget);
+
+      const tdTime = document.createElement('td');
+      tdTime.textContent = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '';
+      tr.appendChild(tdTime);
+
+      const tdDetails = document.createElement('td');
+      tdDetails.className = 'audit-details';
+      tdDetails.textContent = typeof entry.details === 'object' ? JSON.stringify(entry.details) : (entry.details || '');
+      tdDetails.title = tdDetails.textContent;
+      tr.appendChild(tdDetails);
+
+      tbody.appendChild(tr);
+    });
+
+    _auditCurrentPage = page;
+    _auditLastPageToken = data.nextPageToken || null;
+    if (_auditLastPageToken && !_auditPageTokens[page]) {
+      _auditPageTokens[page] = _auditLastPageToken;
+    }
+
+    pagination.style.display = 'flex';
+    pageInfo.textContent = 'Page ' + page;
+    document.getElementById('audit-prev-btn').disabled = page <= 1;
+    document.getElementById('audit-next-btn').disabled = !_auditLastPageToken;
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--danger);font-size:12px;">Failed: ' + escapeHtml(err.message) + '</td></tr>';
+  }
+}
+
+async function exportInlineAuditCsv() {
+  try {
+    const token = await _getToken();
+    const params = new URLSearchParams();
+    const admin = document.getElementById('audit-filter-admin').value.trim();
+    const action = document.getElementById('audit-filter-action').value;
+    const target = document.getElementById('audit-filter-target').value.trim();
+    const from = document.getElementById('audit-filter-from').value;
+    const to = document.getElementById('audit-filter-to').value;
+    if (admin) params.set('admin', admin);
+    if (action) params.set('action', action);
+    if (target) params.set('target', target);
+    if (from) params.set('from', new Date(from).toISOString());
+    if (to) params.set('to', new Date(to).toISOString());
+
+    const res = await fetch(`${_apiBase}/api/admin/audit-log/export?${params.toString()}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Export failed: HTTP ' + res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'audit-log-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Audit log exported', 'success');
+  } catch (err) {
+    showToast('Export failed: ' + err.message, 'error');
+  }
 }

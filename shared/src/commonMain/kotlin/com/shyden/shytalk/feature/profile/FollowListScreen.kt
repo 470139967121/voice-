@@ -360,6 +360,7 @@ private fun FollowUserRow(
                         )
                     }
                 }
+
                 FollowTab.FOLLOWERS -> {
                     // Follow back button
                     IconButton(onClick = onToggleFollow) {
@@ -405,6 +406,7 @@ private fun FollowUserRow(
                         }
                     }
                 }
+
                 FollowTab.STALKERS -> Unit
             }
         }

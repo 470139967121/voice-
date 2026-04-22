@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars, no-undef */
+/* eslint-disable no-unused-vars */
 /**
  * Tests for admin audit log, maintenance endpoints, structured logging, and health check.
  *

@@ -503,18 +503,21 @@ fun RoomScreen(
                         }
                     Triple(stringResource(Res.string.banned_from_room), reason, false)
                 }
+
                 is BlockWarning.BlockedByRoomOwner ->
                     Triple(
                         stringResource(Res.string.cannot_enter_room),
                         stringResource(Res.string.not_allowed_to_enter),
                         false,
                     )
+
                 is BlockWarning.BlockedUserInRoom ->
                     Triple(
                         stringResource(Res.string.blocked_user_in_room),
                         stringResource(Res.string.blocked_user_in_room_description),
                         true,
                     )
+
                 is BlockWarning.BlockedByUserInRoom ->
                     Triple(
                         stringResource(Res.string.notice),

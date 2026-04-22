@@ -173,12 +173,13 @@ jobs:
     secrets: inherit
 
   android-e2e:
-    needs: [detect-changes, build-and-test, sonarcloud]
+    needs: [detect-changes, build-and-test, sonarcloud, test-backend]
     if: |
       always() &&
       needs.detect-changes.outputs.app_changed == 'true' &&
       needs.build-and-test.result == 'success' &&
-      (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped')
+      (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped') &&
+      (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
     uses: ./.github/workflows/e2e-tests.yml
     with:
       android: '33-phone'
@@ -188,12 +189,13 @@ jobs:
     secrets: inherit
 
   playwright-web:
-    needs: [detect-changes, build-and-test, sonarcloud]
+    needs: [detect-changes, build-and-test, sonarcloud, test-backend]
     if: |
       always() &&
       needs.detect-changes.outputs.web_changed == 'true' &&
       (needs.build-and-test.result == 'success' || needs.build-and-test.result == 'skipped') &&
-      (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped')
+      (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped') &&
+      (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
     uses: ./.github/workflows/playwright-tests.yml
     with:
       web: 'all'
@@ -203,12 +205,13 @@ jobs:
     secrets: inherit
 
   ios-e2e:
-    needs: [detect-changes, build-and-test, sonarcloud]
+    needs: [detect-changes, build-and-test, sonarcloud, test-backend]
     if: |
       always() &&
       needs.detect-changes.outputs.app_changed == 'true' &&
       needs.build-and-test.result == 'success' &&
-      (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped')
+      (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped') &&
+      (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
     uses: ./.github/workflows/ios-tests.yml
     with:
       ios: 'none'

@@ -5,7 +5,7 @@
  */
 
 import { apiCall } from '/js/core/api.js';
-import { showToast } from '/js/core/ui.js';
+import { showToast, sanitizeImageUrl } from '/js/core/ui.js';
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -127,7 +127,9 @@ function onFileChange() {
   if (!file || !file.type.startsWith('image/')) return;
   const reader = new FileReader();
   reader.onload = () => {
-    preview.src = reader.result;
+    const safe = sanitizeImageUrl(reader.result);
+    if (!safe) return;
+    preview.src = safe;
     preview.style.display = 'block';
   };
   reader.readAsDataURL(file);
@@ -192,7 +194,7 @@ function renderList() {
     card.appendChild(handle);
 
     const img = document.createElement('img');
-    img.src = b.image_url;
+    img.src = sanitizeImageUrl(b.image_url);
     img.alt = '';
     img.style.cssText =
       'width:120px;height:68px;object-fit:cover;border-radius:6px;flex-shrink:0;';
@@ -365,8 +367,9 @@ function openDialog(banner) {
   activeCheck.checked = banner ? !!banner.is_active : true;
   fileInput.value = '';
   if (banner?.image_url) {
-    preview.src = banner.image_url;
-    preview.style.display = 'block';
+    const safe = sanitizeImageUrl(banner.image_url);
+    preview.src = safe;
+    preview.style.display = safe ? 'block' : 'none';
   } else {
     preview.style.display = 'none';
   }

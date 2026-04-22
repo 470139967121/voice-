@@ -1,8 +1,1 @@
-v0.65.2
-
-extract 15 tab modules from inline script (PR B) (#301)
-- ## Summary
-- Extract all 15 admin panel tab modules from the 14,493-line inline
-- `<script>` block in `public/admin/index.html` into separate ES modules
-- in `public/admin/js/tabs/`.
-- This is **PR B** of the admin panel restructure (roadmap item #41). PR A
+Internal improvements to the admin panel — restructured from a single large file into modular components for better maintainability. No user-facing changes. Added rate limiting to additional authentication endpoints and improved API response times through parallelized requests.

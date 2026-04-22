@@ -58,6 +58,7 @@ class StartingScreenServiceTest {
                     }
                 }
             }
+
             is Resource.Error -> {
                 if (cachedBlocker != null) {
                     StartupState.BLOCKED
@@ -65,6 +66,7 @@ class StartingScreenServiceTest {
                     StartupState.PROCEED
                 }
             }
+
             is Resource.Loading -> StartupState.LOADING
         }
 

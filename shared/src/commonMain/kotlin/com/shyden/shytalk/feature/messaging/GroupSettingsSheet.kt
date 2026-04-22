@@ -131,6 +131,7 @@ fun GroupSettingsSheet(
                         onLeaveGroup = onLeaveGroup,
                         onDismiss = onDismiss,
                     )
+
                 1 ->
                     MembersTab(
                         conversation = conversation,
@@ -143,6 +144,7 @@ fun GroupSettingsSheet(
                         onUpdateGroupRoles = onUpdateGroupRoles,
                         onUnmuteMember = onUnmuteMember,
                     )
+
                 2 ->
                     PermissionsTab(
                         conversation = conversation,
@@ -378,13 +380,16 @@ private fun MembersTab(
                                     GroupRole.MEMBER -> {
                                         currentMods.add(user.uid)
                                     }
+
                                     GroupRole.MOD -> {
                                         currentMods.remove(user.uid)
                                         currentAdmins.add(user.uid)
                                     }
+
                                     GroupRole.ADMIN -> {
                                         currentAdmins.remove(user.uid)
                                     }
+
                                     GroupRole.OWNER -> Unit
                                 }
                                 onUpdateGroupRoles(currentAdmins, currentMods)

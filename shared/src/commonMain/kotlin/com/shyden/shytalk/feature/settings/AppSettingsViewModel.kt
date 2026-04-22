@@ -145,9 +145,11 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -167,9 +169,11 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(error = UiText.res(Res.string.error_unblock_user)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -195,9 +199,11 @@ class AppSettingsViewModel(
         viewModelScope.launch {
             when (userRepository.updateProfile(currentUserId, mapOf("pmPrivacy" to privacy.name))) {
                 is Resource.Success -> Unit
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(pmPrivacy = oldValue, error = UiText.res(Res.string.error_update_privacy)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -220,10 +226,12 @@ class AppSettingsViewModel(
         viewModelScope.launch {
             when (userRepository.updateProfile(currentUserId, mapOf(key to newValue))) {
                 is Resource.Success -> Unit
+
                 is Resource.Error -> {
                     applyOptimistic(currentValue)
                     _uiState.update { it.copy(error = UiText.res(Res.string.error_update_privacy)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -356,6 +364,7 @@ class AppSettingsViewModel(
                         }
                     _uiState.update { it.copy(isCheckingUpdate = false, updateCheckResult = checkResult) }
                 }
+
                 is Resource.Error -> {
                     _uiState.update {
                         it.copy(
@@ -364,6 +373,7 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -403,12 +413,14 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     logE(TAG, "Failed to unlink ${type.key}:$identifier")
                     _uiState.update {
                         it.copy(isUnlinkingProvider = false, error = UiText.res(Res.string.error_update_privacy))
                     }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -439,12 +451,14 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     logE(TAG, "Failed to link ${type.key}:$identifier")
                     _uiState.update {
                         it.copy(isUnlinkingProvider = false, error = UiText.plain("Failed to link account"))
                     }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -463,6 +477,7 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update {
                         it.copy(
@@ -471,6 +486,7 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -488,11 +504,13 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update {
                         it.copy(deletionError = UiText.Plain(result.message))
                     }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -510,6 +528,7 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update {
                         it.copy(
@@ -518,6 +537,7 @@ class AppSettingsViewModel(
                         )
                     }
                 }
+
                 is Resource.Loading -> Unit
             }
         }

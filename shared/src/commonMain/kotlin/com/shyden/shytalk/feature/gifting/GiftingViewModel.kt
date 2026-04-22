@@ -175,10 +175,12 @@ class GiftingViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     logE(TAG, "Gift send failed: ${result.message}")
                     _uiState.update { it.copy(isSending = false, error = UiText.plain(result.message)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -210,9 +212,11 @@ class GiftingViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isSending = false, error = UiText.plain(result.message)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -243,9 +247,11 @@ class GiftingViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isSending = false, error = UiText.plain(result.message)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -264,9 +270,11 @@ class GiftingViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isSending = false, error = UiText.plain(result.message)) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }

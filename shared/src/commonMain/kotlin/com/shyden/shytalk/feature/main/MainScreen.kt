@@ -146,6 +146,7 @@ fun MainScreen(
                         Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.create_room))
                     }
                 }
+
                 BottomNavTab.Messages -> {
                     FloatingActionButton(
                         onClick = onNavigateToNewMessage,
@@ -155,6 +156,7 @@ fun MainScreen(
                         Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.new_message))
                     }
                 }
+
                 else -> Unit
             }
         },
@@ -173,13 +175,16 @@ fun MainScreen(
                                 val value = banner.actionValue ?: return@RoomListContent
                                 when (banner.actionType) {
                                     BannerActionType.URL -> onNavigateToUrl(value)
+
                                     BannerActionType.ROOM -> onNavigateToRoom(value)
+
                                     BannerActionType.SCREEN ->
                                         when (value) {
                                             "wallet" -> onNavigateToWallet()
                                             "settings" -> onNavigateToSettings()
                                             else -> Unit
                                         }
+
                                     BannerActionType.NONE -> Unit
                                 }
                             },
@@ -189,9 +194,11 @@ fun MainScreen(
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
+
                     BottomNavTab.Messages -> {
                         messagesContent(Modifier.fillMaxSize())
                     }
+
                     BottomNavTab.Profile -> {
                         profileContent(Modifier.fillMaxSize())
                     }

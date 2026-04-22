@@ -29,6 +29,7 @@ sealed class UiText {
                 } else {
                     stringResource(resource, *args.toTypedArray())
                 }
+
             is Plain -> text
         }
 
@@ -41,6 +42,7 @@ sealed class UiText {
                 } else {
                     getString(resource, *args.toTypedArray())
                 }
+
             is Plain -> text
         }
 

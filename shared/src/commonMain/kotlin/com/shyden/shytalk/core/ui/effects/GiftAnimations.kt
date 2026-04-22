@@ -197,6 +197,7 @@ private fun DrawScope.drawRareEffect(
                 )
             }
         }
+
         "crown" -> {
             // Golden rays
             for (ray in 0..7) {
@@ -212,6 +213,7 @@ private fun DrawScope.drawRareEffect(
                 )
             }
         }
+
         else -> Unit // Default rare effect (burst + orbiting particles) is enough
     }
 }
@@ -391,6 +393,7 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFFFFDAB9),
                 Color(0xFFFFE4E1),
             ).random()
+
         coinValue < 200 ->
             listOf(
                 Color(0xFF4CAF50),
@@ -399,6 +402,7 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFF66BB6A),
                 Color(0xFF43A047),
             ).random()
+
         coinValue < 2000 ->
             listOf(
                 Color(0xFF2196F3),
@@ -407,6 +411,7 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFF64B5F6),
                 Color(0xFF1E88E5),
             ).random()
+
         coinValue < 10000 ->
             listOf(
                 Color(0xFF9C27B0),
@@ -415,6 +420,7 @@ private fun randomValueColor(coinValue: Int): Color =
                 Color(0xFF7B1FA2),
                 Color(0xFFE040FB),
             ).random()
+
         else ->
             listOf(
                 Color(0xFFFFD700),

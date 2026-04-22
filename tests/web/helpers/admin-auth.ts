@@ -43,12 +43,32 @@ export async function goToAdmin(page: Page): Promise<void> {
 }
 
 /**
- * Navigate to a specific tab.
+ * Navigate to a specific tab and wait for its module to initialise.
+ * The admin panel sets data-module-ready="true" on the panel element
+ * once the ES module's init() + activate() have completed.
  */
+const TAB_PANEL_MAP: Record<string, string> = {
+  Users: 'user-form', Appeals: 'appeals-panel', Reports: 'reports-panel',
+  Gifts: 'gifts-panel', Economy: 'economy-panel', Maintenance: 'maintenance-panel',
+  Monitor: 'monitor-panel', Banners: 'banners-panel', 'Fun Facts': 'funfacts-panel',
+  Backups: 'backups-panel', Logs: 'logs-panel', Devices: 'devices-panel',
+  'Starting Screens': 'starting-screens-panel', Suggestions: 'suggestions-panel',
+  'Audit Log': 'audit-log-panel',
+};
+
 export async function navigateToTab(page: Page, tabName: string): Promise<void> {
   const tabBtn = page.getByRole('button', { name: tabName, exact: true });
   await tabBtn.click();
   await expect(tabBtn).toHaveClass(/active/);
+  // Wait for the module to finish init/activate (signalled via data-module-ready)
+  const panelId = TAB_PANEL_MAP[tabName];
+  if (panelId) {
+    await page.waitForFunction(
+      (id) => document.getElementById(id)?.dataset.moduleReady === 'true',
+      panelId,
+      { timeout: 15_000 },
+    );
+  }
 }
 
 /**

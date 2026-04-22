@@ -327,43 +327,28 @@ test.describe('Admin Economy Config', () => {
   });
 
   // ── Test 14: Milestone type toggle ──
-  test('milestone type toggle — gift type shows gift select', async ({ page, testData }) => {
-    // Always restore config first (removes leftover day-999 from previous failed run)
-    await restoreEconomyConfig(page, testData);
+  test('milestone type toggle — gift type shows gift select', async ({ page }) => {
+    // Test gift-select rendering via UI interaction (no shared Firestore mutation).
+    // Click "Add milestone", change type to "gift", verify select appears.
+    const addBtn = page.locator('#ms-add-btn');
+    await expect(addBtn).toBeVisible({ timeout: 10_000 });
+    await addBtn.click();
 
-    // Get a gift ID from the API
-    const allGifts = await testData.api.get('/api/gifts/all');
-    const giftList = Array.isArray(allGifts) ? allGifts : (allGifts.gifts || []);
-    expect(giftList.length).toBeGreaterThan(0);
-    const giftId = giftList[0].id;
-
-    // Add a gift-type milestone at day 999 (guaranteed to sort last)
-    const currentConfig = await testData.api.get('/api/config/economy');
-    const milestones = { ...(currentConfig.milestoneRewards || {}) };
-    milestones['999'] = { type: 'gift', giftId, quantity: 1 };
-    await page.request.put(`${API_BASE}/api/config/economy`, {
-      headers: {
-        Authorization: `Bearer ${await testData.api.waitForToken()}`,
-        'Content-Type': 'application/json',
-      },
-      data: { milestoneRewards: milestones },
-    });
-
-    // Reload and verify the gift milestone renders correctly
-    // Day 999 is guaranteed to sort last (milestones are sorted by day ascending)
-    await reloadAndNavigateToEconomy(page);
-    // Wait for milestone rows to render before checking the last one
+    // The new row should appear (last row added)
     const milestoneRows = page.locator('#milestone-rows .milestone-row');
-    await expect(milestoneRows.first()).toBeVisible({ timeout: 10_000 });
-    // Wait for day-999 row specifically (it may take a moment to sort/render all rows)
-    const day999Row = milestoneRows.filter({ has: page.locator('.ms-day[value="999"]') });
-    await expect(day999Row).toBeVisible({ timeout: 10_000 });
-    await expect(day999Row.locator('.ms-type')).toHaveValue('gift');
-    // Gift select renders conditionally based on type — may take time on slower CI runners
-    await expect(day999Row.locator('.ms-gift-select')).toBeVisible({ timeout: 15_000 });
+    const lastRow = milestoneRows.last();
+    await expect(lastRow).toBeVisible({ timeout: 5_000 });
 
-    // Restore (remove the day-999 milestone)
-    await restoreEconomyConfig(page, testData);
+    // Change type to "gift"
+    const typeSelect = lastRow.locator('.ms-type');
+    await typeSelect.selectOption('gift');
+
+    // Gift select should now be visible in that row
+    await expect(lastRow.locator('.ms-gift-select')).toBeVisible({ timeout: 10_000 });
+
+    // Change type back to "coins" — gift select should disappear
+    await typeSelect.selectOption('coins');
+    await expect(lastRow.locator('.ms-gift-select')).not.toBeVisible({ timeout: 5_000 });
   });
 
   // ── Test 15: Broadcast thresholds ──

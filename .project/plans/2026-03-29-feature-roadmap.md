@@ -1,6 +1,10 @@
 # ShyTalk Feature Roadmap
 
-_Prioritised 2026-04-14 (revised)_
+_Prioritised 2026-04-19 (revised)_
+
+> **Tri-platform policy (2026-04-19):** All work must keep desktop (web), iOS, and Android in
+> sync. No platform can fall behind. iOS build fix and parity are the immediate next priority.
+> Every future feature must ship on all applicable platforms simultaneously.
 
 ---
 
@@ -16,17 +20,19 @@ roadmap — user-facing web features previously listed here have moved to Phase 
 | 37  | **Allure report directory structure** — per-suite, per-environment, landing page. See `2026-03-29-allure-directory-spec.md`                                                                      | Medium | DONE (PR #241, 2026-03-31)                                    |
 | 35  | **Legal docs: Shyden Ltd branding** — update all public docs and legal pages                                                                                                                     | Small  | DONE (PR #280, 2026-04-09)                                    |
 | 40  | **CI workflow deduplication** — extract duplicated steps into reusable workflows (Firebase rules deploy, google-services decode, iOS signing, Allure report). 6+ workflows have duplicated logic | Small  | DONE (PR #282, 2026-04-09)                                    |
-| 41  | **Admin panel restructure** — break 12,000+ line index.html into modular ES modules. PR A (core modules) merged, PR B (tab extraction) in review, PR C (wiring + cleanup) pending                | Large  | IN PROGRESS (PR A #289 merged, PR B #301 in review)           |
+| 41  | **Admin panel restructure** — break 12,000+ line index.html into modular ES modules. PR A (core modules), PR B (tab extraction), PR C (wiring + cleanup)                                        | Large  | DONE (PR A #289, PR B #301, PR C #304, 2026-04-20)            |
 | 51  | **Seasonal events system** — reusable date-gated theming for holidays (Khmer New Year, Diwali, etc.). Events.json registry, seasonal-theme.js, SeasonalTheme.kt, educational pages               | Medium | DONE (PR #302, 2026-04-16)                                    |
 | 52  | **Khmer (km) as 20th locale** — full app translation to Khmer script (771/781 strings)                                                                                                           | Medium | DONE (PR #302, 2026-04-16)                                    |
 | 53  | **Admin core module tests** — 34 Jest unit tests + 9 Playwright integration tests for PR A core modules                                                                                          | Small  | DONE (PR #290, 2026-04-13)                                    |
+| B5 | **iOS build fix** — cinterop errors block all iOS work. Now on Mac, this is unblocked                                                                                                          | Medium | **NEXT** — immediate priority                                 |
+| B6 | **iOS parity** — testers receiving builds with zero enforcement screens. Must match Android feature-for-feature                                                                                 | Large  | **NEXT** — immediate priority (after B5)                      |
 | B16 | **Cross-device E2E testing** — admin actions (suspension, moderation, ban cascade) performed in admin panel and verified in app on real device. Proves full pipeline end-to-end                  | Large  |                                                               |
 
 ---
 
 ## Phase 1 — Compliance & Legal (non-negotiable)
 
-App store rejection or legal liability if missing.
+App store rejection or legal liability if missing. All features must be implemented on both Android AND iOS.
 
 | #   | Feature                                                                                                                                                                | Effort | Status                     |
 |-----|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|----------------------------|
@@ -45,12 +51,10 @@ App store rejection or legal liability if missing.
 
 ## Phase 2 — Platform Foundation
 
-Unlock iOS and keep Play Store billing current.
+Keep Play Store billing current.
 
 | #  | Feature                                                                     | Effort | Status |
 |----|-----------------------------------------------------------------------------|--------|--------|
-| B5 | **iOS build fix** — cinterop errors block all iOS work                      | Medium |        |
-| B6 | **iOS parity** — testers receiving builds with zero enforcement screens     | Large  |        |
 | B7 | **Billing v7→v8** — Google Play Billing major version, deprecation deadline | Medium |        |
 
 ---
@@ -167,6 +171,8 @@ Items previously in the backlog, now integrated into phases above or resolved:
 | B10 | Playwright BDD upgrade          | 141 scenarios now (Phase 0 testing)                |
 | B11 | Branded sign-in (Apple browser) | Accepted as Firebase limitation — no action needed |
 | B12 | Email sign-in                   | Blocked on self-hosted mail server — deferred      |
+| B5  | iOS build fix                   | Moved to Phase 0 (immediate priority, 2026-04-19)  |
+| B6  | iOS parity                      | Moved to Phase 0 (immediate priority, 2026-04-19)  |
 | B18 | Admin panel restructure         | Duplicate of #41 — removed                         |
 | B13 | Contact form                    | Moved to Phase 8                                   |
 | B14 | Suspended user support          | Moved to Phase 8                                   |

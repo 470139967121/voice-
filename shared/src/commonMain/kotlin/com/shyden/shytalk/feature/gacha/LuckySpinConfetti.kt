@@ -117,12 +117,14 @@ fun LuckySpinConfetti(
                         topLeft = Offset(px - pSize / 2, py - pSize * 0.3f),
                         size = Size(pSize, pSize * 0.6f),
                     )
+
                 1 ->
                     drawCircle(
                         color = particle.color.copy(alpha = particle.opacity.coerceIn(0f, 1f)),
                         radius = pSize / 2,
                         center = Offset(px, py),
                     )
+
                 else ->
                     drawRect(
                         color = particle.color.copy(alpha = particle.opacity.coerceIn(0f, 1f)),

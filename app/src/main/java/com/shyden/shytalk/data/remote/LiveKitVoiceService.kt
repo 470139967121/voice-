@@ -135,6 +135,7 @@ class LiveKitVoiceService(
                             _connectionState.value = VoiceConnectionState.CONNECTED
                             isSwitchingAudioType = false
                         }
+
                         is RoomEvent.Disconnected -> {
                             Log.d(TAG, "Disconnected from room")
                             if (!isSwitchingAudioType) {
@@ -143,14 +144,17 @@ class LiveKitVoiceService(
                                 _speakingUsers.value = emptySet()
                             }
                         }
+
                         is RoomEvent.Reconnecting -> {
                             Log.d(TAG, "Reconnecting...")
                             _connectionState.value = VoiceConnectionState.RECONNECTING
                         }
+
                         is RoomEvent.Reconnected -> {
                             Log.d(TAG, "Reconnected")
                             _connectionState.value = VoiceConnectionState.CONNECTED
                         }
+
                         is RoomEvent.ActiveSpeakersChanged -> {
                             val speakers =
                                 event.speakers
@@ -161,6 +165,7 @@ class LiveKitVoiceService(
                                 _speakingUsers.value = speakers
                             }
                         }
+
                         is RoomEvent.FailedToConnect -> {
                             logE(TAG, "FailedToConnect event: ${event.error.message}", event.error)
                             _error.value = "Voice failed: ${event.error.message}"
@@ -168,12 +173,14 @@ class LiveKitVoiceService(
                             _isJoined.value = false
                             isSwitchingAudioType = false
                         }
+
                         is RoomEvent.ParticipantDisconnected -> {
                             val identity = event.participant.identity?.value
                             if (identity != null) {
                                 _speakingUsers.value = _speakingUsers.value - identity
                             }
                         }
+
                         else -> {}
                     }
                 }

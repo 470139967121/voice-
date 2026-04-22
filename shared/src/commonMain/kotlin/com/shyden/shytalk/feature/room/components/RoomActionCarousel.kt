@@ -88,6 +88,7 @@ fun RoomActionCarousel(
                             gradientColors = listOf(Color(0xFFE53935), Color(0xFFFF6B35)),
                             onClick = onOpenGacha,
                         )
+
                     1 ->
                         SquareCarouselBanner(
                             icon = {

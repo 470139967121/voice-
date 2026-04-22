@@ -34,9 +34,13 @@ fun JSONArray.toList(): List<Any?> = (0 until length()).map { convertValue(get(i
 private fun convertValue(value: Any?): Any? =
     when (value) {
         JSONObject.NULL, null -> null
+
         is JSONObject -> value.toMap()
+
         is JSONArray -> value.toList()
+
         // Normalize Int to Long to match Firestore convention (model fromMap() casts to Long)
         is Int -> value.toLong()
+
         else -> value // String, Long, Double, Boolean
     }

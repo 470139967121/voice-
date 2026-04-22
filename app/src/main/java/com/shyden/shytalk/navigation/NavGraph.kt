@@ -186,16 +186,19 @@ fun NavGraph(
                                 navController.navigate(Screen.ProfileSetup.route) {
                                     popUpTo(Screen.SignIn.route) { inclusive = true }
                                 }
+
                             !hasDOB ->
                                 navController.navigate(Screen.RequiredDOB.route) {
                                     popUpTo(Screen.SignIn.route) { inclusive = true }
                                 }
+
                             needsLegalAcceptance -> {
                                 navController.navigate(Screen.Splash.route) {
                                     popUpTo(Screen.SignIn.route) { inclusive = true }
                                 }
                                 navController.navigate(Screen.LegalAcceptance.route)
                             }
+
                             else ->
                                 navController.navigate(Screen.Splash.route) {
                                     popUpTo(Screen.SignIn.route) { inclusive = true }

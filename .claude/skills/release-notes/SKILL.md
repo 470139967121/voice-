@@ -1,16 +1,17 @@
 ---
 name: release-notes
-description: Generate Google Play release notes (max 500 chars, non-technical) from recent commits
+description: Generate Google Play and App Store release notes (max 500 chars, non-technical) from recent commits
 disable-model-invocation: true
 ---
 
-# Generate Play Store Release Notes
+# Generate Release Notes
 
-Generate user-friendly release notes for Google Play internal track.
+Generate user-friendly release notes for Google Play internal track and App Store (TestFlight).
 
-## Output File
+## Output Files
 
-`app/src/main/play/release-notes/en-US/internal.txt`
+- **Google Play:** `app/src/main/play/release-notes/en-US/internal.txt`
+- **App Store:** `iosApp/fastlane/metadata/en-US/release_notes.txt` (when iOS deployment is configured)
 
 ## Steps
 

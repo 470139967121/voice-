@@ -156,18 +156,21 @@ fun ConversationListItem(
                                         .Color(0xFFFFD700),
                                     stringResource(Res.string.role_owner),
                                 )
+
                             GroupRole.ADMIN ->
                                 Pair(
                                     androidx.compose.ui.graphics
                                         .Color(0xFFFFC107),
                                     stringResource(Res.string.role_admin),
                                 )
+
                             GroupRole.MOD ->
                                 Pair(
                                     androidx.compose.ui.graphics
                                         .Color(0xFF009688),
                                     stringResource(Res.string.role_mod),
                                 )
+
                             GroupRole.MEMBER -> Pair(MaterialTheme.colorScheme.outline, "")
                         }
                     if (badgeLabel.isNotEmpty()) {

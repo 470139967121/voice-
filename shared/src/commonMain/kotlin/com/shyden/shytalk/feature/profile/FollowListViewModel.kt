@@ -166,10 +166,12 @@ class FollowListViewModel(
                                 is Resource.Success -> {
                                     stalkerUserMap = usersResult.data.associateBy { it.uid }
                                 }
+
                                 else -> Unit
                             }
                         }
                     }
+
                     else -> Unit
                 }
             }

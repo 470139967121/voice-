@@ -7,7 +7,7 @@
  */
 
 import { apiCall } from '/js/core/api.js';
-import { showToast, escapeHtml } from '/js/core/ui.js';
+import { showToast, escapeHtml, sanitizeImageUrl } from '/js/core/ui.js';
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -184,6 +184,14 @@ export function init(deps) {
 /** Called every time the Monitor tab is activated. */
 export function activate() {
   populateGuaranteeGiftDropdown();
+  // Restore monitoring from session if not already active
+  const savedUid = sessionStorage.getItem('admin_monitor_uid');
+  if (savedUid && !monitorUid) {
+    monitorUidInput.value = savedUid;
+    startMonitoring(savedUid);
+  } else if (monitorUidInput) {
+    monitorUidInput.focus();
+  }
 }
 
 /** Called when leaving the Monitor tab. */
@@ -207,13 +215,14 @@ function updateMonitorStats(userData) {
   // User card — always update or remove avatar
   const userCard = $("#monitor-user-card");
   const prevAvatar = userCard.querySelector(".user-avatar");
-  if (avatar) {
+  const safeAvatar = sanitizeImageUrl(avatar);
+  if (safeAvatar) {
     if (prevAvatar) {
-      prevAvatar.src = avatar;
+      prevAvatar.src = safeAvatar;
     } else {
       const img = document.createElement("img");
       img.className = "user-avatar";
-      img.src = avatar;
+      img.src = safeAvatar;
       img.alt = "";
       userCard.insertBefore(img, userCard.firstChild);
     }
@@ -547,14 +556,14 @@ export function stopMonitoring() {
   monitorUid = null;
   sessionStorage.removeItem("admin_monitor_uid");
 
-  // Update status
-  monitorDot.classList.remove("live");
-  monitorStatusText.textContent = "Disconnected";
-  monitorStartBtn.style.display = "";
-  monitorStopBtn.style.display = "none";
+  // Update status (guard: init() may not have run if tab was never visited)
+  if (monitorDot) monitorDot.classList.remove("live");
+  if (monitorStatusText) monitorStatusText.textContent = "Disconnected";
+  if (monitorStartBtn) monitorStartBtn.style.display = "";
+  if (monitorStopBtn) monitorStopBtn.style.display = "none";
 
   // Remove live dot from tab
-  const liveDot = tabMonitor.querySelector(".tab-live-dot");
+  const liveDot = tabMonitor?.querySelector(".tab-live-dot");
   if (liveDot) liveDot.remove();
 }
 

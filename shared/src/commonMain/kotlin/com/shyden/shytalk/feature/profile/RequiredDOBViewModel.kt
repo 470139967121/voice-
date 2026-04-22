@@ -41,9 +41,11 @@ class RequiredDOBViewModel(
                 is Resource.Success -> {
                     _uiState.update { it.copy(isLoading = false, saved = true) }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = UiText.res(Res.string.error_save_dob)) }
                 }
+
                 is Resource.Loading -> {}
             }
         }

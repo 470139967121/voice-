@@ -7,7 +7,7 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "local": "node --env-file=.env.local src/index.js",
-    "test": "jest --verbose",
+    "test": "jest --forceExit",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --verbose",
     "lint": "eslint .",
@@ -30,7 +30,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.5",
     "otplib": "^13.4.0",
-    "sharp": "0.34.5"
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

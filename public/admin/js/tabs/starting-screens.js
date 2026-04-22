@@ -7,7 +7,7 @@
  */
 
 import { apiCall } from '/js/core/api.js';
-import { showToast, escapeHtml } from '/js/core/ui.js';
+import { showToast, escapeHtml, sanitizeImageUrl } from '/js/core/ui.js';
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -131,8 +131,9 @@ function updatePreview(card) {
   preview.textContent = '';
   const content = document.createElement('div');
   content.className = 'preview-content';
-  if (bgImageUrl) {
-    content.style.backgroundImage = `url(${encodeURI(bgImageUrl)})`;
+  const safeBgUrl = sanitizeImageUrl(bgImageUrl);
+  if (safeBgUrl) {
+    content.style.backgroundImage = `url(${encodeURI(safeBgUrl)})`;
     content.style.backgroundSize = bgFit;
     content.style.backgroundPosition = 'center';
     content.style.backgroundRepeat = 'no-repeat';

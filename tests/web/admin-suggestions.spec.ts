@@ -1264,6 +1264,14 @@ test.describe('Admin Identity Graph Visualization (11.65)', () => {
     // mouse.wheel is unreliable on mobile-safari viewport
     test.skip(browserName === 'webkit' && test.info().project.name.includes('mobile'), 'mouse.wheel unsupported on mobile Safari');
     const c = page.locator('#identity-graph-container');
+    // Ensure graph is visible before zoom/pan — re-click the Identity subtab
+    // to force the graph container to be shown after serial test state changes
+    await page.locator('.user-subtab[data-subtab="identity"]').click();
+    await page.waitForFunction(() => {
+      const el = document.getElementById('identity-graph-container');
+      return el && el.style.display !== 'none' && el.querySelector('svg') !== null;
+    }, { timeout: 15_000 });
+    await c.scrollIntoViewIfNeeded();
     await c.hover(); await page.mouse.wheel(0, -100); await page.waitForTimeout(500);
     const box = await c.boundingBox();
     if (box) { await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 + 50, box.y + box.height / 2 + 50); await page.mouse.up(); }

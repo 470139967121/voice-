@@ -35,12 +35,13 @@ const logger = require('./utils/loggerInstance');
 const { createRequestLogger } = require('./middleware/requestLogger');
 app.use(createRequestLogger(logger));
 
-// Health check (no auth)
-app.get('/api/health', (req, res) => {
+// Health check (no auth, rate-limited by IP via generalLimiter below)
+app.get('/api/health', generalLimiter, (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
 });
 
 // Auth routes (mounted BEFORE auth middleware — these handle their own auth)
+// Each auth route already applies sensitiveLimiter internally.
 app.use('/api', require('./routes/auth'));
 
 // Auth middleware for all /api routes (except health, log-config, auth, and pre-auth endpoints)
@@ -71,7 +72,8 @@ app.use('/api', (req, res, next) => {
   authMiddleware(req, res, next);
 });
 
-// General rate limit on all API routes (except /test/* in non-prod)
+// General rate limit on authenticated API routes (after auth so req.auth.token.admin skip works)
+// Test routes are exempt in non-production environments.
 app.use('/api', (req, res, next) => {
   if (req.path.startsWith('/test/') && process.env.NODE_ENV !== 'production') {
     return next();

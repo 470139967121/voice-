@@ -11,7 +11,9 @@
       "mcp__plugin_firebase_firebase__firebase_get_environment",
       "Skill(commit-commands:commit-push-pr)",
       "Skill(update-config)",
-      "Skill(commit-commands:commit)"
+      "Skill(commit-commands:commit)",
+      "Bash(mkdir -p ~/.claude/projects/-Users-shyden-Developer-Repos-ShyTalk/memory)",
+      "Bash(mv ~/.claude/projects/Users-shyden-Developer-Repos-ShyTalk/memory/* ~/.claude/projects/-Users-shyden-Developer-Repos-ShyTalk/memory/)"
     ]
   }
 }

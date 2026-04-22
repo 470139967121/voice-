@@ -21,7 +21,7 @@ export default async function globalSetup() {
   // handles those per-worker.
   const collections = [
     'suggestions', 'notifications', 'moderationLog', 'auditLog', 'adminAuditLog',
-    'blockedTopics', 'funFacts',
+    'blockedTopics',
   ];
 
   for (const col of collections) {

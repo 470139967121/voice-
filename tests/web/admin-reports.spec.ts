@@ -120,9 +120,16 @@ test.describe('Admin Reports', () => {
     const searchInput = page.locator('#report-search-input');
     const searchBtn = page.locator('#report-search-btn');
 
-    // Search for the seeded user by uniqueId
+    // Search for the seeded user by uniqueId.
+    // Wait for the search API response before checking the DOM because
+    // loadReports() preserves existing cards during a refresh, so
+    // waitForReportsLoaded would return immediately seeing stale cards.
     await searchInput.fill(String(testData.user.uniqueId));
+    const searchResponse = page.waitForResponse(
+      resp => resp.url().includes('/api/reports') && resp.url().includes('search='),
+    );
     await searchBtn.click();
+    await searchResponse;
     await waitForReportsLoaded(page);
 
     // Verify the results show the user
@@ -135,9 +142,13 @@ test.describe('Admin Reports', () => {
       await expect(reportsList).toContainText(String(testData.user.uniqueId));
     }
 
-    // Clear search
+    // Clear search — same pattern: wait for API response
     await searchInput.fill('');
+    const clearResponse = page.waitForResponse(
+      resp => resp.url().includes('/api/reports') && !resp.url().includes('search='),
+    );
     await searchBtn.click();
+    await clearResponse;
     await waitForReportsLoaded(page);
   });
 

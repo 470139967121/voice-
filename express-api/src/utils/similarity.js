@@ -23,9 +23,18 @@ function normalise(text) {
  * @param {string} b
  * @returns {number}
  */
+const MAX_EDIT_DISTANCE_LEN = 500;
+
 function editDistance(a, b) {
+  // Coerce to strings to prevent type confusion if called with non-string input
+  a = typeof a === 'string' ? a : String(a ?? '');
+  b = typeof b === 'string' ? b : String(b ?? '');
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
+  // Prevent CPU exhaustion with very long strings (O(n*m) algorithm)
+  if (a.length > MAX_EDIT_DISTANCE_LEN || b.length > MAX_EDIT_DISTANCE_LEN) {
+    return a === b ? 0 : Math.max(a.length, b.length);
+  }
 
   const matrix = [];
   for (let i = 0; i <= b.length; i++) matrix[i] = [i];

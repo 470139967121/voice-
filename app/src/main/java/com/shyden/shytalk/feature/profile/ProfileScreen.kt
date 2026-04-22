@@ -1330,6 +1330,7 @@ private fun ProfileContent(
                                         .fillMaxWidth()
                                         .heightIn(max = 400.dp),
                             )
+
                         1 ->
                             if (isOwn && giftingState != null) {
                                 BackpackContent(

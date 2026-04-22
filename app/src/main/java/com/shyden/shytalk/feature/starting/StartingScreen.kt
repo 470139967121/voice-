@@ -147,6 +147,7 @@ fun StartingScreenComposable(
                             modifier = Modifier.size(120.dp),
                         )
                     }
+
                     else -> {
                         // Use template default icon
                         val icon =

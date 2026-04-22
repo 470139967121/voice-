@@ -29,10 +29,15 @@ test.describe('Admin Core Modules Integration', () => {
     expect(mainScript).toBe(1);
   });
 
-  test('core/ui.js showToast is used (not inline version)', async ({ page }) => {
-    // Verify the import statement exists at the top of the inline block
-    const html = await page.content();
-    expect(html).toContain("import { showToast, showConfirm } from '/js/core/ui.js'");
+  test('core/ui.js showToast is imported by tab modules (not inline)', async ({ page }) => {
+    // After PR C, showToast is imported by individual tab modules (e.g., maintenance.js,
+    // economy-config.js) rather than an inline script block. Verify the module is fetchable
+    // and that no inline script block imports it (inline block was removed in PR C).
+    const uiModuleStatus = await page.evaluate(async () => {
+      const res = await fetch('/js/core/ui.js');
+      return res.status;
+    });
+    expect(uiModuleStatus).toBe(200);
   });
 
   test('Firebase getApp() works (no duplicate init error)', async ({ page }) => {
@@ -77,10 +82,45 @@ test.describe('Admin Core Modules Integration', () => {
     }
   });
 
-  test('inline block successfully imports from main.js', async ({ page }) => {
-    // Verify the inline block has the import from main.js
-    const html = await page.content();
-    expect(html).toContain("from './js/main.js'");
+  test('main.js is loaded as module script (no inline block)', async ({ page }) => {
+    // After PR C, the inline script block was removed. main.js is loaded via
+    // <script type="module" src="js/main.js"> and orchestrates all tab modules.
+    const moduleScript = await page.evaluate(() => {
+      const script = document.querySelector('script[type="module"][src="js/main.js"]');
+      return !!script;
+    });
+    expect(moduleScript).toBe(true);
+  });
+
+  test('sanitizeImageUrl blocks dangerous schemes and allows safe URLs', async ({ page }) => {
+    const results = await page.evaluate(async () => {
+      const mod = await import('/js/core/ui.js');
+      const fn = mod.sanitizeImageUrl;
+      return {
+        https: fn('https://example.com/photo.jpg'),
+        http: fn('http://example.com/photo.jpg'),
+        dataImage: fn('data:image/png;base64,iVBOR'),
+        blob: fn('blob:http://localhost:4000/abc-123'),
+        javascript: fn('javascript:alert(1)'),
+        dataHtml: fn('data:text/html,<script>alert(1)</script>'),
+        empty: fn(''),
+        nullVal: fn(null),
+        undefinedVal: fn(undefined),
+        plainText: fn('not-a-url'),
+        ftpScheme: fn('ftp://example.com/file'),
+      };
+    });
+    expect(results.https).toBe('https://example.com/photo.jpg');
+    expect(results.http).toBe('http://example.com/photo.jpg');
+    expect(results.dataImage).toBe('data:image/png;base64,iVBOR');
+    expect(results.blob).toBe('blob:http://localhost:4000/abc-123');
+    expect(results.javascript).toBe('');
+    expect(results.dataHtml).toBe('');
+    expect(results.empty).toBe('');
+    expect(results.nullVal).toBe('');
+    expect(results.undefinedVal).toBe('');
+    expect(results.plainText).toBe('');
+    expect(results.ftpScheme).toBe('');
   });
 
   test('confirm dialog renders with correct DOM structure when triggered', async ({ page }) => {

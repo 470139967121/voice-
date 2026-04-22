@@ -571,7 +571,6 @@ describe('GET /api/config/startingScreens — content hash', () => {
       data: () => ({ golden: screen }),
     });
 
-    const app = createAppWithAuthExemption();
     const res = await request(app).get('/api/config/startingScreens');
 
     // Pre-computed SHA-256 of sorted JSON:

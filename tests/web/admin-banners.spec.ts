@@ -403,11 +403,11 @@ test.describe('Admin Banners', () => {
       buffer: createTestPngBuffer(),
     });
 
-    // Preview should now be visible with a blob URL
+    // Preview should now be visible with a data: URL (FileReader) or blob: URL
     await expect(preview).toHaveCSS('display', 'block');
     const src = await preview.getAttribute('src');
     expect(src).toBeTruthy();
-    expect(src!.startsWith('blob:')).toBe(true);
+    expect(src!.startsWith('data:') || src!.startsWith('blob:')).toBe(true);
 
     await cancelDialog(page);
   });

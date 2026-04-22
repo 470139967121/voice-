@@ -83,6 +83,72 @@ describe('editDistance', () => {
     const b = 'b'.repeat(100);
     expect(editDistance(a, b)).toBe(100);
   });
+
+  // ── Security: String coercion (CodeQL type confusion fix) ──
+
+  test('coerces number inputs to strings', () => {
+    expect(editDistance(123, 123)).toBe(0);
+    expect(editDistance(123, 456)).toBe(3);
+    expect(editDistance(0, '')).toBe(1); // '0' vs ''
+  });
+
+  test('coerces null/undefined to empty string', () => {
+    expect(editDistance(null, 'abc')).toBe(3);
+    expect(editDistance('abc', null)).toBe(3);
+    expect(editDistance(undefined, undefined)).toBe(0);
+    expect(editDistance(null, null)).toBe(0);
+    expect(editDistance(null, undefined)).toBe(0);
+  });
+
+  test('coerces boolean inputs to strings', () => {
+    expect(editDistance(true, 'true')).toBe(0);
+    expect(editDistance(false, 'false')).toBe(0);
+  });
+
+  test('coerces array inputs to strings', () => {
+    // Array.toString() produces comma-separated values
+    expect(editDistance([1, 2], '1,2')).toBe(0);
+  });
+
+  test('coerces object inputs to strings', () => {
+    // Object.toString() produces '[object Object]'
+    expect(editDistance({}, '[object Object]')).toBe(0);
+  });
+
+  // ── Security: MAX_EDIT_DISTANCE_LEN cap (CPU exhaustion prevention) ──
+
+  test('returns max length for strings exceeding 500 chars (different)', () => {
+    const a = 'a'.repeat(501);
+    const b = 'b'.repeat(501);
+    // Short-circuit: returns Math.max(a.length, b.length) when different
+    expect(editDistance(a, b)).toBe(501);
+  });
+
+  test('returns 0 for identical strings exceeding 500 chars', () => {
+    const a = 'x'.repeat(600);
+    // Identical strings over the cap should still return 0
+    expect(editDistance(a, a)).toBe(0);
+  });
+
+  test('returns max length when one string exceeds 500 chars', () => {
+    const a = 'a'.repeat(501);
+    const b = 'b'.repeat(10);
+    expect(editDistance(a, b)).toBe(501);
+  });
+
+  test('uses normal algorithm for strings at exactly 500 chars', () => {
+    const a = 'a'.repeat(500);
+    const b = 'a'.repeat(500);
+    // Identical, at the boundary — should use normal algorithm (returns 0)
+    expect(editDistance(a, b)).toBe(0);
+  });
+
+  test('uses normal algorithm for strings just under 500 chars', () => {
+    const a = 'a'.repeat(499);
+    const b = 'a'.repeat(499) + 'b';
+    // One character different at position 500 — normal algorithm
+    expect(editDistance(a, b)).toBe(1);
+  });
 });
 
 describe('similarity', () => {

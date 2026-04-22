@@ -1026,7 +1026,9 @@ private fun DateSeparator(timestampMs: Long) {
     val label =
         when {
             date == today -> stringResource(Res.string.today)
+
             date.toEpochDays() == today.toEpochDays() - 1 -> stringResource(Res.string.yesterday)
+
             else -> {
                 val month =
                     date.month.name

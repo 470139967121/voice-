@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-04-16",
+  "lastUpdated": "2026-04-21",
   "phases": [
     {
       "title": "Safety & Compliance",
@@ -571,173 +571,95 @@
         "tr": "Platform ve iOS",
         "uk": "Платформа та iOS",
         "vi": "Nền tảng và iOS",
-        "zh": "平台与iOS"
+        "zh": "平台与iOS",
+        "km": "វេទិកា និង iOS"
       },
-      "status": "soon",
+      "status": "active",
       "features": [
         {
-          "name": "iOS build fix",
-          "description": "cinterop errors block all iOS work",
-          "status": "planned",
+          "name": "iOS feature parity",
+          "description": "Bring the iOS app to full feature parity with Android",
+          "status": "in-progress",
           "i18n": {
             "ar": {
-              "n": "إصلاح بناء iOS",
-              "d": "إصلاح أخطاء تجميع iOS"
+              "n": "تكافؤ ميزات iOS",
+              "d": "جعل تطبيق iOS مكافئاً لتطبيق Android"
             },
             "de": {
-              "n": "iOS Build-Fix",
-              "d": "iOS-Kompilierungsfehler beheben"
+              "n": "iOS-Funktionsparität",
+              "d": "iOS-App auf Android-Niveau bringen"
             },
             "es": {
-              "n": "Arreglo de iOS",
-              "d": "Corregir errores de compilación iOS"
+              "n": "Paridad de funciones iOS",
+              "d": "Igualar las funciones de iOS con Android"
             },
             "fr": {
-              "n": "Correction iOS",
-              "d": "Corriger les erreurs de compilation iOS"
+              "n": "Parité fonctionnelle iOS",
+              "d": "Mettre l'app iOS au niveau d'Android"
             },
             "hi": {
-              "n": "iOS बिल्ड फिक्स",
-              "d": "iOS संकलन त्रुटियां ठीक करें"
+              "n": "iOS फ़ीचर समानता",
+              "d": "iOS ऐप को Android के बराबर लाना"
             },
             "id": {
-              "n": "Perbaikan iOS",
-              "d": "Perbaiki kesalahan kompilasi iOS"
+              "n": "Paritas fitur iOS",
+              "d": "Menyamakan fitur iOS dengan Android"
             },
             "it": {
-              "n": "Fix build iOS",
-              "d": "Correggere errori di compilazione iOS"
+              "n": "Parità funzionalità iOS",
+              "d": "Portare l'app iOS al livello di Android"
             },
             "ja": {
-              "n": "iOSビルド修正",
-              "d": "iOSコンパイルエラーの修正"
+              "n": "iOS機能パリティ",
+              "d": "iOSアプリをAndroidと同等に"
             },
             "ko": {
-              "n": "iOS 빌드 수정",
-              "d": "iOS 컴파일 오류 수정"
+              "n": "iOS 기능 동등성",
+              "d": "iOS 앱을 Android 수준으로"
             },
             "nl": {
-              "n": "iOS build fix",
-              "d": "iOS compilatiefouten oplossen"
+              "n": "iOS-functiepariteit",
+              "d": "iOS-app op Android-niveau brengen"
             },
             "pl": {
-              "n": "Naprawa iOS",
-              "d": "Napraw błędy kompilacji iOS"
+              "n": "Parytet funkcji iOS",
+              "d": "Wyrównanie funkcji iOS z Androidem"
             },
             "pt": {
-              "n": "Correção iOS",
-              "d": "Corrigir erros de compilação iOS"
+              "n": "Paridade de recursos iOS",
+              "d": "Igualar o app iOS ao Android"
             },
             "ru": {
-              "n": "Исправление iOS",
-              "d": "Исправить ошибки сборки iOS"
+              "n": "Паритет функций iOS",
+              "d": "Довести iOS-приложение до уровня Android"
             },
             "sv": {
-              "n": "iOS-fix",
-              "d": "Åtgärda iOS-kompileringsfel"
+              "n": "iOS-funktionsparitet",
+              "d": "Ge iOS-appen samma funktioner som Android"
             },
             "th": {
-              "n": "แก้ไข iOS",
-              "d": "แก้ไขข้อผิดพลาดการคอมไพล์ iOS"
+              "n": "ฟีเจอร์ iOS เทียบเท่า",
+              "d": "ทำให้แอป iOS เทียบเท่า Android"
             },
             "tr": {
-              "n": "iOS düzeltme",
-              "d": "iOS derleme hatalarını düzelt"
+              "n": "iOS özellik eşitliği",
+              "d": "iOS uygulamasını Android seviyesine getirmek"
             },
             "uk": {
-              "n": "Виправлення iOS",
-              "d": "Виправити помилки збірки iOS"
+              "n": "Паритет функцій iOS",
+              "d": "Довести iOS-додаток до рівня Android"
             },
             "vi": {
-              "n": "Sửa lỗi iOS",
-              "d": "Sửa lỗi biên dịch iOS"
+              "n": "Tính năng iOS tương đương",
+              "d": "Đưa ứng dụng iOS ngang tầm Android"
             },
             "zh": {
-              "n": "iOS构建修复",
-              "d": "修复iOS编译错误"
-            }
-          }
-        },
-        {
-          "name": "iOS parity",
-          "description": "testers receiving builds with zero enforcement screens",
-          "status": "planned",
-          "i18n": {
-            "ar": {
-              "n": "تكافؤ iOS",
-              "d": "تطبيق ShyTalk الكامل على iPhone وiPad"
+              "n": "iOS功能对等",
+              "d": "使iOS应用达到Android同等水平"
             },
-            "de": {
-              "n": "iOS-Parität",
-              "d": "Volles ShyTalk auf iPhone und iPad"
-            },
-            "es": {
-              "n": "Paridad iOS",
-              "d": "ShyTalk completo en iPhone y iPad"
-            },
-            "fr": {
-              "n": "Parité iOS",
-              "d": "ShyTalk complet sur iPhone et iPad"
-            },
-            "hi": {
-              "n": "iOS समानता",
-              "d": "iPhone और iPad पर पूर्ण ShyTalk"
-            },
-            "id": {
-              "n": "Paritas iOS",
-              "d": "ShyTalk lengkap di iPhone dan iPad"
-            },
-            "it": {
-              "n": "Parità iOS",
-              "d": "ShyTalk completo su iPhone e iPad"
-            },
-            "ja": {
-              "n": "iOS対応",
-              "d": "iPhoneとiPadでフルShyTalk"
-            },
-            "ko": {
-              "n": "iOS 동등성",
-              "d": "iPhone과 iPad에서 완전한 ShyTalk"
-            },
-            "nl": {
-              "n": "iOS-pariteit",
-              "d": "Volledig ShyTalk op iPhone en iPad"
-            },
-            "pl": {
-              "n": "Parytet iOS",
-              "d": "Pełny ShyTalk na iPhone i iPad"
-            },
-            "pt": {
-              "n": "Paridade iOS",
-              "d": "ShyTalk completo no iPhone e iPad"
-            },
-            "ru": {
-              "n": "Паритет iOS",
-              "d": "Полноценный ShyTalk на iPhone и iPad"
-            },
-            "sv": {
-              "n": "iOS-paritet",
-              "d": "Fullständigt ShyTalk på iPhone och iPad"
-            },
-            "th": {
-              "n": "ความเท่าเทียม iOS",
-              "d": "ShyTalk เต็มรูปแบบบน iPhone และ iPad"
-            },
-            "tr": {
-              "n": "iOS eşitliği",
-              "d": "iPhone ve iPad'de tam ShyTalk"
-            },
-            "uk": {
-              "n": "Паритет iOS",
-              "d": "Повний ShyTalk на iPhone та iPad"
-            },
-            "vi": {
-              "n": "Tương đương iOS",
-              "d": "ShyTalk đầy đủ trên iPhone và iPad"
-            },
-            "zh": {
-              "n": "iOS对等",
-              "d": "iPhone和iPad上的完整ShyTalk"
+            "km": {
+              "n": "សមភាពមុខងារ iOS",
+              "d": "នាំកម្មវិធី iOS ឱ្យស្មើ Android"
             }
           }
         },

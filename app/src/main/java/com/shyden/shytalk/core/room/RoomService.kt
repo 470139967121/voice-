@@ -260,9 +260,11 @@ class RoomService : Service() {
                     chatHeadManager?.updatePhoto(photo)
                 }
             }
+
             is Resource.Error -> {
                 Log.w(TAG, "resolveOwnerPhoto: API error: ${result.message}")
             }
+
             else -> {
                 Log.w(TAG, "resolveOwnerPhoto: unexpected result: $result")
             }

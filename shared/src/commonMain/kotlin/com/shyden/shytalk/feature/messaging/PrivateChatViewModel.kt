@@ -210,11 +210,13 @@ class PrivateChatViewModel(
                     observeSettings(conversation.conversationId)
                     connectConversationWs(conversation.conversationId)
                 }
+
                 is Resource.Error -> {
                     _uiState.update {
                         it.copy(isLoading = false, error = result.message)
                     }
                 }
+
                 is Resource.Loading -> Unit
             }
 
@@ -265,9 +267,11 @@ class PrivateChatViewModel(
                     loadGroupMutes(conversationId)
                     connectConversationWs(conversationId)
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
+
                 is Resource.Loading -> Unit
             }
 
@@ -292,12 +296,14 @@ class PrivateChatViewModel(
         // Check PM privacy
         when (otherUser.pmPrivacy) {
             PmPrivacy.NO_ONE -> return "This user does not accept private messages."
+
             PmPrivacy.FOLLOWERS_ONLY -> {
                 // Target must follow the sender
                 if (!otherUser.followingIds.contains(currentUserId)) {
                     return "This user only accepts messages from people they follow."
                 }
             }
+
             PmPrivacy.EVERYONE -> Unit
         }
         return null
@@ -387,6 +393,7 @@ class PrivateChatViewModel(
                     logE(TAG, "Failed to send message")
                     _uiState.update { it.copy(error = "Failed to send message") }
                 }
+
                 else -> Unit
             }
         }
@@ -415,6 +422,7 @@ class PrivateChatViewModel(
                 is Resource.Error -> {
                     _uiState.update { it.copy(error = "Failed to send image") }
                 }
+
                 else -> Unit
             }
         }
@@ -453,6 +461,7 @@ class PrivateChatViewModel(
                 is Resource.Error -> {
                     _uiState.update { it.copy(error = "Failed to edit message") }
                 }
+
                 else -> Unit
             }
         }
@@ -549,9 +558,11 @@ class PrivateChatViewModel(
                         )
                     }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoadingOlder = false) }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -605,6 +616,7 @@ class PrivateChatViewModel(
                                 // Immediately refetch messages (bypass slow polling)
                                 refreshMessages(conversationId)
                             }
+
                             is ConversationEvent.Typing -> {
                                 // For 1-on-1, only show typing from the other user
                                 if (!_uiState.value.isGroup && event.userId != otherUserId) return@collect
@@ -685,9 +697,11 @@ class PrivateChatViewModel(
                 is Resource.Success -> {
                     _uiState.update { it.copy(successMessage = "Report submitted") }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(error = "Failed to submit report") }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -728,9 +742,11 @@ class PrivateChatViewModel(
                 is Resource.Success -> {
                     _uiState.update { it.copy(searchResults = result.data) }
                 }
+
                 is Resource.Error -> {
                     _uiState.update { it.copy(error = "Search failed") }
                 }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -762,6 +778,7 @@ class PrivateChatViewModel(
                     val compressed = compressImage(bytes)
                     when (val result = storageRepository.uploadImage(currentUserId, "pm_images", compressed)) {
                         is Resource.Success -> urls.add(result.data)
+
                         is Resource.Error, is Resource.Loading -> {
                             pendingMessages[tempId] = pendingMsg.copy(sendStatus = SendStatus.FAILED)
                             updateMessagesWithPending()
@@ -790,7 +807,9 @@ class PrivateChatViewModel(
                     // Reload participants
                     initGroupChat(conversationId)
                 }
+
                 is Resource.Error -> _uiState.update { it.copy(error = "Failed to add participant") }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -804,7 +823,9 @@ class PrivateChatViewModel(
                 is Resource.Success -> {
                     initGroupChat(conversationId)
                 }
+
                 is Resource.Error -> _uiState.update { it.copy(error = "Failed to remove participant") }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -818,7 +839,9 @@ class PrivateChatViewModel(
                 is Resource.Success -> {
                     _uiState.update { it.copy(conversationName = name) }
                 }
+
                 is Resource.Error -> _uiState.update { it.copy(error = "Failed to update group name") }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -915,6 +938,7 @@ class PrivateChatViewModel(
                         updateMessagesWithPending()
                         sendStickerMessage(result.data)
                     }
+
                     is Resource.Error, is Resource.Loading -> {
                         pendingMessages[tempId] = pendingMsg.copy(sendStatus = SendStatus.FAILED)
                         updateMessagesWithPending()
@@ -943,6 +967,7 @@ class PrivateChatViewModel(
                 is Resource.Error -> {
                     _uiState.update { it.copy(error = "Failed to send sticker") }
                 }
+
                 else -> Unit
             }
         }
@@ -992,6 +1017,7 @@ class PrivateChatViewModel(
                         stickerStorage.updateStickerUrl(id, result.data)
                         _uiState.update { it.copy(stickers = stickerStorage.getStickers()) }
                     }
+
                     else -> { /* Silently ignore — first send will upload as fallback */ }
                 }
             } catch (e: Exception) {
@@ -1099,7 +1125,9 @@ class PrivateChatViewModel(
                             if (reason != null) ". Reason: $reason" else ""
                     sendModActionMessage(actionText)
                 }
+
                 is Resource.Error -> _uiState.update { it.copy(error = "Failed to mute member") }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -1121,7 +1149,9 @@ class PrivateChatViewModel(
                             ?.displayName ?: "User"
                     sendModActionMessage("${_uiState.value.currentUserName} unmuted $targetName")
                 }
+
                 is Resource.Error -> _uiState.update { it.copy(error = "Failed to unmute member") }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -1135,7 +1165,9 @@ class PrivateChatViewModel(
                 is Resource.Success -> {
                     sendModActionMessage("${_uiState.value.currentUserName} hid a message")
                 }
+
                 is Resource.Error -> _uiState.update { it.copy(error = "Failed to hide message") }
+
                 is Resource.Loading -> Unit
             }
         }
@@ -1171,6 +1203,7 @@ class PrivateChatViewModel(
                         }
                     }
                 }
+
                 else -> Unit
             }
         }
@@ -1182,6 +1215,7 @@ class PrivateChatViewModel(
                 is Resource.Success -> {
                     _uiState.update { it.copy(groupMutes = result.data) }
                 }
+
                 else -> Unit
             }
         }
@@ -1339,6 +1373,7 @@ class PrivateChatViewModel(
                     _uiState.update {
                         it.copy(translations = it.translations + (messageId to result.data.translatedText))
                     }
+
                 else -> { /* Loading or Error — silently fail */ }
             }
         }

@@ -144,6 +144,7 @@ fun AppSettingsScreen(
                     onSignOut = { showSignOutDialog = true },
                     snackbarHostState = snackbarHostState,
                 )
+
             SettingsPage.BlockedUsers ->
                 BlockedUsersPage(
                     uiState = uiState,
@@ -151,6 +152,7 @@ fun AppSettingsScreen(
                     onUnblockUser = { viewModel.unblockUser(it) },
                     snackbarHostState = snackbarHostState,
                 )
+
             SettingsPage.Account ->
                 AccountPage(
                     uiState = uiState,
@@ -161,6 +163,7 @@ fun AppSettingsScreen(
                     onRequestExport = { viewModel.requestDataExport() },
                     snackbarHostState = snackbarHostState,
                 )
+
             SettingsPage.LinkedAccounts ->
                 LinkedAccountsPage(
                     uiState = uiState,
@@ -169,6 +172,7 @@ fun AppSettingsScreen(
                     onLinkProvider = { type -> viewModel.linkProvider(type, "") },
                     snackbarHostState = snackbarHostState,
                 )
+
             SettingsPage.Privacy ->
                 PrivacyPage(
                     uiState = uiState,
@@ -179,6 +183,7 @@ fun AppSettingsScreen(
                     onSetPmPrivacy = { viewModel.setPmPrivacy(it) },
                     snackbarHostState = snackbarHostState,
                 )
+
             SettingsPage.Notifications ->
                 NotificationsPage(
                     uiState = uiState,
@@ -196,11 +201,13 @@ fun AppSettingsScreen(
                     onToggleSelfDestructAlert = { viewModel.toggleSelfDestructAlert() },
                     snackbarHostState = snackbarHostState,
                 )
+
             SettingsPage.Permissions ->
                 PermissionsPage(
                     onBack = { currentPageName = SettingsPage.Main.name },
                     snackbarHostState = snackbarHostState,
                 )
+
             SettingsPage.About ->
                 AboutPage(
                     uiState = uiState,

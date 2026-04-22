@@ -240,7 +240,7 @@ router.post('/auth/otp/verify', sensitiveLimiter, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 
 // POST /api/auth/pin/setup (auth required)
-router.post('/auth/pin/setup', authMiddleware, async (req, res) => {
+router.post('/auth/pin/setup', sensitiveLimiter, authMiddleware, async (req, res) => {
   try {
     const { pin } = req.body || {};
     const uniqueId = req.auth?.uniqueId;
@@ -365,7 +365,7 @@ router.post('/auth/pin/verify', sensitiveLimiter, async (req, res) => {
 });
 
 // POST /api/auth/pin/reset (auth required)
-router.post('/auth/pin/reset', authMiddleware, async (req, res) => {
+router.post('/auth/pin/reset', sensitiveLimiter, authMiddleware, async (req, res) => {
   try {
     const { pin } = req.body || {};
     const uniqueId = req.auth?.uniqueId;
@@ -412,7 +412,7 @@ function cleanExpiredChallenges() {
 }
 
 // POST /api/auth/biometric/register (auth required)
-router.post('/auth/biometric/register', authMiddleware, async (req, res) => {
+router.post('/auth/biometric/register', sensitiveLimiter, authMiddleware, async (req, res) => {
   try {
     const { publicKey, deviceId } = req.body || {};
     const uniqueId = req.auth?.uniqueId;
@@ -540,7 +540,7 @@ router.post('/auth/biometric/verify', sensitiveLimiter, async (req, res) => {
 });
 
 // DELETE /api/auth/biometric/:deviceId (auth required)
-router.delete('/auth/biometric/:deviceId', authMiddleware, async (req, res) => {
+router.delete('/auth/biometric/:deviceId', sensitiveLimiter, authMiddleware, async (req, res) => {
   try {
     const uniqueId = req.auth?.uniqueId;
     if (!uniqueId) return res.status(401).json({ error: 'Authentication required' });
