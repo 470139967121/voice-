@@ -14,9 +14,10 @@ class ViewModelModuleTest {
 
     @Test
     fun `viewModelModule loads without error`() {
-        val koinApp = startKoin {
-            modules(viewModelModule)
-        }
+        val koinApp =
+            startKoin {
+                modules(viewModelModule)
+            }
         assertNotNull(koinApp.koin)
     }
 }

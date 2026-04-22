@@ -45,12 +45,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.google.firebase.messaging.FirebaseMessaging
+import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.core.crop.CropContract
 import com.shyden.shytalk.core.crop.CropInput
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.core.util.Resource
-import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.data.remote.BillingService
 import com.shyden.shytalk.data.remote.PmSyncService
 import com.shyden.shytalk.data.remote.VoiceService
