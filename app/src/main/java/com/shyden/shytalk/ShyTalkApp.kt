@@ -13,6 +13,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.shyden.shytalk.core.di.appModule
+import com.shyden.shytalk.core.di.viewModelModule
 import com.shyden.shytalk.core.util.Constants
 import com.shyden.shytalk.core.util.LanguagePreference
 import okio.Path.Companion.toOkioPath
@@ -50,7 +51,7 @@ class ShyTalkApp :
 
         startKoin {
             androidContext(this@ShyTalkApp)
-            modules(appModule)
+            modules(viewModelModule, appModule)
         }
 
         val notificationManager = getSystemService(NotificationManager::class.java)
