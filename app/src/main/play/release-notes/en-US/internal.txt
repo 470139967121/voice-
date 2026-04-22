@@ -1,8 +1,8 @@
-v0.66.0
+v0.67.0
 
-add multiplatform navigation dep and PlatformNavCallbacks (#312)
+add AndroidPlatformNavCallbacks implementation (#313)
 - ## Summary
-- - Add `org.jetbrains.androidx.navigation:navigation-compose:2.9.2` to
-- `shared/commonMain` — enables `NavHost`/`composable()` on iOS targets
-- - Create `PlatformNavCallbacks` interface defining platform-specific
-- behaviors (FCM, permissions, image picking, billing, URL encoding)
+- - Implement `AndroidPlatformNavCallbacks` — the Android side of the
+- `PlatformNavCallbacks` interface from PR #312
+- - Handles FCM tokens, PmSyncService lifecycle, Uri encoding, and
+- delegates for Compose-scoped operations
