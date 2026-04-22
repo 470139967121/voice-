@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars, no-undef */
 /**
  * Tests for roadmap page authentication flow.
  *
