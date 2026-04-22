@@ -412,7 +412,6 @@
     <string name="send_gift">Отправить подарок</string>
     <string name="shy_beans">ShyBeans</string>
     <string name="shy_coins">ShyCoins</string>
-    <string name="testing_mode_coins">Тестовый режим — реальные деньги не списываются. Нажмите на пакет, чтобы мгновенно получить монеты.</string>
     <string name="filter_all">Все</string>
     <string name="filter_gacha">Гача</string>
     <string name="filter_gifts">Подарки</string>

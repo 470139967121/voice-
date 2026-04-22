@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-04-21",
+  "lastUpdated": "2026-04-22",
   "phases": [
     {
       "title": "Safety & Compliance",
@@ -571,98 +571,10 @@
         "tr": "Platform ve iOS",
         "uk": "Платформа та iOS",
         "vi": "Nền tảng và iOS",
-        "zh": "平台与iOS",
-        "km": "វេទិកា និង iOS"
+        "zh": "平台与iOS"
       },
-      "status": "active",
+      "status": "soon",
       "features": [
-        {
-          "name": "iOS feature parity",
-          "description": "Bring the iOS app to full feature parity with Android",
-          "status": "in-progress",
-          "i18n": {
-            "ar": {
-              "n": "تكافؤ ميزات iOS",
-              "d": "جعل تطبيق iOS مكافئاً لتطبيق Android"
-            },
-            "de": {
-              "n": "iOS-Funktionsparität",
-              "d": "iOS-App auf Android-Niveau bringen"
-            },
-            "es": {
-              "n": "Paridad de funciones iOS",
-              "d": "Igualar las funciones de iOS con Android"
-            },
-            "fr": {
-              "n": "Parité fonctionnelle iOS",
-              "d": "Mettre l'app iOS au niveau d'Android"
-            },
-            "hi": {
-              "n": "iOS फ़ीचर समानता",
-              "d": "iOS ऐप को Android के बराबर लाना"
-            },
-            "id": {
-              "n": "Paritas fitur iOS",
-              "d": "Menyamakan fitur iOS dengan Android"
-            },
-            "it": {
-              "n": "Parità funzionalità iOS",
-              "d": "Portare l'app iOS al livello di Android"
-            },
-            "ja": {
-              "n": "iOS機能パリティ",
-              "d": "iOSアプリをAndroidと同等に"
-            },
-            "ko": {
-              "n": "iOS 기능 동등성",
-              "d": "iOS 앱을 Android 수준으로"
-            },
-            "nl": {
-              "n": "iOS-functiepariteit",
-              "d": "iOS-app op Android-niveau brengen"
-            },
-            "pl": {
-              "n": "Parytet funkcji iOS",
-              "d": "Wyrównanie funkcji iOS z Androidem"
-            },
-            "pt": {
-              "n": "Paridade de recursos iOS",
-              "d": "Igualar o app iOS ao Android"
-            },
-            "ru": {
-              "n": "Паритет функций iOS",
-              "d": "Довести iOS-приложение до уровня Android"
-            },
-            "sv": {
-              "n": "iOS-funktionsparitet",
-              "d": "Ge iOS-appen samma funktioner som Android"
-            },
-            "th": {
-              "n": "ฟีเจอร์ iOS เทียบเท่า",
-              "d": "ทำให้แอป iOS เทียบเท่า Android"
-            },
-            "tr": {
-              "n": "iOS özellik eşitliği",
-              "d": "iOS uygulamasını Android seviyesine getirmek"
-            },
-            "uk": {
-              "n": "Паритет функцій iOS",
-              "d": "Довести iOS-додаток до рівня Android"
-            },
-            "vi": {
-              "n": "Tính năng iOS tương đương",
-              "d": "Đưa ứng dụng iOS ngang tầm Android"
-            },
-            "zh": {
-              "n": "iOS功能对等",
-              "d": "使iOS应用达到Android同等水平"
-            },
-            "km": {
-              "n": "សមភាពមុខងារ iOS",
-              "d": "នាំកម្មវិធី iOS ឱ្យស្មើ Android"
-            }
-          }
-        },
         {
           "name": "Billing v7→v8",
           "description": "Google Play Billing major version, deprecation deadline",

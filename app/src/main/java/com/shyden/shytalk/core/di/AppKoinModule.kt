@@ -68,37 +68,13 @@ import com.shyden.shytalk.data.repository.TranslationRepositoryImpl
 import com.shyden.shytalk.data.repository.TypingRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.data.repository.UserRepositoryImpl
-import com.shyden.shytalk.feature.auth.AuthViewModel
-import com.shyden.shytalk.feature.auth.EmailOtpViewModel
-import com.shyden.shytalk.feature.auth.LockScreenViewModel
-import com.shyden.shytalk.feature.auth.PinSetupViewModel
-import com.shyden.shytalk.feature.daily.DailyRewardViewModel
-import com.shyden.shytalk.feature.gacha.GachaViewModel
-import com.shyden.shytalk.feature.gifting.GiftingViewModel
-import com.shyden.shytalk.feature.home.HomeViewModel
-import com.shyden.shytalk.feature.messaging.ConversationListViewModel
-import com.shyden.shytalk.feature.messaging.GroupSetupViewModel
-import com.shyden.shytalk.feature.messaging.NewMessageViewModel
-import com.shyden.shytalk.feature.messaging.PrivateChatViewModel
-import com.shyden.shytalk.feature.messaging.ReportReviewViewModel
-import com.shyden.shytalk.feature.profile.FollowListViewModel
-import com.shyden.shytalk.feature.profile.GiftWallViewModel
-import com.shyden.shytalk.feature.profile.ProfileViewModel
-import com.shyden.shytalk.feature.profile.RequiredDOBViewModel
-import com.shyden.shytalk.feature.room.RoomViewModel
-import com.shyden.shytalk.feature.settings.AppSettingsViewModel
-import com.shyden.shytalk.feature.settings.RoomSettingsViewModel
-import com.shyden.shytalk.feature.shop.TransactionHistoryViewModel
-import com.shyden.shytalk.feature.shop.WalletViewModel
 import com.shyden.shytalk.feature.splash.BannerImagePreloader
 import com.shyden.shytalk.feature.splash.CoilBannerImagePreloader
-import com.shyden.shytalk.feature.splash.FunFactSplashViewModel
 import com.shyden.shytalk.feature.splash.OkHttpWebContentPreloader
 import com.shyden.shytalk.feature.splash.WebContentPreloader
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
-import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -177,48 +153,7 @@ val appModule =
         single { ActiveRoomManager(get(), get(), get(), get(), get(), get(), get(), androidContext()) }
         single<RoomLifecycleManager> { get<ActiveRoomManager>() }
 
-        // ViewModels
-        viewModel { AuthViewModel(get(), get(), get(), get(), get(named("deviceId")), get(named("bypassDeviceChecks")), get(), get()) }
-        viewModel { LockScreenViewModel(get(), get(), get(), get(), get()) }
-        viewModel { PinSetupViewModel(get(), get()) }
-        viewModel { EmailOtpViewModel(get()) }
-        viewModel { HomeViewModel(get(), get(), get(), get()) }
-        viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get(), get()) }
-        viewModel { RequiredDOBViewModel(get(), get()) }
-        viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }
-        viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-        viewModel { AppSettingsViewModel(get(), get(), get(), get()) }
-        viewModel { RoomSettingsViewModel(get(), get(), get(), get()) }
-        viewModel { ConversationListViewModel(get(), get(), get()) }
-        viewModel { params ->
-            val values = params.values
-            PrivateChatViewModel(
-                otherUserId = (values.getOrNull(0) as? String) ?: "",
-                pmRepository = get(),
-                userRepository = get(),
-                authRepository = get(),
-                typingRepository = get(),
-                reportRepository = get(),
-                storageRepository = get(),
-                stickerStorage = get(),
-                initialConversationId = values.getOrNull(1) as? String,
-                conversationWs = get(),
-                roomRepository = get(),
-                translationRepository = get(),
-            )
-        }
-        viewModel { ReportReviewViewModel(get(), get()) }
-        viewModel { NewMessageViewModel(get(), get(), get()) }
-        viewModel { params -> GroupSetupViewModel(params[0], get(), get(), get(), get()) }
-
-        // Monetization ViewModels
-        viewModel { GachaViewModel(get(), get()) }
-        viewModel { WalletViewModel(get(), get(), get()) }
-        viewModel { TransactionHistoryViewModel(get()) }
-        viewModel { GiftingViewModel(get(), get(), get()) }
-        viewModel { params -> GiftWallViewModel(params[0], get()) }
-        viewModel { DailyRewardViewModel(get(), get()) }
+        // Preloaders (Android-specific implementations)
         single<BannerImagePreloader> { CoilBannerImagePreloader(androidContext()) }
         single<WebContentPreloader> { OkHttpWebContentPreloader(get()) }
-        viewModel { FunFactSplashViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     }

@@ -412,7 +412,6 @@
     <string name="send_gift">Enviar presente</string>
     <string name="shy_beans">ShyBeans</string>
     <string name="shy_coins">ShyCoins</string>
-    <string name="testing_mode_coins">Modo de teste — nenhum dinheiro real é cobrado. Toque em um pacote para receber moedas instantaneamente.</string>
     <string name="filter_all">Tudo</string>
     <string name="filter_gacha">Gacha</string>
     <string name="filter_gifts">Presentes</string>

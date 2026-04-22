@@ -137,7 +137,7 @@ fun WalletScreen(
                             coinBalance = state.coinBalance,
                             coinPackages = state.coinPackages,
                             isPurchasing = state.isPurchasing,
-                            onTestPurchase = { coins -> viewModel.testPurchaseCoins(coins) },
+                            onPurchasePackage = onPurchasePackage,
                         )
 
                     1 ->
@@ -157,7 +157,7 @@ private fun CoinsTab(
     coinBalance: Long,
     coinPackages: List<CoinPackage>,
     isPurchasing: Boolean,
-    onTestPurchase: (Int) -> Unit,
+    onPurchasePackage: (CoinPackage) -> Unit,
 ) {
     Column(
         modifier =
@@ -174,23 +174,6 @@ private fun CoinsTab(
             modifier = Modifier.fillMaxWidth().testTag("wallet_balance"),
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                ),
-        ) {
-            Text(
-                text = stringResource(Res.string.testing_mode_coins),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                modifier = Modifier.padding(12.dp),
-            )
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(stringResource(Res.string.buy_shy_coins), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -204,12 +187,11 @@ private fun CoinsTab(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 row.forEach { pkg ->
-                    val totalCoins = pkg.coins + pkg.bonusCoins
                     Box(modifier = Modifier.weight(1f)) {
                         CoinPackageCard(
                             pkg = pkg,
                             enabled = !isPurchasing,
-                            onClick = { onTestPurchase(totalCoins) },
+                            onClick = { onPurchasePackage(pkg) },
                         )
                     }
                 }
@@ -407,7 +389,7 @@ fun CoinPurchaseSheetContent(
     coinBalance: Long,
     coinPackages: List<CoinPackage>,
     isPurchasing: Boolean,
-    onTestPurchase: (Int) -> Unit,
+    onPurchasePackage: (CoinPackage) -> Unit,
     _onDismiss: () -> Unit,
 ) {
     Column(
@@ -436,12 +418,11 @@ fun CoinPurchaseSheetContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 row.forEach { pkg ->
-                    val totalCoins = pkg.coins + pkg.bonusCoins
                     Box(modifier = Modifier.weight(1f)) {
                         CoinPackageCard(
                             pkg = pkg,
                             enabled = !isPurchasing,
-                            onClick = { onTestPurchase(totalCoins) },
+                            onClick = { onPurchasePackage(pkg) },
                         )
                     }
                 }

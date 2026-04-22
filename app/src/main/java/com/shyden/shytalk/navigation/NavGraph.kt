@@ -45,6 +45,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.google.firebase.messaging.FirebaseMessaging
+import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.core.crop.CropContract
 import com.shyden.shytalk.core.crop.CropInput
 import com.shyden.shytalk.core.room.RoomLifecycleManager
@@ -839,12 +840,23 @@ fun NavGraph(
                     onNavigateBack = { navController.safePopBackStack() },
                     onNavigateToTransactions = { navController.navigate(Screen.Transactions.route) },
                     onPurchasePackage = { pkg ->
-                        walletScope.launch {
-                            val products = billingService.queryProducts(listOf(pkg.productId))
-                            val details = products.firstOrNull()
-                            if (details != null) {
-                                val activity = walletContext as android.app.Activity
-                                billingService.launchPurchaseFlow(activity, details)
+                        if (BuildConfig.FLAVOR != "prod") {
+                            // Dev/local: skip Google Play billing, call backend directly.
+                            // The /economy/purchase endpoint skips Play Store verification
+                            // in non-production environments.
+                            walletViewModel.onPurchaseCompleted(
+                                pkg.productId,
+                                "dev-${java.util.UUID.randomUUID()}",
+                                false,
+                            )
+                        } else {
+                            walletScope.launch {
+                                val products = billingService.queryProducts(listOf(pkg.productId))
+                                val details = products.firstOrNull()
+                                if (details != null) {
+                                    val activity = walletContext as android.app.Activity
+                                    billingService.launchPurchaseFlow(activity, details)
+                                }
                             }
                         }
                     },

@@ -130,36 +130,6 @@ class WalletViewModelTest {
         }
 
     @Test
-    fun `testPurchaseCoins adds coins on success`() =
-        runTest {
-            coEvery { economyRepository.addTestCoins(500) } returns Resource.Success(emptyMap())
-
-            val vm = createViewModel()
-            advanceUntilIdle()
-
-            vm.testPurchaseCoins(500)
-            advanceUntilIdle()
-
-            assertTrue(vm.uiState.value.successMessage is UiText.Res)
-            assertFalse(vm.uiState.value.isPurchasing)
-        }
-
-    @Test
-    fun `testPurchaseCoins sets error on failure`() =
-        runTest {
-            coEvery { economyRepository.addTestCoins(500) } returns Resource.Error("Server error")
-
-            val vm = createViewModel()
-            advanceUntilIdle()
-
-            vm.testPurchaseCoins(500)
-            advanceUntilIdle()
-
-            assertEquals(UiText.Plain("Server error"), vm.uiState.value.error)
-            assertFalse(vm.uiState.value.isPurchasing)
-        }
-
-    @Test
     fun `redeemBeans with insufficient beans sets error`() =
         runTest {
             val vm = createViewModel()
@@ -384,12 +354,12 @@ class WalletViewModelTest {
     @Test
     fun `clearSuccess clears success message`() =
         runTest {
-            coEvery { economyRepository.addTestCoins(100) } returns Resource.Success(emptyMap())
+            coEvery { economyRepository.purchaseCoins(any(), any()) } returns Resource.Success(emptyMap())
 
             val vm = createViewModel()
             advanceUntilIdle()
 
-            vm.testPurchaseCoins(100)
+            vm.onPurchaseCompleted("coins_100", "test-token", false)
             advanceUntilIdle()
 
             assertNotNull(vm.uiState.value.successMessage)

@@ -412,7 +412,6 @@
     <string name="send_gift">ギフトを送る</string>
     <string name="shy_beans">ShyBeans</string>
     <string name="shy_coins">ShyCoins</string>
-    <string name="testing_mode_coins">テストモード — 実際の課金は発生しません。パッケージをタップすると即座にコインを受け取れます。</string>
     <string name="filter_all">すべて</string>
     <string name="filter_gacha">ガチャ</string>
     <string name="filter_gifts">ギフト</string>

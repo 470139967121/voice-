@@ -412,7 +412,6 @@
     <string name="send_gift">선물 보내기</string>
     <string name="shy_beans">ShyBeans</string>
     <string name="shy_coins">ShyCoins</string>
-    <string name="testing_mode_coins">테스트 모드 — 실제 결제가 되지 않습니다. 패키지를 탭하면 즉시 코인을 받을 수 있습니다.</string>
     <string name="filter_all">전체</string>
     <string name="filter_gacha">가챠</string>
     <string name="filter_gifts">선물</string>

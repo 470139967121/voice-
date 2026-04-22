@@ -412,7 +412,6 @@
     <string name="send_gift">Hediye Gönder</string>
     <string name="shy_beans">ShyBeans</string>
     <string name="shy_coins">ShyCoins</string>
-    <string name="testing_mode_coins">Test modu — gerçek ücret alınmaz. Anında jeton almak için bir pakete dokunun.</string>
     <string name="filter_all">Tümü</string>
     <string name="filter_gacha">Gacha</string>
     <string name="filter_gifts">Hediyeler</string>

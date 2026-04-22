@@ -412,7 +412,6 @@
     <string name="send_gift">ส่งของขวัญ</string>
     <string name="shy_beans">ShyBeans</string>
     <string name="shy_coins">ShyCoins</string>
-    <string name="testing_mode_coins">โหมดทดสอบ — ไม่มีการเรียกเก็บเงินจริง แตะแพ็คเกจเพื่อรับเหรียญทันที</string>
     <string name="filter_all">ทั้งหมด</string>
     <string name="filter_gacha">กาชา</string>
     <string name="filter_gifts">ของขวัญ</string>
