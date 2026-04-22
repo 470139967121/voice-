@@ -140,6 +140,8 @@ class PlatformScreensTest {
                 signInScreen = {},
                 appSettingsScreen = {},
                 warningScreen = {},
+                profileScreen = {},
+                roomScreen = {},
             )
         // If construction succeeds without exception, the types are correct
         assertEquals(screens, screens.copy())
