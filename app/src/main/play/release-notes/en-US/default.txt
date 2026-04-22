@@ -1,8 +1,8 @@
-v0.68.0
+v0.69.0
 
-add PlatformScreens for NavGraph screen injection (#314)
+create SharedNavGraph in shared/commonMain (#315)
 - ## Summary
-- - Add `PlatformScreens` container with composable lambdas for
-- platform-specific screens
-- `SignInScreenParams`,
-- `AppSettingsScreenParams`, `WarningScreenParams`
+- - Create `SharedNavGraph` — the core cross-platform navigation
+- composable
+- - Replace ALL Android-specific code with `PlatformNavCallbacks` +
+- `PlatformScreens` injections
