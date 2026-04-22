@@ -12,6 +12,7 @@ package com.shyden.shytalk.navigation
  */
 interface PlatformNavCallbacks {
     // ── Push notifications ──
+
     /** Save the platform push token (FCM on Android, APNs on iOS) for the given user. */
     fun saveFcmToken(userId: String)
 
@@ -19,6 +20,7 @@ interface PlatformNavCallbacks {
     fun removeFcmToken(userId: String)
 
     // ── Background services ──
+
     /** Start background message sync (Android foreground service, iOS background task). */
     fun startMessageSyncService()
 
@@ -26,6 +28,7 @@ interface PlatformNavCallbacks {
     fun stopMessageSyncService()
 
     // ── Permissions ──
+
     /** Request runtime permissions (notifications, microphone). No-op on iOS (handled differently). */
     fun requestPermissions()
 
@@ -33,8 +36,12 @@ interface PlatformNavCallbacks {
     fun canDrawOverlays(): Boolean
 
     // ── Media picking ──
+
     /** Launch image picker for up to [maxCount] images. Delivers results via [onResult]. */
-    fun pickImages(maxCount: Int, onResult: (List<ByteArray>) -> Unit)
+    fun pickImages(
+        maxCount: Int,
+        onResult: (List<ByteArray>) -> Unit,
+    )
 
     /** Launch single image picker for a sticker. Delivers result via [onResult]. */
     fun pickStickerImage(onResult: (ByteArray?) -> Unit)
@@ -43,6 +50,7 @@ interface PlatformNavCallbacks {
     fun pickAndCropPhoto(onResult: (ByteArray?) -> Unit)
 
     // ── Billing ──
+
     /** Launch in-app purchase flow for a coin package. */
     fun purchasePackage(productId: String)
 
@@ -50,6 +58,7 @@ interface PlatformNavCallbacks {
     fun purchaseSubscription(productId: String)
 
     // ── URL encoding ──
+
     /** Encode a URL for safe use in navigation routes. */
     fun encodeUrl(url: String): String
 

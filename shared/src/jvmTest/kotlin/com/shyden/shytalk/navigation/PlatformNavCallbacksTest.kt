@@ -27,27 +27,56 @@ class PlatformNavCallbacksTest {
         val encodedUrls = mutableListOf<String>()
         val decodedUrls = mutableListOf<String>()
 
-        override fun saveFcmToken(userId: String) { fcmTokensSaved.add(userId) }
-        override fun removeFcmToken(userId: String) { fcmTokensRemoved.add(userId) }
-        override fun startMessageSyncService() { messageSyncStarted = true }
-        override fun stopMessageSyncService() { messageSyncStopped = true }
-        override fun requestPermissions() { permissionsRequested = true }
+        override fun saveFcmToken(userId: String) {
+            fcmTokensSaved.add(userId)
+        }
+
+        override fun removeFcmToken(userId: String) {
+            fcmTokensRemoved.add(userId)
+        }
+
+        override fun startMessageSyncService() {
+            messageSyncStarted = true
+        }
+
+        override fun stopMessageSyncService() {
+            messageSyncStopped = true
+        }
+
+        override fun requestPermissions() {
+            permissionsRequested = true
+        }
+
         override fun canDrawOverlays(): Boolean = canDrawOverlaysResult
-        override fun pickImages(maxCount: Int, onResult: (List<ByteArray>) -> Unit) {
+
+        override fun pickImages(
+            maxCount: Int,
+            onResult: (List<ByteArray>) -> Unit,
+        ) {
             imagesPickedCallbacks.add(onResult)
         }
+
         override fun pickStickerImage(onResult: (ByteArray?) -> Unit) {
             stickerPickedCallbacks.add(onResult)
         }
+
         override fun pickAndCropPhoto(onResult: (ByteArray?) -> Unit) {
             photoPickedCallbacks.add(onResult)
         }
-        override fun purchasePackage(productId: String) { packagesPurchased.add(productId) }
-        override fun purchaseSubscription(productId: String) { subscriptionsPurchased.add(productId) }
+
+        override fun purchasePackage(productId: String) {
+            packagesPurchased.add(productId)
+        }
+
+        override fun purchaseSubscription(productId: String) {
+            subscriptionsPurchased.add(productId)
+        }
+
         override fun encodeUrl(url: String): String {
             encodedUrls.add(url)
             return "encoded:$url"
         }
+
         override fun decodeUrl(encoded: String): String {
             decodedUrls.add(encoded)
             return "decoded:$encoded"
