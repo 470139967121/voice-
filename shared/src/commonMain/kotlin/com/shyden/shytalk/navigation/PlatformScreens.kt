@@ -32,6 +32,30 @@ data class WarningScreenParams(
     val onViewCommunityStandards: () -> Unit,
 )
 
+/** Parameters for the profile screen. */
+data class ProfileScreenParams(
+    val userId: String? = null,
+    val showBackButton: Boolean = true,
+    val onNavigateBack: () -> Unit = {},
+    val onNavigateToUserProfile: ((String) -> Unit)? = null,
+    val onNavigateToFollowList: ((String, String) -> Unit)? = null,
+    val onNavigateToSettings: (() -> Unit)? = null,
+    val onNavigateToRoom: ((String) -> Unit)? = null,
+    val onNavigateToChat: ((String) -> Unit)? = null,
+    val onNavigateToWallet: (() -> Unit)? = null,
+    val modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+)
+
+/** Parameters for the room screen. */
+data class RoomScreenParams(
+    val roomId: String,
+    val isBackendDegraded: Boolean = false,
+    val onNavigateBack: () -> Unit,
+    val onNavigateToUserProfile: (String) -> Unit = {},
+    val onNavigateToChat: (String) -> Unit = {},
+    val onNavigateToWallet: () -> Unit = {},
+)
+
 /**
  * Container for platform-specific screen composables.
  *
@@ -42,4 +66,6 @@ data class PlatformScreens(
     val signInScreen: @Composable (SignInScreenParams) -> Unit,
     val appSettingsScreen: @Composable (AppSettingsScreenParams) -> Unit,
     val warningScreen: @Composable (WarningScreenParams) -> Unit,
+    val profileScreen: @Composable (ProfileScreenParams) -> Unit,
+    val roomScreen: @Composable (RoomScreenParams) -> Unit,
 )
