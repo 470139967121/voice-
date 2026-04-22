@@ -1,4 +1,3 @@
-
 /**
  * Tests for new admin suggestion routes added in PR #255.
  *

@@ -1192,9 +1192,7 @@ describe('GET /api/admin/bans/check — array query param coercion', () => {
       ],
     });
     const app = createApp();
-    const res = await request(app)
-      .get('/api/admin/bans/check?ip=1.2.3.4&ip=5.6.7.8')
-      .expect(200);
+    const res = await request(app).get('/api/admin/bans/check?ip=1.2.3.4&ip=5.6.7.8').expect(200);
     // Should use the first value and find the ban
     expect(res.body.isBanned).toBe(true);
   });
@@ -1225,9 +1223,7 @@ describe('GET /api/admin/bans/check — array query param coercion', () => {
       ],
     });
     const app = createApp();
-    const res = await request(app)
-      .get('/api/admin/bans/check?uid=1001&uid=2002')
-      .expect(200);
+    const res = await request(app).get('/api/admin/bans/check?uid=1001&uid=2002').expect(200);
     expect(res.body.isBanned).toBe(true);
   });
 

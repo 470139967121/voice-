@@ -389,9 +389,24 @@ router.get('/admin/bans/check', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     // Coerce query params to strings — Express may parse repeated params as arrays
-    const ip = typeof req.query.ip === 'string' ? req.query.ip : Array.isArray(req.query.ip) ? req.query.ip[0] : undefined;
-    const fingerprint = typeof req.query.fingerprint === 'string' ? req.query.fingerprint : Array.isArray(req.query.fingerprint) ? req.query.fingerprint[0] : undefined;
-    const uid = typeof req.query.uid === 'string' ? req.query.uid : Array.isArray(req.query.uid) ? req.query.uid[0] : undefined;
+    const ip =
+      typeof req.query.ip === 'string'
+        ? req.query.ip
+        : Array.isArray(req.query.ip)
+          ? req.query.ip[0]
+          : undefined;
+    const fingerprint =
+      typeof req.query.fingerprint === 'string'
+        ? req.query.fingerprint
+        : Array.isArray(req.query.fingerprint)
+          ? req.query.fingerprint[0]
+          : undefined;
+    const uid =
+      typeof req.query.uid === 'string'
+        ? req.query.uid
+        : Array.isArray(req.query.uid)
+          ? req.query.uid[0]
+          : undefined;
     if (!ip && !fingerprint && !uid) {
       return res
         .status(400)

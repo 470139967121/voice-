@@ -1,4 +1,3 @@
-
 /**
  * Extended tests for admin suggestion routes — gap coverage.
  *
