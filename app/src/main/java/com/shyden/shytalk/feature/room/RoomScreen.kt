@@ -1306,11 +1306,15 @@ fun RoomScreen(
                             coinPackages = walletState.coinPackages,
                             isPurchasing = walletState.isPurchasing,
                             onPurchasePackage = { pkg ->
-                                walletViewModel.onPurchaseCompleted(
-                                    pkg.productId,
-                                    "dev-${java.util.UUID.randomUUID()}",
-                                    false,
-                                )
+                                if (com.shyden.shytalk.BuildConfig.FLAVOR != "prod") {
+                                    walletViewModel.onPurchaseCompleted(
+                                        pkg.productId,
+                                        "dev-${java.util.UUID.randomUUID()}",
+                                        false,
+                                    )
+                                }
+                                // In prod, the room sheet does not launch billing directly —
+                                // users are directed to the full Wallet screen for purchases.
                             },
                             _onDismiss = { showWalletSheet = false },
                         )

@@ -412,7 +412,6 @@
     <string name="send_gift">送礼物</string>
     <string name="shy_beans">ShyBeans</string>
     <string name="shy_coins">ShyCoins</string>
-    <string name="testing_mode_coins">测试模式——不会产生真实费用。点击套餐即可获得币。</string>
     <string name="filter_all">全部</string>
     <string name="filter_gacha">扭蛋</string>
     <string name="filter_gifts">礼物</string>
