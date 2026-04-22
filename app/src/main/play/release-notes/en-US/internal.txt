@@ -1,8 +1,8 @@
-v0.71.0
+v0.72.0
 
-split Koin DI + fix coin purchase bug (#317)
+wire Koin init + update MainViewController (Steps 1.6-1.7) (#318)
 - ## Summary
-- Extract 23 ViewModel bindings from
-- Android's `AppKoinModule` into a shared `viewModelModule` in
-- `commonMain`. Creates iOS platform module structure
-- (`IosPlatformModule`, `KoinHelper`) for Koin initialization from Swift.
+- Updated `MainViewController.kt` to show Koin-initialized
+- status with phase progression notes instead of bare placeholder
+- `iOSApp.swift` now calls `KoinHelperKt.doInitKoin()` in
+- `init()`, loading `viewModelModule + iosPlatformModule` before Compose
