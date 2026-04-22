@@ -230,6 +230,144 @@ describe('POST /api/economy/purchase', () => {
       expect.objectContaining({ isSuperShy: true, superShyTier: 'monthly' }),
     );
   });
+
+  // ── All subscription tiers ──
+
+  test.each([
+    ['super_shy_monthly', 'monthly', 30],
+    ['super_shy_yearly', 'yearly', 365],
+    ['super_shy_lifetime', 'lifetime', null],
+  ])('subscription %s sets tier=%s with %s day expiry', async (productId, tier, days) => {
+    mockCollectionGet = jest.fn().mockResolvedValue({ empty: true, docs: [] });
+    mockDocGet.mockResolvedValue(makeConfigDoc());
+
+    const app = createApp('user-A');
+    const res = await request(app).post('/api/economy/purchase').send({
+      productId,
+      purchaseToken: `sub-token-${productId}`,
+      isSubscription: true,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.tier).toBe(tier);
+
+    const expectedExpiry = days ? 1709913600000 + days * 86400000 : null;
+    expect(mockDocUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isSuperShy: true,
+        superShyTier: tier,
+        superShyExpiry: expectedExpiry,
+      }),
+    );
+  });
+
+  test('returns 400 for unknown subscription productId', async () => {
+    mockCollectionGet = jest.fn().mockResolvedValue({ empty: true, docs: [] });
+    mockDocGet.mockResolvedValue(makeConfigDoc());
+
+    const app = createApp('user-A');
+    const res = await request(app).post('/api/economy/purchase').send({
+      productId: 'super_shy_invalid',
+      purchaseToken: 'sub-token-invalid',
+      isSubscription: true,
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/unknown subscription/i);
+  });
+
+  // ── Coin packages of varying sizes ──
+
+  test.each([
+    { productId: 'coins_100', coins: 100, bonusCoins: 0, expectedTotal: 100 },
+    { productId: 'coins_500', coins: 500, bonusCoins: 50, expectedTotal: 550 },
+    { productId: 'coins_1000', coins: 1000, bonusCoins: 150, expectedTotal: 1150 },
+    { productId: 'coins_5000', coins: 5000, bonusCoins: 1000, expectedTotal: 6000 },
+    { productId: 'coins_10000', coins: 10000, bonusCoins: 3000, expectedTotal: 13000 },
+    { productId: 'coins_50000', coins: 50000, bonusCoins: 20000, expectedTotal: 70000 },
+  ])('purchases $productId ($coins + $bonusCoins bonus = $expectedTotal)', async ({ productId, coins, bonusCoins, expectedTotal }) => {
+    let collectionCallCount = 0;
+    mockCollectionGet = jest.fn().mockImplementation(() => {
+      collectionCallCount++;
+      if (collectionCallCount === 1) {
+        return Promise.resolve({ empty: true, docs: [] }); // no duplicate
+      }
+      return Promise.resolve({
+        empty: false,
+        docs: [{ id: `pkg-${productId}`, data: () => ({ productId, coins, bonusCoins }) }],
+      });
+    });
+
+    mockDocGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ shyCoins: 0, shyBeans: 0 }),
+    });
+
+    const app = createApp('user-A');
+    const res = await request(app)
+      .post('/api/economy/purchase')
+      .send({ productId, purchaseToken: `token-${productId}` });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.coinsAdded).toBe(expectedTotal);
+    expect(res.body.newBalance).toBe(expectedTotal);
+  });
+
+  test('returns 404 for unknown coin package productId', async () => {
+    let collectionCallCount = 0;
+    mockCollectionGet = jest.fn().mockImplementation(() => {
+      collectionCallCount++;
+      if (collectionCallCount === 1) {
+        return Promise.resolve({ empty: true, docs: [] }); // no duplicate
+      }
+      return Promise.resolve({ empty: true, docs: [] }); // no package found
+    });
+
+    const app = createApp('user-A');
+    const res = await request(app)
+      .post('/api/economy/purchase')
+      .send({ productId: 'coins_nonexistent', purchaseToken: 'token-none' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/unknown coin package/i);
+  });
+
+  test('stores purchase receipt with orderId', async () => {
+    let collectionCallCount = 0;
+    mockCollectionGet = jest.fn().mockImplementation(() => {
+      collectionCallCount++;
+      if (collectionCallCount === 1) {
+        return Promise.resolve({ empty: true, docs: [] });
+      }
+      return Promise.resolve({
+        empty: false,
+        docs: [{ id: 'pkg-100', data: () => ({ productId: 'coins_100', coins: 100, bonusCoins: 0 }) }],
+      });
+    });
+
+    mockDocGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ shyCoins: 0, shyBeans: 0 }),
+    });
+
+    const app = createApp('user-A');
+    await request(app)
+      .post('/api/economy/purchase')
+      .send({ productId: 'coins_100', purchaseToken: 'receipt-token' })
+      .expect(200);
+
+    // Verify receipt stored
+    expect(mockDocSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-A',
+        productId: 'coins_100',
+        purchaseToken: 'receipt-token',
+        verified: true,
+      }),
+    );
+  });
 });
 
 // ─── Tests: POST /api/economy/trial-claim ────────────────────────
@@ -455,5 +593,59 @@ describe('POST /api/economy/redeem-beans', () => {
         shyCoins: 'increment(50)',
       }),
     );
+  });
+
+  // ── All preset redemption amounts (matching UI buttons) ──
+
+  test.each([
+    { amount: 100, beanBalance: 500, expectedCoins: 100 },
+    { amount: 500, beanBalance: 1000, expectedCoins: 500 },
+    { amount: 1000, beanBalance: 3000, expectedCoins: 1000 },
+    { amount: 2000, beanBalance: 5000, expectedCoins: 2200 },
+    { amount: 5000, beanBalance: 10000, expectedCoins: 5500 },
+  ])('redeems $amount beans → $expectedCoins coins', async ({ amount, beanBalance, expectedCoins }) => {
+    let callCount = 0;
+    mockDocGet.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({
+          exists: true,
+          data: () => ({ shyBeans: beanBalance, shyCoins: 0 }),
+        });
+      }
+      return Promise.resolve(makeConfigDoc());
+    });
+
+    const app = createApp('user-A');
+    const res = await request(app).post('/api/economy/redeem-beans').send({ amount });
+
+    expect(res.status).toBe(200);
+    expect(res.body.coinsReceived).toBe(expectedCoins);
+    expect(res.body.newBeanBalance).toBe(beanBalance - amount);
+    expect(res.body.newCoinBalance).toBe(expectedCoins);
+  });
+
+  test('redeems full balance (simulating "Redeem All" button)', async () => {
+    const fullBalance = 7500;
+    let callCount = 0;
+    mockDocGet.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({
+          exists: true,
+          data: () => ({ shyBeans: fullBalance, shyCoins: 200 }),
+        });
+      }
+      return Promise.resolve(makeConfigDoc());
+    });
+
+    const app = createApp('user-A');
+    const res = await request(app).post('/api/economy/redeem-beans').send({ amount: fullBalance });
+
+    expect(res.status).toBe(200);
+    // 7500 >= 2000 threshold → bonus: floor(7500 * 1.1) = 8250
+    expect(res.body.coinsReceived).toBe(8250);
+    expect(res.body.newBeanBalance).toBe(0);
+    expect(res.body.newCoinBalance).toBe(8450); // 200 + 8250
   });
 });

@@ -1305,7 +1305,13 @@ fun RoomScreen(
                             coinBalance = walletState.coinBalance,
                             coinPackages = walletState.coinPackages,
                             isPurchasing = walletState.isPurchasing,
-                            onTestPurchase = { coins -> walletViewModel.testPurchaseCoins(coins) },
+                            onPurchasePackage = { pkg ->
+                                walletViewModel.onPurchaseCompleted(
+                                    pkg.productId,
+                                    "dev-${java.util.UUID.randomUUID()}",
+                                    false,
+                                )
+                            },
                             _onDismiss = { showWalletSheet = false },
                         )
                     }
