@@ -32,6 +32,7 @@ securityCrypto = "1.1.0"
 biometric = "1.4.0-alpha06"
 ktlint = "14.2.0"
 detekt = "1.23.8"
+gitliveFirebase = "2.4.0"
 
 [libraries]
 # AndroidX Core
@@ -74,6 +75,12 @@ firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 firebase-database = { group = "com.google.firebase", name = "firebase-database" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+
+# GitLive Firebase KMP (iOS — Android uses native Firebase SDK)
+gitlive-firebase-app = { group = "dev.gitlive", name = "firebase-app", version.ref = "gitliveFirebase" }
+gitlive-firebase-auth = { group = "dev.gitlive", name = "firebase-auth", version.ref = "gitliveFirebase" }
+gitlive-firebase-firestore = { group = "dev.gitlive", name = "firebase-firestore", version.ref = "gitliveFirebase" }
+gitlive-firebase-database = { group = "dev.gitlive", name = "firebase-database", version = "1.8.0" }
 
 # Coroutines
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }

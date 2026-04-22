@@ -1,5 +1,6 @@
 package com.shyden.shytalk.navigation
 
+import com.shyden.shytalk.core.util.logW
 import platform.Foundation.NSCharacterSet
 import platform.Foundation.NSString
 import platform.Foundation.NSURL
@@ -49,28 +50,28 @@ class IosPlatformNavCallbacks : PlatformNavCallbacks {
         maxCount: Int,
         onResult: (List<ByteArray>) -> Unit,
     ) {
-        // Stub: PHPickerViewController integration in future PR
+        logW("IosPlatformNavCallbacks", "pickImages($maxCount) — PHPickerViewController not yet integrated")
         onResult(emptyList())
     }
 
     override fun pickStickerImage(onResult: (ByteArray?) -> Unit) {
-        // Stub
+        logW("IosPlatformNavCallbacks", "pickStickerImage — PHPickerViewController not yet integrated")
         onResult(null)
     }
 
     override fun pickAndCropPhoto(onResult: (ByteArray?) -> Unit) {
-        // Stub
+        logW("IosPlatformNavCallbacks", "pickAndCropPhoto — PHPickerViewController not yet integrated")
         onResult(null)
     }
 
     // ── Billing (no-op v1 — StoreKit integration in future PR) ──
 
     override fun purchasePackage(productId: String) {
-        // No-op
+        logW("IosPlatformNavCallbacks", "purchasePackage($productId) — StoreKit not yet integrated")
     }
 
     override fun purchaseSubscription(productId: String) {
-        // No-op
+        logW("IosPlatformNavCallbacks", "purchaseSubscription($productId) — StoreKit not yet integrated")
     }
 
     // ── URL encoding (real implementation using Foundation) ──
