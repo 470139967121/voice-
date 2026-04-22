@@ -1,7 +1,19 @@
 package com.shyden.shytalk.core.audio
 
+import com.shyden.shytalk.core.util.logW
+
+/**
+ * iOS gacha sound player. Currently uses no-op stubs since
+ * procedural audio generation requires AVAudioEngine setup
+ * that is non-trivial. Sound effects will be added when
+ * bundled audio assets are available.
+ */
 actual object GachaSoundPlayer {
-    actual fun init() {}
+    private const val TAG = "GachaSoundPlayer.ios"
+
+    actual fun init() {
+        logW(TAG, "init — iOS audio not yet implemented")
+    }
 
     actual fun release() {}
 
