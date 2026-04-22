@@ -1,4 +1,8 @@
-v0.65.3
+v0.66.0
 
-wire 14 tab modules, remove ~5,400 lines of inline JS (PR C) (#304)
-- All 26 CI checks pass. Admin panel restructure PR C complete.
+add multiplatform navigation dep and PlatformNavCallbacks (#312)
+- ## Summary
+- - Add `org.jetbrains.androidx.navigation:navigation-compose:2.9.2` to
+- `shared/commonMain` — enables `NavHost`/`composable()` on iOS targets
+- - Create `PlatformNavCallbacks` interface defining platform-specific
+- behaviors (FCM, permissions, image picking, billing, URL encoding)
