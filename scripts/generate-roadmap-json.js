@@ -27,18 +27,21 @@ const ROADMAP_PATH = path.join(
 );
 const OUTPUT_PATH = path.join(__dirname, '..', 'public', 'roadmap-data.json');
 
-// Phase status mapping — determines the badge shown on the public page
-const PHASE_STATUS = {
-  0: 'active',
-  1: 'active',
-  2: 'soon',
-  3: 'planned',
-  4: 'planned',
-  5: 'planned',
-  6: 'planned',
-  7: 'planned',
-  8: 'planned',
-};
+/**
+ * Compute phase status from its features.
+ * - All done → "complete"
+ * - Any done or in-progress → "in-progress"
+ * - Otherwise → "planned"
+ */
+function computePhaseStatus(features) {
+  const total = features.length;
+  if (total === 0) return { label: 'planned', done: 0, total: 0 };
+  const done = features.filter((f) => f.status === 'done').length;
+  const inProgress = features.filter((f) => f.status === 'in-progress' || f.status === 'next').length;
+  if (done === total) return { label: 'complete', done, total };
+  if (done > 0 || inProgress > 0) return { label: 'in-progress', done, total };
+  return { label: 'planned', done, total };
+}
 
 // Phases to hide from the public (internal tooling)
 //
@@ -173,7 +176,7 @@ function parseRoadmap(md) {
 }
 
 // Export for testing
-module.exports = { parseRoadmap, SKIP_PHASES, PHASE_STATUS, PHASE_TITLES };
+module.exports = { parseRoadmap, SKIP_PHASES, PHASE_TITLES, computePhaseStatus };
 
 // ── Main ──
 
@@ -184,23 +187,43 @@ if (!fs.existsSync(ROADMAP_PATH)) {
 const md = fs.readFileSync(ROADMAP_PATH, 'utf-8');
 const parsed = parseRoadmap(md);
 
+const visiblePhases = parsed
+  .filter((p) => !SKIP_PHASES.has(p.num))
+  .filter((p) => p.features.length > 0)
+  .map((p) => {
+    const phaseTitle = PHASE_TITLES[p.num] || `Phase ${p.num}`;
+    const { label, done, total } = computePhaseStatus(p.features);
+    return {
+      title: phaseTitle,
+      titleI18n: translations.phases[phaseTitle] || {},
+      status: label,
+      progress: { done, total },
+      features: p.features.map((f) => {
+        const ft = translations.features[f.name] || {};
+        return { ...f, i18n: ft };
+      }),
+    };
+  });
+
+// Collect "Currently Working On" items — features marked as in-progress across all phases
+const currentlyWorkingOn = [];
+for (const phase of visiblePhases) {
+  for (const feature of phase.features) {
+    if (feature.status === 'in-progress') {
+      currentlyWorkingOn.push({
+        name: feature.name,
+        description: feature.description,
+        phase: phase.title,
+        i18n: feature.i18n,
+      });
+    }
+  }
+}
+
 const output = {
   lastUpdated: new Date().toISOString().split('T')[0],
-  phases: parsed
-    .filter((p) => !SKIP_PHASES.has(p.num))
-    .filter((p) => p.features.length > 0)
-    .map((p) => {
-      const phaseTitle = PHASE_TITLES[p.num] || `Phase ${p.num}`;
-      return {
-        title: phaseTitle,
-        titleI18n: translations.phases[phaseTitle] || {},
-        status: PHASE_STATUS[p.num] || 'planned',
-        features: p.features.map((f) => {
-          const ft = translations.features[f.name] || {};
-          return { ...f, i18n: ft };
-        }),
-      };
-    }),
+  currentlyWorkingOn,
+  phases: visiblePhases,
 };
 
 const newJson = JSON.stringify(output, null, 2) + '\n';

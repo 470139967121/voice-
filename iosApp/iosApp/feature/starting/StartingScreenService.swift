@@ -13,7 +13,8 @@ class StartingScreenService {
     }
 
     #if DEBUG
-    static let defaultBaseURL = "https://dev-api.shytalk.shyden.co.uk"
+    // Simulator uses localhost — host machine's Express API on port 3000
+    static let defaultBaseURL = "http://localhost:3000"
     #else
     static let defaultBaseURL = "https://api.shytalk.shyden.co.uk"
     #endif

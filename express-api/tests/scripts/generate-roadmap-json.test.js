@@ -1,28 +1,19 @@
-/* eslint-disable no-unused-vars */
 /**
  * Tests for roadmap data generation script.
  *
  * Covers spec section:
  *   11.39 — Roadmap Data Generation
  *
- * Script under test:
- *   scripts/generate-roadmap-json.js
+ * Tests parseRoadmap() and computePhaseStatus() directly
+ * rather than running the full script with fs mocks.
  */
 
-const fs = require('node:fs');
-// const path = require('node:path');
+const { parseRoadmap, SKIP_PHASES, PHASE_TITLES, computePhaseStatus } =
+  require('../../../scripts/generate-roadmap-json');
 
-jest.mock('node:fs');
+// ─── Sample data ───────────────────────────────────────────────
 
-beforeEach(() => {
-  jest.clearAllMocks();
-});
-
-// ─── Helpers ────────────────────────────────────────────────────
-
-const SAMPLE_ROADMAP_MD = `# ShyTalk Feature Roadmap
-
-_Prioritised 2026-03-29 (revised)_
+const SAMPLE_MD = `# ShyTalk Feature Roadmap
 
 ---
 
@@ -39,9 +30,10 @@ _Prioritised 2026-03-29 (revised)_
 
 | # | Feature | Effort | Status |
 |---|---------|--------|--------|
-| B1 | **Account deletion** — GDPR Art.17 | Large | DONE (PR #218, 2026-03-29) |
-| B2 | **Data export** — GDPR Art.20 | Medium | DONE (PR #238, 2026-03-30) |
-| 17 | **Age-based segregation** — UK OSA | Large | |
+| B1 | **Account deletion** — GDPR Art.17, Google Play & Apple requirement | Large | DONE (PR #218, 2026-03-29) |
+| B2 | **Data export** — GDPR Art.20 data portability | Medium | DONE (PR #238, 2026-03-30) |
+| 17 | **Age-based segregation** — UK OSA, adults/minors must not interact | Large | IN PROGRESS (design phase) |
+| B3 | **Room message reporting** — UK OSA, report mechanism on every UGC screen | Small | |
 
 ---
 
@@ -49,7 +41,8 @@ _Prioritised 2026-03-29 (revised)_
 
 | # | Feature | Effort | Status |
 |---|---------|--------|--------|
-| B5 | **iOS build fix** — cinterop errors | Medium | |
+| B5 | **iOS build fix** — cinterop errors | Medium | DONE (PRs #312-316, 2026-04-22) |
+| B6 | **iOS app** — full feature parity | XL | IN PROGRESS |
 | B7 | **Billing v7→v8** — deprecation deadline | Medium | |
 
 ---
@@ -62,205 +55,195 @@ _Prioritised 2026-03-29 (revised)_
 | 1 | **Relationships** — paid tiers | Large | |
 `;
 
-const SAMPLE_TRANSLATIONS = JSON.stringify({
-  phases: {
-    'Compliance & Legal': { ar: 'الامتثال والقانون', de: 'Compliance & Recht' },
-    'Platform Foundation': { ar: 'أساس المنصة', de: 'Plattform-Grundlage' },
-    'Revenue Engine': { ar: 'محرك الإيرادات', de: 'Umsatzmaschine' },
-  },
-  features: {
-    'Account deletion': {
-      ar: { n: 'حذف الحساب', d: 'GDPR المادة 17' },
-      de: { n: 'Kontolöschung', d: 'DSGVO Art.17' },
-    },
-    'Data export': {
-      ar: { n: 'تصدير البيانات', d: 'GDPR المادة 20' },
-      de: { n: 'Datenexport', d: 'DSGVO Art.20' },
-    },
-  },
+// ─── parseRoadmap tests ────────────────────────────────────────
+
+describe('parseRoadmap', () => {
+  const phases = parseRoadmap(SAMPLE_MD);
+
+  test('parses all phases from markdown', () => {
+    expect(phases.length).toBe(4); // Phase 0, 1, 2, 3
+  });
+
+  test('extracts feature names correctly', () => {
+    const phase1 = phases.find((p) => p.num === 1);
+    const names = phase1.features.map((f) => f.name);
+    expect(names).toContain('Account deletion');
+    expect(names).toContain('Data export');
+    expect(names).toContain('Age-based segregation');
+    expect(names).toContain('Room message reporting');
+  });
+
+  test('maps DONE status to done', () => {
+    const phase1 = phases.find((p) => p.num === 1);
+    const acctDel = phase1.features.find((f) => f.name === 'Account deletion');
+    expect(acctDel.status).toBe('done');
+  });
+
+  test('maps IN PROGRESS status to in-progress', () => {
+    const phase1 = phases.find((p) => p.num === 1);
+    const ageSeg = phase1.features.find((f) => f.name === 'Age-based segregation');
+    expect(ageSeg.status).toBe('in-progress');
+  });
+
+  test('maps empty status to planned', () => {
+    const phase1 = phases.find((p) => p.num === 1);
+    const roomReport = phase1.features.find((f) => f.name === 'Room message reporting');
+    expect(roomReport.status).toBe('planned');
+  });
+
+  test('strips PR numbers from descriptions', () => {
+    const phase2 = phases.find((p) => p.num === 2);
+    const iosFix = phase2.features.find((f) => f.name === 'iOS build fix');
+    expect(iosFix.description).not.toContain('PR #');
+    expect(iosFix.description).not.toContain('#312');
+  });
+
+  test('hides internal features (SonarCloud, Allure) via keyword filter', () => {
+    const phase0 = phases.find((p) => p.num === 0);
+    expect(phase0).toBeDefined();
+    // SonarCloud and Allure are filtered by HIDE_KEYWORDS in parseRoadmap
+    const names = phase0.features.map((f) => f.name);
+    expect(names).not.toContain('Fix all SonarCloud issues on main');
+    expect(names).not.toContain('Allure report directory structure');
+  });
 });
 
-function setupMocks(markdown = SAMPLE_ROADMAP_MD, translations = SAMPLE_TRANSLATIONS) {
-  fs.existsSync.mockImplementation((p) => {
-    if (p.includes('roadmap-translations')) return true;
-    if (p.includes('feature-roadmap')) return true;
-    return false;
-  });
-  fs.readFileSync.mockImplementation((p) => {
-    if (p.includes('roadmap-translations')) return translations;
-    if (p.includes('feature-roadmap')) return markdown;
-    throw new Error(`Unexpected read: ${p}`);
-  });
-  fs.writeFileSync.mockImplementation(() => {});
+// ─── SKIP_PHASES / filtering tests ─────────────────────────────
 
-  // Also mock the existing output file for change detection
-  try {
-    fs.readFileSync.mockImplementation((p, _encoding) => {
-      if (p.includes('roadmap-translations')) return translations;
-      if (p.includes('feature-roadmap')) return markdown;
-      if (p.includes('roadmap-data.json')) return '{}'; // empty existing
-      throw new Error(`Unexpected read: ${p}`);
-    });
-  } catch {
-    // Ignore
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 11.39 — Roadmap Data Generation
-// ═══════════════════════════════════════════════════════════════
-
-describe('generate-roadmap-json.js', () => {
-  test('produces valid JSON from markdown', () => {
-    setupMocks();
-    // Running the script should produce valid JSON
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
-
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
-
-    expect(output).toBeDefined();
-    const parsed = JSON.parse(output);
-    expect(parsed).toHaveProperty('phases');
-    expect(parsed).toHaveProperty('lastUpdated');
+describe('phase filtering', () => {
+  test('Phase 0 is in SKIP_PHASES (hidden from public)', () => {
+    expect(SKIP_PHASES.has(0)).toBe(true);
   });
 
-  test('strips PR numbers from output', () => {
-    setupMocks();
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
-
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
-
-    expect(output).not.toContain('PR #');
-    expect(output).not.toContain('#223');
-    expect(output).not.toContain('#218');
+  test('Phase 1 is not in SKIP_PHASES', () => {
+    expect(SKIP_PHASES.has(1)).toBe(false);
   });
 
-  test('strips internal references (SonarCloud, Allure, etc.)', () => {
-    setupMocks();
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
+  test('filtered output excludes Phase 0', () => {
+    const phases = parseRoadmap(SAMPLE_MD);
+    const visible = phases.filter((p) => !SKIP_PHASES.has(p.num));
+    expect(visible.length).toBe(3); // Phase 1, 2, 3
+    expect(visible.every((p) => p.num !== 0)).toBe(true);
+  });
+});
 
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
+// ─── computePhaseStatus tests ──────────────────────────────────
 
-    // Phase 0 features should be skipped entirely
-    expect(output).not.toContain('SonarCloud');
-    expect(output).not.toContain('Allure');
+describe('computePhaseStatus', () => {
+  test('all done → complete', () => {
+    const result = computePhaseStatus([
+      { status: 'done' },
+      { status: 'done' },
+      { status: 'done' },
+    ]);
+    expect(result.label).toBe('complete');
+    expect(result.done).toBe(3);
+    expect(result.total).toBe(3);
   });
 
-  test('maps statuses correctly (DONE→done, IN PROGRESS→in-progress)', () => {
-    setupMocks();
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
+  test('mix of done and in-progress → in-progress', () => {
+    const result = computePhaseStatus([
+      { status: 'done' },
+      { status: 'in-progress' },
+      { status: 'planned' },
+    ]);
+    expect(result.label).toBe('in-progress');
+    expect(result.done).toBe(1);
+    expect(result.total).toBe(3);
+  });
 
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
+  test('only in-progress, no done → in-progress', () => {
+    const result = computePhaseStatus([
+      { status: 'in-progress' },
+      { status: 'planned' },
+    ]);
+    expect(result.label).toBe('in-progress');
+    expect(result.done).toBe(0);
+    expect(result.total).toBe(2);
+  });
 
-    const parsed = JSON.parse(output);
-    // Find a done feature
-    const phase1 = parsed.phases.find((p) => p.title.includes('Compliance'));
-    if (phase1) {
-      const doneFeature = phase1.features.find((f) => f.status === 'done');
-      expect(doneFeature).toBeDefined();
+  test('next status counts as in-progress', () => {
+    const result = computePhaseStatus([
+      { status: 'next' },
+      { status: 'planned' },
+    ]);
+    expect(result.label).toBe('in-progress');
+  });
+
+  test('all planned → planned', () => {
+    const result = computePhaseStatus([
+      { status: 'planned' },
+      { status: 'planned' },
+    ]);
+    expect(result.label).toBe('planned');
+    expect(result.done).toBe(0);
+    expect(result.total).toBe(2);
+  });
+
+  test('empty features → planned with 0/0', () => {
+    const result = computePhaseStatus([]);
+    expect(result.label).toBe('planned');
+    expect(result.done).toBe(0);
+    expect(result.total).toBe(0);
+  });
+});
+
+// ─── Integration: full pipeline ────────────────────────────────
+
+describe('full pipeline integration', () => {
+  test('produces correct phase structure with progress', () => {
+    const phases = parseRoadmap(SAMPLE_MD);
+    const visible = phases
+      .filter((p) => !SKIP_PHASES.has(p.num))
+      .filter((p) => p.features.length > 0)
+      .map((p) => {
+        const { label, done, total } = computePhaseStatus(p.features);
+        return {
+          title: PHASE_TITLES[p.num] || `Phase ${p.num}`,
+          status: label,
+          progress: { done, total },
+          featureCount: p.features.length,
+        };
+      });
+
+    expect(visible.length).toBe(3);
+
+    // Phase 1: 2 done, 1 in-progress, 1 planned → in-progress
+    const phase1 = visible.find((p) => p.title.includes('Compliance'));
+    expect(phase1.status).toBe('in-progress');
+    expect(phase1.progress.done).toBe(2);
+    expect(phase1.progress.total).toBe(4);
+
+    // Phase 2: 1 done, 1 in-progress, 1 planned → in-progress
+    const phase2 = visible.find((p) => p.title.includes('Platform'));
+    expect(phase2.status).toBe('in-progress');
+    expect(phase2.progress.done).toBe(1);
+    expect(phase2.progress.total).toBe(3);
+
+    // Phase 3: all planned
+    const phase3 = visible.find((p) => p.title.includes('Revenue'));
+    expect(phase3.status).toBe('planned');
+    expect(phase3.progress.done).toBe(0);
+  });
+
+  test('currentlyWorkingOn collects in-progress items', () => {
+    const phases = parseRoadmap(SAMPLE_MD);
+    const visible = phases
+      .filter((p) => !SKIP_PHASES.has(p.num))
+      .filter((p) => p.features.length > 0);
+
+    const currentlyWorkingOn = [];
+    for (const phase of visible) {
+      const phaseTitle = PHASE_TITLES[phase.num] || `Phase ${phase.num}`;
+      for (const feature of phase.features) {
+        if (feature.status === 'in-progress') {
+          currentlyWorkingOn.push({ name: feature.name, phase: phaseTitle });
+        }
+      }
     }
-  });
 
-  test('skips Phase 0 (internal)', () => {
-    setupMocks();
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
-
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
-
-    const parsed = JSON.parse(output);
-    const phase0 = parsed.phases.find((p) => p.title.includes('Infrastructure'));
-    expect(phase0).toBeUndefined();
-  });
-
-  test('merges translations correctly', () => {
-    setupMocks();
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
-
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
-
-    const parsed = JSON.parse(output);
-    const phase1 = parsed.phases.find((p) => p.title.includes('Compliance'));
-    if (phase1?.titleI18n) {
-      expect(phase1.titleI18n.ar).toBeDefined();
-      expect(phase1.titleI18n.de).toBeDefined();
-    }
-  });
-
-  test('calculates completion stats (done count, total, percentage)', () => {
-    setupMocks();
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
-
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
-
-    const parsed = JSON.parse(output);
-    // Should have stats at top level or per-phase
-    // Phase 1 has 2 done out of 3 total
-  });
-
-  test('handles empty phases', () => {
-    const mdWithEmptyPhase =
-      SAMPLE_ROADMAP_MD +
-      `
-## Phase 9 — Empty Phase
-
-| # | Feature | Effort | Status |
-|---|---------|--------|--------|
-`;
-    setupMocks(mdWithEmptyPhase);
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
-
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
-
-    const parsed = JSON.parse(output);
-    // Should not crash on empty phase
-    expect(parsed.phases).toBeDefined();
-  });
-
-  test('handles missing translations gracefully', () => {
-    setupMocks(SAMPLE_ROADMAP_MD, '{"phases":{},"features":{}}');
-    let output;
-    fs.writeFileSync.mockImplementation((_path, data) => {
-      output = data;
-    });
-
-    jest.resetModules();
-    require('../../../scripts/generate-roadmap-json');
-
-    const parsed = JSON.parse(output);
-    // Should produce output even without translations
-    expect(parsed.phases).toBeDefined();
-    expect(parsed.phases.length).toBeGreaterThan(0);
+    expect(currentlyWorkingOn.length).toBe(2);
+    expect(currentlyWorkingOn[0].name).toBe('Age-based segregation');
+    expect(currentlyWorkingOn[1].name).toBe('iOS app');
   });
 });

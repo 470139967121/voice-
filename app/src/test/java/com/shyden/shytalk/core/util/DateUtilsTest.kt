@@ -250,7 +250,8 @@ class DateUtilsTest {
 
     @Test
     fun `formatSuspensionEnd - exactly 1 hour uses singular`() {
-        val futureMs = System.currentTimeMillis() + (1 * 60 * 60_000L)
+        // Add 30s buffer so we land firmly in "1 hour" despite test execution time
+        val futureMs = System.currentTimeMillis() + (1 * 60 * 60_000L) + 30_000L
         val result = formatSuspensionEnd(futureMs)
         assertTrue(result.contains("1 hour"))
         assertFalse(result.contains("1 hours"))

@@ -23,6 +23,7 @@
       inProgress: "In Progress",
       comingSoon: "Coming Soon",
       planned: "Planned",
+      complete: "Complete",
       done: "Done",
       inProg: "In Progress",
       plan: "Planned",
@@ -37,6 +38,7 @@
         "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
       comingSoon: "\u0642\u0631\u064A\u0628\u064B\u0627",
       planned: "\u0645\u062E\u0637\u0637",
+      complete: "مكتمل",
       done: "\u0645\u0643\u062A\u0645\u0644",
       inProg: "\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",
       plan: "\u0645\u062E\u0637\u0637",
@@ -52,6 +54,7 @@
       inProgress: "In Arbeit",
       comingSoon: "Kommt bald",
       planned: "Geplant",
+      complete: "Abgeschlossen",
       done: "Fertig",
       inProg: "In Arbeit",
       plan: "Geplant",
@@ -64,6 +67,7 @@
       inProgress: "En progreso",
       comingSoon: "Pr\u00F3ximamente",
       planned: "Planificado",
+      complete: "Completado",
       done: "Hecho",
       inProg: "En progreso",
       plan: "Planificado",
@@ -76,6 +80,7 @@
       inProgress: "En cours",
       comingSoon: "Bient\u00F4t",
       planned: "Planifi\u00E9",
+      complete: "Terminé",
       done: "Fait",
       inProg: "En cours",
       plan: "Planifi\u00E9",
@@ -90,6 +95,7 @@
       comingSoon:
         "\u091C\u0932\u094D\u0926 \u0906 \u0930\u0939\u093E \u0939\u0948",
       planned: "\u092F\u094B\u091C\u0928\u093E\u092C\u0926\u094D\u0927",
+      complete: "पूर्ण",
       done: "\u092A\u0942\u0930\u094D\u0923",
       inProg: "\u091C\u093E\u0930\u0940",
       plan: "\u092F\u094B\u091C\u0928\u093E",
@@ -106,6 +112,7 @@
       inProgress: "Sedang berjalan",
       comingSoon: "Segera hadir",
       planned: "Direncanakan",
+      complete: "Selesai",
       done: "Selesai",
       inProg: "Sedang berjalan",
       plan: "Direncanakan",
@@ -118,6 +125,7 @@
       inProgress: "In corso",
       comingSoon: "Prossimamente",
       planned: "Pianificato",
+      complete: "Completato",
       done: "Fatto",
       inProg: "In corso",
       plan: "Pianificato",
@@ -130,6 +138,7 @@
       inProgress: "\u9032\u884C\u4E2D",
       comingSoon: "\u8FD1\u65E5\u516C\u958B",
       planned: "\u8A08\u753B\u4E2D",
+      complete: "完了",
       done: "\u5B8C\u4E86",
       inProg: "\u9032\u884C\u4E2D",
       plan: "\u8A08\u753B",
@@ -144,6 +153,7 @@
       inProgress: "\uC9C4\uD589 \uC911",
       comingSoon: "\uACE7 \uCD9C\uC2DC",
       planned: "\uACC4\uD68D\uB428",
+      complete: "완료",
       done: "\uC644\uB8CC",
       inProg: "\uC9C4\uD589 \uC911",
       plan: "\uACC4\uD68D",
@@ -158,6 +168,7 @@
       inProgress: "Bezig",
       comingSoon: "Binnenkort",
       planned: "Gepland",
+      complete: "Voltooid",
       done: "Klaar",
       inProg: "Bezig",
       plan: "Gepland",
@@ -170,6 +181,7 @@
       inProgress: "W toku",
       comingSoon: "Wkr\u00F3tce",
       planned: "Zaplanowano",
+      complete: "Ukończone",
       done: "Gotowe",
       inProg: "W toku",
       plan: "Plan",
@@ -183,6 +195,7 @@
       inProgress: "Em andamento",
       comingSoon: "Em breve",
       planned: "Planejado",
+      complete: "Concluído",
       done: "Feito",
       inProg: "Em andamento",
       plan: "Planejado",
@@ -212,6 +225,7 @@
       inProgress: "P\u00E5g\u00E5r",
       comingSoon: "Kommer snart",
       planned: "Planerat",
+      complete: "Klart",
       done: "Klart",
       inProg: "P\u00E5g\u00E5r",
       plan: "Planerat",
@@ -225,6 +239,7 @@
         "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23",
       comingSoon: "\u0E40\u0E23\u0E47\u0E27\u0E46 \u0E19\u0E35\u0E49",
       planned: "\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19",
+      complete: "เสร็จสมบูรณ์",
       done: "\u0E40\u0E2A\u0E23\u0E47\u0E08",
       inProg: "\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23",
       plan: "\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19",
@@ -241,6 +256,7 @@
       inProgress: "Devam ediyor",
       comingSoon: "Yak\u0131nda",
       planned: "Planland\u0131",
+      complete: "Tamamlandı",
       done: "Tamam",
       inProg: "Devam ediyor",
       plan: "Planland\u0131",
@@ -271,6 +287,7 @@
       inProgress: "\u0110ang ti\u1EBFn h\u00E0nh",
       comingSoon: "S\u1EAFp ra m\u1EAFt",
       planned: "\u0110\u00E3 l\u00EAn k\u1EBF ho\u1EA1ch",
+      complete: "Hoàn thành",
       done: "Ho\u00E0n th\u00E0nh",
       inProg: "\u0110ang ti\u1EBFn h\u00E0nh",
       plan: "K\u1EBF ho\u1EA1ch",
@@ -284,6 +301,7 @@
       inProgress: "\u8FDB\u884C\u4E2D",
       comingSoon: "\u5373\u5C06\u63A8\u51FA",
       planned: "\u5DF2\u8BA1\u5212",
+      complete: "已完成",
       done: "\u5B8C\u6210",
       inProg: "\u8FDB\u884C\u4E2D",
       plan: "\u5DF2\u8BA1\u5212",
@@ -507,7 +525,7 @@
       html += CHEVRON_SVG;
       html += '<span class="phase-title">' + escapeHtml(t("inProgress") || "In Progress") + '</span>';
       html += '<span class="phase-progress">';
-      html += '<span class="phase-progress-text">' + inProgressItems.length + ' ' + escapeHtml(t("active") || "active") + '</span>';
+      html += '<span class="phase-progress-text">' + inProgressItems.length + ' ' + escapeHtml(t("inProg") || "In Progress") + '</span>';
       html += '</span>';
       html += '</button>';
       html += '<div class="phase-body">';
@@ -559,7 +577,7 @@
         features.length > 0
           ? Math.round((phaseDone / features.length) * 100)
           : 0;
-      var isCollapsed = phase.status !== "active";
+      var isCollapsed = phase.status !== "in-progress" && phase.status !== "active";
       var delay = p * 0.06;
 
       html +=
@@ -581,19 +599,25 @@
         '">';
       html += CHEVRON_SVG;
       html += '<span class="phase-title">' + escapeHtml(phaseTitle) + "</span>";
-      html += '<span class="phase-progress">';
-      html +=
-        '<span class="phase-progress-bar"><span class="phase-progress-fill" style="width:' +
-        progressPct +
-        '%"></span></span>';
+      var fillClass =
+        phaseDone === features.length ? "phase-progress-fill--complete" :
+        (phaseDone > 0 || phaseIp > 0) ? "phase-progress-fill--in-progress" :
+        "phase-progress-fill--planned";
+      var phaseStatusLabel =
+        phaseDone === features.length ? (t("complete") || "Complete") :
+        (phaseDone > 0 || phaseIp > 0) ? (t("inProgress") || "In Progress") :
+        (t("planned") || "Planned");
       html +=
         '<span class="phase-progress-text">' +
-        phaseDone +
-        "/" +
-        features.length +
+        escapeHtml(phaseStatusLabel) +
+        " (" + phaseDone + "/" + features.length + ")" +
         "</span>";
-      html += "</span>";
       html += "</button>";
+      // Full-width progress bar below the header
+      html +=
+        '<div class="phase-progress-bar"><span class="phase-progress-fill ' + fillClass + '" style="width:' +
+        progressPct +
+        '%"></span></div>';
 
       // Body
       html += '<div class="phase-body">';
