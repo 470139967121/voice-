@@ -1,8 +1,8 @@
-v0.73.0
+v0.74.0
 
-add GitLive Firebase KMP + iOS repository stubs (Phase 2) (#319)
+implement Phase 3 platform actuals (#320)
 - ## Summary
-- Added GitLive Firebase KMP 2.4.0 to `iosMain`
-- dependencies (auth, firestore, database, app). Android is unaffected.
-- Created 26 stub implementations for ALL
-- repository/service interfaces. Registered in `IosPlatformModule` with
+- Phase 3 of iOS feature parity — replace stub expect/actual
+- implementations with real iOS code:
+- `UIPasteboard.generalPasteboard.string` (was
+- returning null)
