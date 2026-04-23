@@ -35,6 +35,20 @@
 	<array>
 		<string>armv7</string>
 	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ShyTalk needs microphone access for voice rooms.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ShyTalk needs camera access to take profile photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ShyTalk needs photo library access to share images.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

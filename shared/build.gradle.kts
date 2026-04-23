@@ -69,10 +69,13 @@ kotlin {
 
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
-            implementation(libs.gitlive.firebase.app)
-            implementation(libs.gitlive.firebase.auth)
-            implementation(libs.gitlive.firebase.firestore)
-            implementation(libs.gitlive.firebase.database)
+            // GitLive Firebase KMP deps removed until native Firebase iOS SDK
+            // is linked via CocoaPods/SPM. The stubs don't use GitLive types.
+            // Re-add when implementing real Firebase repos:
+            // implementation(libs.gitlive.firebase.app)
+            // implementation(libs.gitlive.firebase.auth)
+            // implementation(libs.gitlive.firebase.firestore)
+            // implementation(libs.gitlive.firebase.database)
         }
     }
 }
