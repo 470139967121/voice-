@@ -46,13 +46,31 @@ private fun IosSignInPlaceholder(params: SignInScreenParams) {
 
 @Composable
 private fun IosSettingsPlaceholder(params: AppSettingsScreenParams) {
-    PlaceholderScreen(
-        title = "Settings",
-        subtitle = "iOS settings coming soon",
-        actionLabel = "Back",
-        actionTag = "ios_settings_backButton",
-        onAction = params.onNavigateBack,
-    )
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = params.onNavigateBack,
+            modifier = Modifier.testTag("ios_settings_backButton"),
+        ) {
+            Text("Back")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = params.onSignOut,
+            modifier = Modifier.testTag("ios_settings_signOutButton"),
+        ) {
+            Text("Sign Out")
+        }
+    }
 }
 
 @Composable
