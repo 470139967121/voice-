@@ -1,8 +1,6 @@
 package com.shyden.shytalk.core.di
 
 import com.shyden.shytalk.core.di.stubs.IosAppConfigServiceStub
-import com.shyden.shytalk.core.di.stubs.IosAppLockRepositoryStub
-import com.shyden.shytalk.core.di.stubs.IosAuthRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosBannerImagePreloaderStub
 import com.shyden.shytalk.core.di.stubs.IosBannerRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosBiometricRepositoryStub
@@ -11,7 +9,6 @@ import com.shyden.shytalk.core.di.stubs.IosDeviceRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosEconomyRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosFunFactRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosGiftRepositoryStub
-import com.shyden.shytalk.core.di.stubs.IosIdentityRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosMessageRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosNotificationRepositoryStub
 import com.shyden.shytalk.core.di.stubs.IosOtpRepositoryStub
@@ -32,6 +29,7 @@ import com.shyden.shytalk.core.di.stubs.IosWebContentPreloaderStub
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.core.util.BiometricAuth
 import com.shyden.shytalk.core.util.CryptoKeyPair
+import com.shyden.shytalk.core.util.SecureStorage
 import com.shyden.shytalk.data.local.StickerStorage
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.remote.ConversationWebSocketService
@@ -40,6 +38,7 @@ import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.repository.AppLockRepository
+import com.shyden.shytalk.data.repository.AppLockRepositoryImpl
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.BannerRepository
 import com.shyden.shytalk.data.repository.BiometricRepository
@@ -48,6 +47,8 @@ import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.FunFactRepository
 import com.shyden.shytalk.data.repository.GiftRepository
 import com.shyden.shytalk.data.repository.IdentityRepository
+import com.shyden.shytalk.data.repository.IosAuthRepositoryImpl
+import com.shyden.shytalk.data.repository.IosIdentityRepositoryImpl
 import com.shyden.shytalk.data.repository.MessageRepository
 import com.shyden.shytalk.data.repository.NotificationRepository
 import com.shyden.shytalk.data.repository.OtpRepository
@@ -97,14 +98,14 @@ val iosPlatformModule =
         single { CryptoKeyPair() }
 
         // Repositories
-        single<AuthRepository> { IosAuthRepositoryStub() }
+        single<AuthRepository> { IosAuthRepositoryImpl(get()) }
         single<UserRepository> { IosUserRepositoryStub() }
         single<RoomRepository> { IosRoomRepositoryStub() }
         single<MessageRepository> { IosMessageRepositoryStub() }
         single<SeatRequestRepository> { IosSeatRequestRepositoryStub() }
         single<StorageRepository> { IosStorageRepositoryStub() }
         single<DeviceRepository> { IosDeviceRepositoryStub() }
-        single<IdentityRepository> { IosIdentityRepositoryStub() }
+        single<IdentityRepository> { IosIdentityRepositoryImpl(get(), get()) }
         single<PrivateMessageRepository> { IosPrivateMessageRepositoryStub() }
         single<ReportRepository> { IosReportRepositoryStub() }
         single<TypingRepository> { IosTypingRepositoryStub() }
@@ -117,7 +118,8 @@ val iosPlatformModule =
         single<OtpRepository> { IosOtpRepositoryStub() }
         single<PinRepository> { IosPinRepositoryStub() }
         single<BiometricRepository> { IosBiometricRepositoryStub() }
-        single<AppLockRepository> { IosAppLockRepositoryStub() }
+        single { SecureStorage() }
+        single<AppLockRepository> { AppLockRepositoryImpl(get<SecureStorage>()) }
 
         // Services
         single<TokenService> { IosTokenServiceStub() }
