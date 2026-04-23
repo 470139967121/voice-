@@ -264,3 +264,71 @@ describe('generate-roadmap-json.js', () => {
     expect(parsed.phases.length).toBeGreaterThan(0);
   });
 });
+
+// ── computePhaseStatus tests ───────────────────────────────────
+
+describe('computePhaseStatus', () => {
+  const { computePhaseStatus } = require('../../../scripts/generate-roadmap-json');
+
+  test('all done → complete', () => {
+    const features = [
+      { status: 'done' },
+      { status: 'done' },
+      { status: 'done' },
+    ];
+    const result = computePhaseStatus(features);
+    expect(result.label).toBe('complete');
+    expect(result.done).toBe(3);
+    expect(result.total).toBe(3);
+  });
+
+  test('mix of done and in-progress → in-progress', () => {
+    const features = [
+      { status: 'done' },
+      { status: 'in-progress' },
+      { status: 'planned' },
+    ];
+    const result = computePhaseStatus(features);
+    expect(result.label).toBe('in-progress');
+    expect(result.done).toBe(1);
+    expect(result.total).toBe(3);
+  });
+
+  test('only in-progress, no done → in-progress', () => {
+    const features = [
+      { status: 'in-progress' },
+      { status: 'planned' },
+    ];
+    const result = computePhaseStatus(features);
+    expect(result.label).toBe('in-progress');
+    expect(result.done).toBe(0);
+    expect(result.total).toBe(2);
+  });
+
+  test('next status counts as in-progress', () => {
+    const features = [
+      { status: 'next' },
+      { status: 'planned' },
+    ];
+    const result = computePhaseStatus(features);
+    expect(result.label).toBe('in-progress');
+  });
+
+  test('all planned → planned', () => {
+    const features = [
+      { status: 'planned' },
+      { status: 'planned' },
+    ];
+    const result = computePhaseStatus(features);
+    expect(result.label).toBe('planned');
+    expect(result.done).toBe(0);
+    expect(result.total).toBe(2);
+  });
+
+  test('empty features → planned with 0/0', () => {
+    const result = computePhaseStatus([]);
+    expect(result.label).toBe('planned');
+    expect(result.done).toBe(0);
+    expect(result.total).toBe(0);
+  });
+});

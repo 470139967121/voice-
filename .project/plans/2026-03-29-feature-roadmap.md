@@ -24,8 +24,6 @@ roadmap — user-facing web features previously listed here have moved to Phase 
 | 51  | **Seasonal events system** — reusable date-gated theming for holidays (Khmer New Year, Diwali, etc.). Events.json registry, seasonal-theme.js, SeasonalTheme.kt, educational pages               | Medium | DONE (PR #302, 2026-04-16)                                    |
 | 52  | **Khmer (km) as 20th locale** — full app translation to Khmer script (771/781 strings)                                                                                                           | Medium | DONE (PR #302, 2026-04-16)                                    |
 | 53  | **Admin core module tests** — 34 Jest unit tests + 9 Playwright integration tests for PR A core modules                                                                                          | Small  | DONE (PR #290, 2026-04-13)                                    |
-| B5 | **iOS build fix** — cinterop errors block all iOS work. Now on Mac, this is unblocked                                                                                                          | Medium | DONE (PRs #312-316, 2026-04-22) — iOS compiles, cinterop fixed |
-| B6 | **iOS parity** — testers receiving builds with zero enforcement screens. Must match Android feature-for-feature                                                                                 | Large  | IN PROGRESS — Phase 1 complete (PRs #312-318), Phase 2 (Firebase) next |
 | B16 | **Cross-device E2E testing** — admin actions (suspension, moderation, ban cascade) performed in admin panel and verified in app on real device. Proves full pipeline end-to-end                  | Large  |                                                               |
 
 ---
@@ -51,10 +49,12 @@ App store rejection or legal liability if missing. All features must be implemen
 
 ## Phase 2 — Platform Foundation
 
-Keep Play Store billing current.
+Keep Play Store billing current. Ship iOS alongside Android.
 
 | #  | Feature                                                                     | Effort | Status |
 |----|-----------------------------------------------------------------------------|--------|--------|
+| B5 | **iOS build fix** — cinterop errors, iOS compilation                        | Medium | DONE (PRs #312-316, 2026-04-22) |
+| B6 | **iOS app — full feature parity** — real Firebase repos, same data as Android, all screens functional | XL | IN PROGRESS — Phases 1-4 wiring done (PRs #312-322), real Firebase repos in progress |
 | B7 | **Billing v7→v8** — Google Play Billing major version, deprecation deadline | Medium |        |
 
 ---
@@ -171,8 +171,8 @@ Items previously in the backlog, now integrated into phases above or resolved:
 | B10 | Playwright BDD upgrade          | 141 scenarios now (Phase 0 testing)                |
 | B11 | Branded sign-in (Apple browser) | Accepted as Firebase limitation — no action needed |
 | B12 | Email sign-in                   | Blocked on self-hosted mail server — deferred      |
-| B5  | iOS build fix                   | Moved to Phase 0 (immediate priority, 2026-04-19)  |
-| B6  | iOS parity                      | Moved to Phase 0 (immediate priority, 2026-04-19)  |
+| B5  | iOS build fix                   | Moved to Phase 2 (Platform Foundation, 2026-04-23)  |
+| B6  | iOS parity                      | Moved to Phase 2 (Platform Foundation, 2026-04-23)  |
 | B18 | Admin panel restructure         | Duplicate of #41 — removed                         |
 | B13 | Contact form                    | Moved to Phase 8                                   |
 | B14 | Suspended user support          | Moved to Phase 8                                   |
