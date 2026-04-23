@@ -2,29 +2,48 @@ package com.shyden.shytalk.core.di
 
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
+import com.shyden.shytalk.core.util.logW
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
+import dev.gitlive.firebase.database.database
+import dev.gitlive.firebase.firestore.firestore
 import org.koin.core.context.startKoin
 import org.koin.mp.KoinPlatformTools
 
 /**
- * Initializes Koin for the iOS app.
+ * Initializes Firebase and Koin for the iOS app.
  *
- * Called from Swift: `KoinHelperKt.doInitKoin()` in iOSApp.swift's init().
- * Loads the shared ViewModel module alongside the iOS platform module.
- * Guarded against double invocation — SwiftUI's @main struct init can
- * be called more than once during lifecycle events.
+ * Called from Swift: `KoinHelperKt.doInitKoin(useEmulators: true)` in iOSApp.swift's init().
+ *
+ * @param useEmulators If true, connects Firebase to local emulators (localhost).
  */
-fun doInitKoin() {
+fun doInitKoin(useEmulators: Boolean = true) {
     if (KoinPlatformTools.defaultContext().getOrNull() != null) {
         logI("KoinHelper", "Koin already initialised — skipping")
         return
     }
     try {
+        if (useEmulators) {
+            configureFirebaseEmulators()
+        }
         startKoin {
             modules(viewModelModule, iosPlatformModule)
         }
-        logI("KoinHelper", "Koin initialised successfully")
+        logI("KoinHelper", "Koin initialised successfully (emulators=$useEmulators)")
     } catch (e: Exception) {
-        logE("KoinHelper", "Koin initialisation failed", e)
+        logE("KoinHelper", "Koin initialisation failed: ${e.message}")
         throw e
+    }
+}
+
+private fun configureFirebaseEmulators() {
+    try {
+        val host = "localhost"
+        Firebase.firestore.useEmulator(host, 8080)
+        Firebase.auth.useEmulator(host, 9099)
+        Firebase.database.useEmulator(host, 9000)
+        logI("KoinHelper", "Firebase emulators: Firestore=$host:8080, Auth=$host:9099, RTDB=$host:9000")
+    } catch (e: Exception) {
+        logW("KoinHelper", "Firebase emulator config failed: ${e.message}")
     }
 }

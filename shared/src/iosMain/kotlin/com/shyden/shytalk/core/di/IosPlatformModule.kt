@@ -35,6 +35,7 @@ import com.shyden.shytalk.core.util.CryptoKeyPair
 import com.shyden.shytalk.data.local.StickerStorage
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.remote.ConversationWebSocketService
+import com.shyden.shytalk.data.remote.IosApiClient
 import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
@@ -61,14 +62,34 @@ import com.shyden.shytalk.data.repository.TypingRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.feature.splash.BannerImagePreloader
 import com.shyden.shytalk.feature.splash.WebContentPreloader
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.FirebaseAuth
+import dev.gitlive.firebase.auth.auth
+import dev.gitlive.firebase.database.FirebaseDatabase
+import dev.gitlive.firebase.database.database
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.firestore
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val iosPlatformModule =
     module {
+        // Firebase instances (initialized by KoinHelper.configureFirebaseEmulators before Koin starts)
+        single<FirebaseAuth> { Firebase.auth }
+        single<FirebaseFirestore> { Firebase.firestore }
+        single<FirebaseDatabase> { Firebase.database }
+
+        // API client (Express.js backend)
+        single {
+            IosApiClient(
+                baseUrl = "http://localhost:3000",
+                deviceId = get(named("deviceId")),
+            )
+        }
+
         // Named qualifiers required by AuthViewModel
-        single(named("deviceId")) { "ios-device" } // TODO(Phase 3): Replace with UIDevice.current.identifierForVendor
-        single(named("bypassDeviceChecks")) { true } // TODO(Phase 3): Set to false once real DeviceRepository is implemented
+        single(named("deviceId")) { "ios-device" } // TODO: Replace with UIDevice.current.identifierForVendor
+        single(named("bypassDeviceChecks")) { true } // TODO: Set to false once real DeviceRepository is implemented
 
         // Platform utilities (actual classes already exist in iosMain)
         single { StickerStorage() }
