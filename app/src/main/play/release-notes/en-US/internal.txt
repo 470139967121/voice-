@@ -1,8 +1,8 @@
-v0.82.1
+v0.83.0
 
-Kotlin 2.4.0-Beta2 + static frameworks + Koin init fix (PR A) (#333)
-- Kotlin 2.4.0-Beta2 + static frameworks + Koin init fix
-- - Upgrade Kotlin from 2.3.20 to 2.4.0-Beta2 to fix K/N autoboxing
--   crash in linkDebugFrameworkIosSimulatorArm64
-- - Switch CocoaPods to static linkage for Firebase compatibility
-- - Pass useEmulators parameter to doInitKoin() in iOSApp.swift
+move WarningScreen to shared + expect/actual EmergencyTonePlayer (PR B) (#334)
+- move WarningScreen to shared + expect/actual EmergencyTonePlayer (PR B)
+- Move WarningScreen from app/ (Android-only) to shared/commonMain/
+- (cross-platform). Replace the iOS placeholder with the real shared
+- screen.
+- EmergencyTonePlayer expect/actual:
