@@ -1,8 +1,8 @@
-v0.80.0
+v0.81.0
 
-14 real repositories — Room, Message, Device, Notification, Report, Translation, OTP, PIN, Biometric, Banner, FunFact, Storage, SeatRequest (PR E+F+I) (#329)
-- real RoomRepository + SeatRequestRepository (PR E)
-- RoomRepository (500+ lines):
-- getActiveRooms, getRoomFlow via GitLive snapshots
-- create, join, leave, close, closeAll, leaveAll
-- take, leave, move (transaction), remove, toggle mute
+real PrivateMessageRepository — complete DM + groups (PR G) (#330)
+- real PrivateMessageRepository (PR G)
+- Complete DM + group chat implementation — the largest iOS repository:
+- getConversations flow, getOrCreateConversation, messages
+- flow, loadOlderMessages, markAsRead, resetUnreadCount
+- observe/get conversation settings, mute, pin, hide
