@@ -1,8 +1,8 @@
-v0.76.0
+v0.76.1
 
-Firebase foundation — CocoaPods, GitLive KMP, Ktor API client (#322)
-- ## Summary
-- PR A of the iOS real implementations plan. Sets up the infrastructure
-- for real Firebase-backed iOS repositories.
-- Podfile with Firebase iOS SDK (Core, Auth, Firestore,
-- Database) — native frameworks linked
+resolve all GitHub security alerts (#324)
+- resolve all GitHub security alerts
+- fast-xml-parser
+-   (CVE-2026-41650), @tootallnate/once (CVE-2026-3449), uuid
+-   (GHSA-w5hq-g745-h8pq)
+- use
