@@ -1,8 +1,8 @@
-v0.93.0
+v0.93.1
 
-move RoomScreen + ActiveRoomManager to shared (iOS parity complete) (#351)
-- move ActiveRoomManager to shared/commonMain
-- Migrated 719-line ActiveRoomManager from app/ to shared/:
-- - android.util.Log → logD/logW/logE from core.util
-- - System.currentTimeMillis() → currentTimeMillis() from PlatformTime
-- - ConcurrentHashMap → mutableMapOf (K/N new memory model)
+delete dead iOS stubs (1119 lines removed) (#352)
+- All iOS repository stubs have been replaced by real implementations:
+- real Firebase/Ktor implementations (PRs #332-341)
+- real LiveKit bridge (PR #350)
+- real shared screens (PRs #346, #349, #351)
+- The stubs file was dead code — nothing imported from it.
