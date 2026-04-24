@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
  * These will be replaced with real iOS implementations:
  * - SignIn → ASAuthorizationController (Apple Sign-In)
  * - AppSettings → iOS Settings.app integration
- * - Warning → AVAudioPlayer + bundled images
+ * - Warning → shared WarningScreen (EmergencyTonePlayer via AVAudioEngine + shared drawable)
  * - Profile → shared ProfileScreen (once moved to commonMain)
  * - Room → shared RoomScreen (once moved to commonMain)
  */
@@ -28,7 +28,7 @@ fun createIosPlatformScreens(): PlatformScreens =
     PlatformScreens(
         signInScreen = { params -> IosSignInPlaceholder(params) },
         appSettingsScreen = { params -> IosSettingsPlaceholder(params) },
-        warningScreen = { params -> IosWarningPlaceholder(params) },
+        warningScreen = { params -> IosWarningScreen(params) },
         profileScreen = { params -> IosProfilePlaceholder(params) },
         roomScreen = { params -> IosRoomPlaceholder(params) },
     )
@@ -74,13 +74,11 @@ private fun IosSettingsPlaceholder(params: AppSettingsScreenParams) {
 }
 
 @Composable
-private fun IosWarningPlaceholder(params: WarningScreenParams) {
-    PlaceholderScreen(
-        title = "Warning",
-        subtitle = params.reason ?: "You have a warning",
-        actionLabel = "I Understand",
-        actionTag = "ios_warning_acceptButton",
-        onAction = params.onAccept,
+private fun IosWarningScreen(params: WarningScreenParams) {
+    com.shyden.shytalk.feature.warning.WarningScreen(
+        reason = params.reason,
+        onAccept = params.onAccept,
+        onViewCommunityStandards = params.onViewCommunityStandards,
     )
 }
 
