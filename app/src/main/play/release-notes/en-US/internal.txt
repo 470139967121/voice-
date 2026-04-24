@@ -1,8 +1,8 @@
-v0.89.0
+v0.90.0
 
-shared header component across all pages (#348)
-- New shared-header.js component provides consistent navigation on
-- every public web page:
-- - Logo (left) linking to home
-- user avatar + name dropdown when signed in,
--   "Sign In" button when not
+move AppSettingsScreen to shared/commonMain (iOS parity) (#346)
+- add PlatformBackHandler + settings helper functions
+- Infrastructure for AppSettingsScreen migration to shared/commonMain:
+- wraps Android BackHandler,
+-   no-op on iOS/JVM (iOS has no system back button)
+- censorEmail(), formatCacheSize(), formatTime()
