@@ -1,6 +1,7 @@
 package com.shyden.shytalk.navigation
 
 import com.shyden.shytalk.core.util.logW
+import com.shyden.shytalk.util.IosImagePicker
 import platform.Foundation.NSCharacterSet
 import platform.Foundation.NSString
 import platform.Foundation.NSURL
@@ -13,7 +14,7 @@ import platform.Foundation.stringByRemovingPercentEncoding
  *
  * v1: Most callbacks are no-ops (FCM, permissions, billing, sync service).
  * URL encoding uses Foundation's percent-encoding APIs.
- * Media picking stubs will be replaced with PHPicker in a future PR.
+ * Media picking uses PHPickerViewController for image selection.
  */
 class IosPlatformNavCallbacks : PlatformNavCallbacks {
     // ── Push notifications (no-op v1 — APNs integration in future PR) ──
@@ -44,24 +45,23 @@ class IosPlatformNavCallbacks : PlatformNavCallbacks {
 
     override fun canDrawOverlays(): Boolean = false // Not applicable on iOS
 
-    // ── Media picking (stubs v1) ──
+    // ── Media picking (PHPickerViewController) ──
 
     override fun pickImages(
         maxCount: Int,
         onResult: (List<ByteArray>) -> Unit,
     ) {
-        logW("IosPlatformNavCallbacks", "pickImages($maxCount) — PHPickerViewController not yet integrated")
-        onResult(emptyList())
+        IosImagePicker.pickImages(maxCount = maxCount, onResult = onResult)
     }
 
     override fun pickStickerImage(onResult: (ByteArray?) -> Unit) {
-        logW("IosPlatformNavCallbacks", "pickStickerImage — PHPickerViewController not yet integrated")
-        onResult(null)
+        IosImagePicker.pickSingleImage(onResult = onResult)
     }
 
     override fun pickAndCropPhoto(onResult: (ByteArray?) -> Unit) {
-        logW("IosPlatformNavCallbacks", "pickAndCropPhoto — PHPickerViewController not yet integrated")
-        onResult(null)
+        // iOS has no built-in crop UI in PHPicker — deliver the raw image.
+        // A crop overlay can be added later if needed.
+        IosImagePicker.pickSingleImage(onResult = onResult)
     }
 
     // ── Billing (no-op v1 — StoreKit integration in future PR) ──
