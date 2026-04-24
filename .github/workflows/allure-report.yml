@@ -46,7 +46,7 @@ on:
         default: "10"
 
 concurrency:
-  group: allure-gh-pages-deploy
+  group: gh-pages-deploy
   cancel-in-progress: false
 
 jobs:
