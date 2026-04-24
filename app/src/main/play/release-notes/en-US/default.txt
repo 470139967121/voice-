@@ -1,7 +1,8 @@
-v0.93.5
+v0.93.6
 
-optimise cycle 2 critical findings
-- added NSFaceIDUsageDescription (App Store requirement)
-- added legal footer links (privacy, terms, guidelines)
-- parallelized invitee+inviter Firestore reads with Promise.all
-- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+revert deviceId to placeholder (iOS ClassCastException blocker)
+- The iOS app crashes on launch with:
+- HashMap cannot be cast to CPointer
+- This is a Kotlin/Native interop issue with the GitLive Firebase
+- library on Kotlin 2.4.0-Beta2. Reverted deviceId to placeholder
+- to isolate the issue. The crash occurs during AuthViewModel Koin
