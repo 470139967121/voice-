@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
  * iOS placeholder screens for v1.
  *
  * These will be replaced with real iOS implementations:
- * - SignIn → ASAuthorizationController (Apple Sign-In)
+ * - SignIn → real IosSignInScreen (Google + Apple + Email/OTP)
  * - AppSettings → iOS Settings.app integration
  * - Warning → shared WarningScreen (EmergencyTonePlayer via AVAudioEngine + shared drawable)
  * - Profile → shared ProfileScreen (once moved to commonMain)
@@ -26,23 +26,15 @@ import androidx.compose.ui.unit.dp
  */
 fun createIosPlatformScreens(): PlatformScreens =
     PlatformScreens(
-        signInScreen = { params -> IosSignInPlaceholder(params) },
+        signInScreen = { params ->
+            com.shyden.shytalk.feature.auth
+                .IosSignInScreen(params)
+        },
         appSettingsScreen = { params -> IosSettingsPlaceholder(params) },
         warningScreen = { params -> IosWarningScreen(params) },
         profileScreen = { params -> IosProfilePlaceholder(params) },
         roomScreen = { params -> IosRoomPlaceholder(params) },
     )
-
-@Composable
-private fun IosSignInPlaceholder(params: SignInScreenParams) {
-    PlaceholderScreen(
-        title = "Sign In",
-        subtitle = "iOS sign-in coming soon",
-        actionLabel = "Continue (Demo)",
-        actionTag = "ios_signIn_continueButton",
-        onAction = { params.onAuthSuccess(true, true, false) },
-    )
-}
 
 @Composable
 private fun IosSettingsPlaceholder(params: AppSettingsScreenParams) {

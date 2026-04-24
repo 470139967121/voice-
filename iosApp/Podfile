@@ -8,6 +8,9 @@ target 'iosApp' do
   pod 'FirebaseAuth'
   pod 'FirebaseFirestore'
   pod 'FirebaseDatabase'
+
+  # Google Sign-In
+  pod 'GoogleSignIn'
 end
 
 post_install do |installer|
