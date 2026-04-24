@@ -124,6 +124,10 @@ jest.mock('../../src/utils/fcm', () => ({
   sendFcmToTokens: jest.fn().mockResolvedValue([]),
 }));
 
+jest.mock('../../src/utils/roadmap-notify', () => ({
+  notifyRoadmapSubscribers: jest.fn().mockResolvedValue(),
+}));
+
 // ─── App setup ──────────────────────────────────────────────────
 
 const suggestionsRouter = require('../../src/routes/suggestions');

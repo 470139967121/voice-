@@ -86,9 +86,9 @@ describe('generalLimiter', () => {
   test('returns 429 when limit is exceeded', async () => {
     const app = createGeneralApp();
 
-    // Send 200 requests (the limit)
-    for (let i = 0; i < 200; i++) {
-      await request(app).get('/test');
+    // Send 200 requests in batches to avoid socket exhaustion
+    for (let batch = 0; batch < 10; batch++) {
+      await Promise.all(Array.from({ length: 20 }, () => request(app).get('/test')));
     }
 
     // The 201st request should be rate limited
@@ -107,8 +107,9 @@ describe('writeLimiter', () => {
   test('returns 429 when write limit (30) is exceeded', async () => {
     const app = createWriteApp();
 
-    for (let i = 0; i < 30; i++) {
-      await request(app).post('/message');
+    // Send 30 requests in batches to avoid socket exhaustion
+    for (let batch = 0; batch < 3; batch++) {
+      await Promise.all(Array.from({ length: 10 }, () => request(app).post('/message')));
     }
 
     const res = await request(app).post('/message').expect(429);
@@ -134,9 +135,7 @@ describe('sensitiveLimiter', () => {
   test('returns 429 when sensitive limit (5) is exceeded', async () => {
     const app = createSensitiveApp();
 
-    for (let i = 0; i < 5; i++) {
-      await request(app).post('/report');
-    }
+    await Promise.all(Array.from({ length: 5 }, () => request(app).post('/report')));
 
     const res = await request(app).post('/report').expect(429);
     expect(res.body.error).toBe('Rate limit exceeded for this operation');
@@ -145,9 +144,7 @@ describe('sensitiveLimiter', () => {
   test('logs a warning when sensitive rate limit is hit', async () => {
     const app = createSensitiveApp();
 
-    for (let i = 0; i < 5; i++) {
-      await request(app).post('/report');
-    }
+    await Promise.all(Array.from({ length: 5 }, () => request(app).post('/report')));
 
     await request(app).post('/report').expect(429);
 
@@ -181,10 +178,12 @@ describe('admin exemption', () => {
     app.use(generalLimiter);
     app.get('/test', (req, res) => res.json({ success: true }));
 
-    // Send 210 requests — exceeds the 200 limit
-    for (let i = 0; i < 210; i++) {
-      const res = await request(app).get('/test');
-      expect(res.status).toBe(200);
+    // Send 210 requests in batches — exceeds the 200 limit, all should pass for admin
+    for (let batch = 0; batch < 7; batch++) {
+      const results = await Promise.all(
+        Array.from({ length: 30 }, () => request(app).get('/test')),
+      );
+      results.forEach((res) => expect(res.status).toBe(200));
     }
   });
 
@@ -199,11 +198,11 @@ describe('admin exemption', () => {
     app.use(sensitiveLimiter);
     app.post('/report', (req, res) => res.json({ success: true }));
 
-    // Send 10 requests — double the 5-request limit
-    for (let i = 0; i < 10; i++) {
-      const res = await request(app).post('/report');
-      expect(res.status).toBe(200);
-    }
+    // Send 10 requests in parallel — double the 5-request limit, all should pass for admin
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => request(app).post('/report')),
+    );
+    results.forEach((res) => expect(res.status).toBe(200));
   });
 
   test('non-admin users are still rate-limited on sensitiveLimiter', async () => {
@@ -217,9 +216,7 @@ describe('admin exemption', () => {
     app.use(sensitiveLimiter);
     app.post('/report', (req, res) => res.json({ success: true }));
 
-    for (let i = 0; i < 5; i++) {
-      await request(app).post('/report');
-    }
+    await Promise.all(Array.from({ length: 5 }, () => request(app).post('/report')));
 
     // 6th request should be rate limited
     const res = await request(app).post('/report').expect(429);
@@ -236,9 +233,7 @@ describe('admin exemption', () => {
     app.use(sensitiveLimiter);
     app.post('/report', (req, res) => res.json({ success: true }));
 
-    for (let i = 0; i < 5; i++) {
-      await request(app).post('/report');
-    }
+    await Promise.all(Array.from({ length: 5 }, () => request(app).post('/report')));
 
     const res = await request(app).post('/report').expect(429);
     expect(res.body.error).toBe('Rate limit exceeded for this operation');
@@ -259,9 +254,7 @@ describe('keyGenerator', () => {
     app.post('/report', (req, res) => res.json({ success: true }));
 
     // Exhaust the limit for user-123
-    for (let i = 0; i < 5; i++) {
-      await request(app).post('/report');
-    }
+    await Promise.all(Array.from({ length: 5 }, () => request(app).post('/report')));
 
     // user-123 should be rate limited
     await request(app).post('/report').expect(429);
@@ -289,9 +282,7 @@ describe('keyGenerator', () => {
     app.post('/report', (req, res) => res.json({ success: true }));
 
     // Exhaust limit — all requests from same IP
-    for (let i = 0; i < 5; i++) {
-      await request(app).post('/report');
-    }
+    await Promise.all(Array.from({ length: 5 }, () => request(app).post('/report')));
 
     // Should be rate limited by IP
     const res = await request(app).post('/report').expect(429);
