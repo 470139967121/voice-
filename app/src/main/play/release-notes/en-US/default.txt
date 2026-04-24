@@ -1,8 +1,8 @@
-v0.92.0
+v0.93.0
 
-real iOS VoiceService with LiveKit Swift SDK bridge (#350)
-- Replaces IosVoiceServiceStub with real IosLiveKitVoiceService:
-- Architecture (same pattern as Google/Apple Sign-In):
-- - LiveKitBridge interface in iosMain (Kotlin) defines the contract
-- - LiveKitBridgeImpl (Swift) implements it using LiveKit Swift SDK
-- - Swift registers the bridge at app startup via registerLiveKitBridge()
+move RoomScreen + ActiveRoomManager to shared (iOS parity complete) (#351)
+- move ActiveRoomManager to shared/commonMain
+- Migrated 719-line ActiveRoomManager from app/ to shared/:
+- - android.util.Log → logD/logW/logE from core.util
+- - System.currentTimeMillis() → currentTimeMillis() from PlatformTime
+- - ConcurrentHashMap → mutableMapOf (K/N new memory model)
