@@ -1,8 +1,8 @@
-v0.88.3
+v0.88.4
 
-Windows-to-Mac migration — file permissions + git hooks (#344)
-- Windows-to-Mac migration — file permissions + git config
-- - Make all local/*.sh scripts and .husky hooks executable (lost on Windows)
-- - Enable core.filemode=true (Windows sets false, Mac needs true)
-- - core.hooksPath fixed to .husky (was pointing to Windows C:\ path)
-- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+COOP header for auth popups + subscribe modal UX (#345)
+- same-origin-allow-popups globally
+-    so Firebase Auth sign-in popups can close after OAuth redirect.
+- replaced GDPR consent checkbox with informational
+-    notice. Enabling email notifications implies consent; users can
+-    unsubscribe via the link in each email or from this page.
