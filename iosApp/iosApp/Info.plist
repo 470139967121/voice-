@@ -63,6 +63,8 @@
 	<string>ShyTalk needs camera access to take profile photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>ShyTalk needs photo library access to share images.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>ShyTalk uses Face ID to secure your account.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

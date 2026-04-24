@@ -61,13 +61,14 @@ router.post('/rooms/:roomId/invites/send', async (req, res) => {
 
     // Send FCM push to invitee
     try {
-      const inviteeSnap = await db.doc(`users/${inviteeId}`).get();
+      const [inviteeSnap, inviterSnap] = await Promise.all([
+        db.doc(`users/${inviteeId}`).get(),
+        db.doc(`users/${body.invitedBy}`).get(),
+      ]);
       const inviteeDoc = inviteeSnap.exists ? inviteeSnap.data() : null;
       const tokens = inviteeDoc?.fcmTokens || [];
       if (tokens.length > 0) {
         const roomName = room.name || 'a room';
-        // Look up inviter's display name
-        const inviterSnap = await db.doc(`users/${body.invitedBy}`).get();
         const inviterName = inviterSnap.exists
           ? inviterSnap.data().displayName || 'Someone'
           : 'Someone';
