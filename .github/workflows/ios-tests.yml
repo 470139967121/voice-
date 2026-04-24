@@ -26,6 +26,10 @@ on:
         description: 'Run matrix jobs in parallel'
         type: boolean
         default: true
+      ref:
+        description: 'Git ref to test (default: main)'
+        type: string
+        default: 'main'
 
 permissions:
   contents: read

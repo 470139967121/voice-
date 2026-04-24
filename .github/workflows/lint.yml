@@ -17,6 +17,11 @@ on:
         required: true
 
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to lint (default: main)'
+        type: string
+        default: 'main'
 
 permissions:
   contents: read

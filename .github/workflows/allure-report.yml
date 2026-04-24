@@ -23,6 +23,32 @@ on:
         type: number
         default: 10
 
+  workflow_dispatch:
+    inputs:
+      suite_name:
+        description: "Test suite name (e.g. android-e2e, playwright, express, kotlin)"
+        required: true
+        type: string
+      report_env:
+        description: "Report environment (pr, deploy)"
+        required: false
+        type: string
+        default: "pr"
+      artifact_pattern:
+        description: "Glob pattern for downloading allure result artifacts"
+        required: false
+        type: string
+        default: "allure-results-*"
+      max_history_runs:
+        description: "Number of historical runs to retain"
+        required: false
+        type: string
+        default: "10"
+
+concurrency:
+  group: allure-gh-pages-deploy
+  cancel-in-progress: false
+
 jobs:
   generate-report:
     name: Generate Allure Report
@@ -149,7 +175,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: allure-report
           destination_dir: ${{ inputs.suite_name }}/${{ inputs.report_env }}/latest
-          keep_files: false
+          keep_files: true
 
       - name: Post report URL in summary
         if: steps.check-existing.outputs.skip != 'true'

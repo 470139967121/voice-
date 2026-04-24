@@ -30,6 +30,14 @@ on:
         description: 'Run matrix jobs in parallel'
         type: boolean
         default: true
+      ref:
+        description: 'Git ref to test (default: main)'
+        type: string
+        default: 'main'
+      report_env:
+        description: 'Report environment: pr or deploy'
+        type: string
+        default: 'pr'
 
 permissions:
   contents: write

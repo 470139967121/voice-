@@ -13,6 +13,15 @@ on:
         default: 'pr'
 
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to test (default: main)'
+        type: string
+        default: 'main'
+      report_env:
+        description: 'Report environment: pr or deploy'
+        type: string
+        default: 'pr'
 
 permissions:
   contents: write
