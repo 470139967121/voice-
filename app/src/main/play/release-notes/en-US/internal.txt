@@ -1,8 +1,7 @@
-v0.93.3
+v0.93.4
 
-iOS build + security + Firestore rules (optimise cycle 2)
-- iOS build:
-- - Added 7 missing Swift files to Xcode project target
-- - Fixed LiveKitBridge to use LiveKit 2.0 RoomDelegate API
-- - Changed import LiveKit to import LiveKitClient
-- - Updated GoogleSignIn pod 4.0 to 9.1
+add GoogleService-Info.plist + plists to Xcode project
+- GoogleService-Info.plist was on disk but not referenced in the
+- Xcode project file, causing Firebase.configure() to crash with
+- SIGABRT on launch. Added as a resource to the build target.
+- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
