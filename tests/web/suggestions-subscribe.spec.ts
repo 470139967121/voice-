@@ -19,28 +19,31 @@ test.describe('Subscribe Modal', () => {
 
   // ── 11.12 — Subscribe Modal ──
 
-  test('opens from header Subscribe button', async ({ page }) => {
+  test('unauthenticated: subscribe button opens shared login modal', async ({ page }) => {
     const subscribeBtn = page.locator('[data-testid="subscribe-btn"], .subscribe-btn');
     await subscribeBtn.waitFor({ timeout: 10_000 });
     await subscribeBtn.click();
-    const modal = page.locator('[data-testid="subscribe-modal"], .subscribe-modal');
-    await expect(modal).toBeVisible({ timeout: 5_000 });
+    // When not logged in, should show the shared login modal (not the subscribe modal)
+    const loginModal = page.locator('[data-testid="login-modal-overlay"]');
+    await expect(loginModal).toBeVisible({ timeout: 5_000 });
   });
 
-  test('opens from per-feature bell icon (feature pre-selected)', async ({ page }) => {
+  test('unauthenticated: bell icon opens shared login modal', async ({ page }) => {
     const bell = page.locator('[data-testid="feature-bell"], .feature-bell').first();
     await bell.waitFor({ timeout: 10_000 });
     await bell.click();
-    // If login prompt appears, that's tested elsewhere — here we test the modal flow
+    const loginModal = page.locator('[data-testid="login-modal-overlay"]');
+    await expect(loginModal).toBeVisible({ timeout: 5_000 });
   });
 
-  test('shows login prompt when not logged in', async ({ page }) => {
+  test('unauthenticated: login modal has Google and Apple sign-in buttons', async ({ page }) => {
     const subscribeBtn = page.locator('[data-testid="subscribe-btn"], .subscribe-btn');
-    if (await subscribeBtn.count() > 0) {
-      await subscribeBtn.click();
-      const loginPrompt = page.locator('[data-testid="login-prompt"], .login-prompt');
-      await expect(loginPrompt).toBeVisible({ timeout: 5_000 });
-    }
+    await subscribeBtn.waitFor({ timeout: 10_000 });
+    await subscribeBtn.click();
+    const loginModal = page.locator('[data-testid="login-modal-overlay"]');
+    await expect(loginModal).toBeVisible({ timeout: 5_000 });
+    await expect(loginModal.locator('[data-testid="auth-google-btn"]')).toBeVisible();
+    await expect(loginModal.locator('[data-testid="auth-apple-btn"]')).toBeVisible();
   });
 
   test('all event types listed with 4 channel toggles each', async ({ page }) => {
