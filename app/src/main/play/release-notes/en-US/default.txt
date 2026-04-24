@@ -1,8 +1,8 @@
-v0.91.0
+v0.92.0
 
-move ProfileScreen to shared + redirect-based OAuth (#349)
-- PlatformImagePicker expect/actual for ProfileScreen migration
-- Cross-platform image picking infrastructure:
-- single image pick
-- pick + crop (circle) for profile photos
-- multi-select for report evidence
+real iOS VoiceService with LiveKit Swift SDK bridge (#350)
+- Replaces IosVoiceServiceStub with real IosLiveKitVoiceService:
+- Architecture (same pattern as Google/Apple Sign-In):
+- - LiveKitBridge interface in iosMain (Kotlin) defines the contract
+- - LiveKitBridgeImpl (Swift) implements it using LiveKit Swift SDK
+- - Swift registers the bridge at app startup via registerLiveKitBridge()
