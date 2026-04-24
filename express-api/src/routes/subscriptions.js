@@ -224,9 +224,10 @@ router.post('/subscriptions/unsubscribe', async (req, res) => {
       return res.status(400).json({ error: 'Invalid unsubscribe token' });
     }
 
-    // TODO: Decode token to get uid, then disable email channel
-    // For now, acknowledge the request
-    res.json({ success: true, message: 'Email notifications disabled' });
+    // TODO: Implement proper HMAC-based token verification + uid extraction
+    res
+      .status(501)
+      .json({ error: 'Not implemented', message: 'Email unsubscribe is not yet available' });
   } catch (err) {
     log.error('subscriptions', 'Unsubscribe failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });

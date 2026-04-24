@@ -1,33 +1,21 @@
 import Foundation
-import LiveKit
+import LiveKitClient
 import shared
 
 /// Swift implementation of the Kotlin LiveKitBridge interface.
-/// Wraps the LiveKit Swift SDK Room API and forwards events to the Kotlin delegate.
-class LiveKitBridgeImpl: shared.LiveKitBridge {
+/// Uses LiveKit 2.0 RoomDelegate pattern for event handling.
+class LiveKitBridgeImpl: NSObject, shared.LiveKitBridge, RoomDelegate {
     private var room: Room?
     private var kotlinDelegate: shared.LiveKitBridgeDelegate?
-    private var eventTask: Task<Void, Never>?
 
     func setDelegate(delegate: shared.LiveKitBridgeDelegate?) {
         self.kotlinDelegate = delegate
     }
 
     func connect(url: String, token: String) {
-        let room = Room()
+        let room = Room(delegate: self)
         self.room = room
 
-        // Listen for room events
-        eventTask?.cancel()
-        eventTask = Task { [weak self] in
-            for await event in room.events {
-                await MainActor.run {
-                    self?.handleEvent(event)
-                }
-            }
-        }
-
-        // Connect to LiveKit server
         Task {
             do {
                 try await room.connect(url: url, token: token)
@@ -42,8 +30,6 @@ class LiveKitBridgeImpl: shared.LiveKitBridge {
     func disconnect() {
         Task {
             await room?.disconnect()
-            eventTask?.cancel()
-            eventTask = nil
             room = nil
         }
     }
@@ -69,31 +55,36 @@ class LiveKitBridgeImpl: shared.LiveKitBridge {
         return room?.connectionState == .connected
     }
 
-    private func handleEvent(_ event: RoomEvent) {
-        switch event {
-        case .connected:
-            kotlinDelegate?.onConnected()
+    // MARK: - RoomDelegate
 
-        case .disconnected:
-            kotlinDelegate?.onDisconnected()
+    func roomDidConnect(_ room: Room) {
+        kotlinDelegate?.onConnected()
+    }
 
-        case .reconnecting:
-            kotlinDelegate?.onReconnecting()
+    func room(_ room: Room, didDisconnectWithError error: LiveKitError?) {
+        kotlinDelegate?.onDisconnected()
+    }
 
-        case .reconnected:
-            kotlinDelegate?.onReconnected()
+    func roomIsReconnecting(_ room: Room) {
+        kotlinDelegate?.onReconnecting()
+    }
 
-        case .activeSpeakersChanged(let speakers):
-            let identities = speakers.compactMap { $0.identity?.stringValue }
-            kotlinDelegate?.onActiveSpeakersChanged(speakerIdentities: identities)
+    func roomDidReconnect(_ room: Room) {
+        kotlinDelegate?.onReconnected()
+    }
 
-        case .participantDisconnected(let participant):
-            if let identity = participant.identity?.stringValue {
-                kotlinDelegate?.onParticipantDisconnected(identity: identity)
-            }
+    func room(_ room: Room, didUpdateSpeakingParticipants participants: [Participant]) {
+        let identities = participants.compactMap { $0.identity?.stringValue }
+        kotlinDelegate?.onActiveSpeakersChanged(speakerIdentities: identities)
+    }
 
-        default:
-            break
+    func room(_ room: Room, participantDidDisconnect participant: RemoteParticipant) {
+        if let identity = participant.identity?.stringValue {
+            kotlinDelegate?.onParticipantDisconnected(identity: identity)
         }
+    }
+
+    func room(_ room: Room, didFailToConnectWithError error: LiveKitError?) {
+        kotlinDelegate?.onConnectionFailed(error: error?.localizedDescription ?? "Connection failed")
     }
 }

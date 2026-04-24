@@ -51,8 +51,8 @@
     var rightHtml;
     if (isAuthenticated) {
       var avatarHtml = avatarUrl
-        ? '<img src="' + avatarUrl + '" alt="" class="sh-avatar" />'
-        : '<span class="sh-avatar sh-avatar--fallback">' + (displayName ? displayName.charAt(0).toUpperCase() : '?') + '</span>';
+        ? '<img src="' + escapeHtml(avatarUrl) + '" alt="" class="sh-avatar" />'
+        : '<span class="sh-avatar sh-avatar--fallback">' + escapeHtml(displayName ? displayName.charAt(0).toUpperCase() : '?') + '</span>';
 
       rightHtml =
         '<div class="sh-user" data-testid="header-user-info">' +

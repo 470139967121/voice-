@@ -159,7 +159,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
     const convSnap = await db.doc(`conversations/${req.params.id}`).get();
     if (!convSnap.exists) return res.status(404).json({ error: 'Conversation not found' });
     const participantIds = convSnap.data().participantIds || [];
-    if (!participantIds.includes(req.auth.uniqueId)) {
+    if (!participantIds.map(String).includes(String(req.auth.uniqueId))) {
       return res.status(403).json({ error: 'Not a participant of this conversation' });
     }
 

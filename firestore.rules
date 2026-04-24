@@ -385,7 +385,7 @@ service cloud.firestore {
 
     // ── Subscriptions — owner-only read/write ───────────────────
     match /subscriptions/{uid} {
-      allow read, write: if request.auth != null && callerUniqueId() == uid;
+      allow read, write: if request.auth != null && string(callerUniqueId()) == uid;
     }
 
     // ── Notifications — owner read/update, server create ────────
