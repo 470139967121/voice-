@@ -1,8 +1,8 @@
-v0.85.0
+v0.86.0
 
-real SignInScreen with Google + Apple + Email (PR E+F) (#336)
+PlatformTts expect/actual for cross-platform TTS (PR I) (#338)
 - ## Summary
-- Replaces the iOS sign-in placeholder with a real screen matching
-- Android. Part of the [iOS Feature Parity
-- plan](/.claude/plans/dazzling-finding-wirth.md) — PRs E+F combined.
-- ### Sign-in methods (matching Android)
+- - Adds `PlatformTts` expect/actual object for cross-platform
+- text-to-speech
+- wraps `android.speech.tts.TextToSpeech` (US locale, 0.75
+- pitch, 0.85 rate)
