@@ -8,7 +8,15 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
+import platform.CoreFoundation.CFDictionaryCreateMutable
 import platform.CoreFoundation.CFDictionaryRef
+import platform.CoreFoundation.CFDictionarySetValue
+import platform.CoreFoundation.CFMutableDictionaryRef
+import platform.CoreFoundation.CFTypeRef
+import platform.CoreFoundation.kCFBooleanTrue
+import platform.CoreFoundation.kCFTypeDictionaryKeyCallBacks
+import platform.CoreFoundation.kCFTypeDictionaryValueCallBacks
+import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
@@ -40,21 +48,35 @@ private val ALL_KEYS =
         "localPinHash",
     )
 
-@Suppress("UNCHECKED_CAST", "CAST_NEVER_SUCCEEDS")
 actual class SecureStorage {
+    private fun createQuery(
+        key: String,
+        extras: Map<CFTypeRef?, CFTypeRef?> = emptyMap(),
+    ): CFMutableDictionaryRef {
+        val dict = CFDictionaryCreateMutable(null, 0, null, null)!!
+        CFDictionarySetValue(dict, kSecClass, kSecClassGenericPassword)
+        CFDictionarySetValue(dict, kSecAttrService, CFBridgingRetain(SERVICE_NAME))
+        CFDictionarySetValue(dict, kSecAttrAccount, CFBridgingRetain(key))
+        for ((k, v) in extras) {
+            CFDictionarySetValue(dict, k, v)
+        }
+        return dict
+    }
+
     actual fun getString(key: String): String? {
         val query =
-            mapOf<Any?, Any?>(
-                kSecClass to kSecClassGenericPassword,
-                kSecAttrService to SERVICE_NAME,
-                kSecAttrAccount to key,
-                kSecReturnData to true,
-                kSecMatchLimit to kSecMatchLimitOne,
+            createQuery(
+                key,
+                mapOf(
+                    kSecReturnData to kCFBooleanTrue,
+                    kSecMatchLimit to kSecMatchLimitOne,
+                ),
             )
         memScoped {
             val result = alloc<platform.CoreFoundation.CFTypeRefVar>()
-            val status = SecItemCopyMatching(query as CFDictionaryRef, result.ptr)
+            val status = SecItemCopyMatching(query, result.ptr)
             if (status != errSecSuccess) return null
+            @Suppress("UNCHECKED_CAST")
             val data = result.value as? NSData ?: return null
             return NSString.create(data = data, encoding = NSUTF8StringEncoding) as? String
         }
@@ -64,7 +86,7 @@ actual class SecureStorage {
         key: String,
         value: String,
     ) {
-        delete(key) // remove existing before adding
+        delete(key)
         val bytes = value.encodeToByteArray()
         if (bytes.isEmpty()) return
         val data =
@@ -72,13 +94,11 @@ actual class SecureStorage {
                 NSData.create(bytes = pinned.addressOf(0), length = bytes.size.toULong())
             }
         val query =
-            mapOf<Any?, Any?>(
-                kSecClass to kSecClassGenericPassword,
-                kSecAttrService to SERVICE_NAME,
-                kSecAttrAccount to key,
-                kSecValueData to data,
+            createQuery(
+                key,
+                mapOf(kSecValueData to CFBridgingRetain(data)),
             )
-        SecItemAdd(query as CFDictionaryRef, null)
+        SecItemAdd(query, null)
     }
 
     actual fun getInt(
@@ -118,12 +138,7 @@ actual class SecureStorage {
     }
 
     private fun delete(key: String) {
-        val query =
-            mapOf<Any?, Any?>(
-                kSecClass to kSecClassGenericPassword,
-                kSecAttrService to SERVICE_NAME,
-                kSecAttrAccount to key,
-            )
-        SecItemDelete(query as CFDictionaryRef)
+        val query = createQuery(key)
+        SecItemDelete(query)
     }
 }
