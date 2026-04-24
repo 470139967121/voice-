@@ -1,8 +1,8 @@
-v0.93.2
+v0.93.3
 
-optimise cycle 1 — 25 findings across 25 passes (#353)
-- optimise cycle 1 — 7 bugs found and fixed
-- Code reviewer findings:
-- 3-char local part leaked all chars — added dedicated case
-- delegate not cleared on leaveChannel — now
--    calls setDelegate(null) before disconnect
+iOS build + security + Firestore rules (optimise cycle 2)
+- iOS build:
+- - Added 7 missing Swift files to Xcode project target
+- - Fixed LiveKitBridge to use LiveKit 2.0 RoomDelegate API
+- - Changed import LiveKit to import LiveKitClient
+- - Updated GoogleSignIn pod 4.0 to 9.1
