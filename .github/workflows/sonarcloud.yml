@@ -13,6 +13,15 @@ on:
         default: true
 
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to analyse (default: main)'
+        type: string
+        default: 'main'
+      app_changed:
+        description: 'Include Kotlin/Android coverage'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
