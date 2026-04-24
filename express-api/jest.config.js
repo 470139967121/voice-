@@ -1,5 +1,6 @@
 module.exports = {
   testEnvironment: 'node',
+  maxWorkers: '50%',
   restoreMocks: true,
   clearMocks: true,
   resetMocks: false,

@@ -46,6 +46,7 @@ const { sanitise, sanitiseTitle } = require('../utils/text-sanitiser');
 const { similarity } = require('../utils/similarity');
 const { sendSystemPm } = require('../utils/system-pm');
 const { sendFcmToTokens } = require('../utils/fcm');
+const { notifyRoadmapSubscribers } = require('../utils/roadmap-notify');
 const {
   VALID_TAGS,
   VALID_LANGUAGES,
@@ -1216,12 +1217,20 @@ router.put('/admin/suggestions/:id/status', async (req, res) => {
       { previousStatus: currentStatus, newStatus, reason: reason || null },
     );
 
-    // Notify subscribers
+    // Notify per-suggestion subscribers (FCM + system PM)
     await notifySubscribers(data, newStatus, {
       suggestionId: id,
       previousStatus: currentStatus,
       reason: reason || null,
     });
+
+    // Notify roadmap subscribers when roadmap changes (fire-and-forget)
+    if (newStatus === 'planned' || newStatus === 'completed') {
+      const action = newStatus === 'planned' ? 'added to the roadmap' : 'marked as complete';
+      notifyRoadmapSubscribers(`"${data.title}" has been ${action}.`).catch((err) => {
+        log.error('admin-suggestions', 'Roadmap notification failed', { error: err.message });
+      });
+    }
 
     log.info('admin-suggestions', 'Suggestion status changed', {
       id,
@@ -1276,6 +1285,14 @@ router.put('/admin/suggestions/:id/link', async (req, res) => {
 
     await createAuditEntry(req.auth.uniqueId, 'suggestion_link', 'suggestion', id, {
       roadmapFeatureId,
+    });
+
+    // Notify roadmap subscribers (fire-and-forget)
+    const sugData = sugDoc.data();
+    notifyRoadmapSubscribers(
+      `"${sugData.title || 'A suggestion'}" has been added to the roadmap.`,
+    ).catch((err) => {
+      log.error('admin-suggestions', 'Roadmap notification failed', { error: err.message });
     });
 
     log.info('admin-suggestions', 'Suggestion linked to roadmap feature', {

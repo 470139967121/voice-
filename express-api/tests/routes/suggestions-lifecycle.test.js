@@ -116,6 +116,11 @@ jest.mock('../../src/utils/fcm', () => ({
   sendFcmToTokens: jest.fn().mockResolvedValue([]),
 }));
 
+const mockNotifyRoadmapSubscribers = jest.fn().mockResolvedValue();
+jest.mock('../../src/utils/roadmap-notify', () => ({
+  notifyRoadmapSubscribers: (...args) => mockNotifyRoadmapSubscribers(...args),
+}));
+
 // ─── App setup ──────────────────────────────────────────────────
 
 const suggestionsRouter = require('../../src/routes/suggestions');
@@ -1389,5 +1394,141 @@ describe('11.106 — Concurrent Admin Operations Extended', () => {
       // Stale data is possible — the point is the request doesn't error
       expect(res2.body).toHaveProperty('status');
     }
+  });
+});
+
+// ─── Roadmap subscription notification trigger ──────────────────
+
+describe('Roadmap subscription notification trigger', () => {
+  test('accepted → planned triggers notifyRoadmapSubscribers', async () => {
+    setupDocMocks({
+      'suggestions/sug-1': makeSuggestionSnap('sug-1', {
+        status: 'accepted',
+        title: 'Dark mode support',
+      }),
+      'roadmapFeatures/feat-1': makeRoadmapFeatureSnap('feat-1'),
+    });
+    const app = createAdminApp();
+    await request(app)
+      .put('/api/admin/suggestions/sug-1/status')
+      .send({ status: 'planned', linkedRoadmapFeature: 'feat-1' })
+      .expect(200);
+
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledTimes(1);
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledWith(
+      expect.stringContaining('Dark mode support'),
+    );
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledWith(
+      expect.stringContaining('added to the roadmap'),
+    );
+  });
+
+  test('planned → completed triggers notifyRoadmapSubscribers', async () => {
+    setupDocMocks({
+      'suggestions/sug-1': makeSuggestionSnap('sug-1', {
+        status: 'planned',
+        title: 'Voice rooms',
+        linkedRoadmapFeature: 'feat-1',
+      }),
+    });
+    const app = createAdminApp();
+    await request(app)
+      .put('/api/admin/suggestions/sug-1/status')
+      .send({ status: 'completed' })
+      .expect(200);
+
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledTimes(1);
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledWith(
+      expect.stringContaining('Voice rooms'),
+    );
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledWith(
+      expect.stringContaining('marked as complete'),
+    );
+  });
+
+  test('pending → accepted does NOT trigger notifyRoadmapSubscribers', async () => {
+    setupDocMocks({
+      'suggestions/sug-1': makeSuggestionSnap('sug-1', { status: 'pending' }),
+    });
+    const app = createAdminApp();
+    await request(app)
+      .put('/api/admin/suggestions/sug-1/status')
+      .send({ status: 'accepted' })
+      .expect(200);
+
+    expect(mockNotifyRoadmapSubscribers).not.toHaveBeenCalled();
+  });
+
+  test('pending → rejected does NOT trigger notifyRoadmapSubscribers', async () => {
+    setupDocMocks({
+      'suggestions/sug-1': makeSuggestionSnap('sug-1', { status: 'pending' }),
+    });
+    const app = createAdminApp();
+    await request(app)
+      .put('/api/admin/suggestions/sug-1/status')
+      .send({ status: 'rejected', reason: 'Duplicate' })
+      .expect(200);
+
+    expect(mockNotifyRoadmapSubscribers).not.toHaveBeenCalled();
+  });
+
+  test('completed → planned triggers notifyRoadmapSubscribers (re-planned)', async () => {
+    setupDocMocks({
+      'suggestions/sug-1': makeSuggestionSnap('sug-1', {
+        status: 'completed',
+        title: 'Gift system',
+        linkedRoadmapFeature: 'feat-1',
+        completedAt: 1709913600000,
+      }),
+    });
+    const app = createAdminApp();
+    await request(app)
+      .put('/api/admin/suggestions/sug-1/status')
+      .send({ status: 'planned', reason: 'Needs rework' })
+      .expect(200);
+
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledTimes(1);
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledWith(
+      expect.stringContaining('Gift system'),
+    );
+  });
+
+  test('planned → accepted does NOT trigger notifyRoadmapSubscribers', async () => {
+    setupDocMocks({
+      'suggestions/sug-1': makeSuggestionSnap('sug-1', {
+        status: 'planned',
+        linkedRoadmapFeature: 'feat-1',
+      }),
+    });
+    const app = createAdminApp();
+    await request(app)
+      .put('/api/admin/suggestions/sug-1/status')
+      .send({ status: 'accepted' })
+      .expect(200);
+
+    expect(mockNotifyRoadmapSubscribers).not.toHaveBeenCalled();
+  });
+
+  test('PUT /admin/suggestions/:id/link triggers notifyRoadmapSubscribers', async () => {
+    setupDocMocks({
+      'suggestions/sug-1': makeSuggestionSnap('sug-1', {
+        status: 'accepted',
+        title: 'Custom themes',
+      }),
+      'roadmapFeatures/feat-1': makeRoadmapFeatureSnap('feat-1'),
+    });
+    const app = createAdminApp();
+    await request(app)
+      .put('/api/admin/suggestions/sug-1/link')
+      .send({ roadmapFeatureId: 'feat-1' })
+      .expect(200);
+
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledTimes(1);
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledWith(
+      expect.stringContaining('Custom themes'),
+    );
+    expect(mockNotifyRoadmapSubscribers).toHaveBeenCalledWith(
+      expect.stringContaining('added to the roadmap'),
+    );
   });
 });

@@ -97,6 +97,10 @@ jest.mock('../../src/utils/log', () => ({
   error: jest.fn(),
 }));
 
+jest.mock('../../src/utils/roadmap-notify', () => ({
+  notifyRoadmapSubscribers: jest.fn().mockResolvedValue(),
+}));
+
 // ─── App setup ──────────────────────────────────────────────────
 
 let suggestionsRouter;
