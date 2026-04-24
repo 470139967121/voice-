@@ -1,8 +1,8 @@
-v0.88.4
+v0.88.5
 
-COOP header for auth popups + subscribe modal UX (#345)
-- same-origin-allow-popups globally
--    so Firebase Auth sign-in popups can close after OAuth redirect.
-- replaced GDPR consent checkbox with informational
--    notice. Enabling email notifications implies consent; users can
--    unsubscribe via the link in each email or from this page.
+bell auth check + Google account picker (#347)
+- 1. Bell icons now check auth state before showing login modal. When
+-    authenticated, they open the subscribe modal instead. Exposed
+-    shytalkOpenSubscribeModal globally from suggestions-board.js.
+- 'select_account' so users can
+-    choose which account to use instead of auto-selecting the last one.
