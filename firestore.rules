@@ -406,5 +406,17 @@ service cloud.firestore {
     match /notificationQueue/{docId} {
       allow read, write: if false;
     }
+
+    // ── Audit log — admin read, server write ──────────────────
+    match /auditLog/{logId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
+    // ── Moderation log — admin read, server write ─────────────
+    match /moderationLog/{logId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
   }
 }
