@@ -1,8 +1,8 @@
-v0.84.0
+v0.85.0
 
-Apple Sign-In helper via ASAuthorizationController (PR D) (#335)
-- Creates performAppleSignIn() suspend function that:
-- - Triggers ASAuthorizationController with email + name scopes
-- - Generates cryptographic nonce (SecRandomCopyBytes)
-- - Hashes nonce with CC_SHA256 for Apple's nonce requirement
-- - Returns AppleSignInResult(idToken, rawNonce) for AuthViewModel
+real SignInScreen with Google + Apple + Email (PR E+F) (#336)
+- ## Summary
+- Replaces the iOS sign-in placeholder with a real screen matching
+- Android. Part of the [iOS Feature Parity
+- plan](/.claude/plans/dazzling-finding-wirth.md) — PRs E+F combined.
+- ### Sign-in methods (matching Android)
