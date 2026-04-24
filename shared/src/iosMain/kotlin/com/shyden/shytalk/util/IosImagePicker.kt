@@ -96,22 +96,28 @@ object IosImagePicker {
                 result.itemProvider.loadDataRepresentationForTypeIdentifier(
                     UTTypeImage.identifier,
                 ) { data, error ->
-                    if (error != null) {
-                        logE("IosImagePicker", "Failed to load image: ${error.localizedDescription}")
-                    } else if (data != null) {
-                        // Convert to UIImage for JPEG compression
-                        val image = UIImage(data = data)
-                        val jpegData = UIImageJPEGRepresentation(image, JPEG_QUALITY)
-                        if (jpegData != null) {
-                            val bytes = nsDataToByteArray(jpegData)
-                            images.add(bytes)
+                    // Dispatch to main thread to avoid race conditions on shared state
+                    platform.darwin.dispatch_async(platform.darwin.dispatch_get_main_queue()) {
+                        if (error != null) {
+                            logE("IosImagePicker", "Failed to load image: ${error.localizedDescription}")
+                        } else if (data != null) {
+                            val image = UIImage(data = data)
+                            val jpegData = UIImageJPEGRepresentation(image, JPEG_QUALITY)
+                            if (jpegData != null) {
+                                val bytes = nsDataToByteArray(jpegData)
+                                images.add(bytes)
+                            } else {
+                                logW("IosImagePicker", "JPEG compression returned null for image")
+                            }
+                        } else {
+                            logW("IosImagePicker", "Image load returned neither data nor error")
                         }
-                    }
 
-                    remaining--
-                    if (remaining == 0) {
-                        onResult(images.take(maxCount))
-                        selfRef = null
+                        remaining--
+                        if (remaining == 0) {
+                            onResult(images.take(maxCount))
+                            selfRef = null
+                        }
                     }
                 }
             }

@@ -9,7 +9,7 @@ class LiveKitBridgeImpl: shared.LiveKitBridge {
     private var kotlinDelegate: shared.LiveKitBridgeDelegate?
     private var eventTask: Task<Void, Never>?
 
-    func setDelegate(delegate: shared.LiveKitBridgeDelegate) {
+    func setDelegate(delegate: shared.LiveKitBridgeDelegate?) {
         self.kotlinDelegate = delegate
     }
 
@@ -51,7 +51,13 @@ class LiveKitBridgeImpl: shared.LiveKitBridge {
     func setMicrophoneEnabled(enabled: Bool) {
         guard let room = room else { return }
         Task {
-            try? await room.localParticipant.setMicrophone(enabled: enabled)
+            do {
+                try await room.localParticipant.setMicrophone(enabled: enabled)
+            } catch {
+                await MainActor.run {
+                    self.kotlinDelegate?.onConnectionFailed(error: "Microphone error: \(error.localizedDescription)")
+                }
+            }
         }
     }
 

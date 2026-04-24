@@ -18,11 +18,10 @@
 
   // ── Constants ──
 
-  var API_BASE = location.hostname.includes("dev")
-    ? "https://dev-api.shytalk.shyden.co.uk"
-    : location.hostname === "localhost" || location.hostname === "127.0.0.1"
-      ? "http://localhost:3000"
-      : "https://api.shytalk.shyden.co.uk";
+  // Check isLocal BEFORE isDev — localhost matches both
+  var isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  var isDev = location.hostname.includes("dev") || isLocal;
+  var API_BASE = isLocal ? "http://localhost:3000" : isDev ? "https://dev-api.shytalk.shyden.co.uk" : "https://api.shytalk.shyden.co.uk"; // localhost checked first
 
   var PAGE_SIZE = 10;
   var SEARCH_DEBOUNCE_MS = 300;
@@ -64,6 +63,7 @@
     { value: "id", label: "Indonesian" },
     { value: "it", label: "Italian" },
     { value: "ja", label: "Japanese" },
+    { value: "km", label: "Khmer" },
     { value: "ko", label: "Korean" },
     { value: "nl", label: "Dutch" },
     { value: "pl", label: "Polish" },
@@ -488,7 +488,7 @@
       '<div class="sg-modal-body" id="sg-subscribe-body">' +
       bodyHtml +
       "</div>" +
-      '<div class="sg-gdpr-consent" data-testid="subscribe-gdpr-notice">' +
+      '<div class="sg-gdpr-consent" data-testid="subscribe-gdpr-notice" data-i18n="gdprEmailConsent">' +
       "By enabling email notifications you consent to receive updates. You can unsubscribe at any time using the link in each email or by returning to this page." +
       "</div>" +
       '<div class="sg-modal-actions">' +

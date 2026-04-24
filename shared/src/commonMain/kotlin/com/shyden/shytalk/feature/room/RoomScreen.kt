@@ -658,7 +658,8 @@ fun RoomScreen(
                                 ) {
                                     Icon(
                                         Icons.Default.MicOff,
-                                        contentDescription = null,
+                                        contentDescription =
+                                            stringResource(Res.string.microphone) + " " + stringResource(Res.string.denied).lowercase(),
                                         tint = Color(0xFFE65100),
                                         modifier = Modifier.padding(end = 8.dp),
                                     )
@@ -855,7 +856,7 @@ fun RoomScreen(
                 if (showRoomNameDialog && uiState.room != null) {
                     val isOwner = uiState.currentRole == RoomRole.OWNER
                     if (isOwner) {
-                        var editedName by remember(showRoomNameDialog) { mutableStateOf(uiState.room?.name ?: "") }
+                        var editedName by remember(showRoomNameDialog, isOwner) { mutableStateOf(uiState.room?.name ?: "") }
                         AlertDialog(
                             onDismissRequest = { showRoomNameDialog = false },
                             title = { Text(stringResource(Res.string.edit_room_name)) },

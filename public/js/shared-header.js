@@ -13,6 +13,7 @@
   'use strict';
 
   var isRendered = false;
+  var documentClickHandler = null;
 
   function getAuth() {
     var auth = window.shytalkAuth;
@@ -34,6 +35,11 @@
   }
 
   function render() {
+    // Clean up previous render's document click listener
+    if (documentClickHandler) {
+      document.removeEventListener('click', documentClickHandler);
+      documentClickHandler = null;
+    }
     var existing = document.querySelector('[data-testid="shared-header"]');
     if (existing) existing.remove();
 
@@ -55,11 +61,11 @@
           '<svg class="sh-chevron" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>' +
         '</div>' +
         '<div class="sh-dropdown" data-testid="header-dropdown">' +
-          '<button class="sh-dropdown-item" data-testid="header-signout-btn">Sign Out</button>' +
+          '<button class="sh-dropdown-item" data-testid="header-signout-btn" data-i18n="signOut">Sign Out</button>' +
         '</div>';
     } else {
       rightHtml =
-        '<button class="sh-signin-btn" data-testid="header-signin-btn">Sign In</button>';
+        '<button class="sh-signin-btn" data-testid="header-signin-btn" data-i18n="signIn">Sign In</button>';
     }
 
     var html =
@@ -95,10 +101,11 @@
         }
       });
 
-      // Close dropdown on outside click
-      document.addEventListener('click', function () {
+      // Close dropdown on outside click (stored for cleanup on re-render)
+      documentClickHandler = function () {
         dropdown.classList.remove('sh-dropdown--open');
-      });
+      };
+      document.addEventListener('click', documentClickHandler);
     } else {
       var signInBtn = header.querySelector('[data-testid="header-signin-btn"]');
       if (signInBtn) {
