@@ -1,8 +1,8 @@
-v0.88.2
+v0.88.3
 
-roadmap sign-in modal + Firebase config fallback (#343)
-- roadmap sign-in modal + Firebase config fallback
-- Three fixes for the roadmap page sign-in:
-- 1. Sign-in modal no longer closes immediately when clicking Google/Apple
--    buttons. The modal stays open while the async popup processes, then
--    auto-closes via the shytalk-auth-changed event after auth succeeds.
+Windows-to-Mac migration — file permissions + git hooks (#344)
+- Windows-to-Mac migration — file permissions + git config
+- - Make all local/*.sh scripts and .husky hooks executable (lost on Windows)
+- - Enable core.filemode=true (Windows sets false, Mac needs true)
+- - core.hooksPath fixed to .husky (was pointing to Windows C:\ path)
+- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
