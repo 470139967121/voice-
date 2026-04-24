@@ -1,8 +1,7 @@
-v0.93.6
+v0.93.7
 
-revert deviceId to placeholder (iOS ClassCastException blocker)
-- The iOS app crashes on launch with:
-- HashMap cannot be cast to CPointer
-- This is a Kotlin/Native interop issue with the GitLive Firebase
-- library on Kotlin 2.4.0-Beta2. Reverted deviceId to placeholder
-- to isolate the issue. The crash occurs during AuthViewModel Koin
+iOS SecureStorage crash — use CFDictionary API
+- Kotlin/Native 2.4.0-Beta2 no longer auto-bridges HashMap to
+- CFDictionaryRef. Fixed by using CFDictionaryCreateMutable +
+- CFDictionarySetValue. iOS app now launches successfully.
+- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
