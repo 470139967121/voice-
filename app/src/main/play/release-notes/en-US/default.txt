@@ -1,8 +1,8 @@
-v0.88.5
+v0.89.0
 
-bell auth check + Google account picker (#347)
-- 1. Bell icons now check auth state before showing login modal. When
--    authenticated, they open the subscribe modal instead. Exposed
--    shytalkOpenSubscribeModal globally from suggestions-board.js.
-- 'select_account' so users can
--    choose which account to use instead of auto-selecting the last one.
+shared header component across all pages (#348)
+- New shared-header.js component provides consistent navigation on
+- every public web page:
+- - Logo (left) linking to home
+- user avatar + name dropdown when signed in,
+-   "Sign In" button when not
