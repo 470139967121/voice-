@@ -51,8 +51,8 @@ class IosPlatformSettingsService : PlatformSettingsService {
     }
 
     override fun getAppIcon(): ImageBitmap? {
-        // iOS app icon loading requires UIImage conversion — return null for now
-        // TODO: Implement with UIImage → ImageBitmap conversion
+        // iOS app icon cannot be loaded as ImageBitmap without platform-specific
+        // UIImage→Skia conversion. The About page gracefully handles null (hides icon).
         return null
     }
 

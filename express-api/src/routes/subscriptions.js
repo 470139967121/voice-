@@ -10,6 +10,7 @@
  * POST   /subscriptions/unsubscribe   → one-click email unsubscribe (token-based, no auth)
  */
 
+const crypto = require('node:crypto');
 const router = require('express').Router();
 const { db, FieldValue } = require('../utils/firebase');
 const log = require('../utils/log');
@@ -209,7 +210,7 @@ router.delete('/subscriptions/push-token', async (req, res) => {
   }
 });
 
-// ─── POST /subscriptions/unsubscribe (no auth — token-based) ────
+// ─── POST /subscriptions/unsubscribe (no auth — HMAC token-based) ────
 
 router.post('/subscriptions/unsubscribe', async (req, res) => {
   try {
@@ -218,16 +219,44 @@ router.post('/subscriptions/unsubscribe', async (req, res) => {
       return res.status(400).json({ error: 'Unsubscribe token required' });
     }
 
-    // Verify token format (HMAC-based — token must be at least 10 chars and
-    // contain an 'unsubscribe' marker or have a valid structure)
-    if (token.length < 10 || !token.includes('unsubscribe')) {
+    // Token format: base64(uid:timestamp:hmac)
+    const secret = process.env.UNSUBSCRIBE_SECRET || 'dev-unsubscribe-secret';
+    let decoded;
+    try {
+      decoded = Buffer.from(token, 'base64').toString('utf-8');
+    } catch {
       return res.status(400).json({ error: 'Invalid unsubscribe token' });
     }
 
-    // TODO: Implement proper HMAC-based token verification + uid extraction
-    res
-      .status(501)
-      .json({ error: 'Not implemented', message: 'Email unsubscribe is not yet available' });
+    const parts = decoded.split(':');
+    if (parts.length !== 3) {
+      return res.status(400).json({ error: 'Invalid unsubscribe token format' });
+    }
+
+    const [uid, timestamp, providedHmac] = parts;
+    const expectedHmac = crypto
+      .createHmac('sha256', secret)
+      .update(`${uid}:${timestamp}`)
+      .digest('hex');
+
+    if (providedHmac !== expectedHmac) {
+      return res.status(403).json({ error: 'Invalid unsubscribe token' });
+    }
+
+    // Token is valid — disable email channel for this user
+    const subRef = db.collection('subscriptions').doc(uid);
+    const subSnap = await subRef.get();
+    if (subSnap.exists) {
+      const prefs = subSnap.data().preferences || {};
+      for (const [event, channels] of Object.entries(prefs)) {
+        if (channels && channels.email) {
+          prefs[event] = { ...channels, email: false };
+        }
+      }
+      await subRef.update({ preferences: prefs, gdprEmailConsent: false });
+    }
+
+    res.json({ success: true, message: 'Email notifications disabled' });
   } catch (err) {
     log.error('subscriptions', 'Unsubscribe failed', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });

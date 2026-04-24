@@ -4,7 +4,6 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import android.util.Log
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.Signature
@@ -37,7 +36,7 @@ actual class CryptoKeyPair {
                 true
             }
         } catch (e: Exception) {
-            Log.e("CryptoKeyPair", "generateOrLoad failed for alias=$alias: ${e.javaClass.simpleName}: ${e.message}")
+            logE("CryptoKeyPair", "generateOrLoad failed for alias=$alias: ${e.javaClass.simpleName}: ${e.message}")
             false
         }
     }
@@ -48,7 +47,7 @@ actual class CryptoKeyPair {
             val entry = keyStore.getCertificate(alias) ?: return null
             Base64.encodeToString(entry.publicKey.encoded, Base64.NO_WRAP)
         } catch (e: Exception) {
-            Log.e("CryptoKeyPair", "getPublicKeyBase64 failed: ${e.javaClass.simpleName}: ${e.message}")
+            logE("CryptoKeyPair", "getPublicKeyBase64 failed: ${e.javaClass.simpleName}: ${e.message}")
             null
         }
     }
@@ -62,11 +61,11 @@ actual class CryptoKeyPair {
             signature.update(data)
             signature.sign()
         } catch (e: KeyPermanentlyInvalidatedException) {
-            Log.e("CryptoKeyPair", "Key invalidated (biometric enrollment changed) for alias=$alias. Deleting key.")
+            logE("CryptoKeyPair", "Key invalidated (biometric enrollment changed) for alias=$alias. Deleting key.")
             delete(alias)
             null
         } catch (e: Exception) {
-            Log.e("CryptoKeyPair", "sign failed: ${e.javaClass.simpleName}: ${e.message}")
+            logE("CryptoKeyPair", "sign failed: ${e.javaClass.simpleName}: ${e.message}")
             null
         }
     }
@@ -76,7 +75,7 @@ actual class CryptoKeyPair {
             keyStore.deleteEntry(alias)
             if (currentAlias == alias) currentAlias = null
         } catch (e: Exception) {
-            Log.w("CryptoKeyPair", "delete failed for alias=$alias: ${e.message}")
+            logW("CryptoKeyPair", "delete failed for alias=$alias: ${e.message}")
         }
     }
 }

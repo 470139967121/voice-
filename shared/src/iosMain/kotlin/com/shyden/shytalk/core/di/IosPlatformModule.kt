@@ -87,8 +87,11 @@ val iosPlatformModule =
         }
 
         // Named qualifiers required by AuthViewModel
-        single(named("deviceId")) { "ios-device" } // TODO: Replace with UIDevice.current.identifierForVendor
-        single(named("bypassDeviceChecks")) { true } // TODO: Set to false once real DeviceRepository is implemented
+        single(named("deviceId")) {
+            platform.UIKit.UIDevice.currentDevice.identifierForVendor
+                ?.UUIDString ?: "unknown-ios"
+        }
+        single(named("bypassDeviceChecks")) { false }
 
         // Platform utilities (actual classes already exist in iosMain)
         single { StickerStorage() }

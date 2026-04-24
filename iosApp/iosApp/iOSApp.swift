@@ -9,9 +9,9 @@ struct iOSApp: App {
 
     init() {
         FirebaseApp.configure()
-        // TODO: Replace #if DEBUG with a proper build flavor system (local/dev/prod)
-        // matching Android's 3 flavors. Currently all debug builds use emulators,
-        // which differs from Android where only the "local" flavor does.
+        // Debug builds use emulators, release builds use production Firebase.
+        // iOS has 2 build configurations (Debug/Release) vs Android's 3 flavors
+        // (local/dev/prod). Debug ≈ local, Release ≈ prod.
         #if DEBUG
         KoinHelperKt.doInitKoin(useEmulators: true)
         #else
