@@ -1,7 +1,7 @@
-v0.93.4
+v0.93.5
 
-add GoogleService-Info.plist + plists to Xcode project
-- GoogleService-Info.plist was on disk but not referenced in the
-- Xcode project file, causing Firebase.configure() to crash with
-- SIGABRT on launch. Added as a resource to the build target.
+optimise cycle 2 critical findings
+- added NSFaceIDUsageDescription (App Store requirement)
+- added legal footer links (privacy, terms, guidelines)
+- parallelized invitee+inviter Firestore reads with Promise.all
 - Claude Opus 4.6 (1M context) <noreply@anthropic.com>
