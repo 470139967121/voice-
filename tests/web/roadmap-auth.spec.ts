@@ -153,6 +153,141 @@ test.describe('Roadmap Auth — Login Prompt', () => {
   });
 });
 
+test.describe('Roadmap Auth — Subscribe uses shared login modal', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/roadmap.html');
+  });
+
+  test('subscribe button (unauthenticated) opens the shared login modal, NOT its own modal', async ({
+    page,
+  }) => {
+    const subscribeBtn = page.locator('[data-testid="subscribe-btn"], .subscribe-btn');
+    await subscribeBtn.waitFor({ timeout: 10_000 });
+    await subscribeBtn.click();
+
+    // Should open the shared login modal (login-modal-overlay), NOT the subscribe modal
+    const loginModal = page.locator('[data-testid="login-modal-overlay"]');
+    await expect(loginModal).toBeVisible({ timeout: 5_000 });
+
+    // The subscribe-specific modal should NOT appear when unauthenticated
+    const subscribeModal = page.locator('[data-testid="subscribe-modal"]');
+    expect(await subscribeModal.count()).toBe(0);
+  });
+
+  test('subscribe login modal matches bell login modal (same testid, same structure)', async ({
+    page,
+  }) => {
+    // Open via subscribe button
+    const subscribeBtn = page.locator('[data-testid="subscribe-btn"], .subscribe-btn');
+    await subscribeBtn.waitFor({ timeout: 10_000 });
+    await subscribeBtn.click();
+
+    const modal = page.locator('[data-testid="login-modal-overlay"]');
+    await expect(modal).toBeVisible({ timeout: 5_000 });
+
+    // Should have Google + Apple sign-in buttons
+    await expect(modal.locator('[data-testid="auth-google-btn"]')).toBeVisible();
+    await expect(modal.locator('[data-testid="auth-apple-btn"]')).toBeVisible();
+
+    // Should have close button
+    await expect(modal.locator('[data-testid="login-modal-close"]')).toBeVisible();
+  });
+
+  test('Google sign-in button calls signInWithGoogle (not just closing the modal)', async ({
+    page,
+  }) => {
+    // Intercept the signInWithGoogle call
+    await page.evaluate(() => {
+      (window as any).__signInCalled = null;
+      if ((window as any).shytalkAuth) {
+        (window as any).shytalkAuth.signInWithGoogle = () => {
+          (window as any).__signInCalled = 'google';
+        };
+      }
+      // Also set up for late binding
+      const origDesc = Object.getOwnPropertyDescriptor(window, 'shytalkAuth');
+      if (!origDesc || !origDesc.set) {
+        let _auth = (window as any).shytalkAuth;
+        Object.defineProperty(window, 'shytalkAuth', {
+          get: () => _auth,
+          set: (v) => {
+            _auth = v;
+            if (_auth) {
+              _auth.signInWithGoogle = () => {
+                (window as any).__signInCalled = 'google';
+              };
+            }
+          },
+          configurable: true,
+        });
+      }
+    });
+
+    // Trigger the login modal
+    const suggestBtn = page.locator('[data-testid="suggest-btn"]');
+    await suggestBtn.waitFor({ timeout: 10_000 });
+    await suggestBtn.click();
+    const modal = page.locator('[data-testid="login-modal-overlay"]');
+    await expect(modal).toBeVisible({ timeout: 5_000 });
+
+    // Click Google sign-in
+    await modal.locator('[data-testid="auth-google-btn"]').click();
+
+    // Verify signInWithGoogle was called
+    const called = await page.evaluate(() => (window as any).__signInCalled);
+    expect(called).toBe('google');
+  });
+
+  test('Apple sign-in button calls signInWithApple (not just closing the modal)', async ({
+    page,
+  }) => {
+    await page.evaluate(() => {
+      (window as any).__signInCalled = null;
+      if ((window as any).shytalkAuth) {
+        (window as any).shytalkAuth.signInWithApple = () => {
+          (window as any).__signInCalled = 'apple';
+        };
+      }
+      const origDesc = Object.getOwnPropertyDescriptor(window, 'shytalkAuth');
+      if (!origDesc || !origDesc.set) {
+        let _auth = (window as any).shytalkAuth;
+        Object.defineProperty(window, 'shytalkAuth', {
+          get: () => _auth,
+          set: (v) => {
+            _auth = v;
+            if (_auth) {
+              _auth.signInWithApple = () => {
+                (window as any).__signInCalled = 'apple';
+              };
+            }
+          },
+          configurable: true,
+        });
+      }
+    });
+
+    const suggestBtn = page.locator('[data-testid="suggest-btn"]');
+    await suggestBtn.waitFor({ timeout: 10_000 });
+    await suggestBtn.click();
+    const modal = page.locator('[data-testid="login-modal-overlay"]');
+    await expect(modal).toBeVisible({ timeout: 5_000 });
+
+    await modal.locator('[data-testid="auth-apple-btn"]').click();
+
+    const called = await page.evaluate(() => (window as any).__signInCalled);
+    expect(called).toBe('apple');
+  });
+
+  test('bell button (unauthenticated) opens the shared login modal', async ({ page }) => {
+    const bell = page.locator('[data-testid="feature-bell"], .feature-bell').first();
+    await bell.waitFor({ timeout: 10_000 });
+    await bell.click();
+
+    const loginModal = page.locator('[data-testid="login-modal-overlay"]');
+    await expect(loginModal).toBeVisible({ timeout: 5_000 });
+  });
+});
+
 test.describe('Roadmap Auth — No Account Found', () => {
   test('shows download prompt when Google login has no ShyTalk account', async ({ page }) => {
     // Simulate: user authenticated with Google but API returns 404
