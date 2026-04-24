@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		036D4D15A0AA571475375EFF /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 27B546F78FF904CF3A1203A3 /* GoogleService-Info.plist */; };
 		049B4CD3866C1CAFC7B794C9 /* StartingScreenService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35E742ACAF202B0309A19B78 /* StartingScreenService.swift */; };
 		058557BA273AAA2400C9D062 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 058557B4273AAA2400C9D062 /* iOSApp.swift */; };
 		058557BB273AAA2400C9D062 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 058557B5273AAA2400C9D062 /* ContentView.swift */; };
@@ -29,8 +30,10 @@
 		A10001012600000000000022 /* StartingScreenViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000022 /* StartingScreenViewTests.swift */; };
 		A10001012600000000000023 /* StartingScreenCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000023 /* StartingScreenCoordinatorTests.swift */; };
 		B730411FA36F2ECB9E56182C /* LiveKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */; };
+		C0DD48EFA35A27E6DE3FF992 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 27B546F78FF904CF3A1203A3 /* GoogleService-Info.plist */; };
 		CC7F41EE90273AC8C670F9E0 /* LiveKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */; };
 		DFFC47D68E0648FF823F0574 /* GoogleSignInHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3441E4A3689761DFC9CF90 /* GoogleSignInHelper.swift */; };
+		F75B4ECEB8B107ED07E36BE5 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5B3F476BAA9E046270D4248E /* Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,9 +54,11 @@
 		058557B7273AAA2400C9D062 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		058557B8273AAA2400C9D062 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0B3441E4A3689761DFC9CF90 /* GoogleSignInHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoogleSignInHelper.swift; path = iosApp/GoogleSignInHelper.swift; sourceTree = SOURCE_ROOT; };
+		27B546F78FF904CF3A1203A3 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "iosApp/GoogleService-Info.plist"; sourceTree = SOURCE_ROOT; };
 		35E742ACAF202B0309A19B78 /* StartingScreenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreenService.swift; path = iosApp/feature/starting/StartingScreenService.swift; sourceTree = SOURCE_ROOT; };
 		49532222F59B432DD934D0D7 /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		59DE73CD449B7006816DC1E8 /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
+		5B3F476BAA9E046270D4248E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = iosApp/Info.plist; sourceTree = SOURCE_ROOT; };
 		68FB5FAA0E85EFC24643CA4B /* Pods-iosApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.debug.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"; sourceTree = "<group>"; };
 		89144DA39CA4D062CF1EE9B3 /* StartingScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreenView.swift; path = iosApp/feature/starting/StartingScreenView.swift; sourceTree = SOURCE_ROOT; };
 		A10001002600000000000001 /* StartingScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartingScreen.swift; sourceTree = "<group>"; };
@@ -79,13 +84,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				78199A8EB882DF3D1CBC2FAA /* Pods_iosApp.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A10004002600000000000001 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -115,6 +113,8 @@
 				0259442BA0EB1D29F51D11FF /* StartingScreenCoordinator.swift */,
 				35E742ACAF202B0309A19B78 /* StartingScreenService.swift */,
 				89144DA39CA4D062CF1EE9B3 /* StartingScreenView.swift */,
+				27B546F78FF904CF3A1203A3 /* GoogleService-Info.plist */,
+				5B3F476BAA9E046270D4248E /* Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -211,7 +211,6 @@
 			buildConfigurationList = A10008002600000000000001 /* Build configuration list for PBXNativeTarget "iosAppTests" */;
 			buildPhases = (
 				A10007002600000000000001 /* Sources */,
-				A10004002600000000000001 /* Frameworks */,
 				A10007002600000000000002 /* Resources */,
 			);
 			buildRules = (
@@ -289,6 +288,7 @@
 				058557BC273AAA2400C9D062 /* Assets.xcassets in Resources */,
 				A10001012600000000000010 /* Localizable.xcstrings in Resources */,
 				A10001012600000000000011 /* PrivacyInfo.xcprivacy in Resources */,
+				036D4D15A0AA571475375EFF /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -296,6 +296,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0DD48EFA35A27E6DE3FF992 /* GoogleService-Info.plist in Resources */,
+				F75B4ECEB8B107ED07E36BE5 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
