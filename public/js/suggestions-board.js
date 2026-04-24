@@ -420,28 +420,6 @@
 
     document.body.insertAdjacentHTML("beforeend", html);
 
-    // Wire up Google/Apple sign-in buttons
-    var modalOverlay = document.getElementById("sg-login-modal-overlay");
-    var googleSignIn = modalOverlay.querySelector(".auth-google-btn");
-    var appleSignIn = modalOverlay.querySelector(".auth-apple-btn");
-    function closeModal() { modalOverlay.remove(); }
-    if (googleSignIn) {
-      googleSignIn.addEventListener("click", function () {
-        if (window.shytalkAuth && window.shytalkAuth.signInWithGoogle) {
-          window.shytalkAuth.signInWithGoogle();
-        }
-        closeModal();
-      });
-    }
-    if (appleSignIn) {
-      appleSignIn.addEventListener("click", function () {
-        if (window.shytalkAuth && window.shytalkAuth.signInWithApple) {
-          window.shytalkAuth.signInWithApple();
-        }
-        closeModal();
-      });
-    }
-
     var overlay = document.getElementById("sg-login-modal-overlay");
     var closeBtn = overlay.querySelector(".sg-modal-close");
     var modalContent = overlay.querySelector(".sg-modal");
@@ -450,6 +428,26 @@
       overlay.remove();
       document.removeEventListener("click", outsideClickHandler, true);
       document.removeEventListener("keydown", keyHandler);
+    }
+
+    // Wire up Google/Apple sign-in buttons
+    var googleSignIn = overlay.querySelector(".auth-google-btn");
+    var appleSignIn = overlay.querySelector(".auth-apple-btn");
+    if (googleSignIn) {
+      googleSignIn.addEventListener("click", function () {
+        if (window.shytalkAuth && window.shytalkAuth.signInWithGoogle) {
+          window.shytalkAuth.signInWithGoogle();
+        }
+        close();
+      });
+    }
+    if (appleSignIn) {
+      appleSignIn.addEventListener("click", function () {
+        if (window.shytalkAuth && window.shytalkAuth.signInWithApple) {
+          window.shytalkAuth.signInWithApple();
+        }
+        close();
+      });
     }
 
     function outsideClickHandler(e) {
