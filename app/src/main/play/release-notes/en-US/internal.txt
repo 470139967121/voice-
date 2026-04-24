@@ -1,8 +1,8 @@
-v0.93.1
+v0.93.2
 
-delete dead iOS stubs (1119 lines removed) (#352)
-- All iOS repository stubs have been replaced by real implementations:
-- real Firebase/Ktor implementations (PRs #332-341)
-- real LiveKit bridge (PR #350)
-- real shared screens (PRs #346, #349, #351)
-- The stubs file was dead code — nothing imported from it.
+optimise cycle 1 — 25 findings across 25 passes (#353)
+- optimise cycle 1 — 7 bugs found and fixed
+- Code reviewer findings:
+- 3-char local part leaked all chars — added dedicated case
+- delegate not cleared on leaveChannel — now
+-    calls setDelegate(null) before disconnect
