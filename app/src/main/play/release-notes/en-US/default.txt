@@ -1,7 +1,8 @@
-v0.93.7
+v0.93.8
 
-iOS SecureStorage crash — use CFDictionary API
-- Kotlin/Native 2.4.0-Beta2 no longer auto-bridges HashMap to
-- CFDictionaryRef. Fixed by using CFDictionaryCreateMutable +
-- CFDictionarySetValue. iOS app now launches successfully.
-- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+bump com.android.billingclient:billing-ktx from 7.1.1 to 8.3.0 (#270)
+- Bumps com.android.billingclient:billing-ktx from 7.1.1 to 8.3.0.
+- ---
+- updated-dependencies:
+- com.android.billingclient:billing-ktx
+- 8.3.0
