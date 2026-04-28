@@ -30,7 +30,11 @@ runs:
         # self-hosted runners typically have /Applications/Xcode.app (no suffix).
         # Try the versioned path first, fall back to the unversioned one if its
         # CFBundleShortVersionString matches the requested major version.
-        XCODE=$(ls -d /Applications/Xcode_${{ inputs.xcode-version }}*.app 2>/dev/null | head -1)
+        # `|| true` is required because GitHub's `shell: bash` runs with
+        # `-eo pipefail`, and an empty glob makes the `ls | head` pipeline
+        # exit non-zero on self-hosted runners that don't have the versioned
+        # Xcode path. Suppressing keeps execution flowing into the fallback.
+        XCODE=$(ls -d /Applications/Xcode_${{ inputs.xcode-version }}*.app 2>/dev/null | head -1 || true)
         if [ -z "$XCODE" ] && [ -d /Applications/Xcode.app ]; then
           ACTUAL=$(defaults read /Applications/Xcode.app/Contents/Info CFBundleShortVersionString 2>/dev/null || echo "")
           if [[ "$ACTUAL" == "${{ inputs.xcode-version }}" || "$ACTUAL" == "${{ inputs.xcode-version }}".* ]]; then
