@@ -52,7 +52,7 @@ concurrency:
 jobs:
   generate-report:
     name: Generate Allure Report
-    runs-on: ubuntu-latest-16-cores
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
