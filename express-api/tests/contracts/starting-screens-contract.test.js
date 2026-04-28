@@ -100,6 +100,13 @@ function makeScreen(overrides = {}) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // mockReset() drains queues from prior tests' mockResolvedValueOnce/
+  // mockImplementation — clearAllMocks() does not. Without these resets,
+  // state bleeds across suites and tests flake when run alongside others.
+  mockDocGet.mockReset();
+  mockDocSet.mockReset();
+  // Re-establish defaults after reset (mockReset wipes any prior .mockResolvedValue)
+  mockDocGet.mockResolvedValue({ exists: false });
   mockDocSet.mockResolvedValue();
 });
 

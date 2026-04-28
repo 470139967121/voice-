@@ -70,13 +70,24 @@ class BillingService(
                     }
                 }
             } else if (billingResult.responseCode != BillingClient.BillingResponseCode.USER_CANCELED) {
+                // Surface USER_INELIGIBLE / PAYMENT_DECLINED_DUE_TO_INSUFFICIENT_FUNDS so the
+                // audit trail can distinguish a Play-blocked purchase (regulatory / parental
+                // controls) from a generic billing error. NO_APPLICABLE_SUB_RESPONSE_CODE is
+                // the absent-signal sentinel.
+                val subCode = billingResult.onPurchasesUpdatedSubResponseCode
+                val errorMessage =
+                    if (subCode != BillingClient.OnPurchasesUpdatedSubResponseCode.NO_APPLICABLE_SUB_RESPONSE_CODE) {
+                        "${billingResult.debugMessage} (subCode=$subCode)"
+                    } else {
+                        billingResult.debugMessage
+                    }
                 _purchaseEvents.tryEmit(
                     PurchaseResult(
                         productId = "",
                         purchaseToken = "",
                         isSubscription = false,
                         success = false,
-                        errorMessage = billingResult.debugMessage,
+                        errorMessage = errorMessage,
                     ),
                 )
             }
@@ -141,10 +152,26 @@ class BillingService(
                 .build()
 
         return suspendCancellableCoroutine { cont ->
-            billingClient.queryProductDetailsAsync(queryParams) { result, detailsList ->
+            billingClient.queryProductDetailsAsync(queryParams) { result, queryResult ->
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    cont.resume(detailsList)
+                    // queryProductDetailsAsync can return OK with a partial productDetailsList;
+                    // the unfetched siblings are the only client-side signal of a Play-side
+                    // fetch failure (mistyped / region-restricted / policy-blocked SKU). Don't
+                    // drop them silently.
+                    val unfetched = queryResult.unfetchedProductList
+                    if (unfetched.isNotEmpty()) {
+                        Log.w(
+                            TAG,
+                            "queryProducts: ${unfetched.size} unfetched: " +
+                                unfetched.joinToString { "${it.productId}(status=${it.statusCode})" },
+                        )
+                    }
+                    cont.resume(queryResult.productDetailsList ?: emptyList())
                 } else {
+                    Log.w(
+                        TAG,
+                        "queryProducts failed: code=${result.responseCode} msg=${result.debugMessage}",
+                    )
                     cont.resume(emptyList())
                 }
             }
@@ -175,26 +202,27 @@ class BillingService(
     suspend fun queryExistingPurchases(): List<Purchase> {
         if (!connect()) return emptyList()
 
-        val inAppPurchases =
-            suspendCancellableCoroutine<List<Purchase>> { cont ->
-                billingClient.queryPurchasesAsync(
-                    QueryPurchasesParams
-                        .newBuilder()
-                        .setProductType(BillingClient.ProductType.INAPP)
-                        .build(),
-                ) { _, purchases -> cont.resume(purchases) }
-            }
-
-        val subPurchases =
-            suspendCancellableCoroutine<List<Purchase>> { cont ->
-                billingClient.queryPurchasesAsync(
-                    QueryPurchasesParams
-                        .newBuilder()
-                        .setProductType(BillingClient.ProductType.SUBS)
-                        .build(),
-                ) { _, purchases -> cont.resume(purchases) }
-            }
-
+        val inAppPurchases = queryPurchasesByType(BillingClient.ProductType.INAPP)
+        val subPurchases = queryPurchasesByType(BillingClient.ProductType.SUBS)
         return inAppPurchases + subPurchases
     }
+
+    // A non-OK response here previously returned silently as an empty list, which would
+    // tell a returning user they don't own SuperShy when the real cause is a transient
+    // SERVICE_DISCONNECTED / ITEM_UNAVAILABLE. Log the failure so the caller can at least
+    // distinguish "no purchases" from "Play SDK couldn't fetch."
+    private suspend fun queryPurchasesByType(type: String): List<Purchase> =
+        suspendCancellableCoroutine { cont ->
+            billingClient.queryPurchasesAsync(
+                QueryPurchasesParams.newBuilder().setProductType(type).build(),
+            ) { result, purchases ->
+                if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                    Log.w(
+                        TAG,
+                        "queryPurchasesAsync($type) failed: code=${result.responseCode} msg=${result.debugMessage}",
+                    )
+                }
+                cont.resume(purchases)
+            }
+        }
 }

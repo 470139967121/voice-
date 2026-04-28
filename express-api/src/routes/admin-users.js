@@ -35,6 +35,13 @@ const { sendEmail } = require('../utils/email');
 const { buildDeletionScheduledEmail } = require('../utils/email-templates');
 const { sendFcmToTokens } = require('../utils/fcm');
 
+// Length caps for admin-supplied free-form text. Bounded inputs prevent
+// a compromised or careless admin from blowing out per-user warning
+// subcollections, the global audit log, and system PM bodies — Firestore
+// document storage is metered and the dev project is on Spark free tier.
+const REASON_MAX_LENGTH = 500;
+const ADMIN_NOTE_MAX_LENGTH = 2000;
+
 // ─── Helpers ─────────────────────────────────────────────────────
 
 /**
@@ -410,43 +417,45 @@ async function createWarning(
 
   const warningId = generateId();
 
-  await Promise.all([
-    // Write warning doc to subcollection
-    db.doc(`users/${uniqueId}/warnings/${warningId}`).set({
-      reason,
-      severity,
-      gcsDeduction: deduction,
-      gcsBefore: gcsScore,
-      gcsAfter: newGcs,
-      adminNote: adminNote || null,
-      issuedBy: adminUid,
-      issuedByName: adminName,
-      source: source || 'direct',
-      linkedReportId: linkedReportId || null,
-      revoked: false,
-      revokedAt: null,
-      revokedBy: null,
-      createdAt: timestamp,
-    }),
-    // Update user doc
-    db.doc(`users/${uniqueId}`).update({
-      gcsScore: newGcs,
-      gcsLastDeductionAt: timestamp,
-      warningCount: newWarningCount,
-      warningReason: reason,
-      hasActiveWarning: true,
-      hasNewWarning: true,
-      warningIssuedAt: timestamp,
-    }),
-    // Audit log
-    db.doc(`adminAuditLog/${generateId()}`).set({
-      adminId: adminUid,
-      action: 'WARN',
-      targetUserId: uniqueId,
-      details: `Severity: ${severity}, GCS: ${gcsScore} → ${newGcs}, Reason: ${reason}, Source: ${source || 'direct'}`,
-      createdAt: timestamp,
-    }),
-  ]);
+  // Atomic batch instead of Promise.all so a partial commit (warning subcollection
+  // doc lands but user-doc update fails — or vice-versa) does NOT leave an
+  // orphan warning record. Without atomicity, the admin retry path produces
+  // duplicate warnings and the GCS deduction can land twice. Firestore batches
+  // are all-or-nothing per chunk and stay under the 500-op limit (we have 3).
+  const batch = db.batch();
+  batch.set(db.doc(`users/${uniqueId}/warnings/${warningId}`), {
+    reason,
+    severity,
+    gcsDeduction: deduction,
+    gcsBefore: gcsScore,
+    gcsAfter: newGcs,
+    adminNote: adminNote || null,
+    issuedBy: adminUid,
+    issuedByName: adminName,
+    source: source || 'direct',
+    linkedReportId: linkedReportId || null,
+    revoked: false,
+    revokedAt: null,
+    revokedBy: null,
+    createdAt: timestamp,
+  });
+  batch.update(db.doc(`users/${uniqueId}`), {
+    gcsScore: newGcs,
+    gcsLastDeductionAt: timestamp,
+    warningCount: newWarningCount,
+    warningReason: reason,
+    hasActiveWarning: true,
+    hasNewWarning: true,
+    warningIssuedAt: timestamp,
+  });
+  batch.set(db.doc(`adminAuditLog/${generateId()}`), {
+    adminId: adminUid,
+    action: 'WARN',
+    targetUserId: uniqueId,
+    details: `Severity: ${severity}, GCS: ${gcsScore} → ${newGcs}, Reason: ${reason}, Source: ${source || 'direct'}`,
+    createdAt: timestamp,
+  });
+  await batch.commit();
 
   return { warningId, newGcs, deduction, warningCount: newWarningCount };
 }
@@ -458,6 +467,10 @@ router.post('/user/:uniqueId/warn', async (req, res) => {
 
     const body = req.body;
     if (!body?.reason) return res.status(400).json({ error: 'reason is required' });
+    if (body.reason.length > REASON_MAX_LENGTH)
+      return res.status(400).json({ error: `reason exceeds ${REASON_MAX_LENGTH} chars` });
+    if (body.adminNote && body.adminNote.length > ADMIN_NOTE_MAX_LENGTH)
+      return res.status(400).json({ error: `adminNote exceeds ${ADMIN_NOTE_MAX_LENGTH} chars` });
 
     const severity = Number.parseInt(body.severity, 10) || 3;
     if (severity < 1 || severity > 5)
@@ -822,6 +835,8 @@ router.post('/user/:uniqueId/suspend', async (req, res) => {
 
     const body = req.body;
     if (!body?.reason) return res.status(400).json({ error: 'reason is required' });
+    if (body.reason.length > REASON_MAX_LENGTH)
+      return res.status(400).json({ error: `reason exceeds ${REASON_MAX_LENGTH} chars` });
     if (typeof body.canAppeal !== 'boolean')
       return res.status(400).json({ error: 'canAppeal must be a boolean' });
 
@@ -921,15 +936,26 @@ router.post('/user/:uniqueId/suspend', async (req, res) => {
       }),
     );
 
-    // Evict from any active rooms (fire-and-forget)
-    evictSuspendedUser(req.params.uniqueId).catch((err) =>
+    // Evict from any active rooms. Awaited (was fire-and-forget) so a partial
+    // cascade is reflected in the admin response — without this, a chunk failure
+    // mid-cascade left rooms in mixed state with the admin shown success.
+    // cascade is unconditionally assigned below; earlier iterations had a
+    // fire-and-forget default that's now dead (Pass-19 cleanup).
+    let cascade;
+    try {
+      cascade = await evictSuspendedUser(req.params.uniqueId);
+    } catch (err) {
       log.error('admin-users', 'Failed to evict suspended user', {
         uniqueId: req.params.uniqueId,
         error: err.message,
-      }),
-    );
+      });
+      // 'cascade_failed' is the same token MOD_ERROR.CASCADE_FAILED in reports.js
+      // exports; admin-users.js doesn't import that registry to avoid a circular
+      // dep, but the wire format is identical.
+      cascade = buildCascadeFailure(err, 'cascade_failed');
+    }
 
-    res.json({ success: true });
+    res.json({ success: true, cascade });
   } catch (err) {
     log.error('admin-users', 'Suspend user failed', {
       uniqueId: req.params.uniqueId,
@@ -1196,60 +1222,12 @@ async function liftAutoAppliedBans(uniqueId, adminUid) {
 // HELPER: Evict suspended user from rooms
 // ══════════════════════════════════════════════════════════════
 
-/**
- * Evict a suspended user from any active rooms they are participating in.
- * Queries rooms where the user is a participant, removes them from
- * participantIds, clears their seat, and clears their currentRoomId.
- */
-async function evictSuspendedUser(uid) {
-  const snapshot = await db
-    .collection('rooms')
-    .where('participantIds', 'array-contains', uid)
-    .get();
-
-  if (snapshot.empty) {
-    // Still clear currentRoomId even if no matching rooms found
-    await db.doc(`users/${uid}`).update({ currentRoomId: null });
-    return;
-  }
-
-  const rooms = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-  // Collect all writes then batch in chunks of 500
-  const writes = [];
-
-  for (const room of rooms) {
-    const participantIds = (room.participantIds || []).filter((id) => id !== uid);
-
-    // Clear any seat occupied by this user
-    const seats = room.seats ? { ...room.seats } : {};
-    for (const [index, seat] of Object.entries(seats)) {
-      if (seat && (seat.userId === uid || seat.user_id === uid)) {
-        seats[index] = {
-          index: Number.parseInt(index, 10),
-          status: 'EMPTY',
-          userId: null,
-          isMuted: false,
-        };
-      }
-    }
-
-    writes.push({ ref: db.doc(`rooms/${room.id}`), data: { participantIds, seats } });
-  }
-
-  // Add the user's currentRoomId clear
-  writes.push({ ref: db.doc(`users/${uid}`), data: { currentRoomId: null } });
-
-  // Batch write in chunks of 500
-  for (let i = 0; i < writes.length; i += 500) {
-    const batch = db.batch();
-    const chunk = writes.slice(i, i + 500);
-    for (const w of chunk) {
-      batch.update(w.ref, w.data);
-    }
-    await batch.commit();
-  }
-}
+// evictSuspendedUser is exported from utils so reports.js + admin-users.js share
+// one canonical implementation. See utils/evict-suspended-user.js for behaviour.
+// buildCascadeFailure unifies the on-wire cascade contract across all 4 sites
+// (Pass-17: previously two literals omitted rtdbEventsFailed and used a stale
+// 'cascade_failed' string token, drifting from the resolve routes).
+const { evictSuspendedUser, buildCascadeFailure } = require('../utils/evict-suspended-user');
 
 // ═══════════════════════════════════════════════════════════════════
 // Admin Auth Management (PIN lockout, biometric keys, OTP metrics)

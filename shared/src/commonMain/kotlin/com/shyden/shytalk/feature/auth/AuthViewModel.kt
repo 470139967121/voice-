@@ -49,6 +49,17 @@ data class AuthUiState(
     val needsPinSetup: Boolean = false,
     val hasStoredCredential: Boolean = false,
     val needsLockScreen: Boolean = false,
+    /**
+     * Set when local auth storage (Keychain / EncryptedSharedPreferences / Firebase
+     * SDK persistence) is in a half-cleared state because `signOut()` or
+     * `clearCredential()` threw. The bare sign-in UI cannot recover from this —
+     * retrying sign-in just hits the same broken storage. UI must show a
+     * non-dismissable error explaining that the user needs to force-quit AND
+     * clear app data, and must disable all auth-action buttons while this is set.
+     * NOT cleared by `clearError()`; survives `_uiState.value = AuthUiState()`
+     * resets only by virtue of every reset point preserving it explicitly.
+     */
+    val requiresAppDataClear: Boolean = false,
 )
 
 class AuthViewModel(
@@ -63,6 +74,32 @@ class AuthViewModel(
 ) : ViewModel() {
     companion object {
         private const val TAG = "AuthViewModel"
+
+        /**
+         * Word-boundary match for HTTP status 401 inside otherwise-free-form error text.
+         * `\b` rejects digit-runs embedded in IPv6 prefixes ("[2401:db00::34]"), epoch ms
+         * timestamps ("76401"), or port numbers — those would falsely trigger the
+         * destructive PIN-clearing path in `handleBackendError`.
+         */
+        private val AUTH_401_REGEX = Regex("\\b401\\b")
+
+        /**
+         * Process-level guard preventing the init() migration path from running more than once
+         * per app process. Without this, on iOS new AuthViewModel instances (created when
+         * Compose recomposes the screen tree) re-trigger the migration path, hammering the
+         * Firebase Auth emulator until rate-limited.
+         */
+        @kotlin.concurrent.Volatile
+        private var migrationCompleted: Boolean = false
+
+        /**
+         * Test-only hook to reset the process-level migration guard between test runs.
+         * Production callers must not invoke this — call sites are gated by `signOut()`
+         * resetting the flag at the natural lifecycle boundary.
+         */
+        internal fun resetMigrationGuardForTests() {
+            migrationCompleted = false
+        }
     }
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -94,14 +131,53 @@ class AuthViewModel(
                     _uiState.update { it.copy(hasStoredCredential = true, needsLockScreen = true) }
                 }
             }
-        } else if (lockRepo != null && !lockRepo.hasCredential && authRepository.isAuthenticated) {
+        } else if (
+            lockRepo != null &&
+            !lockRepo.hasCredential &&
+            authRepository.isAuthenticated &&
+            !migrationCompleted
+        ) {
             // First launch after update: user has Firebase session but no PIN
             // Route through identity resolution → PIN setup (migration path)
+            // Guarded by `migrationCompleted` so we don't loop when a new AuthViewModel
+            // instance is created (e.g. iOS Compose recomposition).
+            migrationCompleted = true
             logI(TAG, "Migration: authenticated user without PIN — will route to PIN setup")
             viewModelScope.launch {
                 val providerInfo = authRepository.getProviderInfo()
                 if (providerInfo != null) {
                     resolveIdentityAndProceed(providerInfo.first, providerInfo.second)
+                } else {
+                    // No recognised provider on the Firebase session (legacy account, anonymous,
+                    // custom-token, or provider profile lacking email/uid). Without a provider
+                    // we can't run identity resolution, so the safe path is to clear the orphaned
+                    // session and let the user re-authenticate.
+                    logW(TAG, "Migration aborted: no recognised provider info — clearing session")
+                    var signedOut = true
+                    try {
+                        authRepository.signOut()
+                    } catch (e: Exception) {
+                        signedOut = false
+                        logE(TAG, "signOut during migration abort failed: ${e.message}")
+                    }
+                    if (signedOut) {
+                        // Reset the migration guard so a fresh sign-in re-enters this path
+                        // cleanly. Only do this when signOut actually succeeded — otherwise
+                        // the next ViewModel construction would re-enter migration with the
+                        // same orphaned session and loop on signOut failures.
+                        migrationCompleted = false
+                    } else {
+                        // Mirror the SF3 hard-error pattern from handleBackendError: surface
+                        // the broken state via the sticky `requiresAppDataClear` flag so the
+                        // UI keeps auth actions disabled. The migration guard intentionally
+                        // stays `true` here — re-entering migration without successful
+                        // signOut just retries the same orphaned session and loops.
+                        _uiState.value =
+                            AuthUiState(
+                                error = UiText.plain("Could not clear stored session — please clear app data and restart"),
+                                requiresAppDataClear = true,
+                            )
+                    }
                 }
             }
         }
@@ -281,10 +357,76 @@ class AuthViewModel(
 
             is Resource.Error -> {
                 logE(TAG, "Identity resolution failed: ${result.message}")
-                _uiState.update { it.copy(isLoading = false, isBackendUnreachable = true) }
+                handleBackendError(result.message)
             }
 
             is Resource.Loading -> Unit
+        }
+    }
+
+    /**
+     * Routes auth-related errors to a fresh sign-in screen, network-related errors to
+     * "Unable to Connect". A stale refresh token previously fell through to the
+     * "Unable to Connect" path, leaving the user stuck retrying instead of re-authenticating.
+     *
+     * Each substring covers a specific producer:
+     * - "Not authenticated"      → IosApiClient when Firebase has no current user.
+     * - "Token refresh"          → IosApiClient when getIdToken(forceRefresh=true) fails.
+     * - "INVALID_REFRESH_TOKEN"  → Firebase Auth REST when the refresh token is revoked.
+     * - "UNAUTHENTICATED"        → gRPC error code surfaced by Firestore SDK.
+     * - "\b401\b"                → raw HTTP status 401 in proxy / CDN error bodies. Word
+     *                              boundaries prevent benign matches inside IPv6 prefixes
+     *                              (e.g., "[2401:db00::34]"), epoch ms timestamps, or port
+     *                              numbers — false positives there would destructively
+     *                              clear the user's PIN.
+     *
+     * If a new auth-error shape surfaces, prefer migrating producers to a typed error code
+     * over extending this list — substring matching on free-form text is fragile.
+     */
+    private suspend fun handleBackendError(errorMessage: String?) {
+        val message = errorMessage.orEmpty()
+        val isAuthError =
+            message.contains("Not authenticated", ignoreCase = true) ||
+                message.contains("Token refresh", ignoreCase = true) ||
+                message.contains("INVALID_REFRESH_TOKEN", ignoreCase = true) ||
+                message.contains("UNAUTHENTICATED", ignoreCase = true) ||
+                AUTH_401_REGEX.containsMatchIn(message)
+        if (isAuthError) {
+            logW(TAG, "Auth error — clearing session and routing to sign-in: $message")
+            var credentialCleared = true
+            var signedOut = true
+            try {
+                appLockRepository?.clearCredential()
+            } catch (e: Exception) {
+                credentialCleared = false
+                logE(TAG, "Failed to clear credential during auth-error recovery: ${e.message}")
+            }
+            try {
+                authRepository.signOut()
+            } catch (e: Exception) {
+                signedOut = false
+                logE(TAG, "Sign-out during auth-error recovery failed: ${e.message}")
+            }
+            resolvedUniqueId = null
+            // signOut() resets the migration guard at its natural lifecycle boundary; if it
+            // threw, do it manually so a subsequent successful sign-in can re-enter migration.
+            if (!signedOut) migrationCompleted = false
+            if (!credentialCleared || !signedOut) {
+                // Fresh sign-in UI on top of half-cleared local state would mislead the user
+                // — retrying any provider just hits the same broken storage and loops. The
+                // `requiresAppDataClear` flag is sticky (not cleared by `clearError()`) so
+                // the UI can keep auth actions disabled until the user actually clears app
+                // data and restarts.
+                _uiState.value =
+                    AuthUiState(
+                        error = UiText.plain("Could not clear stored session — please clear app data and restart"),
+                        requiresAppDataClear = true,
+                    )
+            } else {
+                _uiState.value = AuthUiState()
+            }
+        } else {
+            _uiState.update { it.copy(isLoading = false, isBackendUnreachable = true) }
         }
     }
 
@@ -379,11 +521,11 @@ class AuthViewModel(
                             }
                         }
 
-                        else -> {
-                            _uiState.update {
-                                it.copy(isLoading = false, isBackendUnreachable = true)
-                            }
+                        is Resource.Error -> {
+                            handleBackendError(userResult.message)
                         }
+
+                        is Resource.Loading -> Unit
                     }
                 } else {
                     _uiState.update {
@@ -399,9 +541,7 @@ class AuthViewModel(
             }
 
             is Resource.Error -> {
-                _uiState.update {
-                    it.copy(isLoading = false, isBackendUnreachable = true)
-                }
+                handleBackendError(result.message)
             }
 
             is Resource.Loading -> Unit
@@ -502,7 +642,10 @@ class AuthViewModel(
     }
 
     fun clearError() {
-        _uiState.update { it.copy(error = null) }
+        // Preserve the error message when the sticky storage-corrupted flag is set so
+        // the persistent recovery banner can render it after the snackbar dismisses.
+        // Otherwise the user would see disabled auth buttons with no on-screen reason.
+        _uiState.update { if (it.requiresAppDataClear) it else it.copy(error = null) }
     }
 
     fun clearDeviceLocked() {
@@ -565,6 +708,8 @@ class AuthViewModel(
             appLockRepository?.clearCredential()
             resolvedUniqueId = null
             authRepository.signOut()
+            // Allow migration path to run again on next sign-in
+            migrationCompleted = false
             _uiState.value = AuthUiState()
         }
     }

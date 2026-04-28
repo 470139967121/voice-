@@ -18,15 +18,59 @@
  */
 
 const router = require('express').Router();
-const { db, rtdb } = require('../utils/firebase');
+const { db } = require('../utils/firebase');
 const { generateId, now } = require('../utils/helpers');
-const { requireAdmin, clearSuspensionCache } = require('../middleware/auth');
+const { requireAdmin, clearSuspensionCache, resolveUniqueId } = require('../middleware/auth');
 const { sendSystemPm } = require('../utils/system-pm');
 const { computeDisplayScore } = require('../utils/gcs');
 const { getDoc, queryDocs } = require('../utils/firestore-helpers');
 const { sendFcmToTokens } = require('../utils/fcm');
 const log = require('../utils/log');
 const { createWarning } = require('./admin-users');
+
+// See admin-users.js for rationale; same caps apply here so a long reason
+// can't sneak in through the report-resolve path and bypass the warn/suspend
+// boundary checks. The reporter-side caps below cover POST /reports input
+// — without them, a regular user could write up to the 1MB body limit per
+// report, and admin resolution would propagate that string into multiple
+// Firestore documents (warnings + user doc + audit log).
+const REASON_MAX_LENGTH = 500;
+const ADMIN_NOTE_MAX_LENGTH = 2000;
+const DESCRIPTION_MAX_LENGTH = 2000;
+const MESSAGE_TEXT_MAX_LENGTH = 1000;
+// reportedUserName is forwarded into the FCM admin-alert payload at the bottom of
+// POST /reports. FCM rejects oversized payloads with `messaging/invalid-argument`,
+// which `cleanupInvalidAdminTokens` then matches and DELETES from every admin doc —
+// so a single oversized report could blackhole all admin push notifications. Cap
+// matches the displayName max in the user model.
+const REPORTED_USER_NAME_MAX_LENGTH = 50;
+// evidenceUrls is iterated by the orphan-storage cron, which loads up to 1000 reports'
+// urls into a Set in memory. Cap entry-count + per-entry length so a malicious report
+// can't OOM the cron on the Oracle Cloud free tier (1 GB RAM).
+const EVIDENCE_URLS_MAX_COUNT = 10;
+const EVIDENCE_URL_MAX_LENGTH = 500;
+
+// Stable error tokens for the moderation partial-failure contract. Centralised
+// so the admin client (public/admin/js/tabs/reports.js) references one source of
+// truth — a typo or rename in either handler would otherwise silently break the
+// consumer's branch on the response body. Keys suffix `_FAILED` to mirror the
+// value tokens; locked by a snapshot test.
+const MOD_ERROR = Object.freeze({
+  WARNING_CREATE_FAILED: 'warning_create_failed',
+  SUSPENSION_UPDATE_FAILED: 'suspension_update_failed',
+  CASCADE_FAILED: 'cascade_failed',
+  AUDIT_WRITE_FAILED: 'audit_write_failed',
+  REPORTS_COMMIT_FAILED: 'reports_commit_failed',
+});
+
+// Wrap a thunk so a synchronous throw becomes a rejected promise instead of
+// bubbling to the caller. The Promise.resolve().then(opThunk) trampoline
+// catches sync throws inside opThunk; .catch(onError) absorbs both that and
+// async rejection. Used wherever a fire-and-forget side-effect (audit log,
+// lock release) must NOT 500 a fully-applied moderation action.
+function safeFireAndForget(opThunk, onError) {
+  return Promise.resolve().then(opThunk).catch(onError);
+}
 
 /**
  * Remove invalid FCM tokens from admin user docs in Firestore.
@@ -66,7 +110,6 @@ router.post('/reports', async (req, res) => {
     const {
       reportedUserId,
       reportedUserName,
-      reportedUserUniqueId,
       conversationId,
       messageId,
       messageText,
@@ -77,6 +120,59 @@ router.post('/reports', async (req, res) => {
 
     if (!reportedUserId || !reason) {
       return res.status(400).json({ error: 'reportedUserId and reason required' });
+    }
+
+    // Reporter-side text caps. Without these, a regular authenticated user
+    // can submit up to ~1MB strings, and admin resolution propagates them
+    // into 3 Firestore docs (warning, user doc, audit log).
+    if (typeof reason !== 'string' || reason.length > REASON_MAX_LENGTH)
+      return res.status(400).json({ error: `reason exceeds ${REASON_MAX_LENGTH} chars` });
+    if (
+      description !== undefined &&
+      description !== null &&
+      (typeof description !== 'string' || description.length > DESCRIPTION_MAX_LENGTH)
+    )
+      return res.status(400).json({ error: `description exceeds ${DESCRIPTION_MAX_LENGTH} chars` });
+    if (
+      messageText !== undefined &&
+      messageText !== null &&
+      (typeof messageText !== 'string' || messageText.length > MESSAGE_TEXT_MAX_LENGTH)
+    )
+      return res
+        .status(400)
+        .json({ error: `messageText exceeds ${MESSAGE_TEXT_MAX_LENGTH} chars` });
+    if (
+      reportedUserName !== undefined &&
+      reportedUserName !== null &&
+      (typeof reportedUserName !== 'string' ||
+        reportedUserName.length > REPORTED_USER_NAME_MAX_LENGTH)
+    )
+      return res
+        .status(400)
+        .json({ error: `reportedUserName exceeds ${REPORTED_USER_NAME_MAX_LENGTH} chars` });
+    if (evidenceUrls !== undefined && evidenceUrls !== null) {
+      if (!Array.isArray(evidenceUrls))
+        return res.status(400).json({ error: 'evidenceUrls must be an array' });
+      if (evidenceUrls.length > EVIDENCE_URLS_MAX_COUNT)
+        return res
+          .status(400)
+          .json({ error: `evidenceUrls exceeds ${EVIDENCE_URLS_MAX_COUNT} entries` });
+      for (const url of evidenceUrls) {
+        if (typeof url !== 'string' || url.length > EVIDENCE_URL_MAX_LENGTH)
+          return res
+            .status(400)
+            .json({ error: `evidenceUrls entry exceeds ${EVIDENCE_URL_MAX_LENGTH} chars` });
+      }
+    }
+
+    // Server-authoritative uniqueId resolution. Trusting client-supplied
+    // reportedUserUniqueId would let any reporter cause an admin to suspend
+    // an arbitrary chosen victim — when admin resolves with action='suspended',
+    // the cascade keys off reportedUserUniqueId and immediately closes that
+    // user's rooms regardless of who actually owns the reported behaviour.
+    const reportedUserUniqueId = await resolveUniqueId(reportedUserId);
+    if (!reportedUserUniqueId) {
+      return res.status(400).json({ error: 'reportedUserId does not match any known user' });
     }
 
     // Fetch reporter info
@@ -92,7 +188,7 @@ router.post('/reports', async (req, res) => {
         reporterUniqueId: reporter?.uniqueId ?? reporter?.unique_id ?? null,
         reportedUserId: reportedUserId,
         reportedUserName: reportedUserName || null,
-        reportedUserUniqueId: reportedUserUniqueId || null,
+        reportedUserUniqueId,
         conversationId: conversationId || null,
         messageId: messageId || null,
         messageText: messageText || null,
@@ -176,28 +272,32 @@ router.get('/reports', async (req, res) => {
         )
       : userFiltered;
 
-    // Collect all unique user IDs for enrichment
+    // Collect all unique user IDs for enrichment.
     // User documents are keyed by uniqueId (numeric), NOT Firebase Auth UID.
-    // Build a mapping from reportedUserId → reportedUserUniqueId from report data,
-    // then use uniqueId to fetch user documents.
-    const reportedUniqueIdMap = {}; // reportedUserId → reportedUserUniqueId
-    for (const r of filtered) {
-      if (
-        r.reportedUserId &&
-        r.reportedUserUniqueId !== null &&
-        r.reportedUserUniqueId !== undefined
-      ) {
-        reportedUniqueIdMap[r.reportedUserId] = r.reportedUserUniqueId;
-      }
-    }
+    // Re-resolve reportedUserUniqueId server-side from each unique reportedUserId
+    // rather than trusting `r.reportedUserUniqueId` from the stored report — pre-IDOR-fix
+    // reports may carry a client-injected value, which would surface the wrong
+    // user's profile in the admin moderation queue.
     const reportedUserIds = [...new Set(filtered.map((r) => r.reportedUserId).filter(Boolean))];
-    const reportedUniqueIds = [
-      ...new Set(
-        reportedUserIds
-          .map((uid) => reportedUniqueIdMap[uid])
-          .filter((id) => id !== null && id !== undefined),
-      ),
-    ];
+    const reportedUniqueIdMap = {}; // reportedUserId → server-resolved reportedUserUniqueId
+    // Promise.allSettled (not Promise.all) so a single transient lookup failure
+    // doesn't 500 the entire moderation queue. Reports whose target user can't
+    // be resolved render with reportedUser: null instead.
+    const resolutionResults = await Promise.allSettled(
+      reportedUserIds.map((uid) => resolveUniqueId(uid)),
+    );
+    resolutionResults.forEach((result, idx) => {
+      const uid = reportedUserIds[idx];
+      if (result.status === 'fulfilled' && result.value) {
+        reportedUniqueIdMap[uid] = result.value;
+      } else if (result.status === 'rejected') {
+        log.warn('reports', 'resolveUniqueId failed during list enrichment', {
+          reportedUserId: uid,
+          error: result.reason?.message,
+        });
+      }
+    });
+    const reportedUniqueIds = [...new Set(Object.values(reportedUniqueIdMap))];
     const reporterIds = [...new Set(filtered.map((r) => r.reporterId).filter(Boolean))];
 
     // Parallel-fetch user enrichment data and report locks
@@ -237,14 +337,22 @@ router.get('/reports', async (req, res) => {
       lockMap[lock.id] = lock;
     }
 
-    // Enrich reports
-    const enriched = filtered.map((r) => ({
-      ...r,
-      evidenceUrls: r.evidenceUrls || [],
-      reportedUser: userMap[r.reportedUserId] || null,
-      reporter: reporterMap[r.reporterId] || null,
-      lock: lockMap[r.reportedUserId] || null,
-    }));
+    // Enrich reports. Strip the stored `reportedUserUniqueId` (could be
+    // client-injected on pre-IDOR-fix reports) and replace with the
+    // server-resolved value from `reportedUniqueIdMap`. The admin UI keys
+    // its "navigate to user" action off this field, so leaking the stored
+    // value would let a malicious reporter steer admins to a wrong profile.
+    const enriched = filtered.map((r) => {
+      const { reportedUserUniqueId: _stored, ...rest } = r;
+      return {
+        ...rest,
+        reportedUserUniqueId: reportedUniqueIdMap[r.reportedUserId] ?? null,
+        evidenceUrls: r.evidenceUrls || [],
+        reportedUser: userMap[r.reportedUserId] || null,
+        reporter: reporterMap[r.reporterId] || null,
+        lock: lockMap[r.reportedUserId] || null,
+      };
+    });
 
     // Group by reported user for pending reports
     if (statusFilter === 'pending') {
@@ -257,10 +365,12 @@ router.get('/reports', async (req, res) => {
             displayName: r.reportedUser?.displayName ?? r.reportedUser?.display_name ?? null,
             profilePhotoUrl:
               r.reportedUser?.profilePhotoUrl ?? r.reportedUser?.profile_photo_url ?? null,
+            // Drop the `r.reportedUserUniqueId` fallback — it could be
+            // client-injected on pre-IDOR-fix reports.
             uniqueId:
               r.reportedUser?.uniqueId ??
               r.reportedUser?.unique_id ??
-              r.reportedUserUniqueId ??
+              reportedUniqueIdMap[r.reportedUserId] ??
               null,
             warningCount: r.reportedUser?.warningCount ?? r.reportedUser?.warning_count ?? 0,
             isSuspended: r.reportedUser?.isSuspended ?? r.reportedUser?.is_suspended ?? false,
@@ -286,8 +396,12 @@ router.get('/reports', async (req, res) => {
           displayName: r.reportedUser?.displayName ?? r.reportedUser?.display_name ?? null,
           profilePhotoUrl:
             r.reportedUser?.profilePhotoUrl ?? r.reportedUser?.profile_photo_url ?? null,
+          // Drop the `r.reportedUserUniqueId` fallback (IDOR sliver, see comment above).
           uniqueId:
-            r.reportedUser?.uniqueId ?? r.reportedUser?.unique_id ?? r.reportedUserUniqueId ?? null,
+            r.reportedUser?.uniqueId ??
+            r.reportedUser?.unique_id ??
+            reportedUniqueIdMap[r.reportedUserId] ??
+            null,
           warningCount: r.reportedUser?.warningCount ?? r.reportedUser?.warning_count ?? 0,
           isSuspended: r.reportedUser?.isSuspended ?? r.reportedUser?.is_suspended ?? false,
           gcsDisplayScore: r.reportedUser?.gcsDisplayScore ?? 100,
@@ -319,12 +433,29 @@ router.post('/reports/:id/resolve', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const body = req.body;
+    if (body?.reason && body.reason.length > REASON_MAX_LENGTH)
+      return res.status(400).json({ error: `reason exceeds ${REASON_MAX_LENGTH} chars` });
+    if (body?.adminNote && body.adminNote.length > ADMIN_NOTE_MAX_LENGTH)
+      return res.status(400).json({ error: `adminNote exceeds ${ADMIN_NOTE_MAX_LENGTH} chars` });
+
     const action = normaliseAction(body?.action);
     const timestamp = now();
 
     // Fetch the report
     const report = await getDoc(`reports/${req.params.id}`);
     if (!report) return res.status(404).json({ error: 'Report not found' });
+
+    // Resolve the cascade target BEFORE marking the report resolved. If the target
+    // user no longer exists, refuse with 404 so the report stays pending — otherwise
+    // we'd have a status='resolved' report whose downstream warn/suspend actions
+    // silently no-op'd against a wrong-format doc key.
+    let resolvedTargetUniqueId = null;
+    if (action === 'warned' || action === 'warned_severe' || action === 'suspended') {
+      resolvedTargetUniqueId = await resolveUniqueId(report.reportedUserId);
+      if (!resolvedTargetUniqueId) {
+        return res.status(404).json({ error: 'reported user no longer exists' });
+      }
+    }
 
     // Resolve the report
     await db.doc(`reports/${req.params.id}`).update({
@@ -334,24 +465,71 @@ router.post('/reports/:id/resolve', async (req, res) => {
       resolvedBy: req.auth.uid,
     });
 
-    // Audit log (fire-and-forget)
-    const auditWrite = db.doc(`adminAuditLog/${generateId()}`).set(
-      {
-        adminId: req.auth.uid,
-        action: 'RESOLVE_REPORT',
-        targetUserId: report.reportedUserId,
-        details: `Report ${req.params.id}: ${action}`,
-        createdAt: timestamp,
+    // targetUserId is the canonical uniqueId so forensic queries match
+    // admin-economy.js / admin-temp-id.js / admin-users.js convention. Falls
+    // back to the raw uid if the resolve throws — report is already committed
+    // above and a 500 here would lie about the moderation state.
+    let auditTargetUniqueId;
+    if (resolvedTargetUniqueId) {
+      auditTargetUniqueId = resolvedTargetUniqueId;
+    } else {
+      try {
+        auditTargetUniqueId =
+          (await resolveUniqueId(report.reportedUserId)) ?? report.reportedUserId;
+      } catch (resolveErr) {
+        log.warn('reports', 'audit-log uniqueId resolution failed; logging raw reportedUserId', {
+          reportedUserId: report.reportedUserId,
+          error: resolveErr.message,
+        });
+        auditTargetUniqueId = report.reportedUserId;
+      }
+    }
+    // Fire-and-forget so a Firestore throw doesn't 500 a fully-applied
+    // moderation action. The promise is awaited later — but only via .catch —
+    // so the failure becomes a flag in the response, never an upstream throw.
+    // safeFireAndForget also absorbs synchronous throws (bad path, mocking
+    // quirks) that would otherwise bypass the promise chain and bubble up.
+    let auditLogFailed = false;
+    const auditPromise = safeFireAndForget(
+      () =>
+        db.doc(`adminAuditLog/${generateId()}`).set(
+          {
+            adminId: req.auth.uid,
+            action: 'RESOLVE_REPORT',
+            targetUserId: auditTargetUniqueId,
+            details: `Report ${req.params.id}: ${action}`,
+            createdAt: timestamp,
+          },
+          { merge: true },
+        ),
+      (err) => {
+        log.error('reports', 'Failed to write RESOLVE_REPORT audit log', {
+          reportId: req.params.id,
+          error: err?.message ?? String(err),
+        });
+        auditLogFailed = true;
       },
-      { merge: true },
     );
 
+    // PM-failure tracking parallel to the bulk handler. `targetPmFailed`
+    // covers warn/suspend PMs to the moderation target; `reporterPmFailed`
+    // covers the reporter ack PM. Both surface as `pms: { failed, total }`.
+    let targetPmFailed = false;
+    let reporterPmFailed = false;
+    let warnPmPromise = null;
+    let suspendPmPromise = null;
+    let reporterPmPromise = null;
+
     // Warning actions: create warning doc (which deducts GCS)
+    let warningFailed = false;
     if (action === 'warned' || action === 'warned_severe') {
       const severity = body?.severity || (action === 'warned_severe' ? 4 : 2);
       const warningReason = body?.reason || report.reason;
-      // createWarning expects uniqueId (user doc key), not Firebase Auth UID
-      const warnUniqueId = report.reportedUserUniqueId ?? report.reportedUserId;
+      // resolvedTargetUniqueId was checked non-null at the top of the handler before
+      // the report-status update, so it is safe to use here. Trusting the stored
+      // `report.reportedUserUniqueId` would re-introduce the IDOR for pre-existing
+      // reports whose stored value was supplied by an earlier client.
+      const warnUniqueId = resolvedTargetUniqueId;
 
       try {
         await createWarning(warnUniqueId, {
@@ -364,32 +542,39 @@ router.post('/reports/:id/resolve', async (req, res) => {
           adminUniqueId: req.auth.uniqueId,
         });
 
-        // Send warning PM (fire-and-forget)
-        sendSystemPm(
+        warnPmPromise = sendSystemPm(
           report.reportedUserId,
           `\u26a0\ufe0f You have received a warning.\n\nReason: ${warningReason}\n\nRepeated violations may result in suspension.`,
-        ).catch((err) =>
+        ).catch((err) => {
           log.error('reports', 'Failed to send warning PM', {
             userId: report.reportedUserId,
             error: err.message,
-          }),
-        );
+          });
+          targetPmFailed = true;
+        });
       } catch (warnErr) {
+        // Report is already marked resolved above; failure here means the
+        // warning did NOT land. The admin must see this in the response body
+        // (not just log.error) to be able to retry.
         log.error('reports', 'Failed to create warning from report', {
           reportId: req.params.id,
           error: warnErr.message,
         });
+        warningFailed = true;
       }
     }
 
     // Suspension action: suspend the reported user
+    let cascade = null;
+    let suspensionFailed = false;
     if (action === 'suspended') {
       const suspensionDays = body?.suspensionDays ? Number(body.suspensionDays) : 0;
       const canAppeal = body?.canAppeal ?? false;
       const endTimestamp = suspensionDays > 0 ? Date.now() + suspensionDays * 86400000 : null;
 
-      // User documents are keyed by uniqueId, not Firebase Auth UID
-      const reportedUniqueId = report.reportedUserUniqueId ?? report.reportedUserId;
+      // resolvedTargetUniqueId was server-resolved at the top of the handler; using
+      // it here defeats any client-injected `report.reportedUserUniqueId`.
+      const reportedUniqueId = resolvedTargetUniqueId;
       const reportedUser = await getDoc(`users/${reportedUniqueId}`);
 
       try {
@@ -413,24 +598,34 @@ router.post('/reports/:id/resolve', async (req, res) => {
           currentRoomId: null,
         });
 
-        // Evict from rooms (fire-and-forget)
-        evictSuspendedUser(reportedUniqueId).catch((err) =>
+        // Awaited (was fire-and-forget) so cascade partial-failure surfaces in
+        // the response and the admin UI can warn about manual cleanup.
+        try {
+          cascade = await evictSuspendedUser(reportedUniqueId);
+        } catch (cascadeErr) {
           log.error('reports', 'Failed to evict suspended user from resolve', {
             userId: reportedUniqueId,
-            error: err.message,
-          }),
-        );
+            error: cascadeErr.message,
+          });
+          cascade = buildCascadeFailure(cascadeErr, MOD_ERROR.CASCADE_FAILED);
+        }
 
-        // Send suspension PM (fire-and-forget)
-        sendSystemPm(
+        suspendPmPromise = sendSystemPm(
           report.reportedUserId,
           `Your account has been suspended.\n\nReason: ${report.reason || 'Moderation action'}${canAppeal ? '\n\nYou may submit an appeal.' : ''}`,
-        ).catch(() => {});
+        ).catch((err) => {
+          log.error('reports', 'Failed to send suspension PM from resolve', {
+            userId: report.reportedUserId,
+            error: err.message,
+          });
+          targetPmFailed = true;
+        });
       } catch (susErr) {
         log.error('reports', 'Failed to suspend user from resolve', {
           reportId: req.params.id,
           error: susErr.message,
         });
+        suspensionFailed = true;
       }
     }
 
@@ -448,21 +643,67 @@ router.post('/reports/:id/resolve', async (req, res) => {
       } else {
         actionText = 'reviewed';
       }
-      sendSystemPm(
+      reporterPmPromise = sendSystemPm(
         report.reporterId,
         `Your report has been ${actionText}. Thank you for helping keep ShyTalk safe.`,
-      ).catch((err) =>
+      ).catch((err) => {
         log.error('reports', 'Failed to send reporter PM', {
+          reportId: req.params.id,
           reporterId: report.reporterId,
           error: err.message,
-        }),
-      );
+        });
+        reporterPmFailed = true;
+      });
     }
 
-    // Release lock and write audit log in parallel
-    await Promise.all([auditWrite, db.doc(`reportLocks/${req.params.id}`).delete()]);
+    // Lock release IS important (admin needs it cleared to take the next
+    // moderation action against this user) but a Firestore reject here would
+    // 500 a fully-applied moderation. Surface as `lockRelease.failed` flag
+    // so the admin sees the moderation succeeded AND knows to retry the lock.
+    let lockReleaseFailed = false;
+    await safeFireAndForget(
+      () => db.doc(`reportLocks/${req.params.id}`).delete(),
+      (err) => {
+        log.error('reports', 'Failed to release report lock', {
+          reportId: req.params.id,
+          error: err?.message ?? String(err),
+        });
+        lockReleaseFailed = true;
+      },
+    );
 
-    res.json({ success: true });
+    // INVARIANT: every promise added here MUST have an absorbing .catch.
+    // Promise.all rejects on first unhandled — would 500 a fully-applied
+    // moderation. Do NOT split this await into multiple — flag mutations
+    // happen inside the .catch handlers and must all settle before
+    // responseBody is built.
+    await Promise.all(
+      [auditPromise, warnPmPromise, suspendPmPromise, reporterPmPromise].filter(Boolean),
+    );
+
+    const responseBody = { success: true };
+    if (cascade) responseBody.cascade = cascade;
+    if (warningFailed) {
+      responseBody.warning = { failed: true, error: MOD_ERROR.WARNING_CREATE_FAILED };
+    }
+    if (suspensionFailed) {
+      responseBody.suspension = { failed: true, error: MOD_ERROR.SUSPENSION_UPDATE_FAILED };
+    }
+    if (auditLogFailed) {
+      responseBody.auditLog = { failed: true, error: MOD_ERROR.AUDIT_WRITE_FAILED };
+    }
+    if (lockReleaseFailed) {
+      responseBody.lockRelease = { failed: true };
+    }
+    const totalSinglePms =
+      (warnPmPromise !== null ? 1 : 0) +
+      (suspendPmPromise !== null ? 1 : 0) +
+      (reporterPmPromise !== null ? 1 : 0);
+    const failedSinglePms = (targetPmFailed ? 1 : 0) + (reporterPmFailed ? 1 : 0);
+    if (failedSinglePms > 0) {
+      responseBody.pms = { failed: failedSinglePms, total: totalSinglePms };
+    }
+    res.json(responseBody);
   } catch (err) {
     log.error('reports', 'POST /api/reports/:id/resolve failed', {
       reportId: req.params.id,
@@ -478,6 +719,11 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
     if (requireAdmin(req, res)) return;
 
     const body = req.body;
+    if (body?.reason && body.reason.length > REASON_MAX_LENGTH)
+      return res.status(400).json({ error: `reason exceeds ${REASON_MAX_LENGTH} chars` });
+    if (body?.adminNote && body.adminNote.length > ADMIN_NOTE_MAX_LENGTH)
+      return res.status(400).json({ error: `adminNote exceeds ${ADMIN_NOTE_MAX_LENGTH} chars` });
+
     const action = normaliseAction(body?.action);
     const timestamp = now();
 
@@ -488,6 +734,22 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
         .where('reportedUserId', '==', req.params.userId)
         .where('status', '==', 'pending'),
     );
+
+    // Resolve audit target AFTER the empty-reports early-return below so we
+    // do not burn a Firestore op on a no-op call. Wrapped in try/catch so a
+    // transient Firestore throw does not 500 the request (audit log gets the
+    // raw UID instead, response still succeeds).
+    let auditTargetUniqueId = req.params.userId;
+    if (reports.length > 0) {
+      try {
+        auditTargetUniqueId = (await resolveUniqueId(req.params.userId)) ?? req.params.userId;
+      } catch (resolveErr) {
+        log.warn('reports', 'audit-log uniqueId resolution failed in bulk resolve', {
+          userId: req.params.userId,
+          error: resolveErr.message,
+        });
+      }
+    }
 
     if (reports.length === 0) return res.json({ success: true, resolved: 0 });
 
@@ -502,12 +764,27 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
       },
     }));
 
+    // Track every PM that targets the suspended/warned user. Reporter PMs are
+    // tracked separately in `pmsFailed`; this flag covers warning + suspension
+    // PMs delivered to the moderation target. Without this the admin saw only
+    // reporter-PM failures and silently lost target-PM delivery info.
+    let targetPmFailed = false;
+    let warnPmPromise = null;
+    let suspendPmPromise = null;
+
     // Apply warning if applicable (uses createWarning to write warning doc + update user)
+    let warningFailed = false;
     if (action === 'warned' || action === 'warned_severe') {
       const severity = body?.severity || (action === 'warned_severe' ? 4 : 2);
       const warningReason = body?.reason || 'Multiple reports';
-      // createWarning expects uniqueId (user doc key), not Firebase Auth UID
-      const warnUniqueId = reports[0]?.reportedUserUniqueId ?? req.params.userId;
+      // Re-resolve from req.params.userId (server-trusted Firebase Auth UID per
+      // public/admin/js/tabs/reports.js). Stored reports[].reportedUserUniqueId may
+      // have been client-injected before the F1 IDOR fix; trusting it on the bulk
+      // path would re-open the IDOR through the "Resolve all" admin button.
+      const warnUniqueId = await resolveUniqueId(req.params.userId);
+      if (!warnUniqueId) {
+        return res.status(404).json({ error: 'reported user no longer exists' });
+      }
 
       try {
         await createWarning(warnUniqueId, {
@@ -520,32 +797,40 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
           adminUniqueId: req.auth.uniqueId,
         });
 
-        // Send warning PM (fire-and-forget)
-        sendSystemPm(
+        warnPmPromise = sendSystemPm(
           req.params.userId,
           `\u26a0\ufe0f You have received a warning based on multiple reports.\n\nReason: ${warningReason}\n\nRepeated violations may result in suspension.`,
-        ).catch((err) =>
+        ).catch((err) => {
           log.error('reports', 'Failed to send warning PM', {
             userId: req.params.userId,
             error: err.message,
-          }),
-        );
+          });
+          targetPmFailed = true;
+        });
       } catch (warnErr) {
         log.error('reports', 'Failed to create warning from bulk resolve', {
           userId: req.params.userId,
           error: warnErr.message,
         });
+        warningFailed = true;
       }
     }
 
     // Suspension action: suspend the reported user
+    let cascade = null;
+    let suspensionFailed = false;
+    let suspendAuditFailed = false;
+    let suspendAuditPromise = null;
     if (action === 'suspended') {
       const suspensionDays = body?.suspensionDays ? Number(body.suspensionDays) : 0;
       const canAppeal = body?.canAppeal ?? false;
       const endTimestamp = suspensionDays > 0 ? Date.now() + suspensionDays * 86400000 : null;
 
-      // User docs are keyed by uniqueId; get it from the report data
-      const reportedUniqueId = reports[0]?.reportedUserUniqueId ?? req.params.userId;
+      // Same IDOR-defeating re-resolve as the warn branch above.
+      const reportedUniqueId = await resolveUniqueId(req.params.userId);
+      if (!reportedUniqueId) {
+        return res.status(404).json({ error: 'reported user no longer exists' });
+      }
       const reportedUser = await getDoc(`users/${reportedUniqueId}`);
 
       try {
@@ -569,91 +854,181 @@ router.post('/reports/resolve-all/:userId', async (req, res) => {
           currentRoomId: null,
         });
 
-        evictSuspendedUser(reportedUniqueId).catch((err) =>
+        try {
+          cascade = await evictSuspendedUser(reportedUniqueId);
+        } catch (cascadeErr) {
           log.error('reports', 'Failed to evict suspended user from bulk resolve', {
             userId: reportedUniqueId,
-            error: err.message,
-          }),
-        );
+            error: cascadeErr.message,
+          });
+          cascade = buildCascadeFailure(cascadeErr, MOD_ERROR.CASCADE_FAILED);
+        }
 
-        // Send suspension PM (fire-and-forget)
-        sendSystemPm(
+        suspendPmPromise = sendSystemPm(
           reports[0]?.reportedUserId ?? req.params.userId,
           `Your account has been suspended.\n\nReason: Multiple reports${canAppeal ? '\n\nYou may submit an appeal.' : ''}`,
-        ).catch((err) =>
+        ).catch((err) => {
           log.error('reports', 'Failed to send suspension PM from bulk resolve', {
             userId: req.params.userId,
             error: err.message,
-          }),
-        );
+          });
+          targetPmFailed = true;
+        });
 
-        // Audit log for suspension action
-        db.doc(`adminAuditLog/${generateId()}`)
-          .set(
-            {
-              adminId: req.auth.uid,
-              action: 'SUSPEND',
-              targetUserId: reportedUniqueId,
-              details: `Suspended via bulk resolve (${reports.length} reports)`,
-              createdAt: timestamp,
-            },
-            { merge: true },
-          )
-          .catch((err) =>
+        suspendAuditPromise = safeFireAndForget(
+          () =>
+            db.doc(`adminAuditLog/${generateId()}`).set(
+              {
+                adminId: req.auth.uid,
+                action: 'SUSPEND',
+                targetUserId: reportedUniqueId,
+                details: `Suspended via bulk resolve (${reports.length} reports)`,
+                createdAt: timestamp,
+              },
+              { merge: true },
+            ),
+          (err) => {
             log.error('reports', 'Failed to write suspension audit log from bulk resolve', {
               userId: reportedUniqueId,
               error: err.message,
-            }),
-          );
+            });
+            suspendAuditFailed = true;
+          },
+        );
       } catch (susErr) {
         log.error('reports', 'Failed to suspend user from bulk resolve', {
           userId: req.params.userId,
           error: susErr.message,
         });
+        suspensionFailed = true;
       }
     }
 
-    // Execute batch writes in chunks of 500
-    const combinedWrites = allWrites;
-    for (let i = 0; i < combinedWrites.length; i += 500) {
-      const chunk = combinedWrites.slice(i, i + 500);
+    // Wrap chunk-commit so a Firestore throw on chunk N (after warn/suspend
+    // already committed against the user) does NOT 500 the response. A 500
+    // here would leave the admin UI thinking the entire moderation action
+    // failed, when in fact warn/suspend applied — they'd retry, double-warning
+    // the user. Track which reports landed so the admin sees the truth.
+    let reportsCommitted = 0;
+    let reportsCommitFailed = false;
+    for (let i = 0; i < allWrites.length; i += 500) {
+      const chunk = allWrites.slice(i, i + 500);
       const batch = db.batch();
       for (const w of chunk) {
         batch.set(db.doc(w.path), w.data, { merge: true });
       }
-      await batch.commit();
+      try {
+        await batch.commit();
+        reportsCommitted += chunk.length;
+      } catch (chunkErr) {
+        log.error('reports', 'Failed to commit reports batch in bulk resolve', {
+          userId: req.params.userId,
+          chunkStart: i,
+          chunkSize: chunk.length,
+          error: chunkErr.message,
+        });
+        reportsCommitFailed = true;
+      }
     }
 
-    // Audit log and lock release in parallel
-    await Promise.all([
-      db.doc(`adminAuditLog/${generateId()}`).set(
-        {
-          adminId: req.auth.uid,
-          action: 'RESOLVE_ALL_REPORTS',
-          targetUserId: req.params.userId,
-          details: `Resolved ${reports.length} reports: ${action}`,
-          createdAt: timestamp,
-        },
-        { merge: true },
-      ),
-      db.doc(`reportLocks/${req.params.userId}`).delete(),
-    ]);
+    let bulkAuditFailed = false;
+    const bulkAuditPromise = safeFireAndForget(
+      () =>
+        db.doc(`adminAuditLog/${generateId()}`).set(
+          {
+            adminId: req.auth.uid,
+            action: 'RESOLVE_ALL_REPORTS',
+            targetUserId: auditTargetUniqueId,
+            details: `Resolved ${reports.length} reports: ${action}`,
+            createdAt: timestamp,
+          },
+          { merge: true },
+        ),
+      (err) => {
+        log.error('reports', 'Failed to write RESOLVE_ALL_REPORTS audit log', {
+          userId: req.params.userId,
+          error: err?.message ?? String(err),
+        });
+        bulkAuditFailed = true;
+      },
+    );
 
-    // Resolution PMs to all unique reporters (fire-and-forget)
+    // Lock release IS important but a Firestore reject must NOT 500 a
+    // fully-applied moderation. Surface as `lockRelease.failed` flag.
+    let lockReleaseFailed = false;
+    await safeFireAndForget(
+      () => db.doc(`reportLocks/${req.params.userId}`).delete(),
+      (err) => {
+        log.error('reports', 'Failed to release report lock (bulk)', {
+          userId: req.params.userId,
+          error: err?.message ?? String(err),
+        });
+        lockReleaseFailed = true;
+      },
+    );
+
     const uniqueReporters = [...new Set(reports.map((r) => r.reporterId).filter(Boolean))];
-    for (const reporterId of uniqueReporters) {
+    let pmsFailed = 0;
+    const reporterPmPromises = uniqueReporters.map((reporterId) =>
       sendSystemPm(
         reporterId,
         'Your report has been reviewed. Thank you for helping keep ShyTalk safe.',
-      ).catch((err) =>
+      ).catch((err) => {
         log.error('reports', 'Failed to send reporter PM (resolve-all)', {
+          userId: req.params.userId,
           reporterId,
           error: err.message,
-        }),
-      );
-    }
+        });
+        pmsFailed += 1;
+      }),
+    );
 
-    res.json({ success: true, resolved: reports.length });
+    // INVARIANT: every promise added here MUST have an absorbing .catch.
+    // Promise.all rejects on the first unhandled reject, which would 500 a
+    // fully-applied moderation. The .catch handlers also mutate outer-scope
+    // flags (auditLog/pmsFailed/etc) — do NOT split this await into multiple
+    // awaits or the flags may be unset when the response is built.
+    await Promise.all(
+      [
+        bulkAuditPromise,
+        suspendAuditPromise,
+        warnPmPromise,
+        suspendPmPromise,
+        ...reporterPmPromises,
+      ].filter(Boolean),
+    );
+
+    const responseBody = { success: true, resolved: reportsCommitted };
+    if (reportsCommitFailed || reportsCommitted < reports.length) {
+      responseBody.reports = {
+        committed: reportsCommitted,
+        failed: reports.length - reportsCommitted,
+        total: reports.length,
+        error: MOD_ERROR.REPORTS_COMMIT_FAILED,
+      };
+    }
+    if (cascade) responseBody.cascade = cascade;
+    if (warningFailed) {
+      responseBody.warning = { failed: true, error: MOD_ERROR.WARNING_CREATE_FAILED };
+    }
+    if (suspensionFailed) {
+      responseBody.suspension = { failed: true, error: MOD_ERROR.SUSPENSION_UPDATE_FAILED };
+    }
+    if (bulkAuditFailed || suspendAuditFailed) {
+      responseBody.auditLog = { failed: true, error: MOD_ERROR.AUDIT_WRITE_FAILED };
+    }
+    if (lockReleaseFailed) {
+      responseBody.lockRelease = { failed: true };
+    }
+    const totalPms =
+      uniqueReporters.length +
+      (warnPmPromise !== null ? 1 : 0) +
+      (suspendPmPromise !== null ? 1 : 0);
+    const totalPmsFailed = pmsFailed + (targetPmFailed ? 1 : 0);
+    if (totalPmsFailed > 0) {
+      responseBody.pms = { failed: totalPmsFailed, total: totalPms };
+    }
+    res.json(responseBody);
   } catch (err) {
     log.error('reports', 'POST /api/reports/resolve-all/:userId failed', {
       userId: req.params.userId,
@@ -848,6 +1223,8 @@ router.post('/admin/users/:uniqueId/suspend', async (req, res) => {
 
     const body = req.body;
     if (!body?.reason) return res.status(400).json({ error: 'reason is required' });
+    if (body.reason.length > REASON_MAX_LENGTH)
+      return res.status(400).json({ error: `reason exceeds ${REASON_MAX_LENGTH} chars` });
     if (typeof body.canAppeal !== 'boolean')
       return res.status(400).json({ error: 'canAppeal must be a boolean' });
 
@@ -896,15 +1273,22 @@ router.post('/admin/users/:uniqueId/suspend', async (req, res) => {
       ),
     ]);
 
-    // Evict from rooms (fire-and-forget)
-    evictSuspendedUser(req.params.uniqueId).catch((err) =>
+    // Awaited (was fire-and-forget) so cascade partial-failure is visible to admin.
+    // cascade is unconditionally assigned below (success: evictSuspendedUser
+    // return value; failure: buildCascadeFailure). Earlier iterations had a
+    // fire-and-forget cascade where this default was the response — now dead.
+    let cascade;
+    try {
+      cascade = await evictSuspendedUser(req.params.uniqueId);
+    } catch (err) {
       log.error('reports', 'Failed to evict suspended user', {
         userId: req.params.uniqueId,
         error: err.message,
-      }),
-    );
+      });
+      cascade = buildCascadeFailure(err, MOD_ERROR.CASCADE_FAILED);
+    }
 
-    res.json({ success: true });
+    res.json({ success: true, cascade });
   } catch (err) {
     log.error('reports', 'POST /api/admin/users/:uniqueId/suspend failed', {
       userId: req.params.uniqueId,
@@ -1166,90 +1550,9 @@ router.patch('/appeals/:id', async (req, res) => {
 // HELPERS
 // ══════════════════════════════════════════════════════════════
 
-/**
- * Evict a suspended user from all rooms they're in.
- *
- * Queries rooms where the user appears in participantIds, removes them from
- * the participant list, clears their seat, and clears their currentRoomId.
- * If the user is the owner, the room is closed and an RTDB close event is fired.
- */
-async function evictSuspendedUser(userId) {
-  const rooms = await queryDocs(
-    db.collection('rooms').where('participantIds', 'array-contains', userId),
-  );
-
-  if (rooms.length === 0) return;
-
-  const batchOps = [];
-  const rtdbEvents = []; // Collect RTDB writes to fire AFTER Firestore batch
-
-  for (const room of rooms) {
-    if (room.ownerId === userId) {
-      // Owner suspended — close the room
-      batchOps.push({
-        path: `rooms/${room.id}`,
-        data: { state: 'CLOSED', closedAt: now() },
-      });
-      rtdbEvents.push({ roomId: room.id, type: 'room_closed', remove: true });
-    } else {
-      // Regular participant — remove from participants and clear their seat
-      const participantIds = (room.participantIds || []).filter((id) => id !== userId);
-
-      const seats = room.seats ? { ...room.seats } : {};
-      for (const [index, seat] of Object.entries(seats)) {
-        if (seat && (seat.userId === userId || seat.user_id === userId)) {
-          seats[index] = { userId: null, state: 'EMPTY', isMuted: false };
-        }
-      }
-
-      batchOps.push({
-        path: `rooms/${room.id}`,
-        data: { participantIds, seats },
-      });
-      rtdbEvents.push({ roomId: room.id, type: 'room_updated', remove: false });
-    }
-  }
-
-  // Clear user's currentRoomId
-  batchOps.push({
-    path: `users/${userId}`,
-    data: { currentRoomId: null },
-  });
-
-  // Commit Firestore batch first
-  for (let i = 0; i < batchOps.length; i += 500) {
-    const chunk = batchOps.slice(i, i + 500);
-    const batch = db.batch();
-    for (const op of chunk) {
-      batch.set(db.doc(op.path), op.data, { merge: true });
-    }
-    await batch.commit();
-  }
-
-  // Then fire RTDB events (after Firestore is committed)
-  for (const evt of rtdbEvents) {
-    try {
-      await rtdb.ref(`rooms/${evt.roomId}/events/lastEvent`).set({
-        type: evt.type,
-        ts: Date.now(),
-      });
-    } catch (err) {
-      log.warn('reports', `Failed to write ${evt.type} RTDB event`, {
-        roomId: evt.roomId,
-        error: err.message,
-      });
-    }
-    if (evt.remove) {
-      try {
-        await rtdb.ref(`rooms/${evt.roomId}`).remove();
-      } catch (err) {
-        log.warn('reports', 'Failed to remove RTDB room node', {
-          roomId: evt.roomId,
-          error: err.message,
-        });
-      }
-    }
-  }
-}
+const { evictSuspendedUser, buildCascadeFailure } = require('../utils/evict-suspended-user');
 
 module.exports = router;
+// Attach the MOD_ERROR token table to the exported router so the
+// snapshot test can lock its values without parsing the source.
+module.exports.MOD_ERROR = MOD_ERROR;

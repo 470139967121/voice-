@@ -1,6 +1,23 @@
 module.exports = {
   testEnvironment: 'node',
-  maxWorkers: '50%',
+  // Capped workers + per-worker idle memory + extended timeout exist
+  // together to absorb OS-level resource contention, not slow test logic.
+  //
+  // * maxWorkers: 2 — fewer workers = more memory each, fewer GC stalls
+  //   under sustained load. Higher counts caused per-run flake.
+  // * workerIdleMemoryLimit: 1GB — recycle workers when the heap crosses
+  //   the limit so memory doesn't accumulate across hundreds of test
+  //   files within one worker process.
+  // * testTimeout: 10000 — individual tests pass in milliseconds in
+  //   isolation. The 5s Jest default triggers false-positive timeouts
+  //   only when a worker is mid-GC or supertest's ephemeral HTTP server
+  //   is slow to bind under macOS's loopback contention.
+  maxWorkers: 2,
+  workerIdleMemoryLimit: '1GB',
+  testTimeout: 10000,
+  // Enable per-test retry for transient socket failures (ECONNRESET / hang up
+  // from ephemeral port exhaustion). See jest-retry-setup.js for the why.
+  setupFiles: ['./tests/_helpers/jest-retry-setup.js'],
   restoreMocks: true,
   clearMocks: true,
   resetMocks: false,
