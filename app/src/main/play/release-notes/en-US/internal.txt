@@ -1,8 +1,8 @@
-v0.93.10
+v0.93.11
 
-iOS Dev Sign-In + Legal gate + auth-error misclassifier (cycle 5) (#355)
-- hide Email sign-in on iOS to match Android parity
-- Android has the EmailSignInButton commented out pending self-hosted
-- mail server. iOS was showing it, violating tri-platform parity.
-- Claude Opus 4.6 (1M context) <noreply@anthropic.com>
-- iOS Dev Sign-In + Legal gate + auth-error misclassifier (cycle 5)
+disable code-signing on pod targets (#367)
+- disable code-signing on pod targets in Podfile post_install
+- The Deploy To Dev / Prod workflows pass `CODE_SIGN_STYLE=Manual` and
+- `PROVISIONING_PROFILE_SPECIFIER="ShyTalk App Store Distribution"` as global
+- xcodebuild CLI flags. CLI flags override per-target settings AND apply to
+- every target in the workspace, including all CocoaPod static-library targets
