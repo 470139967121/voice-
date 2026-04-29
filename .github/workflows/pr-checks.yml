@@ -27,6 +27,8 @@ jobs:
       backend_changed: ${{ steps.changes.outputs.backend_changed }}
       web_changed: ${{ steps.changes.outputs.web_changed }}
       workflow_only: ${{ steps.changes.outputs.workflow_only }}
+      skip_android_e2e: ${{ steps.changes.outputs.skip_android_e2e }}
+      skip_ios_e2e: ${{ steps.changes.outputs.skip_ios_e2e }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -34,6 +36,8 @@ jobs:
 
       - name: Detect changed paths
         id: changes
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           # Diff entire branch against main — not just the latest push.
           # This ensures all changes in the PR are detected, even if the
@@ -56,10 +60,24 @@ jobs:
           if [ "$APP" = "false" ] && [ "$BACKEND" = "false" ] && [ "$WEB" = "false" ] && [ "$OTHER" = "false" ]; then
             WORKFLOW_ONLY=true
           fi
-          for v in app_changed=$APP backend_changed=$BACKEND web_changed=$WEB workflow_only=$WORKFLOW_ONLY; do
+          # Explicit per-platform E2E skip markers in the PR body. Use when the
+          # developer has verified locally that the changeset cannot affect that
+          # platform's runtime behaviour (e.g. an iOS-only feature whose
+          # commonMain additions are not consumed by Android Koin wiring). The
+          # paid runner emulator pool flakes intermittently; gating iOS-only
+          # work on Android E2E wastes minutes and blocks legitimate merges.
+          SKIP_ANDROID_E2E=false
+          SKIP_IOS_E2E=false
+          if echo "$PR_BODY" | grep -qF '[skip-android-e2e]'; then
+            SKIP_ANDROID_E2E=true
+          fi
+          if echo "$PR_BODY" | grep -qF '[skip-ios-e2e]'; then
+            SKIP_IOS_E2E=true
+          fi
+          for v in app_changed=$APP backend_changed=$BACKEND web_changed=$WEB workflow_only=$WORKFLOW_ONLY skip_android_e2e=$SKIP_ANDROID_E2E skip_ios_e2e=$SKIP_IOS_E2E; do
             echo "$v" >> "$GITHUB_OUTPUT"
           done
-          echo "Detection results: app=$APP backend=$BACKEND web=$WEB workflow_only=$WORKFLOW_ONLY"
+          echo "Detection results: app=$APP backend=$BACKEND web=$WEB workflow_only=$WORKFLOW_ONLY skip_android_e2e=$SKIP_ANDROID_E2E skip_ios_e2e=$SKIP_IOS_E2E"
 
   lint:
     needs: [detect-changes]
@@ -177,6 +195,7 @@ jobs:
     if: |
       always() &&
       needs.detect-changes.outputs.app_changed == 'true' &&
+      needs.detect-changes.outputs.skip_android_e2e != 'true' &&
       needs.build-and-test.result == 'success' &&
       (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped') &&
       (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
@@ -209,6 +228,7 @@ jobs:
     if: |
       always() &&
       needs.detect-changes.outputs.app_changed == 'true' &&
+      needs.detect-changes.outputs.skip_ios_e2e != 'true' &&
       needs.build-and-test.result == 'success' &&
       (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped') &&
       (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
