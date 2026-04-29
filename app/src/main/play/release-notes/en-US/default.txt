@@ -1,8 +1,8 @@
-v0.94.7
+v0.94.8
 
-/api/health returns deployed SHA (closes Phase 0 #64) (#397)
-- Closes the "deploy succeeded but old pm2 process still running"
-- silent-failure class. Without this, a deploy could:
--   1. scp the new tarball
--   2. tar xzf onto the server
--   3. pm2 restart returns 0
+defensive cases for showResultToast (#398)
+- Code-reviewer flagged the lib's defensive surface (null result,
+- malformed result, missing showToast) wasn't locked by tests, even
+- though the lib explicitly markets itself as "the silent-failure
+- class this lib defends against."
+- Add 6 cases covering:
