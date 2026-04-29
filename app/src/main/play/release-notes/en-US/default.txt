@@ -1,8 +1,8 @@
-v0.94.2
+v0.94.3
 
-restore TestFlight uploads broken since 2026-03-12 (#372)
-- restore TestFlight uploads broken since 2026-03-12
-- upload`, making `xcodebuild
-- -exportArchive` attempt the App Store Connect upload itself during
-- the export step. The upload silently failed (no TestFlight builds
-- arrived since 2026-03-12) while xcodebuild still reported
+dedup rtdbEventsFailed counter in evict-suspended-user (#386)
+- For owner-closure rooms, the cascade fires TWO RTDB calls:
+- 'room_closed' })
+-   2. remove('rooms/<id>')
+- Both incremented the same `rtdbEventsFailed` counter, so a room
+- 2`
