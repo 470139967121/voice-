@@ -290,13 +290,28 @@ router.patch('/user/:uniqueId', async (req, res) => {
       }
       if (updates.superShyExpiry !== undefined)
         pmMessages.push('Your Super Shy expiry date has been updated.');
+      let pmSent = 0;
+      let pmFailed = 0;
       for (const msg of pmMessages) {
         try {
           await sendSystemPm(uid, msg);
+          pmSent++;
         } catch (e) {
           log.warn('system-pm', 'Failed to send', { uid, error: e.message });
+          pmFailed++;
         }
       }
+      // Surface partial-failure to the admin UI so it can offer "Retry notify".
+      // Shape matches partial-failure-toast.js's `pms: { failed, total }`
+      // contract — same as reports.js — so the existing
+      // PartialFailureToast.buildPartialFailureMessage() can render it
+      // without additional handler code.
+      res.json({
+        success: true,
+        updatedFields: Object.keys(updates),
+        pms: { failed: pmFailed, total: pmSent + pmFailed },
+      });
+      return;
     }
 
     res.json({ success: true, updatedFields: Object.keys(updates) });
@@ -918,7 +933,11 @@ router.post('/user/:uniqueId/suspend', async (req, res) => {
       ]);
     }
 
-    // Send system PM about suspension (non-blocking)
+    // Send system PM about suspension. Track failure so the admin UI knows
+    // whether the user was actually informed — a suspension where the user
+    // never got the notification is a UX failure even though the suspension
+    // itself succeeded.
+    let pmFailed = false;
     try {
       await sendSystemPm(
         req.params.uniqueId,
@@ -926,6 +945,7 @@ router.post('/user/:uniqueId/suspend', async (req, res) => {
       );
     } catch (e) {
       log.warn('system-pm', 'Failed to send', { uniqueId: req.params.uniqueId, error: e.message });
+      pmFailed = true;
     }
 
     // Auto-apply device and network bans (fire-and-forget)
@@ -955,7 +975,13 @@ router.post('/user/:uniqueId/suspend', async (req, res) => {
       cascade = buildCascadeFailure(err, 'cascade_failed');
     }
 
-    res.json({ success: true, cascade });
+    // pms shape matches partial-failure-toast.js (failed, total). Single PM
+    // for the suspension reason; either delivered or not.
+    res.json({
+      success: true,
+      cascade,
+      pms: { failed: pmFailed ? 1 : 0, total: 1 },
+    });
   } catch (err) {
     log.error('admin-users', 'Suspend user failed', {
       uniqueId: req.params.uniqueId,
@@ -1018,15 +1044,21 @@ router.post('/user/:uniqueId/unsuspend', async (req, res) => {
       }),
     );
 
-    // Send system PM about unsuspension (non-blocking)
+    // Send system PM about unsuspension — track failure so admin UI can
+    // surface that the user wasn't informed about being unsuspended.
+    let pmFailed = false;
     try {
       await sendSystemPm(req.params.uniqueId, 'Your account suspension has been lifted.');
     } catch (e) {
       log.warn('system-pm', 'Failed to send', { uniqueId: req.params.uniqueId, error: e.message });
+      pmFailed = true;
     }
 
     clearSuspensionCache(Number(req.params.uniqueId));
-    res.json({ success: true });
+    res.json({
+      success: true,
+      pms: { failed: pmFailed ? 1 : 0, total: 1 },
+    });
   } catch (err) {
     log.error('admin-users', 'Unsuspend user failed', {
       uniqueId: req.params.uniqueId,

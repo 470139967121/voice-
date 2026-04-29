@@ -867,6 +867,8 @@ async function notifySubscribers(suggestionData, eventType, extraData = {}) {
     const uidsToNotify = new Set(subscribers);
     if (submitterUid) uidsToNotify.add(submitterUid);
 
+    let notified = 0;
+    const failedUids = [];
     for (const uid of uidsToNotify) {
       try {
         const userDoc = await db.doc(`users/${uid}`).get();
@@ -886,12 +888,26 @@ async function notifySubscribers(suggestionData, eventType, extraData = {}) {
           title: suggestionData.title,
           ...extraData,
         });
-      } catch {
-        // Notification failure should not block the main operation
+        notified++;
+      } catch (notifyErr) {
+        // Don't block main operation, but log per-uid so admins can see
+        // which subscribers got their notification dropped (previously a
+        // bare `catch {}` swallowed everything: Firestore read failure,
+        // FCM auth/network errors, sendSystemPm Firestore write failure,
+        // even programmer errors — admin saw "success" while half of
+        // subscribers got nothing).
+        log.warn('admin-suggestions', 'Failed to notify subscriber', {
+          uid,
+          eventType,
+          error: notifyErr.message,
+        });
+        failedUids.push(uid);
       }
     }
+    return { notified, failedUids };
   } catch (err) {
     log.error('admin-suggestions', 'Notification dispatch failed', { error: err.message });
+    return { notified: 0, failedUids: [] };
   }
 }
 
@@ -1217,8 +1233,11 @@ router.put('/admin/suggestions/:id/status', async (req, res) => {
       { previousStatus: currentStatus, newStatus, reason: reason || null },
     );
 
-    // Notify per-suggestion subscribers (FCM + system PM)
-    await notifySubscribers(data, newStatus, {
+    // Notify per-suggestion subscribers (FCM + system PM). Capture
+    // partial-failure counts so the admin UI can show "X/Y subscribers
+    // didn't receive their notification" via the existing
+    // PartialFailureToast.buildPartialFailureMessage() helper.
+    const notifyResult = await notifySubscribers(data, newStatus, {
       suggestionId: id,
       previousStatus: currentStatus,
       reason: reason || null,
@@ -1237,9 +1256,17 @@ router.put('/admin/suggestions/:id/status', async (req, res) => {
       from: currentStatus,
       to: newStatus,
       adminUid: req.auth.uniqueId,
+      pmFailed: notifyResult.failedUids.length,
     });
 
-    res.json({ success: true });
+    // pms shape matches partial-failure-toast.js: { failed, total }.
+    res.json({
+      success: true,
+      pms: {
+        failed: notifyResult.failedUids.length,
+        total: notifyResult.notified + notifyResult.failedUids.length,
+      },
+    });
   } catch (err) {
     log.error('admin-suggestions', 'Failed to change suggestion status', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
