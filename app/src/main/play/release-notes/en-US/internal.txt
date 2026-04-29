@@ -1,8 +1,8 @@
-v0.94.5
+v0.94.6
 
-wire admin UI to consume PM partial-failure flags (#392)
-- wire admin UI to consume PM partial-failure flags
-- Server side (PRs #384, #385) emits `pms: { failed, total }` on every
-- admin route where a user-visible PM might be silently dropped, but
-- the admin UI was discarding those responses entirely — the new
-- signal landed as bytes-on-the-wire that admins never saw, defeating
+move .p8 to $RUNNER_TEMP/private_keys/ (closes Phase 0 #63) (#396)
+- move .p8 to \$RUNNER_TEMP/private_keys/ (closes Phase 0 #63)
+- Previously setup-ios-signing wrote the App Store Connect API key
+- (.p8) to \$HOME/private_keys/. On the persistent self-hosted Mac
+- always() cleanup never
+- ran) would leave the credential under \$HOME indefinitely.
