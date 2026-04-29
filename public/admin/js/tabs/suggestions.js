@@ -121,6 +121,12 @@ export function init(deps) {
     const ids = JSON.parse(dialog.dataset.ids || '[]');
     dialog.style.display = 'none';
     try {
+      // Bulk approve uses two-tier endpoint chain (new POST /approve falls
+      // back to legacy PUT /status). We don't aggregate per-id
+      // pms: { failed, total } here because the .catch fallback masks per-call
+      // shape — single-suggestion handlers (~line 188, 605, 628) DO consume
+      // pms via PartialFailureToast. Tracked as follow-up: align bulk +
+      // single shapes once the legacy fallback is removed.
       await Promise.all(ids.map((id) =>
         apiCall('POST', `/api/admin/suggestions/${id}/approve`).catch(() =>
           apiCall('PUT', `/api/admin/suggestions/${id}/status`, { status: 'accepted' }),
@@ -141,6 +147,8 @@ export function init(deps) {
     const reason = document.getElementById('bulk-reject-reason').value || '';
     dialog.style.display = 'none';
     try {
+      // See bulk-approve comment above — same two-tier fallback shape, same
+      // deferred per-id partial-failure aggregation.
       await Promise.all(ids.map((id) =>
         apiCall('POST', `/api/admin/suggestions/${id}/reject`, { reason }).catch(() =>
           apiCall('PUT', `/api/admin/suggestions/${id}/status`, { status: 'rejected', reason }),
@@ -185,8 +193,8 @@ export function init(deps) {
   document.querySelector('#suggestion-complete-dialog .btn-confirm-complete').addEventListener('click', async () => {
     if (!completeSuggestionId) return;
     try {
-      await apiCall('PUT', `/api/admin/suggestions/${completeSuggestionId}/status`, { status: 'completed' });
-      showToast('Suggestion marked as completed', 'success');
+      const result = await apiCall('PUT', `/api/admin/suggestions/${completeSuggestionId}/status`, { status: 'completed' });
+      window.PartialFailureToast?.showResultToast(showToast, result, 'Suggestion marked as completed');
       document.getElementById('suggestion-complete-dialog').style.display = 'none';
       completeSuggestionId = null;
       loadSuggestions();
@@ -594,8 +602,8 @@ function renderSuggestionCard(sg) {
   approveBtn.addEventListener('click', async () => {
     try {
       // Backend state machine uses "accepted", not "approved".
-      await apiCall('PUT', `/api/admin/suggestions/${sg.id}/status`, { status: 'accepted' });
-      showToast('Suggestion approved', 'success');
+      const result = await apiCall('PUT', `/api/admin/suggestions/${sg.id}/status`, { status: 'accepted' });
+      window.PartialFailureToast?.showResultToast(showToast, result, 'Suggestion approved');
       loadSuggestions();
     } catch (err) { showToast(err.message, 'error'); }
   });
@@ -612,8 +620,8 @@ function renderSuggestionCard(sg) {
   rejectWrap.querySelector('button').addEventListener('click', async () => {
     const reason = rejectWrap.querySelector('input').value.trim();
     try {
-      await apiCall('PUT', `/api/admin/suggestions/${sg.id}/status`, { status: 'rejected', reason });
-      showToast('Suggestion rejected', 'success');
+      const result = await apiCall('PUT', `/api/admin/suggestions/${sg.id}/status`, { status: 'rejected', reason });
+      window.PartialFailureToast?.showResultToast(showToast, result, 'Suggestion rejected');
       loadSuggestions();
     } catch (err) { showToast(err.message, 'error'); }
   });
