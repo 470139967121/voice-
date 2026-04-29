@@ -1,7 +1,13 @@
 package com.shyden.shytalk.navigation
 
+import com.shyden.shytalk.core.push.PushTokenManager
 import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.util.IosImagePicker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.koin.mp.KoinPlatformTools
 import platform.Foundation.NSCharacterSet
 import platform.Foundation.NSString
 import platform.Foundation.NSURL
@@ -12,19 +18,39 @@ import platform.Foundation.stringByRemovingPercentEncoding
 /**
  * iOS implementation of [PlatformNavCallbacks].
  *
- * v1: Most callbacks are no-ops (FCM, permissions, billing, sync service).
+ * Push token management delegates to [PushTokenManager] (commonMain) which
+ * owns the Mutex that serialises save/clear across rapid sign-out → sign-in.
  * URL encoding uses Foundation's percent-encoding APIs.
  * Media picking uses PHPickerViewController for image selection.
  */
 class IosPlatformNavCallbacks : PlatformNavCallbacks {
-    // ── Push notifications (no-op v1 — APNs integration in future PR) ──
+    // Resolve at construction so a missing Koin binding fails loudly during DI
+    // startup rather than being swallowed by the per-call try/catch.
+    private val pushTokenManager: PushTokenManager =
+        KoinPlatformTools.defaultContext().get().get()
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // ── Push notifications ──
 
     override fun saveFcmToken(userId: String) {
-        // No-op: APNs token management will be added later
+        scope.launch {
+            try {
+                pushTokenManager.syncToken(userId)
+            } catch (e: Exception) {
+                logW("IosPlatformNavCallbacks", "saveFcmToken failed: ${e.message}")
+            }
+        }
     }
 
     override fun removeFcmToken(userId: String) {
-        // No-op
+        scope.launch {
+            try {
+                pushTokenManager.clearToken(userId)
+            } catch (e: Exception) {
+                logW("IosPlatformNavCallbacks", "removeFcmToken failed: ${e.message}")
+            }
+        }
     }
 
     // ── Background services (no-op v1) ──

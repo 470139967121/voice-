@@ -6,6 +6,7 @@ import GoogleSignIn
 @main
 struct iOSApp: App {
     @StateObject private var coordinator = StartingScreenCoordinator()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
         // Debug builds use emulators with the demo-shytalk project (matches

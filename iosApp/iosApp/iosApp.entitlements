@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	    aps-environment is set to `production` for both debug and release.
+	    Apple's signing infrastructure picks the actual APNs delivery
+	    environment from the embedded provisioning profile (sandbox for
+	    development profiles, production for distribution profiles), so
+	    `production` here is safe and avoids the silent-delivery-failure
+	    footgun where a `development` value would mismatch any non-debug
+	    local signing (e.g. Ad Hoc).
+	-->
+	<key>aps-environment</key>
+	<string>production</string>
+</dict>
+</plist>
