@@ -1,8 +1,8 @@
-v0.94.6
+v0.94.7
 
-move .p8 to $RUNNER_TEMP/private_keys/ (closes Phase 0 #63) (#396)
-- move .p8 to \$RUNNER_TEMP/private_keys/ (closes Phase 0 #63)
-- Previously setup-ios-signing wrote the App Store Connect API key
-- (.p8) to \$HOME/private_keys/. On the persistent self-hosted Mac
-- always() cleanup never
-- ran) would leave the credential under \$HOME indefinitely.
+/api/health returns deployed SHA (closes Phase 0 #64) (#397)
+- Closes the "deploy succeeded but old pm2 process still running"
+- silent-failure class. Without this, a deploy could:
+-   1. scp the new tarball
+-   2. tar xzf onto the server
+-   3. pm2 restart returns 0
