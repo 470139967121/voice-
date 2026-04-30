@@ -33,7 +33,10 @@ service cloud.firestore {
                      'preSuspensionDisplayName', 'preSuspensionProfilePhotoUrl',
                      'preSuspensionCoverPhotoUrl', 'roleChanged',
                      'unique_id', 'firebase_uid',
-                     'fcmTokens', 'fcm_tokens']);
+                     'fcmTokens', 'fcm_tokens',
+                     'pmNotificationsEnabled', 'pmSoundEnabled',
+                     'pmShowTimestamps', 'pmShowDateSeparators',
+                     'pmNotificationPreview']);
 
       // Backpack — read own, write only via API
       match /backpack/{giftId} {

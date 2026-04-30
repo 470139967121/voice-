@@ -710,6 +710,13 @@ class AuthViewModel(
             authRepository.signOut()
             // Allow migration path to run again on next sign-in
             migrationCompleted = false
+            // Clear any pending push deep link so a notification tapped just
+            // before sign-out doesn't fire under the next user's session.
+            // The bus is process-global; without this clear, a stale link
+            // could leak metadata (target display name / photo) across
+            // accounts on shared devices.
+            com.shyden.shytalk.core.push
+                .consumeChatDeepLink()
             _uiState.value = AuthUiState()
         }
     }

@@ -173,9 +173,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             return
         }
         guard type == "PM" else {
-            // Out of scope at v1: room invites, follow notifications, etc.
-            // Logging makes future on-call diagnose mismatched server payloads.
-            NSLog("[ShyTalkPush] unrecognised type='\(type)' — dropped (v1 only handles PM)")
+            // V1 only handles `type=PM`. Other types (room invites, follow
+            // notifications) will be added later. Logging makes future on-call
+            // diagnose mismatched server payloads. Sanitise `type` before
+            // interpolating into NSLog so a compromised FCM sender can't
+            // inject newlines / control chars into the device console.
+            NSLog("[ShyTalkPush] unrecognised type='\(sanitiseForLog(type))' — dropped (v1 only handles PM)")
             return
         }
         guard UIApplication.shared.applicationState != .active else {
@@ -222,7 +225,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             return
         }
         guard type == "PM" else {
-            NSLog("[ShyTalkPush] tap on unrecognised type='\(type)' — deep link dropped")
+            NSLog("[ShyTalkPush] tap on unrecognised type='\(sanitiseForLog(type))' — deep link dropped")
             return
         }
         guard let otherUserId = userInfo["senderId"] as? String,
@@ -252,5 +255,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             }
         }
         return nil
+    }
+
+    /// Sanitise an attacker-controllable string before interpolating into NSLog.
+    /// FCM payload fields are signed by the project's server key, so a
+    /// compromised key is the threat model — without sanitisation, an attacker
+    /// could inject newlines or control characters into the device console,
+    /// polluting on-call diagnostic output. Truncate to a fixed length and
+    /// strip non-printable ASCII before logging.
+    private func sanitiseForLog(_ value: String) -> String {
+        let truncated = String(value.prefix(64))
+        return truncated.unicodeScalars
+            .filter { $0.isASCII && $0.value >= 0x20 && $0.value < 0x7F }
+            .reduce(into: "") { $0.append(Character($1)) }
     }
 }

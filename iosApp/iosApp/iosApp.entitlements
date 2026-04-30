@@ -10,6 +10,14 @@
 	    `production` here is safe and avoids the silent-delivery-failure
 	    footgun where a `development` value would mismatch any non-debug
 	    local signing (e.g. Ad Hoc).
+
+	    SHARED FILE — DO NOT ADD SCHEME-SPECIFIC KEYS HERE. Both Debug and
+	    Release builds reference this single entitlements file (per
+	    project.pbxproj `CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements`
+	    in both configurations). If you need a Debug-only or staging-only
+	    capability (associated-domains for a staging URL, etc.), split this
+	    into iosApp-Debug.entitlements / iosApp-Release.entitlements and
+	    reference per-configuration in project.pbxproj.
 	-->
 	<key>aps-environment</key>
 	<string>production</string>

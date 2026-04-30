@@ -98,9 +98,14 @@ class IosNotificationRepositoryImpl(
         enabled: Boolean,
     ): Resource<Unit> =
         firebaseCall("Failed to update notification setting") {
-            firestore.collection("users").document(userId).updateFields {
-                "pmNotificationsEnabled" to enabled
-            }
+            // Routed through the Express API rather than a direct Firestore
+            // write so the field is rate-limited (writeLimiter) and audited
+            // consistently with other settings updates. Firestore rule blocks
+            // direct client writes to pmNotificationsEnabled.
+            api.patch(
+                "/api/notifications/settings",
+                JsonObject(mapOf("pmNotificationsEnabled" to JsonPrimitive(enabled))),
+            )
         }
 
     override suspend fun getPmNotificationsEnabled(userId: String): Resource<Boolean> =

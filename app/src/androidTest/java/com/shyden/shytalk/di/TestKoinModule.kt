@@ -1,7 +1,9 @@
 package com.shyden.shytalk.di
 
 import com.shyden.shytalk.core.room.ActiveRoomManager
+import com.shyden.shytalk.core.room.AndroidRoomServiceController
 import com.shyden.shytalk.core.room.RoomLifecycleManager
+import com.shyden.shytalk.core.room.RoomServiceController
 import com.shyden.shytalk.core.util.SecureStorage
 import com.shyden.shytalk.data.remote.AppConfigService
 import com.shyden.shytalk.data.remote.BillingService
@@ -109,9 +111,18 @@ val testModule =
         // Fake managers
         single { FakeActiveRoomManager() } bind RoomLifecycleManager::class
 
+        // RoomServiceController — concrete Android impl bound for the test
+        // Activity's Koin scope. The instrumented tests do not actually join
+        // rooms, so RoomService.start/stop are never called; if a future test
+        // does, swap in a no-op FakeRoomServiceController.
+        single { AndroidRoomServiceController(androidContext()) } bind RoomServiceController::class
+
         // ActiveRoomManager (concrete) — required by RoomScreen which injects the concrete type directly.
         // Constructed with fake dependencies so no real Firebase/LiveKit calls are made.
-        single { ActiveRoomManager(get(), get(), get(), get(), get(), get(), get(), androidContext()) }
+        // The 8th argument is RoomServiceController (NOT a Context — bug in pre-PR-#404 test
+        // wiring fixed here: previous code passed `androidContext()` which is type Context,
+        // and the resulting compile error blocked Android E2E entirely).
+        single { ActiveRoomManager(get(), get(), get(), get(), get(), get(), get(), get<RoomServiceController>()) }
 
         // BillingService (concrete class — use real instance with test context; won't connect to Play)
         single { BillingService(get()) }

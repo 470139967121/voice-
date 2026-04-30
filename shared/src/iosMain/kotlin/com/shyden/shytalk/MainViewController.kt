@@ -10,10 +10,11 @@ import androidx.compose.ui.window.ComposeUIViewController
 import androidx.navigation.compose.rememberNavController
 import com.shyden.shytalk.core.push.chatDeepLinks
 import com.shyden.shytalk.core.push.consumeChatDeepLink
+import com.shyden.shytalk.core.push.verifyPushNavigation
 import com.shyden.shytalk.core.util.LanguagePreference
-import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
 import com.shyden.shytalk.feature.legal.CommunityStandardsScreen
@@ -100,41 +101,32 @@ private fun IosApp() {
                 chatDeepLinks.filterNotNull().collect { link ->
                     val koin = KoinPlatformTools.defaultContext().get()
                     val authRepo = koin.get<AuthRepository>()
-                    val currentUserId = authRepo.currentUserId
+                    // Use resolvedUniqueId (not currentUserId) so we never
+                    // query users/{firebaseUid} during the cold-start race
+                    // before identity resolution completes.
+                    val currentUserId = authRepo.resolvedUniqueId
                     if (currentUserId.isNullOrEmpty()) {
-                        logW("MainViewController", "Push deep-link dropped — not signed in")
+                        logW(
+                            "MainViewController",
+                            "Push deep-link dropped — identity not yet resolved or signed out",
+                        )
                         consumeChatDeepLink()
                         return@collect
                     }
-                    if (!link.isGroup) {
-                        val userRepo = koin.get<UserRepository>()
-                        when (val blocked = userRepo.getBlockedUserIds(currentUserId)) {
-                            is Resource.Success -> {
-                                if (blocked.data.contains(link.otherUserId)) {
-                                    logW(
-                                        "MainViewController",
-                                        "Push deep-link dropped — target user is blocked",
-                                    )
-                                    consumeChatDeepLink()
-                                    return@collect
-                                }
-                            }
-
-                            is Resource.Error -> {
-                                // Fail closed: if we can't determine block status,
-                                // don't risk surfacing a chat with a potentially-blocked
-                                // user (which would flash the target's display name /
-                                // photo header before any screen-level enforcement).
-                                logW(
-                                    "MainViewController",
-                                    "Push deep-link dropped — block status check failed: ${blocked.message}",
-                                )
-                                consumeChatDeepLink()
-                                return@collect
-                            }
-
-                            is Resource.Loading -> Unit // suspending fn — Loading not emitted
-                        }
+                    val targetId = if (link.isGroup) link.conversationId else link.otherUserId
+                    val userRepo = koin.get<UserRepository>()
+                    val pmRepo = koin.get<PrivateMessageRepository>()
+                    val authzOk =
+                        verifyPushNavigation(
+                            currentUserId = currentUserId,
+                            targetId = targetId,
+                            isGroup = link.isGroup,
+                            fetchBlockedUserIds = { userRepo.getBlockedUserIds(it) },
+                            fetchConversation = { pmRepo.getConversation(it) },
+                        )
+                    if (!authzOk) {
+                        consumeChatDeepLink()
+                        return@collect
                     }
                     val route =
                         if (link.isGroup) {

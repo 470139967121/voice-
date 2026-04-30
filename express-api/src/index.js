@@ -113,6 +113,11 @@ app.use('/api/economy/gift', writeLimiter);
 app.use('/api/economy/gift-direct', writeLimiter);
 app.use('/api/economy/gift-batch', writeLimiter);
 app.use('/api/economy/backpack-send', writeLimiter);
+// NOTE: writeLimiter applies to ALL methods/routes under /api/notifications,
+// including any future GET endpoints (e.g. notification history). The current
+// surface is POST/DELETE/PATCH only, all writes — but if a feed-style GET is
+// added later, split this into per-method mounts so reads don't inherit the
+// 30/min/user write cap.
 app.use('/api/notifications', writeLimiter);
 app.use('/api/translate', writeLimiter);
 

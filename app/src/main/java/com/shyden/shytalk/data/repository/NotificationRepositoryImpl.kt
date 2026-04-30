@@ -39,13 +39,22 @@ class NotificationRepositoryImpl(
             Unit
         }
 
-    // Direct Firestore write — no server-side logic needed
+    // Routed through the Express API (PATCH /api/notifications/settings)
+    // rather than a direct Firestore write so the field is rate-limited
+    // (writeLimiter) and audited consistently with other settings updates.
+    // The Firestore rule blocks direct client writes to pmNotificationsEnabled.
     override suspend fun setPmNotificationsEnabled(
         userId: String,
         enabled: Boolean,
     ): Resource<Unit> =
         firebaseCall("Failed to update notification setting") {
-            firestore.document("users/$userId").update("pmNotificationsEnabled", enabled).await()
+            api.patch(
+                "/api/notifications/settings",
+                JSONObject().apply {
+                    put("pmNotificationsEnabled", enabled)
+                },
+            )
+            Unit
         }
 
     override suspend fun getPmNotificationsEnabled(userId: String): Resource<Boolean> =
