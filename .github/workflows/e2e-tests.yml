@@ -159,9 +159,13 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
+          # The android-emulator-runner action executes `script` via /usr/bin/sh
+          # (dash on Ubuntu runners), which does NOT support `set -o pipefail`.
+          # Wrap the command in `bash -c` so pipefail propagates the gradlew
+          # exit code through the tee pipe — without it, tee always returns 0
+          # and a failing test run silently passes.
           script: |
-            set -o pipefail
-            ./gradlew connectedLocalDebugAndroidTest --no-parallel 2>&1 | tee test-output.log
+            bash -c 'set -o pipefail; ./gradlew connectedLocalDebugAndroidTest --no-parallel 2>&1 | tee test-output.log'
 
       - name: Cleanup Docker containers
         if: always()
