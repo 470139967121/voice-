@@ -1,8 +1,8 @@
-v0.95.0
+v0.96.0
 
-APNs / FCM push notifications mirroring Android (#404)
+port getPendingReports to real Express API call (#405)
+- [skip-android-e2e]
 - ## Summary
-- Brings iOS to behavioural parity with Android's
-- `ShyTalkMessagingService.kt` for push notifications. Closes the APNs/FCM
-- piece of Phase 2 / B6 (iOS feature parity).
-- ## What ships
+- Closes a small remaining iOS parity gap.
+- `IosReportRepositoryImpl.getPendingReports` was returning
+- `Resource.Success(emptyList())` so the moderation review screen on iOS
