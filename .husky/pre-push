@@ -25,6 +25,17 @@ if ! bash scripts/check-no-paid-runners.sh; then
   exit 1
 fi
 
+# Guard against regressions to the manual-release flow: any push trigger
+# on release.yml would re-introduce the auto-release-per-merge behaviour
+# that small-PR cadence was built to avoid, and any deploy-dev.yml
+# without a unique CFBundleVersion would resurrect TestFlight duplicate-
+# build-number rejections. ~5ms.
+if ! bash scripts/check-release-trigger.sh; then
+  echo ""
+  echo "✗ Release/dev-versioning guard tripped — push blocked"
+  exit 1
+fi
+
 # Run actionlint on workflow changes BEFORE the SonarCloud check (so workflow
 # regressions don't slip through when nothing else changes). This catches
 # unquoted globs, missing `set -euo pipefail`, and other silent-failure

@@ -304,8 +304,43 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           set -euo pipefail
+          # Inject a unique CFBundleVersion per CI run. TestFlight rejects
+          # uploads that re-use a previous build number for the same
+          # CFBundleShortVersionString, which is exactly what would happen
+          # if every dev deploy used the static `1` from project.pbxproj.
+          # GITHUB_RUN_NUMBER is monotonically increasing per workflow run,
+          # so each dev distribution gets a fresh build number without
+          # coupling to the (now manual) Release workflow.
+          if [ -z "${GITHUB_RUN_NUMBER:-}" ]; then
+            echo "::error::GITHUB_RUN_NUMBER is unset — this step must run inside GitHub Actions. A locally-run archive would produce CFBundleVersion=1 and TestFlight would reject the upload as a duplicate."
+            exit 1
+          fi
+          BUILD_NUMBER="$GITHUB_RUN_NUMBER"
+          # MARKETING_VERSION must be a strict 3-int semver per Apple's
+          # CFBundleShortVersionString rules (App Store would reject any
+          # suffix). Read the latest released semver from build.gradle.kts.
+          # Anchor the awk pattern so a doc comment containing
+          # `versionName = "..."` doesn't get parsed as the value.
+          # Android-side build-run uniqueness already comes from
+          # `versionNameSuffix = "-b${GITHUB_RUN_NUMBER}"` on the dev
+          # flavor, so the two stay aligned.
+          VERSION_NAME=$(awk -F'"' '/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"/ {print $2; exit}' app/build.gradle.kts)
+          if [ -z "$VERSION_NAME" ]; then
+            echo "::error::Could not parse versionName from app/build.gradle.kts"
+            exit 1
+          fi
+          # Defensive validation — Apple silently fails archives where
+          # CFBundleShortVersionString doesn't match the strict semver
+          # format, so catch it locally with a clear error rather than
+          # discovering it in App Store Connect's review feedback.
+          if ! echo "$VERSION_NAME" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::versionName '$VERSION_NAME' is not a strict 3-int semver (Apple's CFBundleShortVersionString rule)"
+            exit 1
+          fi
+          echo "Setting CFBundleVersion=${BUILD_NUMBER} MARKETING_VERSION=${VERSION_NAME}"
           cd iosApp
-          # Archive
+          # Archive — pass build settings so we don't have to mutate
+          # Info.plist or the .pbxproj on disk.
           xcodebuild \
             -workspace iosApp.xcworkspace \
             -scheme iosApp \
@@ -317,6 +352,8 @@ jobs:
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="ShyTalk App Store Distribution" \
             DEVELOPMENT_TEAM=F3XX4PM3MF \
+            CURRENT_PROJECT_VERSION="${BUILD_NUMBER}" \
+            MARKETING_VERSION="${VERSION_NAME}" \
             archive
           # Export IPA
           xcodebuild \
