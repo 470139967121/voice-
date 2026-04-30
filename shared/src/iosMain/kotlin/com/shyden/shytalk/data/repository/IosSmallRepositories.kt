@@ -15,7 +15,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 // ── DeviceRepository ────────────────────────────────────────────
 
@@ -182,7 +184,30 @@ class IosReportRepositoryImpl(
             api.post("/api/reports", JsonObject(fields))
         }
 
-    override suspend fun getPendingReports(): Resource<List<com.shyden.shytalk.feature.messaging.Report>> = Resource.Success(emptyList())
+    override suspend fun getPendingReports(): Resource<List<com.shyden.shytalk.feature.messaging.Report>> =
+        firebaseCall("Failed to load reports") {
+            val arr = api.getArray("/api/reports")
+            arr.map { element ->
+                val obj = element.jsonObject
+                com.shyden.shytalk.feature.messaging.Report(
+                    reportId = obj["id"]?.jsonPrimitive?.contentOrNull ?: "",
+                    reporterId = obj["reporterId"]?.jsonPrimitive?.contentOrNull ?: "",
+                    reporterName = obj["reporterName"]?.jsonPrimitive?.contentOrNull ?: "",
+                    reporterUniqueId = obj["reporterUniqueId"]?.jsonPrimitive?.longOrNull ?: 0L,
+                    reportedUserId = obj["reportedUserId"]?.jsonPrimitive?.contentOrNull ?: "",
+                    reportedUserName = obj["reportedUserName"]?.jsonPrimitive?.contentOrNull ?: "",
+                    reportedUserUniqueId = obj["reportedUserUniqueId"]?.jsonPrimitive?.longOrNull ?: 0L,
+                    conversationId = obj["conversationId"]?.jsonPrimitive?.contentOrNull ?: "",
+                    messageId = obj["messageId"]?.jsonPrimitive?.contentOrNull ?: "",
+                    messageText = obj["messageText"]?.jsonPrimitive?.contentOrNull ?: "",
+                    reason = obj["reason"]?.jsonPrimitive?.contentOrNull ?: "",
+                    description = obj["description"]?.jsonPrimitive?.contentOrNull ?: "",
+                    type = obj["type"]?.jsonPrimitive?.contentOrNull ?: "",
+                    timestamp = obj["timestamp"]?.jsonPrimitive?.longOrNull ?: 0L,
+                    status = obj["status"]?.jsonPrimitive?.contentOrNull ?: "pending",
+                )
+            }
+        }
 
     override suspend fun resolveReport(
         reportId: String,
