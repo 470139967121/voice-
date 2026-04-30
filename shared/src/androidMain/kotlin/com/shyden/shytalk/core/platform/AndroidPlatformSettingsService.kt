@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import com.shyden.shytalk.core.util.logE
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -120,7 +121,8 @@ class AndroidPlatformSettingsService(
                 .getDrawable(context, context.applicationInfo.icon)
                 ?.toBitmap(128, 128)
                 ?.asImageBitmap()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            logE("AndroidPlatformSettings", "Failed to load app icon", e)
             null
         }
 
