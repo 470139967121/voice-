@@ -35,6 +35,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         IosPushBridgeKt.registerPushBridge(bridge: self)
 
         // Request authorization (user prompt). If already-determined, this is a no-op.
+        // TODO(v2): surface auth error / denial to the user via Settings → Notifications status.
+        // Currently a Focus/DnD/parental-control denial gives no in-app feedback.
         UNUserNotificationCenter.current().requestAuthorization(
             options: [.alert, .badge, .sound]
         ) { granted, error in
@@ -166,7 +168,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     private func handleRemotePayload(_ userInfo: [AnyHashable: Any]) {
-        guard let type = userInfo["type"] as? String, type == "PM" else { return }
+        guard let type = userInfo["type"] as? String else {
+            NSLog("[ShyTalkPush] payload missing 'type' field — dropped")
+            return
+        }
+        guard type == "PM" else {
+            // Out of scope at v1: room invites, follow notifications, etc.
+            // Logging makes future on-call diagnose mismatched server payloads.
+            NSLog("[ShyTalkPush] unrecognised type='\(type)' — dropped (v1 only handles PM)")
+            return
+        }
         guard UIApplication.shared.applicationState != .active else {
             // App in foreground — suppress. In-app UI handles delivery (mirrors
             // Android's RoomLifecycleManager.isAppInForeground check).
@@ -206,7 +217,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     private func emitDeepLink(from userInfo: [AnyHashable: Any]) {
-        guard let type = userInfo["type"] as? String, type == "PM" else { return }
+        guard let type = userInfo["type"] as? String else {
+            NSLog("[ShyTalkPush] tap payload missing 'type' — deep link dropped")
+            return
+        }
+        guard type == "PM" else {
+            NSLog("[ShyTalkPush] tap on unrecognised type='\(type)' — deep link dropped")
+            return
+        }
         guard let otherUserId = userInfo["senderId"] as? String,
               let conversationId = userInfo["conversationId"] as? String else {
             NSLog("[ShyTalkPush] tap payload missing senderId or conversationId — deep link dropped")

@@ -66,12 +66,17 @@ jobs:
           # commonMain additions are not consumed by Android Koin wiring). The
           # paid runner emulator pool flakes intermittently; gating iOS-only
           # work on Android E2E wastes minutes and blocks legitimate merges.
+          #
+          # Marker must be on its OWN LINE (anchored with `^…$`) so quoted text
+          # like "this is NOT a [skip-android-e2e] PR" or "- [ ] [skip-android-e2e]"
+          # in checklists and code blocks does not accidentally trip the gate.
+          # `printf '%s'` (not echo) avoids -e/escape interpretation in PR bodies.
           SKIP_ANDROID_E2E=false
           SKIP_IOS_E2E=false
-          if echo "$PR_BODY" | grep -qF '[skip-android-e2e]'; then
+          if printf '%s' "$PR_BODY" | grep -qE '^[[:space:]]*\[skip-android-e2e\][[:space:]]*$'; then
             SKIP_ANDROID_E2E=true
           fi
-          if echo "$PR_BODY" | grep -qF '[skip-ios-e2e]'; then
+          if printf '%s' "$PR_BODY" | grep -qE '^[[:space:]]*\[skip-ios-e2e\][[:space:]]*$'; then
             SKIP_IOS_E2E=true
           fi
           for v in app_changed=$APP backend_changed=$BACKEND web_changed=$WEB workflow_only=$WORKFLOW_ONLY skip_android_e2e=$SKIP_ANDROID_E2E skip_ios_e2e=$SKIP_IOS_E2E; do
