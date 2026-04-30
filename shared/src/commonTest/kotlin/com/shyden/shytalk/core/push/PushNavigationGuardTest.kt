@@ -131,7 +131,12 @@ class PushNavigationGuardTest {
                     isGroup = true,
                     fetchBlockedUserIds = { error("not used") },
                     fetchConversation = {
-                        Resource.Success(Conversation(participantIds = listOf("10000001", "10000002", "10000003")))
+                        Resource.Success(
+                            Conversation(
+                                isGroup = true,
+                                participantIds = listOf("10000001", "10000002", "10000003"),
+                            ),
+                        )
                     },
                 )
             assertTrue(ok)
@@ -150,7 +155,12 @@ class PushNavigationGuardTest {
                         // Defence in depth: even if Firestore rules let the read
                         // through (e.g. rules drift), the participantIds check
                         // catches the mismatch.
-                        Resource.Success(Conversation(participantIds = listOf("10000002", "10000003")))
+                        Resource.Success(
+                            Conversation(
+                                isGroup = true,
+                                participantIds = listOf("10000002", "10000003"),
+                            ),
+                        )
                     },
                 )
             assertFalse(ok)
@@ -185,6 +195,63 @@ class PushNavigationGuardTest {
                     },
                 )
             assertFalse(ok)
+        }
+
+    @Test
+    fun groupChat_payloadIsGroupTrue_butConversationIs1on1_dropsToPreventBlockBypass() =
+        runTest {
+            // Block-bypass attack: a malicious payload claims isGroup=true for
+            // a 1:1 conversationId. Without the type gate, this would skip the
+            // block-list check (the participant gate alone would pass since
+            // 1:1 conversations also have participantIds).
+            val ok =
+                verifyPushNavigation(
+                    currentUserId = "10000001",
+                    targetId = "conv-1on1",
+                    isGroup = true,
+                    fetchBlockedUserIds = { error("not used") },
+                    fetchConversation = {
+                        Resource.Success(
+                            Conversation(
+                                isGroup = false, // 1:1 conversation
+                                participantIds = listOf("10000001", "10000099"),
+                            ),
+                        )
+                    },
+                )
+            assertFalse(ok, "Type-gate must reject group payloads pointing at 1:1 conversations")
+        }
+
+    @Test
+    fun privateChat_blockListLambdaThrows_failsClosed() =
+        runTest {
+            // Repository contract is to return Resource.Error, but a faulty /
+            // future impl could throw synchronously. The throwable must NOT
+            // propagate out — it would crash LaunchedEffect.collect and bring
+            // down the Compose root.
+            val ok =
+                verifyPushNavigation(
+                    currentUserId = "10000001",
+                    targetId = "10000099",
+                    isGroup = false,
+                    fetchBlockedUserIds = { throw IllegalStateException("repo broken") },
+                    fetchConversation = { error("not used") },
+                )
+            assertFalse(ok, "Synchronous throw must be caught and treated as fail-closed")
+        }
+
+    @Test
+    fun groupChat_conversationLambdaThrows_failsClosed() =
+        runTest {
+            val ok =
+                verifyPushNavigation(
+                    currentUserId = "10000001",
+                    targetId = "conv-abc",
+                    isGroup = true,
+                    fetchBlockedUserIds = { error("not used") },
+                    fetchConversation = { throw RuntimeException("net glitch") },
+                )
+            assertFalse(ok, "Synchronous throw must be caught and treated as fail-closed")
         }
 
     @Test

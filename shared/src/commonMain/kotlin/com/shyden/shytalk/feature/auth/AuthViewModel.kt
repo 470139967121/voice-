@@ -2,6 +2,7 @@ package com.shyden.shytalk.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shyden.shytalk.core.push.consumeChatDeepLink
 import com.shyden.shytalk.core.util.DisposableEmailDomains
 import com.shyden.shytalk.core.util.LanguagePreference
 import com.shyden.shytalk.core.util.Resource

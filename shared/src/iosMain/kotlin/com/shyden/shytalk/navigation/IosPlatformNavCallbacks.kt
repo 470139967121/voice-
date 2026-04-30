@@ -24,10 +24,15 @@ import platform.Foundation.stringByRemovingPercentEncoding
  * Media picking uses PHPickerViewController for image selection.
  */
 class IosPlatformNavCallbacks : PlatformNavCallbacks {
-    // Resolve at construction so a missing Koin binding fails loudly during DI
-    // startup rather than being swallowed by the per-call try/catch.
-    private val pushTokenManager: PushTokenManager =
+    // Lazy Koin resolution — match Android's `by inject()` pattern. Eager
+    // resolution at construction worked fine in production (Koin is up before
+    // MainViewController instantiates IosPlatformNavCallbacks) but broke any
+    // test or Compose-preview surface that constructs this class before
+    // `doInitKoin`. Lazy means the lookup happens on first save/remove call,
+    // by which point production callers have always initialised Koin.
+    private val pushTokenManager: PushTokenManager by lazy {
         KoinPlatformTools.defaultContext().get().get()
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

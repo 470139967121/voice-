@@ -404,6 +404,10 @@ class MainActivity : AppCompatActivity() {
                                     launchSingleTop = true
                                 }
                                 navigateToChatState.value = null
+                                // Also clear the shared chatDeepLinks bus so a
+                                // future tri-platform unification through that
+                                // channel doesn't leave a stale link. Idempotent.
+                                consumeChatDeepLink()
                             }
                         }
 
