@@ -92,7 +92,18 @@ val iosPlatformModule =
         }
 
         // Named qualifiers required by AuthViewModel
-        single(named("deviceId")) { "ios-device-placeholder" }
+        // Stable per-device identifier: `UIDevice.identifierForVendor` returns
+        // the same UUID for every app from the same vendor on the same device,
+        // and persists across app launches. It IS reset when the user uninstalls
+        // every app from this vendor, which matches Android's `ANDROID_ID`
+        // behaviour after a factory reset / settings reset. Falls back to a
+        // generated UUID if iOS returns null (rare — happens before the device
+        // is unlocked for the first time after boot).
+        single(named("deviceId")) {
+            platform.UIKit.UIDevice.currentDevice.identifierForVendor
+                ?.UUIDString
+                ?: platform.Foundation.NSUUID().UUIDString
+        }
         single(named("bypassDeviceChecks")) { true }
 
         // Platform utilities (actual classes already exist in iosMain)
