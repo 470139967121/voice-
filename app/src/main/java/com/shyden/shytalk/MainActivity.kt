@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -70,6 +71,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.android.ext.android.inject
+
+private const val TAG = "MainActivity"
 
 class MainActivity : AppCompatActivity() {
     private val authRepository: AuthRepository by inject()
@@ -357,10 +360,47 @@ class MainActivity : AppCompatActivity() {
 
                         val navigateToChatInfo by navigateToChatState
 
+                        // Push deep-link authorisation re-check (parity with iOS
+                        // MainViewController). A compromised FCM project (or
+                        // anyone with the FCM server key) could deliver a payload
+                        // that opens a chat with an arbitrary uniqueId, bypassing
+                        // block / friend gating in the UI. Firestore rules enforce
+                        // the actual security boundary at message-read time, but
+                        // the chat-screen header would briefly flash the target's
+                        // display name / photo before failure. Re-validate
+                        // signed-in state and block status here so the navigation
+                        // never starts for invalid targets. Fail closed when the
+                        // block-status fetch errors so a transient backend issue
+                        // can't surface a flash of a potentially-blocked user.
                         LaunchedEffect(navigateToChatInfo) {
                             val chatInfo = navigateToChatInfo
                             if (chatInfo != null) {
                                 val (id, isGroup) = chatInfo
+                                val currentUserId = authRepository.currentUserId
+                                if (currentUserId.isNullOrEmpty()) {
+                                    Log.w(TAG, "Push deep-link dropped — not signed in")
+                                    navigateToChatState.value = null
+                                    return@LaunchedEffect
+                                }
+                                if (!isGroup) {
+                                    when (val blocked = userRepository.getBlockedUserIds(currentUserId)) {
+                                        is Resource.Success -> {
+                                            if (blocked.data.contains(id)) {
+                                                Log.w(TAG, "Push deep-link dropped — target user is blocked")
+                                                navigateToChatState.value = null
+                                                return@LaunchedEffect
+                                            }
+                                        }
+
+                                        is Resource.Error -> {
+                                            Log.w(TAG, "Push deep-link dropped — block status check failed: ${blocked.message}")
+                                            navigateToChatState.value = null
+                                            return@LaunchedEffect
+                                        }
+
+                                        is Resource.Loading -> Unit
+                                    }
+                                }
                                 val route =
                                     if (isGroup) {
                                         Screen.GroupChat.createRoute(id)
