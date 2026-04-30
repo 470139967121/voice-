@@ -117,6 +117,15 @@ val testModule =
         // does, swap in a no-op FakeRoomServiceController.
         single { AndroidRoomServiceController(androidContext()) } bind RoomServiceController::class
 
+        // PlatformSettingsService — injected by AppSettingsScreen and RoomScreen
+        // via koinInject(). Real Android impl is fine for tests (it only reads
+        // permissions and opens system Settings activities, which the tests
+        // don't trigger).
+        single<com.shyden.shytalk.core.platform.PlatformSettingsService> {
+            com.shyden.shytalk.core.platform
+                .AndroidPlatformSettingsService(androidContext())
+        }
+
         // ActiveRoomManager (concrete) — required by RoomScreen which injects the concrete type directly.
         // Constructed with fake dependencies so no real Firebase/LiveKit calls are made.
         // The 8th argument is RoomServiceController (NOT a Context — bug in pre-PR-#404 test

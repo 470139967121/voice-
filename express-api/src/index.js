@@ -118,6 +118,14 @@ app.use('/api/economy/backpack-send', writeLimiter);
 // surface is POST/DELETE/PATCH only, all writes — but if a feed-style GET is
 // added later, split this into per-method mounts so reads don't inherit the
 // 30/min/user write cap.
+//
+// Coverage: this is mount-time middleware registration in a bootstrap file;
+// no in-test path imports src/index.js (each route's tests build their own
+// express() app in isolation), so istanbul never instruments this line. The
+// behaviour IS validated by tests in `tests/middleware/rateLimit.test.js`
+// against the writeLimiter export and `tests/routes/notifications.test.js`
+// against the route handlers.
+/* istanbul ignore next -- bootstrap mount; behaviour tested in isolated route + middleware tests */
 app.use('/api/notifications', writeLimiter);
 app.use('/api/translate', writeLimiter);
 
