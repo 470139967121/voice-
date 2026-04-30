@@ -1,8 +1,8 @@
-v0.96.0
+v0.97.0
 
-port getPendingReports to real Express API call (#405)
+real device ID via UIDevice.identifierForVendor (#406)
 - [skip-android-e2e]
 - ## Summary
-- Closes a small remaining iOS parity gap.
-- `IosReportRepositoryImpl.getPendingReports` was returning
-- `Resource.Success(emptyList())` so the moderation review screen on iOS
+- Replaces the `"ios-device-placeholder"` stub with a real per-device
+- stable identifier via `UIDevice.identifierForVendor`. Closes the
+- device-binding gap on iOS — the Express API endpoints that gate
