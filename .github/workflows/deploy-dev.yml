@@ -337,6 +337,12 @@ jobs:
             echo "::error::versionName '$VERSION_NAME' is not a strict 3-int semver (Apple's CFBundleShortVersionString rule)"
             exit 1
           fi
+          # Note re Android-side parity: in CI the dev flavor's
+          # versionNameSuffix resolves to "-b${GITHUB_RUN_NUMBER}", so
+          # the two stay aligned per CI run. Locally (Xcode IDE / Android
+          # Studio), Android falls back to `git rev-parse --short HEAD`
+          # and iOS uses CURRENT_PROJECT_VERSION=1 from project.pbxproj
+          # — both fine for non-distributed local builds.
           echo "Setting CFBundleVersion=${BUILD_NUMBER} MARKETING_VERSION=${VERSION_NAME}"
           cd iosApp
           # Archive — pass build settings so we don't have to mutate

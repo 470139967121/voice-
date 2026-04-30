@@ -25,6 +25,10 @@ fi
 # defeats the manual-release purpose.
 #
 # Use yq if available (more robust against YAML quirks), fall back to grep.
+# Allowed triggers: workflow_dispatch (the manual flow) and schedule
+# (kept for forward compatibility — we don't currently use it but a
+# future cron'd "weekly stable cut" would be reasonable). Any other
+# trigger is rejected.
 if command -v yq >/dev/null 2>&1; then
   triggers=$(yq '.on | keys | .[]' "$RELEASE_YML")
   if [ -z "$triggers" ]; then
@@ -33,33 +37,67 @@ if command -v yq >/dev/null 2>&1; then
   fi
   while IFS= read -r trigger; do
     case "$trigger" in
-      workflow_dispatch) ;;
-      schedule) ;;
+      workflow_dispatch|schedule) ;;
       *)
-        echo "::error::release.yml has unsupported trigger '$trigger' — must be workflow_dispatch only"
+        echo "::error::release.yml has unsupported trigger '$trigger' — must be workflow_dispatch (or schedule) only"
         exit 1
         ;;
     esac
   done <<< "$triggers"
 else
-  # Grep-based check. Reject ANY occurrence of `push:` as a trigger key.
-  # Catches all common forms:
-  #   push:                          (block style)
-  #   push:                          (then branches: under it)
-  #     branches: [main]
-  #   push: [main]                   (inline list)
-  #   push: { branches: [main] }     (inline mapping)
-  #   on: { push: { ... }, ... }     (fully-inline `on:`)
-  # The pattern matches `push:` either at the start of an indented line
-  # (block style) or anywhere inside a `{ ... }` after `on:`. We accept
-  # the false-positive risk of matching `push:` inside a string literal
-  # — release.yml has no such literals and the cost of a false positive
-  # is just a clearer manual review.
-  if grep -qE '^\s*push:\s*([\[{]|$)|on:\s*\{[^}]*\bpush:' "$RELEASE_YML"; then
-    echo "::error::release.yml has a 'push:' trigger — must be workflow_dispatch only"
-    grep -nE 'push:' "$RELEASE_YML" || true
+  # Grep-based POSITIVE-allowlist check. Enumerate every trigger key
+  # found and reject any that isn't in the allowlist. A denylist (eg.
+  # `push|pull_request|...`) would silently accept any new GitHub event
+  # type added in the future — `merge_group` was a recent example.
+  #
+  # We refuse inline `on: { key1: ..., key2: ... }` form entirely. It's
+  # rare in practice, brace-counting in pure shell is brittle, and
+  # forcing block form keeps the parsing logic here trivial. If a real
+  # need arises, install `yq` locally (the script's faster path).
+  if grep -qE '^on:[[:space:]]*\{' "$RELEASE_YML"; then
+    echo "::error::release.yml uses inline 'on: { ... }' which this guard refuses to parse. Use block form (one trigger key per line) — or install yq locally."
     exit 1
   fi
+
+  # Block-style: extract keys at exactly the first indent level under
+  # `on:`. The awk script tracks the base indent of the first child
+  # encountered and skips anything deeper (which would be sub-keys like
+  # `branches:`, `inputs:`, etc.).
+  # Run awk + sort + grep without `|| true` so a real pipeline error
+  # (locale issue, awk crash) propagates instead of being conflated
+  # with the legitimate "no triggers found" case below.
+  raw_triggers=$(awk '
+    /^on:[[:space:]]*$/ { in_on=1; next }
+    in_on && /^[a-z]/ { in_on=0 }
+    in_on && /^[[:space:]]+[a-z_]+:/ {
+      match($0, /^[[:space:]]+/)
+      indent = RLENGTH
+      if (!base_indent) base_indent = indent
+      if (indent == base_indent) {
+        match($0, /[a-z_]+/)
+        print substr($0, RSTART, RLENGTH)
+      }
+    }
+  ' "$RELEASE_YML")
+  # Sort + dedupe, drop blank lines. `grep -v '^$' ' returns 1 if every
+  # line is blank — that's a legitimate "no triggers" outcome, NOT an
+  # error. Use `|| [ $? -eq 1 ]` to swallow only that specific exit.
+  triggers=$(printf '%s\n' "$raw_triggers" | sort -u | { grep -v '^$' || [ $? -eq 1 ]; })
+
+  if [ -z "$triggers" ]; then
+    echo "::error::release.yml has no parseable 'on:' triggers — workflow would be unreachable"
+    exit 1
+  fi
+
+  while IFS= read -r trigger; do
+    case "$trigger" in
+      workflow_dispatch|schedule) ;;
+      *)
+        echo "::error::release.yml has unsupported trigger '$trigger' — must be workflow_dispatch (or schedule) only"
+        exit 1
+        ;;
+    esac
+  done <<< "$triggers"
 fi
 
 # Verify workflow_dispatch is present (otherwise the workflow can never fire).

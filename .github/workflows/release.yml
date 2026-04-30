@@ -54,6 +54,24 @@ jobs:
           # for the changelog aggregation step below.
           fetch-depth: 0
 
+      - name: Guard against double-fired releases
+        run: |
+          set -euo pipefail
+          # Workflow concurrency keeps two runs from executing in
+          # parallel, but cancel-in-progress: false lets a queued run
+          # start AFTER the in-progress one finishes. If the operator
+          # double-clicks Run Workflow, run B would observe HEAD already
+          # at a freshly-bumped `chore: release vX.Y.Z` and silently
+          # bump it again to vX.Y.Z+1, producing a duplicate release
+          # that the operator never asked for. Refuse to bump on top of
+          # another release commit — the operator must explicitly choose
+          # whether the second click was intentional.
+          LATEST_SUBJECT=$(git log -1 --format='%s')
+          if echo "$LATEST_SUBJECT" | grep -qE '^chore: release v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::HEAD is already a release commit ('$LATEST_SUBJECT'). Refusing to bump on top of an existing release. If this was intentional (e.g. publishing a same-content re-tag), do it manually."
+            exit 1
+          fi
+
       - name: Resolve bump type from input
         id: bump
         run: |
@@ -139,17 +157,45 @@ jobs:
           fi
 
           # First-parent walk on main so we get one line per merged PR,
-          # not per intermediate commit on the PR branch. Strip the
-          # Conventional-Commits prefix and the trailing `(#NNN)` suffix
-          # so the human-facing notes read cleanly. Filter out internal
-          # noise (chore/ci/build/style) so the user sees only what
-          # changed for them.
+          # not per intermediate commit on the PR branch. We use an
+          # ALLOWLIST of Conventional-Commits types instead of a denylist
+          # so non-CC commit subjects (e.g. an emergency hotfix done via
+          # the GitHub web UI without a `feat:` prefix) don't leak into
+          # user-facing release notes verbatim.
+          # Allowed: feat / fix / perf — types that produce a user-
+          # observable change. revert is deliberately excluded because
+          # `revert(x): feat(y): added z` would survive the filter and
+          # the prefix-strip would leave `feat(y): added z` in the notes
+          # — advertising a reverted feature as new. docs/refactor/test/
+          # chore/ci/build/style are also excluded.
+          # When the empty-RANGE branch fires (genuinely first release),
+          # cap to 50 most-recent matches to keep the GitHub Release
+          # body readable instead of dumping every commit since project
+          # inception.
+          # `git log` failures (corrupt repo, bad RANGE) need to abort —
+          # don't mask with `|| true`. We've validated RANGE above so a
+          # failure here is genuinely exceptional.
           # shellcheck disable=SC2086
-          ALL_LINES=$(git log $RANGE --first-parent --pretty=format:'%s' || true)
+          ALL_LINES=$(git log $RANGE --first-parent --pretty=format:'%s')
+          # `grep` returns exit 1 when there are no matches (legitimate
+          # "no user-facing changes" case). Swallow ONLY that specific
+          # exit so a real error from grep (regex compile, I/O) or sed
+          # (regex compile, write failure) still propagates and aborts
+          # under set -euo pipefail.
           USER_FACING=$(echo "$ALL_LINES" \
-            | grep -vE '^(chore|ci|build|style)(\(.+\))?:' \
-            | sed -E 's/^[a-z]+(\([^)]*\))?: //' \
-            || true)
+            | { grep -E '^(feat|fix|perf)(\(.+\))?:' || [ $? -eq 1 ]; } \
+            | sed -E 's/^[a-z]+(\([^)]*\))?: //')
+          # Reverts are summarised separately so they appear distinctly
+          # in the notes rather than masquerading as new features. Drop
+          # the `revert(scope): ` outer prefix only — keep the inner
+          # subject so users can see WHAT was reverted.
+          REVERTS=$(echo "$ALL_LINES" \
+            | { grep -E '^revert(\(.+\))?:' || [ $? -eq 1 ]; } \
+            | sed -E 's/^revert(\([^)]*\))?: //')
+          if [ -z "$LAST_TAG" ]; then
+            USER_FACING=$(echo "$USER_FACING" | head -50)
+            REVERTS=$(echo "$REVERTS" | head -10)
+          fi
 
           # Build full release notes for GitHub Release + Firebase
           # Distribution. Even if USER_FACING is empty (e.g. first run
@@ -167,8 +213,18 @@ jobs:
                 cleaned=$(echo "$line" | sed -E 's/[[:space:]]*\(#[0-9]+\)[[:space:]]*$//')
                 echo "- ${cleaned}"
               done
-            else
+            elif [ -z "$REVERTS" ]; then
+              # No reverts and no user-facing — truly internal release.
               echo "Internal release with no user-facing changes."
+            fi
+            if [ -n "$REVERTS" ]; then
+              echo ""
+              echo "### Reverted"
+              echo ""
+              echo "$REVERTS" | while IFS= read -r line; do
+                cleaned=$(echo "$line" | sed -E 's/[[:space:]]*\(#[0-9]+\)[[:space:]]*$//')
+                echo "- ${cleaned}"
+              done
             fi
           } > "$NOTES_FILE"
 
@@ -183,14 +239,31 @@ jobs:
                 cleaned=$(echo "$line" | sed -E 's/[[:space:]]*\(#[0-9]+\)[[:space:]]*$//')
                 echo "- ${cleaned}"
               done
-            else
+            elif [ -z "$REVERTS" ]; then
               echo "Internal improvements."
+            fi
+            if [ -n "$REVERTS" ]; then
+              echo ""
+              echo "Reverted:"
+              echo "$REVERTS" | head -3 | while IFS= read -r line; do
+                cleaned=$(echo "$line" | sed -E 's/[[:space:]]*\(#[0-9]+\)[[:space:]]*$//')
+                echo "- ${cleaned}"
+              done
             fi
           } > "$PLAY_FILE"
 
-          # Truncate to 500 chars (Play Store hard limit per locale).
-          truncated=$(head -c 500 "$PLAY_FILE")
-          echo "$truncated" > "$PLAY_FILE"
+          # Truncate to 500 CHARACTERS (not bytes) per Play Store's hard
+          # limit. `head -c` counts bytes, which would cut mid-codepoint
+          # for any non-ASCII character (PR titles legitimately contain
+          # accented locale strings + the project ships 20 locales).
+          # Cutting mid-UTF-8 produces invalid bytes that Play Console
+          # silently rejects with a generic "invalid characters" error
+          # six hours later in r0adkll/upload-google-play. Python 3
+          # string slicing is codepoint-based so safely respects
+          # character boundaries. Pass the path via env var rather than
+          # interpolating into the Python source — interpolation would
+          # break if the path contained quotes or backslashes.
+          PLAY_FILE_FOR_PY="$PLAY_FILE" python3 -c "import os; p=os.environ['PLAY_FILE_FOR_PY']; open(p,'w',encoding='utf-8').write(open(p,'r',encoding='utf-8').read()[:500])"
 
           # Copy to default.txt (r0adkll/upload-google-play falls back to default.txt).
           cp "$PLAY_FILE" "app/src/main/play/release-notes/en-US/default.txt"
@@ -204,10 +277,40 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Capture the SHA we expect HEAD~1 to point at after the bump.
+          # `git pull --rebase` updates the local `origin/main` ref to
+          # the freshly-fetched tip, so `git rev-parse origin/main`
+          # AFTER the pull would always equal HEAD~1 — making any post-
+          # pull comparison against origin/main vacuous. The only
+          # reliable witness of "did rebase pull in unrelated commits"
+          # is the origin/main SHA captured BEFORE the pull. If post-
+          # rebase HEAD~1 doesn't match it, the rebase replayed our
+          # bump on top of someone else's commits — and the changelog
+          # (computed from LAST_TAG..PRE_BUMP_HEAD earlier) won't
+          # mention them.
+          PRE_PULL_ORIGIN=$(git rev-parse origin/main)
           git add app/build.gradle.kts app/src/main/play/release-notes/en-US/internal.txt app/src/main/play/release-notes/en-US/default.txt
           git commit -m "chore: release v${{ steps.version.outputs.version }}"
-          git pull --rebase origin main
-          git push
+          # `set -euo pipefail` would abort on a rebase conflict with a
+          # generic "Process completed with exit code 1" annotation that
+          # gives the operator no indication WHY. Wrap the pull so we
+          # can surface a clear, action-oriented error if it fails.
+          if ! git pull --rebase origin main; then
+            echo "::error::git pull --rebase origin main failed — likely a conflict with concurrent commits on main. The release notes / version bump touched the same lines as another merge. Re-trigger the Release workflow once main has stabilised; the regenerated changelog will pick up the new commits cleanly."
+            exit 1
+          fi
+          POST_REBASE_BASE=$(git rev-parse HEAD~1)
+          if [ "$POST_REBASE_BASE" != "$PRE_PULL_ORIGIN" ]; then
+            echo "::error::Rebase pulled in unrelated commits (HEAD~1=$POST_REBASE_BASE, expected $PRE_PULL_ORIGIN — the origin/main tip captured BEFORE the pull). The release tag would attach to commits the changelog doesn't describe. Re-run the workflow to regenerate the changelog against the new main tip."
+            exit 1
+          fi
+          # Wrap push so a remote rejection (branch protection rule, force-
+          # push needed, network blip) emits a clear ::error:: annotation
+          # instead of the generic "Process completed with exit code 1".
+          if ! git push; then
+            echo "::error::git push failed — could be branch protection rule rejection, the remote moved between the rebase and the push, or a transient network issue. The version bump commit IS local; re-trigger the Release workflow once the cause is clear."
+            exit 1
+          fi
           # Verify the bump landed at HEAD. `git pull --rebase` can race with
           # other commits on main and silently produce a HEAD whose
           # versionName doesn't match what we just bumped — leading to a tag
@@ -227,10 +330,41 @@ jobs:
           set -euo pipefail
           VERSION="${{ steps.version.outputs.version }}"
           COMMIT_SHA=$(git rev-parse HEAD)
-          gh release create "v${VERSION}" \
+          NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
+          # The version-bump commit is ALREADY on origin/main from the
+          # previous step. If `gh release create` fails (rate limit, 5xx,
+          # token scope issue, transient blip), we don't auto-retry —
+          # re-running this workflow would be blocked by the double-
+          # fired-release guard. Surface a single-line ::error::
+          # (multi-line annotations don't render) plus full recovery
+          # instructions in the step output and job summary so the
+          # operator can manually complete the release.
+          if ! gh release create "v${VERSION}" \
             --target "$COMMIT_SHA" \
             --title "v${VERSION}" \
-            --notes-file "${{ steps.notes.outputs.notes_file }}"
+            --notes-file "$NOTES_FILE"; then
+            echo "::error::gh release create failed for v${VERSION}. The version bump is on main but no tag/release exists. See step output + job summary for manual-recovery command."
+            {
+              echo ""
+              echo "============================================================"
+              echo "MANUAL RECOVERY REQUIRED"
+              echo "============================================================"
+              echo "The version bump for v${VERSION} is at commit ${COMMIT_SHA}"
+              echo "on origin/main, but the GitHub Release was not created."
+              echo "Re-running this workflow will fail the double-fired-release"
+              echo "guard. Run locally on a fresh clone of main:"
+              echo ""
+              echo "  gh release create v${VERSION} \\"
+              echo "    --target ${COMMIT_SHA} \\"
+              echo "    --title v${VERSION} \\"
+              echo "    --notes-file -<<'NOTES'"
+              cat "$NOTES_FILE"
+              echo "NOTES"
+              echo ""
+              echo "============================================================"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           echo "Created release v${VERSION} at ${COMMIT_SHA}"
 
           # Job summary for easy copy-paste

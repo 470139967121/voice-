@@ -29,7 +29,9 @@ fi
 # on release.yml would re-introduce the auto-release-per-merge behaviour
 # that small-PR cadence was built to avoid, and any deploy-dev.yml
 # without a unique CFBundleVersion would resurrect TestFlight duplicate-
-# build-number rejections. ~5ms.
+# build-number rejections. Runs unconditionally on every push (the script
+# itself is fast — small grep over two YAML files — so we don't gate it
+# on path filters).
 if ! bash scripts/check-release-trigger.sh; then
   echo ""
   echo "✗ Release/dev-versioning guard tripped — push blocked"
