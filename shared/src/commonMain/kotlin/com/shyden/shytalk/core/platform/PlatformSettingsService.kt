@@ -9,8 +9,13 @@ interface PlatformSettingsService {
     /** Open an email compose window to the given address. */
     fun openEmail(email: String)
 
-    /** Open the platform's app store page for the given package/bundle ID. */
-    fun openPlayStore(packageId: String)
+    /**
+     * Open the platform's app store page for the given package/bundle ID.
+     * Returns true if the store was launched, false if it could not be opened
+     * (e.g. no store app installed, URL rejected by the system). Callers on
+     * blocking screens like force-update MUST surface a fallback when false.
+     */
+    fun openPlayStore(packageId: String): Boolean
 
     /** Open platform system settings for the specified type. */
     fun openSystemSettings(type: SettingsType)

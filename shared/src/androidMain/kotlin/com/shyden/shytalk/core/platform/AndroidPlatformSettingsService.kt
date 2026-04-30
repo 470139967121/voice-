@@ -39,18 +39,21 @@ class AndroidPlatformSettingsService(
         )
     }
 
-    override fun openPlayStore(packageId: String) {
-        val intent =
-            try {
-                Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageId"))
-            } catch (_: Exception) {
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse("https://play.google.com/store/apps/details?id=$packageId"),
-                )
-            }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        ctx?.startActivity(intent)
+    override fun openPlayStore(packageId: String): Boolean {
+        val context = ctx ?: return false
+        val market =
+            Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageId"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return runCatching { context.startActivity(market) }
+            .recoverCatching {
+                // No Play Store installed (Huawei / AOSP) — fall back to web URL.
+                val web =
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://play.google.com/store/apps/details?id=$packageId"),
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(web)
+            }.isSuccess
     }
 
     override fun openSystemSettings(type: SettingsType) {

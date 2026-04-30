@@ -665,6 +665,7 @@
     <!-- Force Update -->
     <string name="update_required">ត្រូវការអាប់ដេត</string>
     <string name="update_required_description">កំណែថ្មីនៃ ShyTalk អាចប្រើបាន។ សូមអាប់ដេតដើម្បីបន្ត។</string>
+    <string name="update_open_store_failed">Cannot open the app store automatically. Please update ShyTalk manually from your device app store.</string>
 
     <!-- Leave/Close room dialog -->
     <string name="close_room_question">បិទបន្ទប់?</string>

@@ -22,12 +22,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.shyden.shytalk.R
-import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.ban_expires
+import com.shyden.shytalk.resources.ban_permanent
+import com.shyden.shytalk.resources.ban_reason
+import com.shyden.shytalk.resources.device_banned_description
+import com.shyden.shytalk.resources.device_banned_title
+import com.shyden.shytalk.resources.network_banned_description
+import com.shyden.shytalk.resources.network_banned_title
+import com.shyden.shytalk.resources.police_duck
+import com.shyden.shytalk.resources.police_duck_description
+import com.shyden.shytalk.resources.sign_out
+import com.shyden.shytalk.resources.support_contact
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -48,7 +57,7 @@ fun BanScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Image(
-                painter = painterResource(R.drawable.police_duck),
+                painter = painterResource(Res.drawable.police_duck),
                 contentDescription = stringResource(Res.string.police_duck_description),
                 modifier =
                     Modifier
@@ -119,7 +128,10 @@ fun BanScreen(
 
             OutlinedButton(
                 onClick = onSignOut,
-                modifier = Modifier.fillMaxWidth().testTag("ban_signOutButton"),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag("ban_signOutButton"),
                 colors =
                     ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
