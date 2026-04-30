@@ -11,6 +11,10 @@ import androidx.navigation.compose.rememberNavController
 import com.shyden.shytalk.core.push.chatDeepLinks
 import com.shyden.shytalk.core.push.consumeChatDeepLink
 import com.shyden.shytalk.core.util.LanguagePreference
+import com.shyden.shytalk.core.util.Resource
+import com.shyden.shytalk.core.util.logW
+import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
 import com.shyden.shytalk.feature.legal.CommunityStandardsScreen
 import com.shyden.shytalk.feature.legal.CyberBullyingPolicyScreen
@@ -23,6 +27,7 @@ import com.shyden.shytalk.navigation.SharedNavGraph
 import com.shyden.shytalk.navigation.createIosPlatformScreens
 import com.shyden.shytalk.ui.theme.ShyTalkTheme
 import kotlinx.coroutines.flow.filterNotNull
+import org.koin.mp.KoinPlatformTools
 
 @Suppress("ktlint:standard:function-naming")
 fun MainViewController() = ComposeUIViewController { IosApp() }
@@ -82,8 +87,55 @@ private fun IosApp() {
             // non-null values, navigate, then `consume()` to clear so a re-subscribe
             // (e.g. after sign-out → sign-in re-creating the NavGraph) does NOT
             // re-fire the link from the previous user session.
+            //
+            // Authorisation re-check before navigation: a compromised FCM project
+            // (or anyone with the FCM server key) could deliver a payload that
+            // opens a chat with an arbitrary uniqueId, bypassing block / friend
+            // gating in the UI. Firestore rules enforce the actual security
+            // boundary at message-read time, but the chat-screen header would
+            // briefly flash the target's display name / photo before failure.
+            // Re-validate signed-in state and block status here so the
+            // navigation never starts for invalid targets.
             LaunchedEffect(navController) {
                 chatDeepLinks.filterNotNull().collect { link ->
+                    val koin = KoinPlatformTools.defaultContext().get()
+                    val authRepo = koin.get<AuthRepository>()
+                    val currentUserId = authRepo.currentUserId
+                    if (currentUserId.isNullOrEmpty()) {
+                        logW("MainViewController", "Push deep-link dropped — not signed in")
+                        consumeChatDeepLink()
+                        return@collect
+                    }
+                    if (!link.isGroup) {
+                        val userRepo = koin.get<UserRepository>()
+                        when (val blocked = userRepo.getBlockedUserIds(currentUserId)) {
+                            is Resource.Success -> {
+                                if (blocked.data.contains(link.otherUserId)) {
+                                    logW(
+                                        "MainViewController",
+                                        "Push deep-link dropped — target user is blocked",
+                                    )
+                                    consumeChatDeepLink()
+                                    return@collect
+                                }
+                            }
+
+                            is Resource.Error -> {
+                                // Fail closed: if we can't determine block status,
+                                // don't risk surfacing a chat with a potentially-blocked
+                                // user (which would flash the target's display name /
+                                // photo header before any screen-level enforcement).
+                                logW(
+                                    "MainViewController",
+                                    "Push deep-link dropped — block status check failed: ${blocked.message}",
+                                )
+                                consumeChatDeepLink()
+                                return@collect
+                            }
+
+                            is Resource.Loading -> Unit // suspending fn — Loading not emitted
+                        }
+                    }
                     val route =
                         if (link.isGroup) {
                             Screen.GroupChat.createRoute(link.conversationId)

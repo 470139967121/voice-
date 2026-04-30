@@ -113,6 +113,7 @@ app.use('/api/economy/gift', writeLimiter);
 app.use('/api/economy/gift-direct', writeLimiter);
 app.use('/api/economy/gift-batch', writeLimiter);
 app.use('/api/economy/backpack-send', writeLimiter);
+app.use('/api/notifications', writeLimiter);
 app.use('/api/translate', writeLimiter);
 
 // Strictest limits on sensitive operations

@@ -32,7 +32,8 @@ service cloud.firestore {
                      'suspendedBy', 'is_suspended', 'suspensionReason', 'suspension_reason',
                      'preSuspensionDisplayName', 'preSuspensionProfilePhotoUrl',
                      'preSuspensionCoverPhotoUrl', 'roleChanged',
-                     'unique_id', 'firebase_uid']);
+                     'unique_id', 'firebase_uid',
+                     'fcmTokens', 'fcm_tokens']);
 
       // Backpack — read own, write only via API
       match /backpack/{giftId} {
