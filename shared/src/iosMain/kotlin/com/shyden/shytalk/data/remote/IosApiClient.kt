@@ -22,8 +22,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -90,6 +92,25 @@ class IosApiClient(
     }
 
     suspend fun get(path: String): JsonObject = request("GET", path)
+
+    /**
+     * GET an endpoint that returns a JSON array at the top level (e.g.
+     * `/api/reports`). Android's WorkerApiClient has the same `getArray` method.
+     * Throws if the response is a JSON object instead of an array — caller
+     * should use [get] for object responses.
+     */
+    suspend fun getArray(path: String): JsonArray {
+        val token = getIdToken() ?: throw ApiException(401, "Not authenticated")
+        val response = executeRequest("GET", path, null, token)
+        val freshResponse =
+            if (response.status.value == 401) {
+                val freshToken = getIdToken(forceRefresh = true) ?: throw ApiException(401, "Token refresh failed")
+                executeRequest("GET", path, null, freshToken)
+            } else {
+                response
+            }
+        return parseArrayResponse(freshResponse)
+    }
 
     suspend fun post(
         path: String,
@@ -204,6 +225,34 @@ class IosApiClient(
         } catch (e: Exception) {
             // Response might be empty or non-JSON
             JsonObject(emptyMap())
+        }
+    }
+
+    private suspend fun parseArrayResponse(response: HttpResponse): JsonArray {
+        val status = response.status.value
+        val text = response.bodyAsText()
+
+        if (status !in 200..299) {
+            val errorMsg =
+                try {
+                    json
+                        .parseToJsonElement(text)
+                        .jsonObject["error"]
+                        ?.jsonPrimitive
+                        ?.content ?: text
+                } catch (e: Exception) {
+                    text
+                }
+            logE(TAG, "HTTP $status: $errorMsg")
+            throw ApiException(status, errorMsg)
+        }
+
+        return try {
+            json.parseToJsonElement(text).jsonArray
+        } catch (e: Exception) {
+            // Empty or non-JSON response — return empty array rather than throw
+            // so callers can treat "no data" the same as "empty list".
+            JsonArray(emptyList())
         }
     }
 }
