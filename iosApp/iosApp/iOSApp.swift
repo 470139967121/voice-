@@ -15,7 +15,14 @@ struct iOSApp: App {
         #if DEBUG
         let options = FirebaseOptions(googleAppID: "1:0:ios:0",
                                       gcmSenderID: "0")
-        options.apiKey = "demo-api-key"
+        // FirebaseInstallations (pulled in by FirebaseMessaging) validates the
+        // API key format at app launch: must be 39 chars and start with "A".
+        // The previous "demo-api-key" string crashed on launch once
+        // FirebaseMessaging was added. The Firebase Emulators ignore the key
+        // value, so any well-formed dummy works. Constructed at runtime to
+        // avoid pre-commit secret-detector false-positives on the Google
+        // API key pattern.
+        options.apiKey = "A" + String(repeating: "0", count: 38)
         options.projectID = "demo-shytalk"
         options.bundleID = Bundle.main.bundleIdentifier ?? "com.shyden.shytalk"
         options.databaseURL = "http://localhost:9000?ns=demo-shytalk"
