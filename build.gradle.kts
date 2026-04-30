@@ -101,7 +101,21 @@ sonar {
             listOf(
                 "shared/src/commonMain/**",
                 "shared/src/androidMain/**",
+                // iosMain Kotlin/Native targets do not run on the JVM, so
+                // the standard JaCoCo coverage path never sees them. Tests
+                // for iOS-only Kotlin live in iosTest (no CI coverage tool
+                // hooked up yet) and are exercised via simulator + manual QA.
+                // TODO: once Kotlin/Native coverage (e.g. via konanArgs
+                // -Xcoverage-only-files) or xcresult→Cobertura is wired up,
+                // remove this exclusion so iOS code earns its 80% bar.
+                "shared/src/iosMain/**",
                 "app/src/main/**",
+                // Swift sources have no JVM-ingestible coverage tool. They
+                // are exercised via XCTest / simulator runs which produce
+                // .xcresult bundles, not jacoco XML.
+                // TODO: when adding Slather or xchtmlreport→Cobertura to CI,
+                // remove this exclusion so Swift earns its coverage bar.
+                "iosApp/**",
             ).joinToString(","),
         )
 

@@ -14,6 +14,7 @@
 		058557BC273AAA2400C9D062 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 058557B6273AAA2400C9D062 /* Assets.xcassets */; };
 		115345A7BFC5B39CE7E9C4A3 /* StartingScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6914C8FB414C2D00F27D96C /* StartingScreen.swift */; };
 		2BB749AEBFC35FADE18D2078 /* StartingScreenCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0259442BA0EB1D29F51D11FF /* StartingScreenCoordinator.swift */; };
+		336672D1F166200A14293D3C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118DE4D1B78999277946A689 /* AppDelegate.swift */; };
 		4BAC4643AF77198FAA4511FA /* GoogleSignInHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3441E4A3689761DFC9CF90 /* GoogleSignInHelper.swift */; };
 		78199A8EB882DF3D1CBC2FAA /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49532222F59B432DD934D0D7 /* Pods_iosApp.framework */; };
 		78514F28AD1C7871F34247FC /* StartingScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89144DA39CA4D062CF1EE9B3 /* StartingScreenView.swift */; };
@@ -54,6 +55,7 @@
 		058557B7273AAA2400C9D062 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		058557B8273AAA2400C9D062 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0B3441E4A3689761DFC9CF90 /* GoogleSignInHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoogleSignInHelper.swift; path = iosApp/GoogleSignInHelper.swift; sourceTree = SOURCE_ROOT; };
+		118DE4D1B78999277946A689 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = iosApp/AppDelegate.swift; sourceTree = SOURCE_ROOT; };
 		27B546F78FF904CF3A1203A3 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "iosApp/GoogleService-Info.plist"; sourceTree = SOURCE_ROOT; };
 		35E742ACAF202B0309A19B78 /* StartingScreenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreenService.swift; path = iosApp/feature/starting/StartingScreenService.swift; sourceTree = SOURCE_ROOT; };
 		49532222F59B432DD934D0D7 /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -74,6 +76,7 @@
 		A10001002600000000000023 /* StartingScreenCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartingScreenCoordinatorTests.swift; sourceTree = "<group>"; };
 		A10003002600000000000001 /* iosAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4194D2DAF7801EEB19415A3 /* StartingScreenCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreenCache.swift; path = iosApp/feature/starting/StartingScreenCache.swift; sourceTree = SOURCE_ROOT; };
+		BE254B9C06195293860934D8 /* iosApp.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = iosApp.entitlements; path = iosApp/iosApp.entitlements; sourceTree = SOURCE_ROOT; };
 		E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveKitBridge.swift; path = iosApp/LiveKitBridge.swift; sourceTree = SOURCE_ROOT; };
 		F6914C8FB414C2D00F27D96C /* StartingScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreen.swift; path = iosApp/feature/starting/StartingScreen.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -128,6 +131,8 @@
 				058557B7273AAA2400C9D062 /* Info.plist */,
 				A10001002600000000000010 /* Localizable.xcstrings */,
 				A10001002600000000000011 /* PrivacyInfo.xcprivacy */,
+				118DE4D1B78999277946A689 /* AppDelegate.swift */,
+				BE254B9C06195293860934D8 /* iosApp.entitlements */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -394,6 +399,7 @@
 				A10001012600000000000005 /* StartingScreenCoordinator.swift in Sources */,
 				4BAC4643AF77198FAA4511FA /* GoogleSignInHelper.swift in Sources */,
 				CC7F41EE90273AC8C670F9E0 /* LiveKitBridge.swift in Sources */,
+				336672D1F166200A14293D3C /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -551,6 +557,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = F3XX4PM3MF;
@@ -579,6 +586,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = F3XX4PM3MF;

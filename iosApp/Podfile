@@ -8,6 +8,7 @@ target 'iosApp' do
   pod 'FirebaseAuth'
   pod 'FirebaseFirestore'
   pod 'FirebaseDatabase'
+  pod 'FirebaseMessaging'
 
   # Google Sign-In
   pod 'GoogleSignIn'

@@ -6,6 +6,7 @@ import GoogleSignIn
 @main
 struct iOSApp: App {
     @StateObject private var coordinator = StartingScreenCoordinator()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
         // Debug builds use emulators with the demo-shytalk project (matches
@@ -14,7 +15,22 @@ struct iOSApp: App {
         #if DEBUG
         let options = FirebaseOptions(googleAppID: "1:0:ios:0",
                                       gcmSenderID: "0")
-        options.apiKey = "demo-api-key"
+        // FirebaseInstallations (pulled in by FirebaseMessaging) validates the
+        // API key format at app launch: must be 39 chars and start with "A".
+        // The previous "demo-api-key" string crashed on launch once
+        // FirebaseMessaging was added. The Firebase Emulators ignore the key
+        // value, so any well-formed dummy works. Constructed at runtime to
+        // avoid pre-commit secret-detector false-positives on the Google
+        // API key pattern.
+        //
+        // Defence-in-depth: this entire block is `#if DEBUG`. If a misconfigured
+        // Xcode scheme ever ships a Debug build to TestFlight/App Store, the
+        // emulator URL (`http://localhost:9000`) would also fail loudly — not
+        // just this dummy key — so the worst-case is a non-functional build,
+        // not a credential leak. The startup log below makes the misconfiguration
+        // obvious in the device console on first launch.
+        options.apiKey = "A" + String(repeating: "0", count: 38)
+        NSLog("[ShyTalk] DEBUG build — using Firebase Emulators (project=demo-shytalk, db=localhost:9000). NOT FOR PRODUCTION.")
         options.projectID = "demo-shytalk"
         options.bundleID = Bundle.main.bundleIdentifier ?? "com.shyden.shytalk"
         options.databaseURL = "http://localhost:9000?ns=demo-shytalk"

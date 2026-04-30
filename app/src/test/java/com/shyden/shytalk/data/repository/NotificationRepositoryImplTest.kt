@@ -79,16 +79,26 @@ class NotificationRepositoryImplTest {
         }
 
     @Test
-    fun `setPmNotificationsEnabled returns Success`() =
+    fun `setPmNotificationsEnabled hits PATCH api and returns Success`() =
         runTest {
+            coEvery { api.patch("/api/notifications/settings", any()) } returns
+                JSONObject().apply { put("success", true) }
             val result = repo.setPmNotificationsEnabled("user-1", true)
             assertTrue(result is Resource.Success)
+            // Verify the field is included in the request body so we are not
+            // silently no-oping on the server side.
+            coVerify {
+                api.patch(
+                    "/api/notifications/settings",
+                    match<JSONObject> { it.optBoolean("pmNotificationsEnabled") },
+                )
+            }
         }
 
     @Test
-    fun `setPmNotificationsEnabled returns Error on exception`() =
+    fun `setPmNotificationsEnabled returns Error on api failure`() =
         runTest {
-            every { mockDocRef.update(any<String>(), any()) } returns Tasks.forException(RuntimeException("Fail"))
+            coEvery { api.patch("/api/notifications/settings", any()) } throws RuntimeException("Fail")
             val result = repo.setPmNotificationsEnabled("user-1", true)
             assertTrue(result is Resource.Error)
         }

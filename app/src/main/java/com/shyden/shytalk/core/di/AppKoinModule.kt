@@ -87,6 +87,16 @@ val appModule =
         single { FirebaseAuth.getInstance() }
         single { FirebaseFirestore.getInstance() }
 
+        // Platform-specific services. AndroidPlatformSettingsService is
+        // injected into AppSettingsScreen and RoomScreen via koinInject().
+        // Was previously unbound — instrumented tests started catching this
+        // once the unrelated TestKoinModule compile error was fixed; in
+        // production it would crash on first navigation to those screens.
+        single<com.shyden.shytalk.core.platform.PlatformSettingsService> {
+            com.shyden.shytalk.core.platform
+                .AndroidPlatformSettingsService(androidContext())
+        }
+
         // Connect to Firebase Emulators for local development
         if (BuildConfig.FLAVOR == "local") {
             val host = BuildConfig.LOCAL_HOST

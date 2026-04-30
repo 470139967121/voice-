@@ -55,7 +55,11 @@ class WalletAndTransactionsTest {
         composeTestRule.waitForTag("wallet_transactionsButton")
         composeTestRule.onNodeWithTag("wallet_transactionsButton").performClick()
         composeTestRule.waitForTag("transactions_list")
-        // Press back to return to wallet
+        // Wait for navigation animations to settle before pressing back. Without
+        // waitForIdle here, Espresso.pressBack() races with the Compose nav
+        // transition and can throw RootViewWithoutFocusException after a 10s
+        // timeout (window-focus poll fails while the transition is mid-animation).
+        composeTestRule.waitForIdle()
         Espresso.pressBack()
         composeTestRule.waitForTag("wallet_balance")
         composeTestRule.onNodeWithTag("wallet_balance").assertIsDisplayed()

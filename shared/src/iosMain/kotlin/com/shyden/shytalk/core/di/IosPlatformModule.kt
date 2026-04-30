@@ -1,5 +1,7 @@
 package com.shyden.shytalk.core.di
 
+import com.shyden.shytalk.core.push.PushTokenManager
+import com.shyden.shytalk.core.push.getPushBridge
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.core.room.IosRoomServiceController
 import com.shyden.shytalk.core.room.RoomLifecycleManager
@@ -150,6 +152,10 @@ val iosPlatformModule =
             com.shyden.shytalk.core.platform
                 .IosPlatformSettingsService()
         }
+
+        // Push notification token manager (single Mutex serialises save/clear).
+        // Bridge is registered from Swift after Koin init, hence lazy `::getPushBridge`.
+        single { PushTokenManager(bridgeProvider = ::getPushBridge, notificationRepo = get()) }
 
         // Preloaders
         single<BannerImagePreloader> { BannerImagePreloader { } }

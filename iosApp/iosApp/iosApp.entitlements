@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	    aps-environment is set to `production` for both debug and release.
+	    Apple's signing infrastructure picks the actual APNs delivery
+	    environment from the embedded provisioning profile (sandbox for
+	    development profiles, production for distribution profiles), so
+	    `production` here is safe and avoids the silent-delivery-failure
+	    footgun where a `development` value would mismatch any non-debug
+	    local signing (e.g. Ad Hoc).
+
+	    SHARED FILE — DO NOT ADD SCHEME-SPECIFIC KEYS HERE. Both Debug and
+	    Release builds reference this single entitlements file (per
+	    project.pbxproj `CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements`
+	    in both configurations). If you need a Debug-only or staging-only
+	    capability (associated-domains for a staging URL, etc.), split this
+	    into iosApp-Debug.entitlements / iosApp-Release.entitlements and
+	    reference per-configuration in project.pbxproj.
+	-->
+	<key>aps-environment</key>
+	<string>production</string>
+</dict>
+</plist>

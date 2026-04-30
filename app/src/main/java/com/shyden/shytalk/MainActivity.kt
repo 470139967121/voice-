@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +35,8 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import com.shyden.shytalk.core.BuildVariant
+import com.shyden.shytalk.core.push.consumeChatDeepLink
+import com.shyden.shytalk.core.push.verifyPushNavigation
 import com.shyden.shytalk.core.room.ActiveRoomManager
 import com.shyden.shytalk.core.room.RoomLifecycleManager
 import com.shyden.shytalk.core.room.RoomService
@@ -45,6 +48,7 @@ import com.shyden.shytalk.data.remote.StartingScreen
 import com.shyden.shytalk.data.remote.WorkerApiClient
 import com.shyden.shytalk.data.repository.AppLockRepository
 import com.shyden.shytalk.data.repository.AuthRepository
+import com.shyden.shytalk.data.repository.PrivateMessageRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.feature.legal.CURRENT_LEGAL_VERSION
 import com.shyden.shytalk.feature.legal.CommunityStandardsScreen
@@ -71,9 +75,12 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.android.ext.android.inject
 
+private const val TAG = "MainActivity"
+
 class MainActivity : AppCompatActivity() {
     private val authRepository: AuthRepository by inject()
     private val userRepository: UserRepository by inject()
+    private val privateMessageRepository: PrivateMessageRepository by inject()
     private val workerApiClient: WorkerApiClient by inject()
     private val activeRoomManager: RoomLifecycleManager by inject()
     private val appConfigService: AppConfigService by inject()
@@ -357,10 +364,36 @@ class MainActivity : AppCompatActivity() {
 
                         val navigateToChatInfo by navigateToChatState
 
+                        // Push deep-link authorisation re-check — delegates to
+                        // commonMain `verifyPushNavigation` so iOS and Android
+                        // share the same authz semantics (timeout, identity
+                        // gate, block-list gate, group conversation-membership
+                        // gate; all fail-closed). Use `resolvedUniqueId`
+                        // explicitly to avoid the cold-start race where
+                        // `currentUserId` falls back to the Firebase UID
+                        // before identity resolution completes.
                         LaunchedEffect(navigateToChatInfo) {
                             val chatInfo = navigateToChatInfo
                             if (chatInfo != null) {
                                 val (id, isGroup) = chatInfo
+                                val currentUserId = authRepository.resolvedUniqueId
+                                if (currentUserId.isNullOrEmpty()) {
+                                    Log.w(TAG, "Push deep-link dropped — identity not yet resolved or signed out")
+                                    navigateToChatState.value = null
+                                    return@LaunchedEffect
+                                }
+                                val authzOk =
+                                    verifyPushNavigation(
+                                        currentUserId = currentUserId,
+                                        targetId = id,
+                                        isGroup = isGroup,
+                                        fetchBlockedUserIds = { userRepository.getBlockedUserIds(it) },
+                                        fetchConversation = { privateMessageRepository.getConversation(it) },
+                                    )
+                                if (!authzOk) {
+                                    navigateToChatState.value = null
+                                    return@LaunchedEffect
+                                }
                                 val route =
                                     if (isGroup) {
                                         Screen.GroupChat.createRoute(id)
@@ -371,6 +404,10 @@ class MainActivity : AppCompatActivity() {
                                     launchSingleTop = true
                                 }
                                 navigateToChatState.value = null
+                                // Also clear the shared chatDeepLinks bus so a
+                                // future tri-platform unification through that
+                                // channel doesn't leave a stale link. Idempotent.
+                                consumeChatDeepLink()
                             }
                         }
 
