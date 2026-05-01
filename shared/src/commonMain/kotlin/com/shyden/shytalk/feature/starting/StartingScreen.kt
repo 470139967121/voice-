@@ -29,45 +29,54 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.AsyncImage
-import com.shyden.shytalk.R
-import com.shyden.shytalk.resources.*
+import com.shyden.shytalk.core.platform.PlatformSettingsService
 import com.shyden.shytalk.resources.Res
-import com.shyden.shytalk.ui.theme.ShyTalkTheme
+import com.shyden.shytalk.resources.police_duck
+import com.shyden.shytalk.resources.starting_screen_dismiss
+import com.shyden.shytalk.resources.starting_screen_police_duck_description
+import com.shyden.shytalk.resources.starting_screen_pre_launch_message
+import com.shyden.shytalk.resources.starting_screen_pre_launch_title
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import com.shyden.shytalk.data.remote.StartingScreen as StartingScreenData
+
+private const val PRE_LAUNCH_GATE_ID = "preLaunchGate"
+private const val POLICE_DUCK_IMAGE = "police_duck"
+
+private val WARNING_COLOR = Color(0xFFE74C3C)
+private val PROMO_COLOR = Color(0xFF9B59B6)
+private val ANNOUNCEMENT_COLOR = Color(0xFF3498DB)
+private val INFO_COLOR = Color(0xFF2ECC71)
 
 /**
  * Full-screen starting screen composable.
  *
- * Shows ShyTalk branding, template/image icon, title, message,
- * and optionally a dismiss button. Can have a background image
- * with a dark overlay for text readability.
+ * Shows ShyTalk branding, template/image icon, title, message, and
+ * optionally a dismiss button. Can have a background image with a
+ * dark overlay for text readability.
  */
 @Composable
 fun StartingScreenComposable(
     screen: StartingScreenData,
     onDismiss: () -> Unit,
     backgroundImagePath: String? = null,
+    platformSettings: PlatformSettingsService = koinInject(),
 ) {
-    val context = LocalContext.current
     val templateColor =
         remember(screen.template) {
             when (screen.template) {
-                "warning" -> Color(0xFFE74C3C)
-                "promotional" -> Color(0xFF9B59B6)
-                "announcement" -> Color(0xFF3498DB)
-                "info" -> Color(0xFF2ECC71)
-                else -> Color(0xFF2ECC71) // fallback to info
+                "warning" -> WARNING_COLOR
+                "promotional" -> PROMO_COLOR
+                "announcement" -> ANNOUNCEMENT_COLOR
+                "info" -> INFO_COLOR
+                else -> INFO_COLOR
             }
         }
 
@@ -76,7 +85,6 @@ fun StartingScreenComposable(
         color = MaterialTheme.colorScheme.background,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Background image with overlay if provided
             if (backgroundImagePath != null) {
                 AsyncImage(
                     model = backgroundImagePath,
@@ -84,7 +92,6 @@ fun StartingScreenComposable(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                 )
-                // Dark overlay for text readability
                 Box(
                     modifier =
                         Modifier
@@ -102,17 +109,10 @@ fun StartingScreenComposable(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                // ShyTalk app icon + logo (always present)
-                val appIcon =
-                    remember(context) {
-                        try {
-                            val drawable = context.packageManager.getApplicationIcon(context.packageName)
-                            BitmapPainter(drawable.toBitmap(128, 128).asImageBitmap())
-                        } catch (_: Exception) {
-                            null
-                        }
-                    }
-
+                // App icon resolved via PlatformSettingsService — Android returns
+                // the launcher icon, iOS returns null (UIImage→Skia conversion is
+                // non-trivial and the screen renders without it).
+                val appIcon = remember { platformSettings.getAppIcon()?.let(::BitmapPainter) }
                 if (appIcon != null) {
                     Image(
                         painter = appIcon,
@@ -136,20 +136,16 @@ fun StartingScreenComposable(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Template/image icon
                 when (screen.imageType) {
-                    "police_duck" -> {
+                    POLICE_DUCK_IMAGE -> {
                         Image(
-                            painter =
-                                androidx.compose.ui.res
-                                    .painterResource(R.drawable.police_duck),
+                            painter = painterResource(Res.drawable.police_duck),
                             contentDescription = stringResource(Res.string.starting_screen_police_duck_description),
                             modifier = Modifier.size(120.dp),
                         )
                     }
 
                     else -> {
-                        // Use template default icon
                         val icon =
                             when (screen.template) {
                                 "warning" -> Icons.Default.Warning
@@ -168,9 +164,8 @@ fun StartingScreenComposable(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Title
                 val displayTitle =
-                    if (screen.screenId == "preLaunchGate") {
+                    if (screen.screenId == PRE_LAUNCH_GATE_ID) {
                         stringResource(Res.string.starting_screen_pre_launch_title)
                     } else {
                         screen.title
@@ -193,9 +188,8 @@ fun StartingScreenComposable(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Message
                 val displayMessage =
-                    if (screen.screenId == "preLaunchGate") {
+                    if (screen.screenId == PRE_LAUNCH_GATE_ID) {
                         stringResource(Res.string.starting_screen_pre_launch_message)
                     } else {
                         screen.message
@@ -216,7 +210,6 @@ fun StartingScreenComposable(
                             .testTag("startingScreen_message"),
                 )
 
-                // Dismiss button (only if dismissable)
                 if (screen.dismissable) {
                     Spacer(modifier = Modifier.height(32.dp))
 
@@ -240,48 +233,5 @@ fun StartingScreenComposable(
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun StartingScreenPreview_Warning() {
-    ShyTalkTheme(darkTheme = true) {
-        StartingScreenComposable(
-            screen =
-                StartingScreenData(
-                    screenId = "preLaunchGate",
-                    enabled = true,
-                    dismissable = false,
-                    frequency = "every_launch",
-                    template = "warning",
-                    title = "ShyTalk is not available yet",
-                    message =
-                        "ShyTalk has not been released yet. To apply to test the application, " +
-                            "contact Shyden. Testing is available for iOS and Android users.",
-                    imageType = "police_duck",
-                ),
-            onDismiss = {},
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun StartingScreenPreview_Dismissable() {
-    ShyTalkTheme(darkTheme = true) {
-        StartingScreenComposable(
-            screen =
-                StartingScreenData(
-                    screenId = "announcement1",
-                    enabled = true,
-                    dismissable = true,
-                    frequency = "once",
-                    template = "announcement",
-                    title = "Welcome to ShyTalk!",
-                    message = "We are excited to have you here. Explore voice rooms, chat with friends, and more!",
-                ),
-            onDismiss = {},
-        )
     }
 }
