@@ -1,5 +1,6 @@
 package com.shyden.shytalk.feature.auth
 
+import com.shyden.shytalk.core.util.logE
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -25,13 +26,27 @@ fun registerGoogleSignInHandler(handler: GoogleSignInHandler) {
 }
 
 /**
- * Triggers Google Sign-In via the registered Swift handler.
- * Returns the Google ID token for AuthViewModel.signInWithGoogle().
+ * iOS actual for the cross-platform [performGoogleSignIn] expect. The
+ * `context` and `webClientId` params are ignored — the Firebase iOS SDK
+ * reads its OAuth client ID from `FirebaseApp.app().options.clientID`,
+ * and there's no Activity/Context concept on iOS.
+ *
+ * Maps the Swift "cancelled" string back to [GoogleSignInCancelledException]
+ * so the cross-platform call site can branch silently on cancel without
+ * caring which platform produced the cancel.
  */
-suspend fun performGoogleSignIn(): String =
+actual suspend fun performGoogleSignIn(
+    context: Any?,
+    webClientId: String?,
+): String =
     suspendCancellableCoroutine { continuation ->
         val handler = googleSignInHandler
         if (handler == null) {
+            // Programmer error — setupGoogleSignIn() in iOSApp.init()
+            // never registered a handler. Log so Sentry catches the
+            // misconfiguration rather than letting it surface as a
+            // user-facing snackbar.
+            logE("GoogleSignInHelper", "Google Sign-In handler not registered — setupGoogleSignIn() missing from iOSApp.init?")
             continuation.resumeWithException(Exception("Google Sign-In not configured on iOS"))
             return@suspendCancellableCoroutine
         }
@@ -40,10 +55,16 @@ suspend fun performGoogleSignIn(): String =
             if (!continuation.isActive) return@signIn
             if (idToken != null) {
                 continuation.resume(idToken)
+            } else if (error != null && error.equals("cancelled", ignoreCase = true)) {
+                continuation.resumeWithException(GoogleSignInCancelledException())
             } else {
-                continuation.resumeWithException(
-                    Exception(error ?: "Google Sign-In failed"),
-                )
+                // Real failure — Swift forwarded a localizedDescription.
+                // Log via logE so Sentry sees iOS Google Sign-In failures
+                // (the snackbar shows the message but cross-user pattern
+                // detection requires structured logs).
+                val msg = error ?: "Google Sign-In failed"
+                logE("GoogleSignInHelper", "Google Sign-In failed on iOS: $msg")
+                continuation.resumeWithException(Exception(msg))
             }
         }
     }

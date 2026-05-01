@@ -33,17 +33,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.core.ui.StyledSnackbarHost
 import com.shyden.shytalk.core.util.SecureStorage
+import com.shyden.shytalk.feature.auth.GoogleSignInCancelledException
+import com.shyden.shytalk.feature.auth.GoogleSignInNoAccountException
 import com.shyden.shytalk.feature.auth.components.AppleSignInButton
 import com.shyden.shytalk.feature.auth.components.GoogleSignInButton
+import com.shyden.shytalk.feature.auth.performGoogleSignIn
 import com.shyden.shytalk.feature.suspension.BanScreen
 import com.shyden.shytalk.feature.suspension.SuspensionScreen
 import com.shyden.shytalk.resources.*
@@ -68,7 +66,6 @@ fun SignInScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val credentialManager = remember { CredentialManager.create(context) }
     val googleSignInFailed = stringResource(Res.string.google_sign_in_failed)
     val secureStorage: SecureStorage = koinInject()
 
@@ -280,40 +277,35 @@ fun SignInScreen(
             // provider would just hit the same broken storage. User must clear app data.
             val isBusy = uiState.isLoading || signingInProvider != null || uiState.requiresAppDataClear
 
-            // Google Sign-In button (branded)
+            // Google Sign-In button (branded). The CredentialManager flow lives
+            // in shared/androidMain/.../GoogleSignInHelper.android.kt as the
+            // Android actual of `performGoogleSignIn` — keeping the screen
+            // close to the iOS counterpart and unblocking SignInScreen
+            // consolidation into commonMain.
             GoogleSignInButton(
                 onClick = {
                     if (isBusy) return@GoogleSignInButton
                     signingInProvider = "google"
                     scope.launch {
                         try {
-                            val googleIdOption =
-                                GetGoogleIdOption
-                                    .Builder()
-                                    .setFilterByAuthorizedAccounts(false)
-                                    .setServerClientId(BuildConfig.WEB_CLIENT_ID)
-                                    .build()
-
-                            val request =
-                                GetCredentialRequest
-                                    .Builder()
-                                    .addCredentialOption(googleIdOption)
-                                    .build()
-
-                            val result =
-                                credentialManager.getCredential(
-                                    request = request,
-                                    context = context,
-                                )
-
                             val googleIdToken =
-                                GoogleIdTokenCredential
-                                    .createFrom(result.credential.data)
-                                    .idToken
-
+                                performGoogleSignIn(
+                                    context = context,
+                                    webClientId = BuildConfig.WEB_CLIENT_ID,
+                                )
                             viewModel.signInWithGoogle(googleIdToken)
-                        } catch (_: GetCredentialCancellationException) {
+                        } catch (_: GoogleSignInCancelledException) {
+                            // User dismissed the picker — silent, no toast.
                             signingInProvider = null
+                        } catch (e: GoogleSignInNoAccountException) {
+                            // User-fixable: no Google account on device. Show
+                            // the actionable message verbatim ("Add a Google
+                            // account in Settings…") rather than the generic
+                            // "Google sign-in failed".
+                            signingInProvider = null
+                            snackbarHostState.showSnackbar(
+                                e.message ?: googleSignInFailed,
+                            )
                         } catch (e: Exception) {
                             signingInProvider = null
                             snackbarHostState.showSnackbar(

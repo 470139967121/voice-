@@ -70,6 +70,13 @@ kotlin {
             implementation(libs.lottie.compose)
             implementation(libs.androidx.security.crypto)
             implementation(libs.androidx.biometric)
+            // Required by GoogleSignInHelper.android.kt actual —
+            // CredentialManager + GoogleIdTokenCredential. Same versions
+            // already declared in app/build.gradle.kts; pulled in here
+            // so the shared module can compile its iOS-parity actual.
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.play.services)
+            implementation(libs.google.id)
         }
 
         iosMain.dependencies {
