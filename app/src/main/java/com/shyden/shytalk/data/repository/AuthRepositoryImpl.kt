@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.firebaseCall
+import com.shyden.shytalk.core.util.logE
 import kotlinx.coroutines.tasks.await
 
 class AuthRepositoryImpl(
@@ -60,18 +61,30 @@ class AuthRepositoryImpl(
         rawNonce: String,
     ): Resource<String> {
         return try {
+            // Apple Sign-In on Firebase requires setIdTokenWithRawNonce,
+            // which stores BOTH idToken + rawNonce on the credential and
+            // leaves accessToken unset. Apple does NOT issue an
+            // access_token, so the prior .setAccessToken(rawNonce) call
+            // stuffed the nonce into the wrong field — Firebase backend
+            // would reject the credential as malformed, surfacing the
+            // generic "AccessToken must not be null" error.
             val credential =
                 com.google.firebase.auth.OAuthProvider
                     .newCredentialBuilder("apple.com")
-                    .setIdToken(idToken)
-                    .setAccessToken(rawNonce)
+                    .setIdTokenWithRawNonce(idToken, rawNonce)
                     .build()
             val authResult = auth.signInWithCredential(credential).await()
             val uid = authResult.user?.uid ?: return Resource.Error("Apple sign-in failed")
             Resource.Success(uid)
         } catch (e: com.google.firebase.auth.FirebaseAuthUserCollisionException) {
+            logE("AuthRepository", "Apple sign-in: user collision", e)
             Resource.Error("An account already exists with this email using a different sign-in method")
         } catch (e: Exception) {
+            // Log the underlying exception so a future credential
+            // malformation (the bug class fixed here) doesn't go
+            // undiagnosed under the generic "Apple sign-in failed"
+            // Resource.Error.
+            logE("AuthRepository", "Apple sign-in failed", e)
             Resource.Error("Apple sign-in failed")
         }
     }
