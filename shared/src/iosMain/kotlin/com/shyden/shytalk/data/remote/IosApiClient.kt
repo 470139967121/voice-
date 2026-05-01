@@ -10,6 +10,8 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.darwin.Darwin
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.delete
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.patch
@@ -19,6 +21,8 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -140,6 +144,59 @@ class IosApiClient(
                 header("X-Device-Id", deviceId)
             }
         return parseResponse(response)
+    }
+
+    /**
+     * Multipart upload — used for image uploads to the storage worker.
+     * Mirrors Android `StorageRepositoryImpl.uploadImage` (OkHttp multipart),
+     * with the same auth + 401 retry semantics as the JSON endpoints.
+     */
+    suspend fun postMultipart(
+        path: String,
+        fileBytes: ByteArray,
+        fileName: String,
+        fileContentType: String,
+        formFields: Map<String, String> = emptyMap(),
+    ): JsonObject {
+        val token = getIdToken() ?: throw ApiException(401, "Not authenticated")
+        val response = executeMultipart(path, fileBytes, fileName, fileContentType, formFields, token)
+        if (response.status.value == 401) {
+            logI(TAG, "401 on multipart $path — refreshing token and retrying")
+            val freshToken = getIdToken(forceRefresh = true) ?: throw ApiException(401, "Token refresh failed")
+            return parseResponse(
+                executeMultipart(path, fileBytes, fileName, fileContentType, formFields, freshToken),
+            )
+        }
+        return parseResponse(response)
+    }
+
+    private suspend fun executeMultipart(
+        path: String,
+        fileBytes: ByteArray,
+        fileName: String,
+        fileContentType: String,
+        formFields: Map<String, String>,
+        token: String,
+    ): HttpResponse {
+        val multipart =
+            MultiPartFormDataContent(
+                formData {
+                    formFields.forEach { (name, value) -> append(name, value) }
+                    append(
+                        "file",
+                        fileBytes,
+                        Headers.build {
+                            append(HttpHeaders.ContentType, fileContentType)
+                            append(HttpHeaders.ContentDisposition, "filename=\"$fileName\"")
+                        },
+                    )
+                },
+            )
+        return client.post("$baseUrl$path") {
+            header("Authorization", "Bearer $token")
+            header("X-Device-Id", deviceId)
+            setBody(multipart)
+        }
     }
 
     suspend fun postPublic(

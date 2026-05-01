@@ -5,11 +5,13 @@ import com.shyden.shytalk.core.model.FunFact
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.firebaseCall
+import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.data.firestore.dataMap
 import com.shyden.shytalk.data.remote.ApiException
 import com.shyden.shytalk.data.remote.IosApiClient
 import dev.gitlive.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
@@ -460,14 +462,39 @@ class IosStorageRepositoryImpl(
         path: String,
         imageData: ByteArray,
         contentType: String,
-    ): Resource<String> = Resource.Error("Image upload not yet implemented on iOS")
+    ): Resource<String> =
+        try {
+            val json =
+                api.postMultipart(
+                    path = "/api/storage/upload",
+                    fileBytes = imageData,
+                    fileName = "upload",
+                    fileContentType = contentType,
+                    formFields = mapOf("path" to path),
+                )
+            val url = json["url"]?.jsonPrimitive?.content
+            if (url.isNullOrEmpty()) {
+                logE("StorageRepository", "Upload response missing url field; raw=$json")
+                Resource.Error("Upload response missing URL")
+            } else {
+                Resource.Success(url)
+            }
+        } catch (e: CancellationException) {
+            // Don't swallow structured-concurrency cancellation.
+            throw e
+        } catch (e: Exception) {
+            logE("StorageRepository", "Image upload failed", e)
+            Resource.Error(e.message ?: "Failed to upload image", e)
+        }
 
     override suspend fun deleteImageByUrl(url: String) {
         try {
             val key = url.removePrefix("https://images.shytalk.shyden.co.uk/")
             api.delete("/api/storage/delete?key=$key")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            logW("StorageRepository", "Best-effort image delete failed: ${e.message}")
+            logW("StorageRepository", "Best-effort image delete failed", e)
         }
     }
 }
