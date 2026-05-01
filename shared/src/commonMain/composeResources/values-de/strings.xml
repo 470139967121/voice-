@@ -736,6 +736,7 @@
     <string name="quantity_all">ALLE (%1$d)</string>
     <string name="english_language">Englisch</string>
     <string name="google_sign_in_failed">Google-Anmeldung fehlgeschlagen</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Mit Apple anmelden</string>
     <string name="send_link">Link senden</string>
     <string name="paste_link">Link einfügen</string>

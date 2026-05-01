@@ -736,6 +736,7 @@
     <string name="quantity_all">전체 (%1$d)</string>
     <string name="english_language">영어</string>
     <string name="google_sign_in_failed">Google 로그인 실패</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Apple로 로그인</string>
     <string name="send_link">링크 보내기</string>
     <string name="paste_link">링크 붙여넣기</string>

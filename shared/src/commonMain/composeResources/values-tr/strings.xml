@@ -736,6 +736,7 @@
     <string name="quantity_all">TÜMÜ (%1$d)</string>
     <string name="english_language">İngilizce</string>
     <string name="google_sign_in_failed">Google ile giriş başarısız</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Apple ile giriş yap</string>
     <string name="send_link">Bağlantı gönder</string>
     <string name="paste_link">Bağlantıyı yapıştır</string>

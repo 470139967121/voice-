@@ -736,6 +736,7 @@
     <string name="quantity_all">SEMUA (%1$d)</string>
     <string name="english_language">Inggris</string>
     <string name="google_sign_in_failed">Gagal masuk dengan Google</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Masuk dengan Apple</string>
     <string name="send_link">Kirim Tautan</string>
     <string name="paste_link">Tempel Tautan</string>

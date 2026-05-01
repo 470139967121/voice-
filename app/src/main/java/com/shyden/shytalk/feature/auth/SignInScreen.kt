@@ -37,10 +37,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.core.ui.StyledSnackbarHost
 import com.shyden.shytalk.core.util.SecureStorage
+import com.shyden.shytalk.feature.auth.AppleSignInCancelledException
 import com.shyden.shytalk.feature.auth.GoogleSignInCancelledException
 import com.shyden.shytalk.feature.auth.GoogleSignInNoAccountException
 import com.shyden.shytalk.feature.auth.components.AppleSignInButton
 import com.shyden.shytalk.feature.auth.components.GoogleSignInButton
+import com.shyden.shytalk.feature.auth.performAppleSignInFlow
 import com.shyden.shytalk.feature.auth.performGoogleSignIn
 import com.shyden.shytalk.feature.suspension.BanScreen
 import com.shyden.shytalk.feature.suspension.SuspensionScreen
@@ -53,6 +55,12 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 private const val KEY_EMAIL_FOR_LINK = "email_for_sign_in_link"
+
+// Exact literal that AuthRepositoryImpl.signInWithAppleViaProvider
+// emits for FirebaseAuthWebException (user cancelled the WebView OAuth
+// flow). Matched literally (not substring) in the error LaunchedEffect
+// so other error copy mentioning "cancellation" stays visible.
+private const val APPLE_SIGN_IN_CANCELLED_MESSAGE = "Sign-in was cancelled"
 
 @Composable
 fun SignInScreen(
@@ -67,6 +75,7 @@ fun SignInScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val googleSignInFailed = stringResource(Res.string.google_sign_in_failed)
+    val appleSignInFailed = stringResource(Res.string.apple_sign_in_failed)
     val secureStorage: SecureStorage = koinInject()
 
     // Handle incoming email sign-in deep link
@@ -202,7 +211,22 @@ fun SignInScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it.resolveAsync())
+            val message = it.resolveAsync()
+            // Suppress snackbar for the exact user-cancellation signal
+            // that Android's Apple Sign-In via Firebase WebView OAuth
+            // produces (FirebaseAuthWebException → repo emits this exact
+            // literal). The iOS path already routes cancels through the
+            // typed AppleSignInCancelledException at the Apple button,
+            // so this keeps the cancel UX consistent — silent on both.
+            //
+            // Match the LITERAL string, not a substring, so future error
+            // copy that happens to mention "cancellation" (e.g. an
+            // account-scheduled-for-cancellation banner) doesn't get
+            // silently swallowed. The repo emits exactly this string at
+            // app/src/main/.../AuthRepositoryImpl.kt for Apple cancel.
+            if (message != APPLE_SIGN_IN_CANCELLED_MESSAGE) {
+                snackbarHostState.showSnackbar(message)
+            }
             viewModel.clearError()
         }
     }
@@ -320,16 +344,34 @@ fun SignInScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Apple Sign-In button (branded)
+            // Apple Sign-In button (branded). Routed through the
+            // cross-platform performAppleSignInFlow expect/actual —
+            // Android wraps Firebase's WebView OAuth provider, iOS
+            // (when this screen later moves to commonMain) will use
+            // ASAuthorizationController. Same call site, platform
+            // mechanics behind the abstraction.
             AppleSignInButton(
                 onClick = {
                     if (isBusy) return@AppleSignInButton
                     val activity = context as? android.app.Activity ?: return@AppleSignInButton
                     signingInProvider = "apple"
-                    viewModel.signInWithAppleViaProvider(activity)
+                    scope.launch {
+                        try {
+                            performAppleSignInFlow(viewModel = viewModel, activity = activity)
+                        } catch (_: AppleSignInCancelledException) {
+                            // User dismissed — silent, no toast.
+                            signingInProvider = null
+                        } catch (e: Exception) {
+                            signingInProvider = null
+                            snackbarHostState.showSnackbar(
+                                e.message ?: appleSignInFailed,
+                            )
+                        }
+                    }
                 },
                 isLoading = signingInProvider == "apple" || (uiState.isLoading && signingInProvider == "apple"),
                 enabled = !isBusy,
+                // testTag is set inside AppleSignInButton; not duplicating here.
             )
 
             // Email Sign-In hidden — pending self-hosted mail server implementation

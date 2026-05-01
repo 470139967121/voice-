@@ -736,6 +736,7 @@
     <string name="quantity_all">TẤT CẢ (%1$d)</string>
     <string name="english_language">Tiếng Anh</string>
     <string name="google_sign_in_failed">Đăng nhập Google thất bại</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Đăng nhập bằng Apple</string>
     <string name="send_link">Gửi liên kết</string>
     <string name="paste_link">Dán liên kết</string>
