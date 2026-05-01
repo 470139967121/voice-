@@ -15,28 +15,26 @@ class NotificationRepositoryImpl(
         userId: String,
         token: String,
     ): Resource<Unit> =
-        firebaseCall("Failed to save FCM token") {
+        firebaseCall<Unit>("Failed to save FCM token") {
             api.post(
                 "/api/notifications/token",
                 JSONObject().apply {
                     put("token", token)
                 },
             )
-            Unit
         }
 
     override suspend fun removeFcmToken(
         userId: String,
         token: String,
     ): Resource<Unit> =
-        firebaseCall("Failed to remove FCM token") {
+        firebaseCall<Unit>("Failed to remove FCM token") {
             api.delete(
                 "/api/notifications/token",
                 JSONObject().apply {
                     put("token", token)
                 },
             )
-            Unit
         }
 
     // Routed through the Express API (PATCH /api/notifications/settings)
@@ -47,14 +45,13 @@ class NotificationRepositoryImpl(
         userId: String,
         enabled: Boolean,
     ): Resource<Unit> =
-        firebaseCall("Failed to update notification setting") {
+        firebaseCall<Unit>("Failed to update notification setting") {
             api.patch(
                 "/api/notifications/settings",
                 JSONObject().apply {
                     put("pmNotificationsEnabled", enabled)
                 },
             )
-            Unit
         }
 
     override suspend fun getPmNotificationsEnabled(userId: String): Resource<Boolean> =

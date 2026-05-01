@@ -166,7 +166,9 @@ class BillingService(
                                 unfetched.joinToString { "${it.productId}(status=${it.statusCode})" },
                         )
                     }
-                    cont.resume(queryResult.productDetailsList ?: emptyList())
+                    // queryResult.productDetailsList is documented non-null
+                    // (MutableList<ProductDetails>); empty when no SKUs match.
+                    cont.resume(queryResult.productDetailsList)
                 } else {
                     Log.w(
                         TAG,

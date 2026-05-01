@@ -1,7 +1,7 @@
 package com.shyden.shytalk.util
 
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 
 /**
  * Singleton that holds the ComposeTestRule shared across Cucumber step definition classes.

@@ -106,6 +106,8 @@ class MainActivity : AppCompatActivity() {
         BuildVariant.initLocalEmulator(
             value = BuildConfig.FLAVOR == "local",
             devPassword = BuildConfig.LOCAL_DEV_PASSWORD,
+            devEmail = BuildConfig.LOCAL_DEV_EMAIL,
+            googleWebClientId = BuildConfig.WEB_CLIENT_ID,
         )
         biometricAuth.setActivity(this)
         enableEdgeToEdge()

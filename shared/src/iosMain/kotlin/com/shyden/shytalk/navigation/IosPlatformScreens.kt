@@ -15,20 +15,23 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
 /**
- * iOS placeholder screens for v1.
+ * iOS-specific NavGraph screen wiring.
  *
- * These will be replaced with real iOS implementations:
- * - SignIn → real IosSignInScreen (Google + Apple + Email/OTP)
- * - AppSettings → iOS Settings.app integration
- * - Warning → shared WarningScreen (EmergencyTonePlayer via AVAudioEngine + shared drawable)
- * - Profile → shared ProfileScreen (once moved to commonMain)
- * - Room → shared RoomScreen (once moved to commonMain)
+ * - SignIn → unified `SignInScreen` (commonMain since Phase 4 of #20)
+ * - AppSettings → unified `AppSettingsScreen` (commonMain)
+ * - Warning → shared `WarningScreen` (commonMain)
+ * - Profile → shared `ProfileScreen` (commonMain)
+ * - Room → shared `RoomScreen` (commonMain)
  */
 fun createIosPlatformScreens(): PlatformScreens =
     PlatformScreens(
         signInScreen = { params ->
-            com.shyden.shytalk.feature.auth
-                .IosSignInScreen(params)
+            com.shyden.shytalk.feature.auth.SignInScreen(
+                pendingEmailLink = params.pendingEmailLink,
+                onEmailLinkConsumed = params.onEmailLinkConsumed,
+                onNavigateToEmail = params.onNavigateToEmail,
+                onAuthSuccess = params.onAuthSuccess,
+            )
         },
         appSettingsScreen = { params ->
             com.shyden.shytalk.feature.settings.AppSettingsScreen(

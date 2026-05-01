@@ -57,14 +57,21 @@ actual suspend fun performGoogleSignIn(
                 continuation.resume(idToken)
             } else if (error != null && error.equals("cancelled", ignoreCase = true)) {
                 continuation.resumeWithException(GoogleSignInCancelledException())
-            } else {
+            } else if (error != null) {
                 // Real failure — Swift forwarded a localizedDescription.
                 // Log via logE so Sentry sees iOS Google Sign-In failures
-                // (the snackbar shows the message but cross-user pattern
-                // detection requires structured logs).
-                val msg = error ?: "Google Sign-In failed"
-                logE("GoogleSignInHelper", "Google Sign-In failed on iOS: $msg")
-                continuation.resumeWithException(Exception(msg))
+                // (cross-user pattern detection requires structured logs).
+                logE("GoogleSignInHelper", "Google Sign-In failed on iOS: $error")
+                continuation.resumeWithException(Exception(error))
+            } else {
+                // Bridge-contract violation: handler invoked the callback
+                // with both idToken and error null. Should be impossible
+                // per the Swift bridge protocol — log loudly so we catch
+                // future regressions where the bridge silently no-ops.
+                logE("GoogleSignInHelper", "Bridge contract violation: callback fired with both idToken and error null")
+                continuation.resumeWithException(
+                    Exception("Google Sign-In returned no result (bridge contract violation)"),
+                )
             }
         }
     }

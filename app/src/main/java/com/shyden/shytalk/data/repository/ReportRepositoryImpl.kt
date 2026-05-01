@@ -23,7 +23,7 @@ class ReportRepositoryImpl(
         reason: String,
         description: String,
     ): Resource<Unit> =
-        firebaseCall("Failed to submit report") {
+        firebaseCall<Unit>("Failed to submit report") {
             api.post(
                 "/api/reports",
                 JSONObject().apply {
@@ -37,7 +37,6 @@ class ReportRepositoryImpl(
                     put("description", description)
                 },
             )
-            Unit
         }
 
     override suspend fun reportUser(
@@ -52,7 +51,7 @@ class ReportRepositoryImpl(
         description: String,
         evidenceUrls: List<String>,
     ): Resource<Unit> =
-        firebaseCall("Failed to submit report") {
+        firebaseCall<Unit>("Failed to submit report") {
             api.post(
                 "/api/reports",
                 JSONObject().apply {
@@ -67,7 +66,6 @@ class ReportRepositoryImpl(
                     }
                 },
             )
-            Unit
         }
 
     override suspend fun getPendingReports(): Resource<List<Report>> =
@@ -99,13 +97,12 @@ class ReportRepositoryImpl(
         reportId: String,
         action: String,
     ): Resource<Unit> =
-        firebaseCall("Failed to resolve report") {
+        firebaseCall<Unit>("Failed to resolve report") {
             api.post(
                 "/api/reports/$reportId/resolve",
                 JSONObject().apply {
                     put("action", action)
                 },
             )
-            Unit
         }
 }

@@ -36,18 +36,27 @@ struct iOSApp: App {
         options.databaseURL = "http://localhost:9000?ns=demo-shytalk"
         options.storageBucket = "demo-shytalk.appspot.com"
         FirebaseApp.configure(options: options)
-        // The dev-sign-in seed is passed in only inside #if DEBUG so the
-        // literal is stripped from Release iOS binaries at compile time —
+        // Dev sign-in inputs are passed in only inside #if DEBUG so the
+        // literals are stripped from Release iOS binaries at compile time —
         // closes the "reverse-engineer the IPA to learn the seed credential"
         // leak. The runtime gate requires `useEmulators=true` to even show
-        // the button, so on a Release build the value is nil and the
+        // the button, so on a Release build both values are nil and the
         // SignInScreen dev path fails closed. Source of truth for the value
         // is `local/seed.js` — keep them in sync.
         let emulatorSeed = "localdev123"
-        KoinHelperKt.doInitKoin(useEmulators: true, devSignInPassword: emulatorSeed)
+        let emulatorEmail = "claude-test@shytalk.dev"
+        KoinHelperKt.doInitKoin(
+            useEmulators: true,
+            devSignInPassword: emulatorSeed,
+            devSignInEmail: emulatorEmail
+        )
         #else
         FirebaseApp.configure()
-        KoinHelperKt.doInitKoin(useEmulators: false, devSignInPassword: nil)
+        KoinHelperKt.doInitKoin(
+            useEmulators: false,
+            devSignInPassword: nil,
+            devSignInEmail: nil
+        )
         #endif
         setupGoogleSignIn()
         setupLiveKit()
