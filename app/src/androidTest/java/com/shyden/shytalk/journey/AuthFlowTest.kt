@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.shyden.shytalk.core.BuildVariant
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserFlags
 import com.shyden.shytalk.data.repository.UserRepository
@@ -16,6 +17,7 @@ import com.shyden.shytalk.util.ScreenshotRule
 import com.shyden.shytalk.util.launchNavGraph
 import com.shyden.shytalk.util.launchSignIn
 import com.shyden.shytalk.util.waitForTag
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -83,5 +85,40 @@ class AuthFlowTest : KoinTest {
         composeTestRule.onNodeWithTag("profileSetup_displayNameField").assertIsDisplayed()
         composeTestRule.onNodeWithTag("profileSetup_dobButton").assertIsDisplayed()
         composeTestRule.onNodeWithTag("profileSetup_continueButton").assertIsDisplayed()
+    }
+
+    @After
+    fun resetBuildVariant() {
+        // Test fixtures must not leak isLocalEmulator=true into other suites,
+        // since the dev sign-in path is unreachable on prod and a leaked
+        // `true` would let unrelated tests trip the dev-only branch.
+        BuildVariant.initLocalEmulator(false)
+    }
+
+    @Test
+    fun signInScreen_devButton_hiddenWhenNotLocalEmulator() {
+        BuildVariant.initLocalEmulator(false)
+        val fakeAuth = authRepository as FakeAuthRepository
+        fakeAuth.fakeAuthenticated = false
+        fakeAuth.fakeUserId = null
+
+        composeTestRule.launchSignIn()
+        composeTestRule.waitForTag("signIn_googleButton")
+        // Dev button MUST NOT render on dev / prod flavours — it bypasses
+        // the OAuth flow with a hardcoded emulator credential and would
+        // hit the production Firebase Auth tenant if rendered there.
+        composeTestRule.onNodeWithTag("dev_sign_in").assertDoesNotExist()
+    }
+
+    @Test
+    fun signInScreen_devButton_visibleOnLocalEmulator() {
+        BuildVariant.initLocalEmulator(true)
+        val fakeAuth = authRepository as FakeAuthRepository
+        fakeAuth.fakeAuthenticated = false
+        fakeAuth.fakeUserId = null
+
+        composeTestRule.launchSignIn()
+        composeTestRule.waitForTag("dev_sign_in")
+        composeTestRule.onNodeWithTag("dev_sign_in").assertIsDisplayed()
     }
 }

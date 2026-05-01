@@ -103,7 +103,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        BuildVariant.initLocalEmulator(BuildConfig.FLAVOR == "local")
+        BuildVariant.initLocalEmulator(
+            value = BuildConfig.FLAVOR == "local",
+            devPassword = BuildConfig.LOCAL_DEV_PASSWORD,
+        )
         biometricAuth.setActivity(this)
         enableEdgeToEdge()
 

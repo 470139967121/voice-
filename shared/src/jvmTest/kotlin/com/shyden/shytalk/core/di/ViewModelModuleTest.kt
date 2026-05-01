@@ -32,11 +32,13 @@ import com.shyden.shytalk.data.repository.TypingRepository
 import com.shyden.shytalk.data.repository.UserRepository
 import com.shyden.shytalk.feature.splash.BannerImagePreloader
 import com.shyden.shytalk.feature.splash.WebContentPreloader
+import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.test.verify.verify
 import kotlin.test.Test
 
 class ViewModelModuleTest {
     @Test
+    @OptIn(KoinExperimentalAPI::class)
     fun `viewModelModule verifies all ViewModel dependency graphs`() {
         // verify() performs static analysis of the module's dependency graph.
         // extraTypes lists types provided by platform modules at runtime —

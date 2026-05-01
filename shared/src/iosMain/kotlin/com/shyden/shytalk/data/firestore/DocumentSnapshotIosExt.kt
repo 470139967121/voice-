@@ -23,10 +23,7 @@ import platform.Foundation.NSNumber
  * to access the raw NSDictionary and convert it manually to native Kotlin types.
  */
 fun DocumentSnapshot.dataMap(): Map<String, Any?> {
-    val nsDict = ios.data() ?: return emptyMap()
-
-    @Suppress("UNCHECKED_CAST")
-    val rawMap = nsDict as Map<Any?, Any?>
+    val rawMap = ios.data() ?: return emptyMap()
     return rawMap.entries.associate { (k, v) -> (k as String) to convertValue(v) }
 }
 

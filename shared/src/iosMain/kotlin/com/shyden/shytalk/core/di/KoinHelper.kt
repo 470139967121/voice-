@@ -13,12 +13,23 @@ import org.koin.mp.KoinPlatformTools
 /**
  * Initializes Firebase and Koin for the iOS app.
  *
- * Called from Swift: `KoinHelperKt.doInitKoin(useEmulators: true)` in iOSApp.swift's init().
+ * Called from Swift inside the `#if DEBUG` block — the Swift side reads the
+ * emulator seed literal from a `let` local in iOSApp.swift and forwards it.
+ * The Release branch passes `nil` so the literal does NOT end up in the
+ * production iOS binary — Xcode strips `#if DEBUG` text at compile time.
+ * This closes the "reverse-engineer the IPA to learn the seed credential"
+ * leak. Source of truth for the value is `local/seed.js`.
  *
  * @param useEmulators If true, connects Firebase to local emulators (localhost).
+ * @param devSignInPassword Plaintext password for the dev-only one-tap sign-in
+ *   button on `SignInScreen`. MUST be `nil` outside `#if DEBUG`. The runtime
+ *   gate also requires `useEmulators=true` to even render the button.
  */
-fun doInitKoin(useEmulators: Boolean = false) {
-    BuildVariant.initLocalEmulator(useEmulators)
+fun doInitKoin(
+    useEmulators: Boolean = false,
+    devSignInPassword: String? = null,
+) {
+    BuildVariant.initLocalEmulator(useEmulators, devSignInPassword)
     if (KoinPlatformTools.defaultContext().getOrNull() != null) {
         logI("KoinHelper", "Koin already initialised — skipping")
         return

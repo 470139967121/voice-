@@ -28,14 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.shyden.shytalk.core.BuildVariant
+import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.feature.auth.components.AppleSignInButton
 import com.shyden.shytalk.feature.auth.components.GoogleSignInButton
 import com.shyden.shytalk.feature.suspension.SuspensionScreen
 import com.shyden.shytalk.navigation.SignInScreenParams
 import com.shyden.shytalk.resources.Res
 import com.shyden.shytalk.resources.voice_chat_reimagined
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -158,13 +157,23 @@ fun IosSignInScreen(params: SignInScreenParams) {
                         try {
                             val idToken = performGoogleSignIn()
                             viewModel.signInWithGoogle(idToken)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            // Structured concurrency: rethrow cancellation so
+                            // composition tear-down propagates correctly. Was
+                            // previously swallowed by the generic catch.
+                            throw e
+                        } catch (_: GoogleSignInCancelledException) {
+                            // User dismissed the Google sheet — silent, no toast.
+                            // IosGoogleSignInHelper.kt:59 throws this typed
+                            // exception (mapped from the Swift "cancelled" string)
+                            // so we no longer need locale-fragile string sniffing.
                         } catch (e: Exception) {
+                            logW("IosSignInScreen", "Google sign-in failed", e)
+                            snackbarHostState.showSnackbar(
+                                e.message ?: "Google Sign-In failed",
+                            )
+                        } finally {
                             signingInProvider = null
-                            if (!e.message.orEmpty().contains("cancelled", ignoreCase = true)) {
-                                snackbarHostState.showSnackbar(
-                                    e.message ?: "Google Sign-In failed",
-                                )
-                            }
                         }
                     }
                 },
@@ -184,13 +193,21 @@ fun IosSignInScreen(params: SignInScreenParams) {
                         try {
                             val result = performAppleSignIn()
                             viewModel.signInWithApple(result.idToken, result.rawNonce)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (_: AppleSignInCancelledException) {
+                            // User dismissed the ASAuthorizationController.
+                            // IosAppleSignInHelper.kt detects 1001 at the
+                            // NSError boundary and throws the typed exception,
+                            // so we don't string-sniff Apple's localised
+                            // cancellation text any more.
                         } catch (e: Exception) {
+                            logW("IosSignInScreen", "Apple sign-in failed", e)
+                            snackbarHostState.showSnackbar(
+                                e.message ?: "Apple Sign-In failed",
+                            )
+                        } finally {
                             signingInProvider = null
-                            if (!e.message.orEmpty().contains("cancelled", ignoreCase = true)) {
-                                snackbarHostState.showSnackbar(
-                                    e.message ?: "Apple Sign-In failed",
-                                )
-                            }
                         }
                     }
                 },
@@ -222,25 +239,36 @@ fun IosSignInScreen(params: SignInScreenParams) {
                                     TextButton(
                                         onClick = {
                                             showDevPicker = false
-                                            // Defence-in-depth: the surrounding picker is
-                                            // already gated by isLocalEmulator, but a Frida
-                                            // / debugger flip of the flag at runtime is the
-                                            // documented S2 risk. Re-check the flag at the
-                                            // call site so the auth call refuses.
-                                            if (!BuildVariant.isLocalEmulator) return@TextButton
+                                            if (!BuildVariant.isLocalEmulator) {
+                                                logW(
+                                                    "IosSignInScreen",
+                                                    "Dev sign-in guard mismatch: picker shown but isLocalEmulator=false",
+                                                )
+                                                return@TextButton
+                                            }
+                                            // Password is injected from `iOSApp.swift`'s
+                                            // `#if DEBUG` block via `KoinHelper.doInitKoin`,
+                                            // so it's `null` in Release iOS — fail closed.
+                                            val password = BuildVariant.localDevPassword
+                                            if (password.isNullOrEmpty()) {
+                                                logW(
+                                                    "IosSignInScreen",
+                                                    "Dev sign-in invoked but BuildVariant.localDevPassword is null/empty — non-DEBUG iOS",
+                                                )
+                                                return@TextButton
+                                            }
                                             signingInProvider = "dev"
                                             scope.launch {
                                                 try {
-                                                    Firebase.auth.signInWithEmailAndPassword(
-                                                        email,
-                                                        "localdev123",
-                                                    )
+                                                    performDevSignIn(email = email, password = password)
                                                     viewModel.resolveAfterExternalSignIn("email", email)
+                                                } catch (e: kotlinx.coroutines.CancellationException) {
+                                                    throw e
                                                 } catch (e: Exception) {
+                                                    logW("IosSignInScreen", "Dev sign-in failed", e)
+                                                    snackbarHostState.showSnackbar("Dev sign-in failed")
+                                                } finally {
                                                     signingInProvider = null
-                                                    snackbarHostState.showSnackbar(
-                                                        e.message ?: "Dev sign-in failed",
-                                                    )
                                                 }
                                             }
                                         },
@@ -272,13 +300,14 @@ fun IosSignInScreen(params: SignInScreenParams) {
 // not seeded here would surface ERROR_USER_NOT_FOUND from Firebase, so list
 // only the verified seed set. Mirrors Android's local-flavor picker.
 //
-// TODO(ios-debug-strip): the strings in this list (and the inline shared dev
-// password) compile into the iOS Kotlin/Native binary regardless of build
-// configuration — Kotlin/Native does not dead-code-eliminate constants based
-// on `if (BuildVariant.isLocalEmulator)` branches the way Android's
-// `BuildConfig.FLAVOR` does. Eliminating the leak from RELEASE iOS binaries
-// requires moving DEV_ACCOUNTS into a Swift `#if DEBUG` section and bridging
-// via Koin.
+// The shared dev password is no longer hardcoded here — it's pulled at
+// runtime from `BuildVariant.localDevPassword`, which is set only by the
+// `#if DEBUG` block in `iOSApp.swift` (which reads the emulator seed
+// literal from a local `let` and forwards it to `KoinHelper.doInitKoin`).
+// Release iOS builds never see the password literal because Xcode strips
+// `#if DEBUG` text at compile time. The email strings remain — they are
+// identifiers, not secrets, and `claude-test@shytalk.dev` is already
+// documented in repo memory and `local/seed.js`.
 private val DEV_ACCOUNTS =
     listOf(
         "claude-test@shytalk.dev" to "Admin",

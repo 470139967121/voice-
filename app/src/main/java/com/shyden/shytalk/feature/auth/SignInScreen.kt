@@ -35,21 +35,23 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shyden.shytalk.BuildConfig
+import com.shyden.shytalk.core.BuildVariant
 import com.shyden.shytalk.core.ui.StyledSnackbarHost
 import com.shyden.shytalk.core.util.SecureStorage
+import com.shyden.shytalk.core.util.logW
 import com.shyden.shytalk.feature.auth.AppleSignInCancelledException
 import com.shyden.shytalk.feature.auth.GoogleSignInCancelledException
 import com.shyden.shytalk.feature.auth.GoogleSignInNoAccountException
 import com.shyden.shytalk.feature.auth.components.AppleSignInButton
 import com.shyden.shytalk.feature.auth.components.GoogleSignInButton
 import com.shyden.shytalk.feature.auth.performAppleSignInFlow
+import com.shyden.shytalk.feature.auth.performDevSignIn
 import com.shyden.shytalk.feature.auth.performGoogleSignIn
 import com.shyden.shytalk.feature.suspension.BanScreen
 import com.shyden.shytalk.feature.suspension.SuspensionScreen
 import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -318,23 +320,32 @@ fun SignInScreen(
                                     webClientId = BuildConfig.WEB_CLIENT_ID,
                                 )
                             viewModel.signInWithGoogle(googleIdToken)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            // Structured concurrency: never swallow cancellation
+                            // (composition tear-down, parent scope cancel) —
+                            // rethrow so the launched job propagates correctly.
+                            throw e
                         } catch (_: GoogleSignInCancelledException) {
                             // User dismissed the picker — silent, no toast.
-                            signingInProvider = null
                         } catch (e: GoogleSignInNoAccountException) {
                             // User-fixable: no Google account on device. Show
                             // the actionable message verbatim ("Add a Google
                             // account in Settings…") rather than the generic
                             // "Google sign-in failed".
-                            signingInProvider = null
                             snackbarHostState.showSnackbar(
                                 e.message ?: googleSignInFailed,
                             )
                         } catch (e: Exception) {
-                            signingInProvider = null
+                            logW("SignInScreen", "Google sign-in failed", e)
                             snackbarHostState.showSnackbar(
                                 e.message ?: googleSignInFailed,
                             )
+                        } finally {
+                            // Always clear the local busy marker — covers both
+                            // success (where the original code left it stale
+                            // until LaunchedEffect caught up) and exceptional
+                            // exits including the rethrown CancellationException.
+                            signingInProvider = null
                         }
                     }
                 },
@@ -358,14 +369,19 @@ fun SignInScreen(
                     scope.launch {
                         try {
                             performAppleSignInFlow(viewModel = viewModel, activity = activity)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            // Structured concurrency: rethrow cancellation; see
+                            // Google block for the reasoning.
+                            throw e
                         } catch (_: AppleSignInCancelledException) {
                             // User dismissed — silent, no toast.
-                            signingInProvider = null
                         } catch (e: Exception) {
-                            signingInProvider = null
+                            logW("SignInScreen", "Apple sign-in failed", e)
                             snackbarHostState.showSnackbar(
                                 e.message ?: appleSignInFailed,
                             )
+                        } finally {
+                            signingInProvider = null
                         }
                     }
                 },
@@ -378,23 +394,54 @@ fun SignInScreen(
             // Spacer(modifier = Modifier.height(12.dp))
             // EmailSignInButton(onClick = onNavigateToEmail)
 
-            // Dev-only sign-in for local emulator testing
-            if (BuildConfig.FLAVOR == "local") {
+            // Dev-only sign-in for local emulator testing. Gate via the
+            // cross-platform BuildVariant flag (= BuildConfig.FLAVOR ==
+            // "local" on Android, set in MainActivity at boot) so the
+            // SignInScreen migration to commonMain in Phase 4 doesn't
+            // need a platform-specific check here.
+            if (BuildVariant.isLocalEmulator) {
                 Spacer(modifier = Modifier.height(24.dp))
                 TextButton(
                     onClick = {
                         if (isBusy) return@TextButton
+                        if (!BuildVariant.isLocalEmulator) {
+                            logW(
+                                "SignInScreen",
+                                "Dev sign-in guard mismatch: button rendered but isLocalEmulator=false",
+                            )
+                            return@TextButton
+                        }
+                        // Read credentials from build-time injection. The email
+                        // is a `buildConfigField` (non-secret identifier; empty
+                        // on dev / prod). The password is read from
+                        // `BuildVariant.localDevPassword` — populated on Android
+                        // by `MainActivity` from `BuildConfig.LOCAL_DEV_PASSWORD`
+                        // (also empty on dev / prod via per-flavour
+                        // `buildConfigField`). On iOS the same `BuildVariant`
+                        // slot is populated by the `#if DEBUG` block in
+                        // `iOSApp.swift`, keeping the password literal out of
+                        // every Release iOS binary at compile time.
+                        val devEmail = BuildConfig.LOCAL_DEV_EMAIL
+                        val devPassword = BuildVariant.localDevPassword
+                        if (devEmail.isEmpty() || devPassword.isNullOrEmpty()) {
+                            logW(
+                                "SignInScreen",
+                                "Dev sign-in invoked but credentials are empty — non-local flavor or BuildVariant uninitialised",
+                            )
+                            return@TextButton
+                        }
                         signingInProvider = "dev"
                         scope.launch {
                             try {
-                                com.google.firebase.auth.FirebaseAuth
-                                    .getInstance()
-                                    .signInWithEmailAndPassword("claude-test@shytalk.dev", "localdev123")
-                                    .await()
-                                viewModel.resolveAfterExternalSignIn("email", "claude-test@shytalk.dev")
+                                performDevSignIn(email = devEmail, password = devPassword)
+                                viewModel.resolveAfterExternalSignIn("email", devEmail)
+                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                throw e
                             } catch (e: Exception) {
+                                logW("SignInScreen", "Dev sign-in failed", e)
+                                snackbarHostState.showSnackbar("Dev sign-in failed")
+                            } finally {
                                 signingInProvider = null
-                                snackbarHostState.showSnackbar(e.message ?: "Dev sign-in failed")
                             }
                         }
                     },

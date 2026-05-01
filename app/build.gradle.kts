@@ -57,6 +57,8 @@ android {
             buildConfigField("String", "RTDB_URL", "\"https://shytalk-dev-default-rtdb.europe-west1.firebasedatabase.app\"")
             buildConfigField("String", "EMAIL_LINK_DOMAIN", "\"dev.shytalk.shyden.co.uk\"")
             buildConfigField("String", "LOCAL_HOST", "\"\"")
+            buildConfigField("String", "LOCAL_DEV_EMAIL", "\"\"")
+            buildConfigField("String", "LOCAL_DEV_PASSWORD", "\"\"")
         }
         create("prod") {
             dimension = "env"
@@ -68,6 +70,8 @@ android {
             buildConfigField("String", "RTDB_URL", "\"https://shytalk-7ba69-default-rtdb.asia-southeast1.firebasedatabase.app\"")
             buildConfigField("String", "EMAIL_LINK_DOMAIN", "\"shytalk.shyden.co.uk\"")
             buildConfigField("String", "LOCAL_HOST", "\"\"")
+            buildConfigField("String", "LOCAL_DEV_EMAIL", "\"\"")
+            buildConfigField("String", "LOCAL_DEV_PASSWORD", "\"\"")
         }
         create("local") {
             dimension = "env"
@@ -87,6 +91,12 @@ android {
             buildConfigField("String", "EMAIL_LINK_DOMAIN", "\"localhost\"")
             buildConfigField("String", "WEB_CLIENT_ID", "\"placeholder-local\"")
             buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "true")
+            // Dev sign-in shortcut — only present on local-emulator builds.
+            // Empty on dev / prod so reverse-engineering the production APK
+            // can't extract a usable seed credential. Mirrors `local/seed.js`
+            // (the source of truth for the credential).
+            buildConfigField("String", "LOCAL_DEV_EMAIL", "\"claude-test@shytalk.dev\"")
+            buildConfigField("String", "LOCAL_DEV_PASSWORD", "\"localdev123\"")
         }
     }
 
