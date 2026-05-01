@@ -16,10 +16,20 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<!--
+	    MARKETING_VERSION + CURRENT_PROJECT_VERSION are injected by the
+	    deploy workflows (deploy-dev.yml uses GITHUB_RUN_NUMBER + the
+	    versionName from app/build.gradle.kts; deploy-prod.yml uses both
+	    versionCode + versionName from app/build.gradle.kts which the
+	    manual Release workflow keeps in sync). Hard-coding literal
+	    values here would silently override the build-setting injection
+	    and ship every build with `1.0` / `1`, which TestFlight rejects
+	    as a duplicate after the first upload.
+	-->
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 	<key>LSRequiresIPhoneOS</key>

@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# Verify release.yml is workflow_dispatch-only and never auto-fires on push.
+#
+# Background: every merge to main used to auto-bump the semver and create a
+# tagged release. With small-PR cadence, that produced one "release" per
+# unrelated change. The agreed flow is: merge freely to main, manually
+# trigger Release when a stable batch is ready. This guard prevents the
+# `push: branches: [main]` trigger from sneaking back in.
+#
+# Run from project root.
+
+set -euo pipefail
+
+RELEASE_YML=".github/workflows/release.yml"
+DEPLOY_DEV_YML=".github/workflows/deploy-dev.yml"
+
+if [ ! -f "$RELEASE_YML" ]; then
+  echo "::error::$RELEASE_YML not found"
+  exit 1
+fi
+
+# Parse the `on:` block. We accept workflow_dispatch and manual triggers
+# only — no `push:` trigger of any kind. This deliberately rejects ALL
+# push triggers, not just push-to-main, since any auto-fire-on-merge
+# defeats the manual-release purpose.
+#
+# Use yq if available (more robust against YAML quirks), fall back to grep.
+# Allowed triggers: workflow_dispatch (the manual flow) and schedule
+# (kept for forward compatibility — we don't currently use it but a
+# future cron'd "weekly stable cut" would be reasonable). Any other
+# trigger is rejected.
+if command -v yq >/dev/null 2>&1; then
+  triggers=$(yq '.on | keys | .[]' "$RELEASE_YML")
+  if [ -z "$triggers" ]; then
+    echo "::error::release.yml has no 'on:' triggers — workflow would be unreachable"
+    exit 1
+  fi
+  while IFS= read -r trigger; do
+    case "$trigger" in
+      workflow_dispatch|schedule) ;;
+      *)
+        echo "::error::release.yml has unsupported trigger '$trigger' — must be workflow_dispatch (or schedule) only"
+        exit 1
+        ;;
+    esac
+  done <<< "$triggers"
+else
+  # Grep-based POSITIVE-allowlist check. Enumerate every trigger key
+  # found and reject any that isn't in the allowlist. A denylist (eg.
+  # `push|pull_request|...`) would silently accept any new GitHub event
+  # type added in the future — `merge_group` was a recent example.
+  #
+  # We refuse inline `on: { key1: ..., key2: ... }` form entirely. It's
+  # rare in practice, brace-counting in pure shell is brittle, and
+  # forcing block form keeps the parsing logic here trivial. If a real
+  # need arises, install `yq` locally (the script's faster path).
+  if grep -qE '^on:[[:space:]]*\{' "$RELEASE_YML"; then
+    echo "::error::release.yml uses inline 'on: { ... }' which this guard refuses to parse. Use block form (one trigger key per line) — or install yq locally."
+    exit 1
+  fi
+
+  # Block-style: extract keys at exactly the first indent level under
+  # `on:`. The awk script tracks the base indent of the first child
+  # encountered and skips anything deeper (which would be sub-keys like
+  # `branches:`, `inputs:`, etc.).
+  # Run awk + sort + grep without `|| true` so a real pipeline error
+  # (locale issue, awk crash) propagates instead of being conflated
+  # with the legitimate "no triggers found" case below.
+  raw_triggers=$(awk '
+    /^on:[[:space:]]*$/ { in_on=1; next }
+    in_on && /^[a-z]/ { in_on=0 }
+    in_on && /^[[:space:]]+[a-z_]+:/ {
+      match($0, /^[[:space:]]+/)
+      indent = RLENGTH
+      if (!base_indent) base_indent = indent
+      if (indent == base_indent) {
+        match($0, /[a-z_]+/)
+        print substr($0, RSTART, RLENGTH)
+      }
+    }
+  ' "$RELEASE_YML")
+  # Sort + dedupe, drop blank lines. `grep -v '^$' ' returns 1 if every
+  # line is blank — that's a legitimate "no triggers" outcome, NOT an
+  # error. Use `|| [ $? -eq 1 ]` to swallow only that specific exit.
+  triggers=$(printf '%s\n' "$raw_triggers" | sort -u | { grep -v '^$' || [ $? -eq 1 ]; })
+
+  if [ -z "$triggers" ]; then
+    echo "::error::release.yml has no parseable 'on:' triggers — workflow would be unreachable"
+    exit 1
+  fi
+
+  while IFS= read -r trigger; do
+    case "$trigger" in
+      workflow_dispatch|schedule) ;;
+      *)
+        echo "::error::release.yml has unsupported trigger '$trigger' — must be workflow_dispatch (or schedule) only"
+        exit 1
+        ;;
+    esac
+  done <<< "$triggers"
+fi
+
+# Verify workflow_dispatch is present (otherwise the workflow can never fire).
+if ! grep -qE '^\s*workflow_dispatch:' "$RELEASE_YML"; then
+  echo "::error::release.yml is missing 'workflow_dispatch:' trigger — would be unreachable"
+  exit 1
+fi
+
+# Verify deploy-dev.yml injects an iOS build number from GITHUB_RUN_NUMBER
+# so each dev build gets a unique CFBundleVersion (TestFlight rejects
+# duplicates). Without this, dropping the auto-release trigger leaves iOS
+# stuck on whatever CFBundleVersion is committed in project.pbxproj.
+if [ -f "$DEPLOY_DEV_YML" ]; then
+  if ! grep -qE 'CFBundleVersion|CURRENT_PROJECT_VERSION' "$DEPLOY_DEV_YML"; then
+    echo "::error::deploy-dev.yml does not bump CFBundleVersion / CURRENT_PROJECT_VERSION — iOS dev uploads will hit duplicate-build-number rejections from TestFlight"
+    exit 1
+  fi
+  if ! grep -qE 'GITHUB_RUN_NUMBER|github\.run_number' "$DEPLOY_DEV_YML"; then
+    echo "::error::deploy-dev.yml does not reference GITHUB_RUN_NUMBER for build numbering — iOS CFBundleVersion will not be unique per run"
+    exit 1
+  fi
+fi
+
+echo "✓ release.yml is workflow_dispatch-only; deploy-dev.yml injects unique iOS build number."
