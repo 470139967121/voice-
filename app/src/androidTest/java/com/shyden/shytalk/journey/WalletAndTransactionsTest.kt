@@ -1,11 +1,12 @@
 package com.shyden.shytalk.journey
 
+import android.view.KeyEvent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.shyden.shytalk.navigation.Screen
 import com.shyden.shytalk.util.ResetFakesRule
 import com.shyden.shytalk.util.ScreenshotRule
@@ -55,12 +56,16 @@ class WalletAndTransactionsTest {
         composeTestRule.waitForTag("wallet_transactionsButton")
         composeTestRule.onNodeWithTag("wallet_transactionsButton").performClick()
         composeTestRule.waitForTag("transactions_list")
-        // Wait for navigation animations to settle before pressing back. Without
-        // waitForIdle here, Espresso.pressBack() races with the Compose nav
-        // transition and can throw RootViewWithoutFocusException after a 10s
-        // timeout (window-focus poll fails while the transition is mid-animation).
         composeTestRule.waitForIdle()
-        Espresso.pressBack()
+        // Use the Instrumentation key-event API instead of Espresso.pressBack().
+        // Espresso polls for window focus before dispatching the back press,
+        // and that poll deterministically times out (RootViewWithoutFocusException
+        // after 10s) when running with `mainClock.autoAdvance = false` because
+        // the Compose nav-transition frames don't render to drive focus
+        // settlement. sendKeyDownUpSync bypasses the focus poll — it sends
+        // the KEYCODE_BACK event directly to the Activity, matching what a
+        // real hardware/gesture back press does at the system layer.
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         composeTestRule.waitForTag("wallet_balance")
         composeTestRule.onNodeWithTag("wallet_balance").assertIsDisplayed()
     }
