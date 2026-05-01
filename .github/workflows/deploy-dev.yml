@@ -62,7 +62,13 @@ jobs:
           # checkout fails with `fatal: reference is not a tree`. Pull
           # full history when the operator overrides ref so any SHA is
           # reachable; keep depth 1 for default-ref runs to save time.
-          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
+          # IMPORTANT: use string literals '0'/'1' here. GitHub Actions
+          # expression `cond && 0 || 1` evaluates to `1` even when cond
+          # is true because numeric 0 is falsy (JS-style coercion), so
+          # the `|| 1` short-circuit fires. Strings "0"/"1" are both
+          # truthy, so `cond && '0' || '1'` correctly returns '0' when
+          # cond is true. `actions/checkout` parses the input as int.
+          fetch-depth: ${{ inputs.ref != '' && '0' || '1' }}
 
       - name: Resolve deployed SHA
         id: deployed-sha
@@ -155,7 +161,13 @@ jobs:
           # checkout fails with `fatal: reference is not a tree`. Pull
           # full history when the operator overrides ref so any SHA is
           # reachable; keep depth 1 for default-ref runs to save time.
-          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
+          # IMPORTANT: use string literals '0'/'1' here. GitHub Actions
+          # expression `cond && 0 || 1` evaluates to `1` even when cond
+          # is true because numeric 0 is falsy (JS-style coercion), so
+          # the `|| 1` short-circuit fires. Strings "0"/"1" are both
+          # truthy, so `cond && '0' || '1'` correctly returns '0' when
+          # cond is true. `actions/checkout` parses the input as int.
+          fetch-depth: ${{ inputs.ref != '' && '0' || '1' }}
 
       - uses: ./.github/actions/setup-node
 
@@ -193,7 +205,13 @@ jobs:
           # checkout fails with `fatal: reference is not a tree`. Pull
           # full history when the operator overrides ref so any SHA is
           # reachable; keep depth 1 for default-ref runs to save time.
-          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
+          # IMPORTANT: use string literals '0'/'1' here. GitHub Actions
+          # expression `cond && 0 || 1` evaluates to `1` even when cond
+          # is true because numeric 0 is falsy (JS-style coercion), so
+          # the `|| 1` short-circuit fires. Strings "0"/"1" are both
+          # truthy, so `cond && '0' || '1'` correctly returns '0' when
+          # cond is true. `actions/checkout` parses the input as int.
+          fetch-depth: ${{ inputs.ref != '' && '0' || '1' }}
 
       - name: Resolve deployed SHA
         id: deployed-sha
@@ -319,7 +337,13 @@ jobs:
           # checkout fails with `fatal: reference is not a tree`. Pull
           # full history when the operator overrides ref so any SHA is
           # reachable; keep depth 1 for default-ref runs to save time.
-          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
+          # IMPORTANT: use string literals '0'/'1' here. GitHub Actions
+          # expression `cond && 0 || 1` evaluates to `1` even when cond
+          # is true because numeric 0 is falsy (JS-style coercion), so
+          # the `|| 1` short-circuit fires. Strings "0"/"1" are both
+          # truthy, so `cond && '0' || '1'` correctly returns '0' when
+          # cond is true. `actions/checkout` parses the input as int.
+          fetch-depth: ${{ inputs.ref != '' && '0' || '1' }}
 
       # Pre-cleanup: scrub any signing material left behind by a PRIOR
       # crashed run. `if: always()` cleanup at job end doesn't run if the
@@ -547,7 +571,13 @@ jobs:
           # checkout fails with `fatal: reference is not a tree`. Pull
           # full history when the operator overrides ref so any SHA is
           # reachable; keep depth 1 for default-ref runs to save time.
-          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
+          # IMPORTANT: use string literals '0'/'1' here. GitHub Actions
+          # expression `cond && 0 || 1` evaluates to `1` even when cond
+          # is true because numeric 0 is falsy (JS-style coercion), so
+          # the `|| 1` short-circuit fires. Strings "0"/"1" are both
+          # truthy, so `cond && '0' || '1'` correctly returns '0' when
+          # cond is true. `actions/checkout` parses the input as int.
+          fetch-depth: ${{ inputs.ref != '' && '0' || '1' }}
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
