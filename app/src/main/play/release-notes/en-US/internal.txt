@@ -1,8 +1,0 @@
-v0.97.0
-
-real device ID via UIDevice.identifierForVendor (#406)
-- [skip-android-e2e]
-- ## Summary
-- Replaces the `"ios-device-placeholder"` stub with a real per-device
-- stable identifier via `UIDevice.identifierForVendor`. Closes the
-- device-binding gap on iOS — the Express API endpoints that gate
