@@ -11,6 +11,7 @@ import com.shyden.shytalk.core.util.Resource
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
@@ -117,6 +118,42 @@ class AuthRepositoryImplTest {
             val result = repo.signInWithAppleIdToken("token", "nonce")
 
             assertTrue(result is Resource.Error)
+        }
+
+    @Test
+    fun `signInWithAppleIdToken builds credential via setIdTokenWithRawNonce, never via setAccessToken(rawNonce)`() =
+        runTest {
+            // Regression test for the "AccessToken must not be null" bug. The
+            // pre-fix code called .setAccessToken(rawNonce) — semantically wrong
+            // because Apple does not issue an access_token, so Firebase backend
+            // would reject the credential as if accessToken were null. The
+            // correct API for Apple is .setIdTokenWithRawNonce(idToken, rawNonce)
+            // which sets BOTH idToken + rawNonce (and leaves accessToken unset).
+            //
+            // We can't verify the resulting credential's internal accessToken
+            // field directly because OAuthCredential's getters require a real
+            // Firebase Android runtime. Instead, capture the credential and
+            // assert it's a real OAuthCredential whose getAccessToken() does
+            // NOT equal the rawNonce. The pre-fix code would fail this because
+            // the rawNonce gets stored in the accessToken slot.
+            val credentialSlot = slot<AuthCredential>()
+            every { auth.signInWithCredential(capture(credentialSlot)) } returns
+                Tasks.forException(RuntimeException("short-circuit"))
+
+            repo.signInWithAppleIdToken("idtoken-X", "rawnonce-Y")
+
+            val captured = credentialSlot.captured
+            assertTrue(
+                "Expected OAuthCredential, got ${captured::class.simpleName}",
+                captured is com.google.firebase.auth.OAuthCredential,
+            )
+            val oauth = captured as com.google.firebase.auth.OAuthCredential
+            assertEquals("idtoken-X", oauth.idToken)
+            // Pre-fix bug: accessToken contained "rawnonce-Y". Post-fix: null.
+            assertFalse(
+                "rawNonce must NOT be stored as accessToken — that's the bug. accessToken=${oauth.accessToken}",
+                oauth.accessToken == "rawnonce-Y",
+            )
         }
 
     @Test
