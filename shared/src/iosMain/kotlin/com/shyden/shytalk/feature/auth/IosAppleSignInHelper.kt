@@ -35,6 +35,12 @@ import kotlin.coroutines.resumeWithException
 
 private const val TAG = "AppleSignIn"
 
+// ASAuthorizationErrorCanceled — value from
+// platform.AuthenticationServices.ASAuthorizationError. Hard-coded here
+// because Kotlin/Native doesn't expose the enum case as a constant.
+// 1001 has been stable since iOS 13.
+private const val APPLE_SIGNIN_ERROR_CANCELED: Long = 1001
+
 data class AppleSignInResult(
     val idToken: String,
     val rawNonce: String,
@@ -97,11 +103,26 @@ suspend fun performAppleSignIn(): AppleSignInResult =
                 ) {
                     strongDelegate = null
                     strongContextProvider = null
-                    logE(TAG, "Apple Sign-In failed: ${didCompleteWithError.localizedDescription}")
+                    // Detect user cancellation by NSError code at the
+                    // typed-error boundary (1001 = ASAuthorizationErrorCanceled)
+                    // rather than substring-matching localizedDescription
+                    // downstream — Apple localises that string per device
+                    // locale ("abgebrochen", "annulé", "キャンセル"), so
+                    // string sniffing would only catch English cancels.
+                    val isCancellation =
+                        didCompleteWithError.domain == "com.apple.AuthenticationServices.AuthorizationError" &&
+                            didCompleteWithError.code == APPLE_SIGNIN_ERROR_CANCELED
                     if (continuation.isActive) {
-                        continuation.resumeWithException(
-                            Exception("Apple Sign-In failed: ${didCompleteWithError.localizedDescription}"),
-                        )
+                        if (isCancellation) {
+                            // No log on cancel — the caller treats this as
+                            // a silent user gesture, not a failure.
+                            continuation.resumeWithException(AppleSignInCancelledException())
+                        } else {
+                            logE(TAG, "Apple Sign-In failed: ${didCompleteWithError.localizedDescription}")
+                            continuation.resumeWithException(
+                                Exception("Apple Sign-In failed: ${didCompleteWithError.localizedDescription}"),
+                            )
+                        }
                     }
                 }
             }

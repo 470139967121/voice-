@@ -736,6 +736,7 @@
     <string name="quantity_all">全て (%1$d)</string>
     <string name="english_language">英語</string>
     <string name="google_sign_in_failed">Googleログインに失敗しました</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Appleでサインイン</string>
     <string name="send_link">リンクを送信</string>
     <string name="paste_link">リンクを貼り付け</string>

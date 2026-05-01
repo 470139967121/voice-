@@ -736,6 +736,7 @@
     <string name="quantity_all">TOUT (%1$d)</string>
     <string name="english_language">Anglais</string>
     <string name="google_sign_in_failed">Échec de la connexion Google</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Se connecter avec Apple</string>
     <string name="send_link">Envoyer le lien</string>
     <string name="paste_link">Coller le lien</string>

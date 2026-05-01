@@ -736,6 +736,7 @@
     <string name="quantity_all">ทั้งหมด (%1$d)</string>
     <string name="english_language">อังกฤษ</string>
     <string name="google_sign_in_failed">เข้าสู่ระบบด้วย Google ล้มเหลว</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">ลงชื่อเข้าใช้ด้วย Apple</string>
     <string name="send_link">ส่งลิงก์</string>
     <string name="paste_link">วางลิงก์</string>

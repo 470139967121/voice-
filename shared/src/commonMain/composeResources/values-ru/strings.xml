@@ -736,6 +736,7 @@
     <string name="quantity_all">ВСЕ (%1$d)</string>
     <string name="english_language">Английский</string>
     <string name="google_sign_in_failed">Не удалось войти через Google</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Войти через Apple</string>
     <string name="send_link">Отправить ссылку</string>
     <string name="paste_link">Вставить ссылку</string>

@@ -832,6 +832,7 @@
     <string name="quantity_all">ទាំងអស់ (%1$d)</string>
     <string name="english_language">English</string>
     <string name="google_sign_in_failed">ការចូលជាមួយ Google បរាជ័យ</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
 
     <!-- PIN & Security -->
     <string name="enter_pin">បញ្ចូលលេខកូដ PIN</string>

@@ -736,6 +736,7 @@
     <string name="quantity_all">सभी (%1$d)</string>
     <string name="english_language">अंग्रेज़ी</string>
     <string name="google_sign_in_failed">Google साइन-इन विफल</string>
+    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
     <string name="sign_in_with_apple">Apple से साइन इन करें</string>
     <string name="send_link">लिंक भेजें</string>
     <string name="paste_link">लिंक पेस्ट करें</string>
