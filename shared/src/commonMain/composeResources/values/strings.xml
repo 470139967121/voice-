@@ -660,6 +660,7 @@
     <!-- Force Update -->
     <string name="update_required">Update Required</string>
     <string name="update_required_description">A new version of ShyTalk is available. Please update to continue using the app.</string>
+    <string name="update_open_store_failed">Cannot open the app store automatically. Please update ShyTalk manually from your device app store.</string>
 
     <!-- Leave/Close room dialog -->
     <string name="close_room_question">Close Room?</string>

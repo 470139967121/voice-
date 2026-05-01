@@ -11,9 +11,7 @@ class JvmPlatformSettingsService : PlatformSettingsService {
         // No-op on JVM (test-only target)
     }
 
-    override fun openPlayStore(packageId: String) {
-        // No-op on JVM (test-only target)
-    }
+    override fun openPlayStore(packageId: String): Boolean = false
 
     override fun openSystemSettings(type: SettingsType) {
         // No-op on JVM (test-only target)

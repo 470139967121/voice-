@@ -17,12 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.shyden.shytalk.R
-import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.device_not_supported
+import com.shyden.shytalk.resources.device_not_supported_description
+import com.shyden.shytalk.resources.police_duck
+import com.shyden.shytalk.resources.police_duck_description
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -40,7 +42,7 @@ fun UnsafeDeviceScreen() {
             verticalArrangement = Arrangement.Center,
         ) {
             Image(
-                painter = painterResource(R.drawable.police_duck),
+                painter = painterResource(Res.drawable.police_duck),
                 contentDescription = stringResource(Res.string.police_duck_description),
                 modifier =
                     Modifier

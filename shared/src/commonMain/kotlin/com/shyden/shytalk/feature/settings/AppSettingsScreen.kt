@@ -301,6 +301,7 @@ fun AppSettingsScreen(
 
     // Update check result dialog
     uiState.updateCheckResult?.let { result ->
+        var openStoreFailed by remember(result) { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { viewModel.dismissUpdateResult() },
             title = {
@@ -313,20 +314,40 @@ fun AppSettingsScreen(
                 )
             },
             text = {
-                Text(
-                    when (result) {
-                        is UpdateCheckResult.UpToDate -> stringResource(Res.string.up_to_date_description)
-                        is UpdateCheckResult.UpdateAvailable -> stringResource(Res.string.update_available_description, result.versionName)
-                        is UpdateCheckResult.Error -> result.message.resolve()
-                    },
-                )
+                Column {
+                    Text(
+                        when (result) {
+                            is UpdateCheckResult.UpToDate -> stringResource(Res.string.up_to_date_description)
+
+                            is UpdateCheckResult.UpdateAvailable ->
+                                stringResource(Res.string.update_available_description, result.versionName)
+
+                            is UpdateCheckResult.Error -> result.message.resolve()
+                        },
+                    )
+                    if (openStoreFailed) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = stringResource(Res.string.update_open_store_failed),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testTag("settings_updateOpenStoreFailed"),
+                        )
+                    }
+                }
             },
             confirmButton = {
                 if (result is UpdateCheckResult.UpdateAvailable) {
                     Button(
                         onClick = {
-                            viewModel.dismissUpdateResult()
-                            platformSettings.openPlayStore("com.shyden.shytalk")
+                            // Dismiss only on success — if the store failed to
+                            // open we keep the dialog visible and surface the
+                            // failure inline so the user can retry or pick Later.
+                            if (platformSettings.openPlayStore("com.shyden.shytalk")) {
+                                viewModel.dismissUpdateResult()
+                            } else {
+                                openStoreFailed = true
+                            }
                         },
                         modifier = Modifier.testTag("settings_downloadUpdateButton"),
                     ) {

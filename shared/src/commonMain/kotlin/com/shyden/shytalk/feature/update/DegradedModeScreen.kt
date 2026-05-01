@@ -1,16 +1,15 @@
 package com.shyden.shytalk.feature.update
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -19,18 +18,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.contact_support_help
+import com.shyden.shytalk.resources.i_understand
+import com.shyden.shytalk.resources.technical_difficulties
+import com.shyden.shytalk.resources.technical_difficulties_description
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun ForceUpdateScreen() {
-    val context = LocalContext.current
-
+fun DegradedModeScreen(onAcknowledge: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -44,44 +43,48 @@ fun ForceUpdateScreen() {
             verticalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector = Icons.Default.SystemUpdate,
+                imageVector = Icons.Default.Warning,
                 contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.error,
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = stringResource(Res.string.update_required),
-                style = MaterialTheme.typography.headlineMedium,
+                text = stringResource(Res.string.technical_difficulties),
+                style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.testTag("forceUpdate_title"),
+                modifier = Modifier.testTag("degraded_title"),
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = stringResource(Res.string.update_required_description),
-                style = MaterialTheme.typography.bodyLarge,
+                text = stringResource(Res.string.technical_difficulties_description),
+                style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(Res.string.contact_support_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = {
-                    val intent =
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://play.google.com/store/apps/details?id=com.shyden.shytalk"),
-                        )
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.testTag("forceUpdate_updateButton"),
+                onClick = onAcknowledge,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag("degraded_acknowledgeButton"),
             ) {
-                Text(stringResource(Res.string.update_now))
+                Text(stringResource(Res.string.i_understand))
             }
         }
     }
