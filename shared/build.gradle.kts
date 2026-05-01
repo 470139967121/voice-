@@ -77,6 +77,13 @@ kotlin {
             implementation(libs.androidx.credentials)
             implementation(libs.androidx.credentials.play.services)
             implementation(libs.google.id)
+            // Required by DevSignInHelper.android.kt actual —
+            // FirebaseAuth + Tasks await() adapter for the local-emulator
+            // sign-in path. firebase-auth pulls its version from the BOM
+            // (matching the app module's pinned versions).
+            implementation(project.dependencies.platform(libs.firebase.bom))
+            implementation(libs.firebase.auth)
+            implementation(libs.kotlinx.coroutines.play.services)
         }
 
         iosMain.dependencies {

@@ -3,7 +3,6 @@
 
 package com.shyden.shytalk.feature.auth
 
-import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -118,7 +117,11 @@ suspend fun performAppleSignIn(): AppleSignInResult =
                             // a silent user gesture, not a failure.
                             continuation.resumeWithException(AppleSignInCancelledException())
                         } else {
-                            logE(TAG, "Apple Sign-In failed: ${didCompleteWithError.localizedDescription}")
+                            // Caller (IosSignInScreen.kt) logs the wrapped
+                            // exception via logW once it propagates — duplicating
+                            // here would just produce two Sentry events for the
+                            // same failure. The localizedDescription is included
+                            // in the Exception message for that single log.
                             continuation.resumeWithException(
                                 Exception("Apple Sign-In failed: ${didCompleteWithError.localizedDescription}"),
                             )

@@ -80,7 +80,9 @@ val testModule =
         // Device ID
         single(named("deviceId")) { "test-device-id" }
 
-        // SecureStorage (real implementation — works on emulator with EncryptedSharedPreferences)
+        // SecureStorage (real implementation — plain SharedPreferences on
+        // the test emulator's app private dir; safe because instrumented
+        // tests run in a sandboxed package).
         single { SecureStorage(androidContext()) }
 
         // Fake services

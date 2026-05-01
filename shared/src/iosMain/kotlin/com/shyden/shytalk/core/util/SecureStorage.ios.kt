@@ -76,8 +76,16 @@ actual class SecureStorage {
             val result = alloc<platform.CoreFoundation.CFTypeRefVar>()
             val status = SecItemCopyMatching(query, result.ptr)
             if (status != errSecSuccess) return null
-            @Suppress("UNCHECKED_CAST")
+            // Toll-free bridging: CFTypeRef returned by SecItemCopyMatching with
+            // kSecReturnData=true is an NSData. Kotlin/Native's compile-time
+            // type checker can't see the bridge, so the cast looks dubious; at
+            // runtime the same bytes are an NSData reference. The same applies
+            // to NSString.create(data:encoding:) — the factory returns an
+            // NSString that bridges to kotlin.String via the K/N runtime.
+            @Suppress("UNCHECKED_CAST", "CAST_NEVER_SUCCEEDS")
             val data = result.value as? NSData ?: return null
+
+            @Suppress("CAST_NEVER_SUCCEEDS")
             return NSString.create(data = data, encoding = NSUTF8StringEncoding) as? String
         }
     }
