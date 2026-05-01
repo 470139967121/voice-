@@ -4,6 +4,11 @@ name: Deploy To Dev
 on:
   workflow_dispatch:
     inputs:
+      ref:
+        description: 'Branch, tag, or commit SHA to deploy. Leave blank to use the ref selected in the run-workflow dropdown above (which only lists branches and tags — use this field for commit SHAs).'
+        required: false
+        type: string
+        default: ''
       backend:
         description: 'Deploy Express API to dev'
         type: boolean
@@ -44,6 +49,33 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # Honour the optional `ref` input so the operator can deploy a
+          # specific branch, tag (e.g. `v0.97.1`), or commit SHA. Falls
+          # back to the workflow_dispatch ref dropdown when unset (which
+          # supports branches and tags but not commits — hence the
+          # explicit input).
+          ref: ${{ inputs.ref || github.ref }}
+          # `actions/checkout` defaults to fetch-depth: 1 which only
+          # includes the tip of the named ref. A commit-SHA `inputs.ref`
+          # may NOT be at the tip of any branch/tag, in which case
+          # checkout fails with `fatal: reference is not a tree`. Pull
+          # full history when the operator overrides ref so any SHA is
+          # reachable; keep depth 1 for default-ref runs to save time.
+          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
+
+      - name: Resolve deployed SHA
+        id: deployed-sha
+        # `github.sha` is fixed at workflow-trigger time against the
+        # dropdown ref, so it doesn't reflect the override `inputs.ref`
+        # we just checked out. Re-resolve from the working tree so the
+        # SHA we record matches the code actually shipped.
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse HEAD)
+          REF_LABEL='${{ inputs.ref != '' && inputs.ref || github.ref_name }}'
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "Deploying ref=$REF_LABEL → sha=$SHA"
 
       - uses: ./.github/actions/setup-node
 
@@ -53,6 +85,7 @@ jobs:
       - name: Deploy Express API to London (dev)
         env:
           SSH_KEY: ${{ secrets.LONDON_SSH_KEY }}
+          DEPLOYED_SHA: ${{ steps.deployed-sha.outputs.sha }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
@@ -68,12 +101,13 @@ jobs:
           # endpoint reads it back so the deploy verification can assert
           # the new code is actually serving (vs. stale pm2 process from
           # a prior tarball that didn't trigger restart correctly).
-          ssh ubuntu@145.241.224.13 "cd ~/express-api && tar xzf /tmp/api.tar.gz && echo '${{ github.sha }}' > .deployed-sha && npm install --omit=dev && DEPLOYED_SHA='${{ github.sha }}' pm2 restart shytalk-api --update-env"
+          ssh ubuntu@145.241.224.13 "cd ~/express-api && tar xzf /tmp/api.tar.gz && echo '$DEPLOYED_SHA' > .deployed-sha && npm install --omit=dev && DEPLOYED_SHA='$DEPLOYED_SHA' pm2 restart shytalk-api --update-env"
 
       - name: Verify dev API health
+        env:
+          EXPECTED_SHA: ${{ steps.deployed-sha.outputs.sha }}
         run: |
           set -euo pipefail
-          EXPECTED_SHA='${{ github.sha }}'
           for i in 1 2 3 4 5; do
             sleep 5
             body=$(curl -sf -m 10 https://dev-api.shytalk.shyden.co.uk/api/health || echo "")
@@ -108,6 +142,20 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # Honour the optional `ref` input so the operator can deploy a
+          # specific branch, tag (e.g. `v0.97.1`), or commit SHA. Falls
+          # back to the workflow_dispatch ref dropdown when unset (which
+          # supports branches and tags but not commits — hence the
+          # explicit input).
+          ref: ${{ inputs.ref || github.ref }}
+          # `actions/checkout` defaults to fetch-depth: 1 which only
+          # includes the tip of the named ref. A commit-SHA `inputs.ref`
+          # may NOT be at the tip of any branch/tag, in which case
+          # checkout fails with `fatal: reference is not a tree`. Pull
+          # full history when the operator overrides ref so any SHA is
+          # reachable; keep depth 1 for default-ref runs to save time.
+          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
 
       - uses: ./.github/actions/setup-node
 
@@ -132,6 +180,32 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # Honour the optional `ref` input so the operator can deploy a
+          # specific branch, tag (e.g. `v0.97.1`), or commit SHA. Falls
+          # back to the workflow_dispatch ref dropdown when unset (which
+          # supports branches and tags but not commits — hence the
+          # explicit input).
+          ref: ${{ inputs.ref || github.ref }}
+          # `actions/checkout` defaults to fetch-depth: 1 which only
+          # includes the tip of the named ref. A commit-SHA `inputs.ref`
+          # may NOT be at the tip of any branch/tag, in which case
+          # checkout fails with `fatal: reference is not a tree`. Pull
+          # full history when the operator overrides ref so any SHA is
+          # reachable; keep depth 1 for default-ref runs to save time.
+          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
+
+      - name: Resolve deployed SHA
+        id: deployed-sha
+        # See deploy-backend-dev/Resolve deployed SHA for full rationale —
+        # we re-resolve from the working tree because `github.sha` is
+        # fixed against the dropdown ref and ignores `inputs.ref`.
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse HEAD)
+          REF_LABEL='${{ inputs.ref != '' && inputs.ref || github.ref_name }}'
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "Distributing ref=$REF_LABEL → sha=$SHA"
 
       - name: Try download cached APK
         id: cached-apk
@@ -218,7 +292,7 @@ jobs:
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
           groups: internal-testers
           file: ${{ steps.find-apk.outputs.apk_path }}
-          releaseNotes: ${{ inputs.release-notes != '' && inputs.release-notes || format('Dev build from {0} ({1})', github.ref_name, github.sha) }}
+          releaseNotes: ${{ inputs.release-notes != '' && inputs.release-notes || format('Dev build from {0} ({1})', (inputs.ref != '' && inputs.ref || github.ref_name), steps.deployed-sha.outputs.sha) }}
 
   distribute-ios:
     name: Distribute iOS to TestFlight
@@ -232,6 +306,20 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # Honour the optional `ref` input so the operator can deploy a
+          # specific branch, tag (e.g. `v0.97.1`), or commit SHA. Falls
+          # back to the workflow_dispatch ref dropdown when unset (which
+          # supports branches and tags but not commits — hence the
+          # explicit input).
+          ref: ${{ inputs.ref || github.ref }}
+          # `actions/checkout` defaults to fetch-depth: 1 which only
+          # includes the tip of the named ref. A commit-SHA `inputs.ref`
+          # may NOT be at the tip of any branch/tag, in which case
+          # checkout fails with `fatal: reference is not a tree`. Pull
+          # full history when the operator overrides ref so any SHA is
+          # reachable; keep depth 1 for default-ref runs to save time.
+          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
 
       # Pre-cleanup: scrub any signing material left behind by a PRIOR
       # crashed run. `if: always()` cleanup at job end doesn't run if the
@@ -446,6 +534,20 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # Honour the optional `ref` input so the operator can deploy a
+          # specific branch, tag (e.g. `v0.97.1`), or commit SHA. Falls
+          # back to the workflow_dispatch ref dropdown when unset (which
+          # supports branches and tags but not commits — hence the
+          # explicit input).
+          ref: ${{ inputs.ref || github.ref }}
+          # `actions/checkout` defaults to fetch-depth: 1 which only
+          # includes the tip of the named ref. A commit-SHA `inputs.ref`
+          # may NOT be at the tip of any branch/tag, in which case
+          # checkout fails with `fatal: reference is not a tree`. Pull
+          # full history when the operator overrides ref so any SHA is
+          # reachable; keep depth 1 for default-ref runs to save time.
+          fetch-depth: ${{ inputs.ref != '' && 0 || 1 }}
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
