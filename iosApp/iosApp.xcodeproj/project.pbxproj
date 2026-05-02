@@ -30,6 +30,7 @@
 		A10001012600000000000021 /* StartingScreenCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000021 /* StartingScreenCacheTests.swift */; };
 		A10001012600000000000022 /* StartingScreenViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000022 /* StartingScreenViewTests.swift */; };
 		A10001012600000000000023 /* StartingScreenCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000023 /* StartingScreenCoordinatorTests.swift */; };
+		A10001012600000000000024 /* GoogleSignInHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000024 /* GoogleSignInHelperTests.swift */; };
 		B730411FA36F2ECB9E56182C /* LiveKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */; };
 		C0DD48EFA35A27E6DE3FF992 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 27B546F78FF904CF3A1203A3 /* GoogleService-Info.plist */; };
 		CC7F41EE90273AC8C670F9E0 /* LiveKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */; };
@@ -76,6 +77,7 @@
 		A10001002600000000000021 /* StartingScreenCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartingScreenCacheTests.swift; sourceTree = "<group>"; };
 		A10001002600000000000022 /* StartingScreenViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartingScreenViewTests.swift; sourceTree = "<group>"; };
 		A10001002600000000000023 /* StartingScreenCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartingScreenCoordinatorTests.swift; sourceTree = "<group>"; };
+		A10001002600000000000024 /* GoogleSignInHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInHelperTests.swift; sourceTree = "<group>"; };
 		A10003002600000000000001 /* iosAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4194D2DAF7801EEB19415A3 /* StartingScreenCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreenCache.swift; path = iosApp/feature/starting/StartingScreenCache.swift; sourceTree = SOURCE_ROOT; };
 		BE254B9C06195293860934D8 /* iosApp.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = iosApp.entitlements; path = iosApp/iosApp.entitlements; sourceTree = SOURCE_ROOT; };
@@ -157,6 +159,7 @@
 				A10001002600000000000021 /* StartingScreenCacheTests.swift */,
 				A10001002600000000000022 /* StartingScreenViewTests.swift */,
 				A10001002600000000000023 /* StartingScreenCoordinatorTests.swift */,
+				A10001002600000000000024 /* GoogleSignInHelperTests.swift */,
 			);
 			path = iosAppTests;
 			sourceTree = "<group>";
@@ -306,7 +309,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0DD48EFA35A27E6DE3FF992 /* GoogleService-Info.plist in Resources */,
-				F75B4ECEB8B107ED07E36BE5 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -416,6 +418,7 @@
 				A10001012600000000000021 /* StartingScreenCacheTests.swift in Sources */,
 				A10001012600000000000022 /* StartingScreenViewTests.swift in Sources */,
 				A10001012600000000000023 /* StartingScreenCoordinatorTests.swift in Sources */,
+				A10001012600000000000024 /* GoogleSignInHelperTests.swift in Sources */,
 				DFFC47D68E0648FF823F0574 /* GoogleSignInHelper.swift in Sources */,
 				B730411FA36F2ECB9E56182C /* LiveKitBridge.swift in Sources */,
 				E1B5C2D49A3F8E7B6C4D1A03 /* StoreKitBridge.swift in Sources */,
