@@ -54,7 +54,10 @@ fun TransactionHistoryScreen(
             TopAppBar(
                 title = { Text(stringResource(Res.string.transactions)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.testTag("transactions_backButton"),
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.go_back))
                     }
                 },
