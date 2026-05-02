@@ -282,4 +282,24 @@ class BuildVariantTest {
         BuildVariant.initBuildInfo(environment = "dev", buildVersion = "1.0")
         assertEquals("?", BuildVariant.deviceInfo)
     }
+
+    // ── PreviewWatermarkConstants — UX guarantees ──
+    //
+    // The watermark must remain semi-transparent so the underlying UI
+    // is legible. The user explicitly required: "we still need to be
+    // able to see the app". The contract is alpha ≤ 0.5 (clearly
+    // see-through) AND alpha ≥ 0.1 (not so faded it disappears on
+    // light backgrounds). Tested as a constant rather than an
+    // instrumented Compose render so the contract is enforceable from
+    // the JVM unit-test layer that runs in pre-push and CI.
+
+    @Test
+    fun `watermark badge alpha is at most half-opaque`() {
+        assertTrue(PreviewWatermarkConstants.BADGE_BACKGROUND_ALPHA <= 0.5f)
+    }
+
+    @Test
+    fun `watermark badge alpha is at least faintly visible`() {
+        assertTrue(PreviewWatermarkConstants.BADGE_BACKGROUND_ALPHA >= 0.1f)
+    }
 }

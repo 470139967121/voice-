@@ -90,4 +90,61 @@ test.describe('Preview watermark — overlay does not break the page', () => {
     const bodyText = await page.locator('body').textContent();
     expect(bodyText?.length || 0).toBeGreaterThan(50);
   });
+
+  test('watermark background alpha is transparent enough to see through', async ({ page }) => {
+    // The badge must be visibly transparent so the underlying UI
+    // remains legible. Read the computed background-color via JS and
+    // verify the alpha component is at most 0.5. Below this threshold
+    // the underlying page colour clearly bleeds through.
+    await page.goto('/');
+    const alpha = await page.locator('#preview-watermark').evaluate((el) => {
+      const bg = window.getComputedStyle(el).backgroundColor;
+      // matches "rgba(r, g, b, a)" or "rgb(r, g, b)" (alpha 1)
+      const m = /rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(?:,\s*([\d.]+)\s*)?\)/.exec(bg);
+      return m && m[1] !== undefined ? parseFloat(m[1]) : 1;
+    });
+    expect(alpha).toBeLessThanOrEqual(0.5);
+    expect(alpha).toBeGreaterThanOrEqual(0.1);
+  });
+
+  test('watermark does not intercept pointer events on the page beneath it', async ({ page }) => {
+    // The watermark must NOT block clicks on whatever's underneath.
+    // Read the CSS `pointer-events` property directly — `none` means
+    // the badge is visually present but clicks pass straight through
+    // to the element behind it (the standard "decoration overlay"
+    // contract). The user explicitly required "taps or clicks must
+    // not be blocked by any watermark".
+    await page.goto('/');
+    const pointerEvents = await page.locator('#preview-watermark').evaluate((el) => {
+      return window.getComputedStyle(el).pointerEvents;
+    });
+    expect(pointerEvents).toBe('none');
+  });
+
+  test('clicks at the watermark coordinates reach the page beneath', async ({ page }) => {
+    // End-to-end check that confirms `pointer-events: none` actually
+    // works for real click dispatches — places a button under the
+    // watermark via JS, clicks at the watermark's bounding box, and
+    // verifies the button received the click.
+    await page.goto('/');
+    await page.evaluate(() => {
+      const wm = document.getElementById('preview-watermark');
+      if (!wm) throw new Error('no watermark');
+      const rect = wm.getBoundingClientRect();
+      const btn = document.createElement('button');
+      btn.id = 'pw-test-button';
+      btn.textContent = 'click me';
+      btn.style.cssText = `position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;height:${rect.height}px;z-index:1;`;
+      btn.dataset.clicked = '0';
+      btn.addEventListener('click', () => { btn.dataset.clicked = '1'; });
+      document.body.appendChild(btn);
+    });
+    // Click at the centre of the watermark.
+    const box = await page.locator('#preview-watermark').boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    const clicked = await page.locator('#pw-test-button').getAttribute('data-clicked');
+    expect(clicked).toBe('1');
+  });
 });

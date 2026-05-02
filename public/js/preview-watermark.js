@@ -93,8 +93,16 @@
       'top:4px',
       'right:4px',
       'z-index:2147483647', // max int — guarantee on top of any modal
-      'background:rgba(211,47,47,0.85)',
+      // Alpha 0.4 — visible enough to read the build/env/UID lines
+      // against any background, transparent enough that the underlying
+      // page colour clearly bleeds through. The contract is enforced by
+      // the alpha test in preview-watermark.spec.ts (≤ 0.5, ≥ 0.1).
+      'background:rgba(211,47,47,0.4)',
       'color:#fff',
+      // White text against semi-transparent red can wash out — add a
+      // subtle dark text-shadow so the labels remain readable on light
+      // backgrounds without bumping the badge opacity back up.
+      'text-shadow:0 1px 2px rgba(0,0,0,0.6)',
       'padding:3px 6px',
       'border-radius:3px',
       'font-family:ui-monospace,Menlo,Consolas,monospace',
