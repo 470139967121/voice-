@@ -1408,7 +1408,15 @@ test.describe('Admin Notifications (11.92)', () => {
     const expected = pending.total || pending.suggestions?.length || 0;
     if (expected === 0) { test.skip(true, 'No pending'); return; }
     await page.reload(); await adminLogin(page);
-    expect(Number(await page.locator('#tab-suggestions .tab-badge, #tab-suggestions .badge').textContent())).toBe(expected);
+    // Badge text is populated by an async polling fetch after the page
+    // mounts — assert with a retry timeout so the test doesn't trip on
+    // the brief window between page-load and the first badge update.
+    // Without this, the test flakes ~1 in 30 runs because the badge
+    // briefly reads "0" or empty before the polling write.
+    await expect(page.locator('#tab-suggestions .tab-badge, #tab-suggestions .badge')).toHaveText(
+      String(expected),
+      { timeout: 10_000 },
+    );
   });
 
   test('badge clears when admin views pending queue', async ({ page, testData }) => {
