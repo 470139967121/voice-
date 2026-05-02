@@ -90,6 +90,10 @@ app.use('/api', (req, res, next) => {
       req.path !== '/suggestions/mine') ||
     // One-click email unsubscribe (token-based, no auth)
     (req.method === 'POST' && req.path === '/subscriptions/unsubscribe') ||
+    // Apple App Store Server Notifications V2 webhook — auth is the JWS
+    // signature verified inside the route, not a Bearer token (Apple does
+    // not send one). Without this skip, every notification would 401.
+    (req.method === 'POST' && req.path === '/apple-notifications/v2') ||
     // Portal TOTP recovery (unauthenticated — user has lost their TOTP device)
     req.path.startsWith('/portal/totp-recovery/')
   )
@@ -154,6 +158,7 @@ app.use('/api', portalRoutes);
 app.use('/api', require('./routes/config'));
 app.use('/api', require('./routes/users'));
 app.use('/api', require('./routes/economy'));
+app.use('/api', require('./routes/apple-notifications'));
 app.use('/api', require('./routes/livekit'));
 app.use('/api', require('./routes/reports'));
 app.use('/api', require('./routes/notifications'));

@@ -420,5 +420,28 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow write: if false;
     }
+
+    // ── Apple notifications dedup — server-only (webhook idempotency)
+    match /appleNotifications/{notificationUUID} {
+      allow read, write: if false;
+    }
+
+    // ── Orphan refunds worklist — admin read, server write ─────
+    // Apple-side refunds with no matching purchaseReceipt. Ops resolves
+    // these manually; the admin panel surfaces them via this collection.
+    match /orphanRefunds/{notificationUUID} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
+
+    // ── Pending refund reversals — admin read, server write ────
+    // Apple REFUND_REVERSED events (customer charged back the refund or
+    // App Review reversed it). Auto-restoration of entitlement is risky
+    // for money-affecting paths, so the webhook delegates to ops via
+    // this worklist + a critical alert.
+    match /pendingRefundReversals/{notificationUUID} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
   }
 }
