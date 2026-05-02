@@ -70,11 +70,22 @@ struct iOSApp: App {
         #endif
         setupGoogleSignIn()
         setupLiveKit()
+        setupStoreKit()
     }
 
     private func setupLiveKit() {
         let bridge = LiveKitBridgeImpl()
         IosLiveKitBridgeKt.registerLiveKitBridge(bridge: bridge)
+    }
+
+    private func setupStoreKit() {
+        // StoreKit 2 requires iOS 15+. App's deployment target is iOS 16
+        // (per Podfile), so the availability guard is satisfied at link
+        // time — runtime crashes only on a misconfigured installer.
+        if #available(iOS 15.0, *) {
+            let bridge = StoreKitBridgeImpl()
+            IosStoreKitBridgeKt.registerStoreKitBridge(bridge: bridge)
+        }
     }
 
     var body: some Scene {
