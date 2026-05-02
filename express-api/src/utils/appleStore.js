@@ -149,9 +149,37 @@ async function verifyApplePurchase(expectedProductId, signedTransactionInfo, isS
   };
 }
 
+/**
+ * Verify an App Store Server Notifications V2 signed payload and return
+ * the decoded notification body. Used by the
+ * `/api/apple-notifications/v2` webhook to handle refunds, renewals,
+ * revokes, etc. Reuses the same `SignedDataVerifier` instance as
+ * `verifyApplePurchase`.
+ */
+async function verifyAppleNotification(signedPayload) {
+  return getVerifier().verifyAndDecodeNotification(signedPayload);
+}
+
+/**
+ * Verify a standalone signed transaction payload (e.g.
+ * `data.signedTransactionInfo` from an App Store Server Notification)
+ * and return the decoded transaction. Convenience wrapper for
+ * notification handlers that need the embedded transaction without
+ * the productId / bundleId / revocation enforcement that
+ * `verifyApplePurchase` runs (those are caller-controlled here).
+ */
+async function verifyAppleSignedTransaction(signedTransactionInfo) {
+  return getVerifier().verifyAndDecodeTransaction(signedTransactionInfo);
+}
+
 // Exposed for testing — allows resetting the cached verifier instance
 function _resetVerifier() {
   verifier = null;
 }
 
-module.exports = { verifyApplePurchase, _resetVerifier };
+module.exports = {
+  verifyApplePurchase,
+  verifyAppleNotification,
+  verifyAppleSignedTransaction,
+  _resetVerifier,
+};

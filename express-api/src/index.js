@@ -154,6 +154,7 @@ app.use('/api', portalRoutes);
 app.use('/api', require('./routes/config'));
 app.use('/api', require('./routes/users'));
 app.use('/api', require('./routes/economy'));
+app.use('/api', require('./routes/apple-notifications'));
 app.use('/api', require('./routes/livekit'));
 app.use('/api', require('./routes/reports'));
 app.use('/api', require('./routes/notifications'));
