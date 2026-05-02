@@ -120,29 +120,46 @@ async function reverseCoinPackEntitlement(found, transaction, dedupePayload, ded
     return { ok: false, reason: 'zero_coins' };
   }
 
-  const batch = db.batch();
-  batch.update(db.doc(`users/${userId}`), { shyCoins: FieldValue.increment(-totalCoins) });
-  batch.set(db.doc(`users/${userId}/transactions/${generateId()}`), {
-    type: 'REFUND',
-    amount: -totalCoins,
-    currency: 'COINS',
-    // Negative balance is acceptable here — the post-update balance is
-    // not knowable inside a batch without an extra read, and surfacing a
-    // misleading zero would be worse than omitting it. UI reads the
-    // user's live `shyCoins` field anyway.
-    balanceAfter: null,
-    details: `Refund: ${detailSuffix}`,
-    timestamp: now(),
-    originOrderId: transaction.transactionId,
+  // Wrap dedupe-check + state mutation in a Firestore transaction so a
+  // concurrent retry (Apple times out our response and re-sends within
+  // milliseconds) can't pass the dedupe check twice and double-debit.
+  // The pre-handler `dedupeRef.get()` at the route level is a fast-path
+  // optimisation; this is the load-bearing safety check.
+  const txRefundDocRef = db.doc(`users/${userId}/transactions/${generateId()}`);
+  const userRef = db.doc(`users/${userId}`);
+  const applied = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(dedupeRef);
+    if (snap.exists) return false;
+    tx.update(userRef, { shyCoins: FieldValue.increment(-totalCoins) });
+    tx.set(txRefundDocRef, {
+      type: 'REFUND',
+      amount: -totalCoins,
+      currency: 'COINS',
+      // Negative balance is acceptable here — the post-update balance is
+      // not knowable inside a transaction without re-reading after the
+      // increment, and surfacing a misleading zero would be worse than
+      // omitting it. UI reads the user's live `shyCoins` field anyway.
+      balanceAfter: null,
+      details: `Refund: ${detailSuffix}`,
+      timestamp: now(),
+      originOrderId: transaction.transactionId,
+    });
+    tx.set(dedupeRef, dedupePayload);
+    return true;
   });
-  batch.set(dedupeRef, dedupePayload);
-  await batch.commit();
 
-  log.info('apple-notifications', 'Reversed coin-pack entitlement', {
-    userId,
-    productId,
-    coinsRemoved: totalCoins,
-  });
+  if (applied) {
+    log.info('apple-notifications', 'Reversed coin-pack entitlement', {
+      userId,
+      productId,
+      coinsRemoved: totalCoins,
+    });
+  } else {
+    log.info('apple-notifications', 'Coin-pack refund skipped (race-resolved duplicate)', {
+      userId,
+      productId,
+    });
+  }
   return { ok: true };
 }
 
@@ -189,42 +206,67 @@ async function reverseSubscriptionEntitlement(found, transaction, dedupePayload,
     }
   }
 
-  const batch = db.batch();
-  batch.update(db.doc(`users/${userId}`), {
-    isSuperShy: false,
-    superShyExpiry: null,
-    superShyTier: null,
+  // Wrap dedupe-check + state mutation in a Firestore transaction so a
+  // concurrent retry can't pass the dedupe check twice and clear an
+  // already-cleared entitlement (idempotent in practice but writes a
+  // duplicate REFUND tx row, which would mislead transaction history).
+  const userRef = db.doc(`users/${userId}`);
+  const txRefundDocRef = db.doc(`users/${userId}/transactions/${generateId()}`);
+  const applied = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(dedupeRef);
+    if (snap.exists) return false;
+    tx.update(userRef, {
+      isSuperShy: false,
+      superShyExpiry: null,
+      superShyTier: null,
+    });
+    tx.set(txRefundDocRef, {
+      type: 'REFUND',
+      amount: 0,
+      currency: 'COINS',
+      balanceAfter: null,
+      details: `Subscription refund: Super Shy ${tier} (${productId})`,
+      timestamp: now(),
+      originOrderId: transaction.transactionId,
+    });
+    tx.set(dedupeRef, dedupePayload);
+    return true;
   });
-  batch.set(db.doc(`users/${userId}/transactions/${generateId()}`), {
-    type: 'REFUND',
-    amount: 0,
-    currency: 'COINS',
-    balanceAfter: null,
-    details: `Subscription refund: Super Shy ${tier} (${productId})`,
-    timestamp: now(),
-    originOrderId: transaction.transactionId,
-  });
-  batch.set(dedupeRef, dedupePayload);
-  await batch.commit();
 
-  log.info('apple-notifications', 'Reversed subscription entitlement', { userId, productId, tier });
+  if (applied) {
+    log.info('apple-notifications', 'Reversed subscription entitlement', {
+      userId,
+      productId,
+      tier,
+    });
+  } else {
+    log.info('apple-notifications', 'Subscription refund skipped (race-resolved duplicate)', {
+      userId,
+      productId,
+    });
+  }
   return { ok: tier !== 'unknown', reason: tier === 'unknown' ? 'unknown_subscription' : null };
 }
 
 /**
  * Clear a subscription entitlement atomically with the dedupe-row write.
  * Used by EXPIRED / DID_FAIL_TO_RENEW / GRACE_PERIOD_EXPIRED — no REFUND
- * transaction is written because no money moved.
+ * transaction is written because no money moved. Wrapped in a transaction
+ * so a concurrent retry can't apply the clear twice (idempotent but
+ * pollutes audit trails with redundant updates).
  */
 async function clearSubscriptionAtomic(userId, dedupePayload, dedupeRef) {
-  const batch = db.batch();
-  batch.update(db.doc(`users/${userId}`), {
-    isSuperShy: false,
-    superShyExpiry: null,
-    superShyTier: null,
+  const userRef = db.doc(`users/${userId}`);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(dedupeRef);
+    if (snap.exists) return;
+    tx.update(userRef, {
+      isSuperShy: false,
+      superShyExpiry: null,
+      superShyTier: null,
+    });
+    tx.set(dedupeRef, dedupePayload);
   });
-  batch.set(dedupeRef, dedupePayload);
-  await batch.commit();
 }
 
 /**

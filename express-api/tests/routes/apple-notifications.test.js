@@ -6,9 +6,19 @@ const mockDocGet = jest.fn();
 const mockDocUpdate = jest.fn().mockResolvedValue();
 const mockDocSet = jest.fn().mockResolvedValue();
 let mockCollectionGet = jest.fn().mockResolvedValue({ empty: true, docs: [] });
-const mockBatchUpdate = jest.fn();
-const mockBatchSet = jest.fn();
-const mockBatchCommit = jest.fn().mockResolvedValue();
+
+// Transaction tracking: every `tx.update`/`tx.set` call inside the
+// runTransaction callback is recorded against these mocks so tests can
+// assert what the atomic state mutation contained.
+const mockTxGet = jest.fn();
+const mockTxUpdate = jest.fn();
+const mockTxSet = jest.fn();
+// Each runTransaction call returns the callback's return value, mirroring
+// the real Firestore SDK contract so the helper can branch on whether
+// the dedupe check short-circuited (false) or the side effect ran (true).
+const mockRunTransaction = jest.fn(async (fn) => {
+  return fn({ get: mockTxGet, update: mockTxUpdate, set: mockTxSet });
+});
 
 jest.mock('../../src/utils/firebase', () => ({
   db: {
@@ -28,11 +38,7 @@ jest.mock('../../src/utils/firebase', () => ({
         })),
       })),
     })),
-    batch: jest.fn(() => ({
-      update: mockBatchUpdate,
-      set: mockBatchSet,
-      commit: mockBatchCommit,
-    })),
+    runTransaction: mockRunTransaction,
   },
   FieldValue: {
     increment: jest.fn((n) => `increment(${n})`),
@@ -74,7 +80,15 @@ const log = require('../../src/utils/log');
 beforeEach(() => {
   jest.clearAllMocks();
   mockCollectionGet = jest.fn().mockResolvedValue({ empty: true, docs: [] });
-  mockBatchCommit.mockResolvedValue();
+  // Default: inside-transaction dedupe check sees no prior row (proceed
+  // with the side effect). Tests for the race-resolved-duplicate path
+  // override with `mockTxGet.mockResolvedValueOnce({ exists: true })`.
+  mockTxGet.mockResolvedValue({ exists: false });
+  // Re-bind the runTransaction mock so each test starts with the default
+  // pass-through behaviour after `clearAllMocks` resets it to a bare fn.
+  mockRunTransaction.mockImplementation(async (fn) => {
+    return fn({ get: mockTxGet, update: mockTxUpdate, set: mockTxSet });
+  });
 });
 
 function createApp() {
@@ -138,7 +152,7 @@ describe('POST /api/apple-notifications/v2 — validation', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/Invalid embedded transaction/i);
-    expect(mockBatchCommit).not.toHaveBeenCalled();
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 });
 
@@ -160,10 +174,10 @@ describe('POST /api/apple-notifications/v2 — idempotency', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ ok: true, deduped: true });
     expect(mockVerifyAppleSignedTransaction).not.toHaveBeenCalled();
-    expect(mockBatchCommit).not.toHaveBeenCalled();
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 
-  test('side effect + dedupe row commit atomically (single batch)', async () => {
+  test('side effect + dedupe row commit atomically inside a single transaction', async () => {
     mockVerifyAppleNotification.mockResolvedValueOnce({
       notificationType: 'REFUND',
       notificationUUID: 'uuid-atomic',
@@ -194,10 +208,12 @@ describe('POST /api/apple-notifications/v2 — idempotency', () => {
     const app = createApp();
     await request(app).post('/api/apple-notifications/v2').send({ signedPayload: 'mock' });
 
-    expect(mockBatchCommit).toHaveBeenCalledTimes(1);
-    // Batch must include the dedupe-row write so a partial commit can never
-    // leave the side effect applied without the dedupe row (or vice versa).
-    expect(mockBatchSet).toHaveBeenCalledWith(
+    expect(mockRunTransaction).toHaveBeenCalledTimes(1);
+    // The transaction must include the dedupe-row write so a partial
+    // commit can never leave the side effect applied without the
+    // dedupe row (or vice versa). Concurrent retries are serialised by
+    // Firestore on the dedupe-ref read.
+    expect(mockTxSet).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         notificationType: 'REFUND',
@@ -205,6 +221,50 @@ describe('POST /api/apple-notifications/v2 — idempotency', () => {
         orderId: '2000atomic',
       }),
     );
+  });
+
+  test('inside-transaction dedupe sees concurrent retry → side effect skipped (race resolved)', async () => {
+    mockVerifyAppleNotification.mockResolvedValueOnce({
+      notificationType: 'REFUND',
+      notificationUUID: 'uuid-race',
+      data: { signedTransactionInfo: 'mock' },
+    });
+    mockVerifyAppleSignedTransaction.mockResolvedValueOnce({
+      transactionId: 'race-tx',
+      productId: 'medium_pack',
+      bundleId: 'com.shyden.shytalk',
+    });
+    // Outer dedupe check passes (concurrent request hasn't yet written),
+    // but by the time we're inside the transaction the OTHER concurrent
+    // request has already written the dedupe row.
+    mockDocGet.mockResolvedValueOnce({ exists: false });
+    mockTxGet.mockResolvedValueOnce({ exists: true });
+    mockCollectionGet = jest.fn().mockResolvedValue({
+      empty: false,
+      docs: [
+        {
+          id: 'r-race',
+          data: () => ({
+            userId: 'user-race',
+            isSubscription: false,
+            orderId: 'race-tx',
+            coinsGranted: 500,
+            bonusCoinsGranted: 0,
+          }),
+        },
+      ],
+    });
+
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/apple-notifications/v2')
+      .send({ signedPayload: 'mock' });
+
+    expect(res.status).toBe(200);
+    // Side effect must NOT have been applied — the concurrent request
+    // already did it. No update, no transaction row write.
+    expect(mockTxUpdate).not.toHaveBeenCalled();
+    expect(mockTxSet).not.toHaveBeenCalled();
   });
 });
 
@@ -250,11 +310,11 @@ describe('POST /api/apple-notifications/v2 — REFUND coin pack', () => {
       .send({ signedPayload: 'mock' });
 
     expect(res.status).toBe(200);
-    expect(mockBatchUpdate).toHaveBeenCalledWith(
+    expect(mockTxUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ shyCoins: 'increment(-500)' }),
     );
-    expect(mockBatchSet).toHaveBeenCalledWith(
+    expect(mockTxSet).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         type: 'REFUND',
@@ -263,7 +323,7 @@ describe('POST /api/apple-notifications/v2 — REFUND coin pack', () => {
         originOrderId: '2000000123456789',
       }),
     );
-    expect(mockBatchCommit).toHaveBeenCalledTimes(1);
+    expect(mockRunTransaction).toHaveBeenCalledTimes(1);
   });
 
   test('legacy receipt (no coinsGranted) falls back to live coinPackages with logged warning', async () => {
@@ -320,7 +380,7 @@ describe('POST /api/apple-notifications/v2 — REFUND coin pack', () => {
       expect.stringContaining('Legacy receipt'),
       expect.any(Object),
     );
-    expect(mockBatchUpdate).toHaveBeenCalledWith(
+    expect(mockTxUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ shyCoins: 'increment(-500)' }),
     );
@@ -376,7 +436,7 @@ describe('POST /api/apple-notifications/v2 — REFUND coin pack', () => {
       expect.any(Object),
     );
     // Balance must NOT change — but dedupe row IS written so Apple stops retrying.
-    expect(mockBatchUpdate).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
     expect(mockDocSet).toHaveBeenCalled();
   });
 });
@@ -420,7 +480,7 @@ describe('POST /api/apple-notifications/v2 — REFUND subscription', () => {
       .send({ signedPayload: 'mock' });
 
     expect(res.status).toBe(200);
-    expect(mockBatchUpdate).toHaveBeenCalledWith(
+    expect(mockTxUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         isSuperShy: false,
@@ -428,14 +488,14 @@ describe('POST /api/apple-notifications/v2 — REFUND subscription', () => {
         superShyTier: null,
       }),
     );
-    expect(mockBatchSet).toHaveBeenCalledWith(
+    expect(mockTxSet).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         type: 'REFUND',
         details: expect.stringContaining('Super Shy monthly'),
       }),
     );
-    expect(mockBatchCommit).toHaveBeenCalled();
+    expect(mockRunTransaction).toHaveBeenCalled();
   });
 
   test('subscription not in SUBSCRIPTION_TIERS still clears entitlement defensively + alerts ops', async () => {
@@ -473,7 +533,7 @@ describe('POST /api/apple-notifications/v2 — REFUND subscription', () => {
 
     expect(res.status).toBe(200);
     // Defensive clear must still happen.
-    expect(mockBatchUpdate).toHaveBeenCalledWith(
+    expect(mockTxUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ isSuperShy: false }),
     );
@@ -531,7 +591,7 @@ describe('POST /api/apple-notifications/v2 — REFUND orphan', () => {
         resolved: false,
       }),
     );
-    expect(mockBatchUpdate).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -572,7 +632,7 @@ describe('POST /api/apple-notifications/v2 — REVOKE', () => {
       .send({ signedPayload: 'mock' });
 
     expect(res.status).toBe(200);
-    expect(mockBatchUpdate).toHaveBeenCalledWith(
+    expect(mockTxUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ shyCoins: 'increment(-200)' }),
     );
@@ -614,7 +674,7 @@ describe('POST /api/apple-notifications/v2 — REFUND_REVERSED', () => {
       expect.any(Object),
     );
     // No batch commit — the auto-restore is delegated to ops via worklist.
-    expect(mockBatchCommit).not.toHaveBeenCalled();
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 });
 
@@ -649,7 +709,7 @@ describe('POST /api/apple-notifications/v2 — subscription expiry', () => {
       .send({ signedPayload: 'mock' });
 
     expect(res.status).toBe(200);
-    expect(mockBatchUpdate).toHaveBeenCalledWith(
+    expect(mockTxUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         isSuperShy: false,
@@ -687,7 +747,7 @@ describe('POST /api/apple-notifications/v2 — subscription expiry', () => {
       .send({ signedPayload: 'mock' });
 
     expect(res.status).toBe(200);
-    expect(mockBatchUpdate).toHaveBeenCalledWith(
+    expect(mockTxUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ isSuperShy: false }),
     );
@@ -727,7 +787,7 @@ describe('POST /api/apple-notifications/v2 — subscription expiry', () => {
       expect.any(Object),
     );
     // No entitlement mutation.
-    expect(mockBatchUpdate).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
   });
 
   test('EXPIRED with no matching receipt logs warning + writes dedupe', async () => {
@@ -755,7 +815,7 @@ describe('POST /api/apple-notifications/v2 — subscription expiry', () => {
       expect.stringContaining('expiry with no matching receipt'),
       expect.any(Object),
     );
-    expect(mockBatchUpdate).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -812,7 +872,7 @@ describe('POST /api/apple-notifications/v2 — TEST', () => {
       expect.stringContaining('TEST notification'),
       expect.any(Object),
     );
-    expect(mockBatchUpdate).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
     expect(mockCreateAlert).not.toHaveBeenCalled();
     // dedupe row IS written.
     expect(mockDocSet).toHaveBeenCalled();
@@ -846,7 +906,7 @@ describe('POST /api/apple-notifications/v2 — unknown type', () => {
       expect.stringContaining('Acknowledged'),
       expect.any(Object),
     );
-    expect(mockBatchUpdate).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
     expect(mockCreateAlert).not.toHaveBeenCalled();
   });
 });
@@ -881,7 +941,7 @@ describe('POST /api/apple-notifications/v2 — crash handling', () => {
         },
       ],
     });
-    mockBatchCommit.mockRejectedValueOnce(new Error('Firestore down'));
+    mockRunTransaction.mockRejectedValueOnce(new Error('Firestore down'));
 
     const app = createApp();
     const res = await request(app)

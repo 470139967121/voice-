@@ -466,10 +466,54 @@ describe('POST /api/economy/purchase', () => {
           })
           .expect(200);
 
+        // Refund handler reads coinsGranted/bonusCoinsGranted from this
+        // receipt at refund time — assert they're persisted so a future
+        // economy.js refactor can't silently break the refund path.
         expect(mockDocSet).toHaveBeenCalledWith(
           expect.objectContaining({
             platform: 'apple',
             orderId: '2000000abcdef',
+            coinsGranted: 100,
+            bonusCoinsGranted: 0,
+            isSubscription: false,
+          }),
+        );
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+      }
+    });
+
+    test('subscription receipt persists tierGranted + daysGranted for refund handler', async () => {
+      mockCollectionGet = jest.fn().mockResolvedValue({ empty: true, docs: [] });
+      mockDocGet.mockResolvedValue({ exists: true, data: () => ({ shyCoins: 0, shyBeans: 0 }) });
+
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      verifyApplePurchase.mockResolvedValueOnce({
+        orderId: '2000000sub-monthly',
+        productId: 'super_shy_monthly',
+        purchaseDate: 1700000000000,
+      });
+
+      try {
+        const app = createApp('user-A');
+        await request(app)
+          .post('/api/economy/purchase')
+          .send({
+            productId: 'super_shy_monthly',
+            purchaseToken: 'mock-jws-sub',
+            platform: 'apple',
+            isSubscription: true,
+          })
+          .expect(200);
+
+        expect(mockDocSet).toHaveBeenCalledWith(
+          expect.objectContaining({
+            platform: 'apple',
+            orderId: '2000000sub-monthly',
+            isSubscription: true,
+            tierGranted: 'monthly',
+            daysGranted: 30,
           }),
         );
       } finally {
