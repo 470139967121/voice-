@@ -181,6 +181,7 @@ describe('verifyApplePurchase — configuration', () => {
 
   test('uses PRODUCTION environment when APPLE_APP_STORE_ENV=production', async () => {
     process.env.APPLE_APP_STORE_ENV = 'production';
+    process.env.APPLE_APP_STORE_APP_ID = '1234567890';
     _resetVerifier();
     const { SignedDataVerifier } = require('@apple/app-store-server-library');
 
@@ -193,17 +194,39 @@ describe('verifyApplePurchase — configuration', () => {
 
     await verifyApplePurchase('medium_pack', 'mock-jws', false);
 
-    // SignedDataVerifier(rootCerts, performRevocationChecking, environment, bundleId)
+    // SignedDataVerifier(rootCerts, performRevocationChecking, environment, bundleId, appAppleId)
     expect(SignedDataVerifier).toHaveBeenCalledWith(
       expect.any(Array),
       true,
       'PRODUCTION',
       'com.shyden.shytalk',
+      1234567890,
     );
   });
 
-  test('uses SANDBOX environment by default', async () => {
+  test('throws when APPLE_APP_STORE_ENV=production but APPLE_APP_STORE_APP_ID unset', async () => {
+    process.env.APPLE_APP_STORE_ENV = 'production';
+    delete process.env.APPLE_APP_STORE_APP_ID;
+    _resetVerifier();
+
+    await expect(verifyApplePurchase('medium_pack', 'mock-jws', false)).rejects.toThrow(
+      /APPLE_APP_STORE_APP_ID/,
+    );
+  });
+
+  test('throws when APPLE_APP_STORE_APP_ID is non-numeric', async () => {
+    process.env.APPLE_APP_STORE_ENV = 'production';
+    process.env.APPLE_APP_STORE_APP_ID = 'not-a-number';
+    _resetVerifier();
+
+    await expect(verifyApplePurchase('medium_pack', 'mock-jws', false)).rejects.toThrow(
+      /must be numeric/,
+    );
+  });
+
+  test('uses SANDBOX environment by default (no appAppleId required)', async () => {
     delete process.env.APPLE_APP_STORE_ENV;
+    delete process.env.APPLE_APP_STORE_APP_ID;
     _resetVerifier();
     const { SignedDataVerifier } = require('@apple/app-store-server-library');
 
@@ -221,6 +244,7 @@ describe('verifyApplePurchase — configuration', () => {
       true,
       'SANDBOX',
       'com.shyden.shytalk',
+      undefined,
     );
   });
 });

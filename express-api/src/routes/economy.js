@@ -28,6 +28,7 @@ const { requireAdmin } = require('../middleware/auth');
 const log = require('../utils/log');
 const { verifyProductPurchase, verifySubscription } = require('../utils/playStore');
 const { verifyApplePurchase } = require('../utils/appleStore');
+const { SUBSCRIPTION_TIERS } = require('../utils/subscriptionTiers');
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -1329,33 +1330,31 @@ router.post('/economy/purchase', async (req, res) => {
     }
 
     const orderId = verification.orderId || verification.latestOrderId || null;
-
-    // Store receipt for audit trail
-    const receiptId = generateId();
-    await db.doc(`purchaseReceipts/${receiptId}`).set({
-      userId: uniqueId,
-      productId,
-      purchaseToken,
-      platform: purchasePlatform,
-      isSubscription: !!isSubscription,
-      createdAt: now(),
-      verified: true,
-      orderId,
-    });
-
     const timestamp = now();
+    const receiptId = generateId();
 
     if (isSubscription) {
-      const tierMap = {
-        super_shy_monthly: { tier: 'monthly', days: 30 },
-        super_shy_yearly: { tier: 'yearly', days: 365 },
-        super_shy_lifetime: { tier: 'lifetime', days: null },
-      };
-
-      const sub = tierMap[productId];
+      const sub = SUBSCRIPTION_TIERS[productId];
       if (!sub) return res.status(400).json({ error: 'Unknown subscription product' });
 
       const expiry = sub.days ? timestamp + sub.days * 86400000 : null;
+
+      // Store receipt AFTER tier resolution so we can persist the granted
+      // tier + days. The refund handler reads from the receipt instead of
+      // re-deriving from the (mutable) SUBSCRIPTION_TIERS map, so a future
+      // tier change cannot retroactively rewrite the refund's reversal.
+      await db.doc(`purchaseReceipts/${receiptId}`).set({
+        userId: uniqueId,
+        productId,
+        purchaseToken,
+        platform: purchasePlatform,
+        isSubscription: true,
+        createdAt: timestamp,
+        verified: true,
+        orderId,
+        tierGranted: sub.tier,
+        daysGranted: sub.days,
+      });
 
       await db.doc(`users/${uniqueId}`).update({
         isSuperShy: true,
@@ -1385,13 +1384,33 @@ router.post('/economy/purchase', async (req, res) => {
     const pkg = pkgSnap.empty ? null : { id: pkgSnap.docs[0].id, ...pkgSnap.docs[0].data() };
     if (!pkg) return res.status(404).json({ error: 'Unknown coin package' });
 
-    const totalCoins = (pkg.coins || 0) + (pkg.bonusCoins || 0);
+    const coinsGranted = pkg.coins || 0;
+    const bonusCoinsGranted = pkg.bonusCoins || 0;
+    const totalCoins = coinsGranted + bonusCoinsGranted;
 
     const userSnap = await db.doc(`users/${uniqueId}`).get();
     if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
     const user = userSnap.data();
 
     const shyCoins = userField(user, 'shyCoins', 'shy_coins') || 0;
+
+    // Persist the actual granted amounts on the receipt so the refund
+    // handler can reverse the original entitlement even if `coinPackages`
+    // is later mutated (price changes, promotional bonus weekends,
+    // deprecated SKUs). Without this the refund would reverse today's
+    // package config, not what the user originally received.
+    await db.doc(`purchaseReceipts/${receiptId}`).set({
+      userId: uniqueId,
+      productId,
+      purchaseToken,
+      platform: purchasePlatform,
+      isSubscription: false,
+      createdAt: timestamp,
+      verified: true,
+      orderId,
+      coinsGranted,
+      bonusCoinsGranted,
+    });
 
     await db.doc(`users/${uniqueId}`).update({ shyCoins: FieldValue.increment(totalCoins) });
 

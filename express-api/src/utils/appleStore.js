@@ -16,6 +16,11 @@
  * - `APPLE_APP_STORE_ENV` — `production` or `sandbox` (defaults to
  *   `sandbox` so a misconfigured prod deploy fails closed instead of
  *   accepting sandbox-signed transactions as real purchases).
+ * - `APPLE_APP_STORE_APP_ID` — numeric Apple App ID from App Store Connect
+ *   (App Information → "Apple ID"). **Required when `APPLE_APP_STORE_ENV=production`** —
+ *   Apple's `SignedDataVerifier` constructor throws without it in PRODUCTION
+ *   mode, and the notification verifier needs it to bind the JWS to our
+ *   specific app identity (defence-in-depth against cross-app payload reuse).
  *
  * Note: This module verifies signed transactions the client passes in.
  * For server-side App Store Server Notifications (refund webhooks,
@@ -67,8 +72,32 @@ function getVerifier() {
   const environment =
     process.env.APPLE_APP_STORE_ENV === 'production' ? Environment.PRODUCTION : Environment.SANDBOX;
 
-  // SignedDataVerifier(rootCerts, performOnlineRevocationChecking, environment, bundleId)
-  verifier = new SignedDataVerifier(rootCerts, true, environment, BUNDLE_ID);
+  // Apple's SignedDataVerifier constructor THROWS if environment is
+  // PRODUCTION and appAppleId is undefined. The notification verifier
+  // also uses appAppleId to bind the JWS to our specific app identity.
+  // Sandbox doesn't require it (and passing undefined there is fine —
+  // the library validates the requirement only in PRODUCTION).
+  let appAppleId;
+  if (environment === Environment.PRODUCTION) {
+    const raw = process.env.APPLE_APP_STORE_APP_ID;
+    if (!raw) {
+      throw new Error(
+        'APPLE_APP_STORE_APP_ID environment variable is required when ' +
+          'APPLE_APP_STORE_ENV=production. Find it in App Store Connect → ' +
+          'App Information → "Apple ID" (numeric).',
+      );
+    }
+    appAppleId = Number(raw);
+    if (!Number.isFinite(appAppleId)) {
+      throw new Error(
+        `APPLE_APP_STORE_APP_ID must be numeric (got "${raw}"). Take the ` +
+          'value from App Store Connect → App Information → "Apple ID".',
+      );
+    }
+  }
+
+  // SignedDataVerifier(rootCerts, performOnlineRevocationChecking, environment, bundleId, appAppleId?)
+  verifier = new SignedDataVerifier(rootCerts, true, environment, BUNDLE_ID, appAppleId);
   return verifier;
 }
 
