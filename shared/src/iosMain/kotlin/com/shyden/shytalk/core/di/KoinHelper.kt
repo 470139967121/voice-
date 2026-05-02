@@ -37,6 +37,7 @@ fun doInitKoin(
     useEmulators: Boolean = false,
     devSignInPassword: String? = null,
     devSignInEmail: String? = null,
+    deviceId: String? = null,
 ) {
     BuildVariant.initLocalEmulator(
         value = useEmulators,
@@ -46,6 +47,13 @@ fun doInitKoin(
         // — the Android-only CredentialManager webClientId is not needed.
         googleWebClientId = null,
     )
+    // Eagerly persist the iOS deviceId before any Firebase / Koin
+    // resolution. PR #406 attempted lazy `UIDevice.identifierForVendor`
+    // inside the Koin factory and crashed with `ClassCastException:
+    // HashMap cannot be cast to CPointer` — see
+    // `project-ios-device-id-revert-rca.md`. Eager Swift-side compute +
+    // BuildVariant slot avoids the K/N + GitLive Firebase init race.
+    BuildVariant.initIosDeviceId(deviceId)
     if (KoinPlatformTools.defaultContext().getOrNull() != null) {
         logI("KoinHelper", "Koin already initialised — skipping")
         return

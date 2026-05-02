@@ -45,17 +45,27 @@ struct iOSApp: App {
         // is `local/seed.js` — keep them in sync.
         let emulatorSeed = "localdev123"
         let emulatorEmail = "claude-test@shytalk.dev"
+        // Eager device-ID compute. Calling UIDevice.identifierForVendor
+        // here (after UIApplication setup, before doInitKoin → Firebase init)
+        // is the safe pattern — the previous attempt to read it lazily from
+        // a Koin `single` factory inside AuthViewModel construction crashed
+        // with a K/N CPointer cast bug (PR #406, reverted by 043cdf47ce).
+        // See `project-ios-device-id-revert-rca.md`.
+        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
         KoinHelperKt.doInitKoin(
             useEmulators: true,
             devSignInPassword: emulatorSeed,
-            devSignInEmail: emulatorEmail
+            devSignInEmail: emulatorEmail,
+            deviceId: deviceId
         )
         #else
         FirebaseApp.configure()
+        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
         KoinHelperKt.doInitKoin(
             useEmulators: false,
             devSignInPassword: nil,
-            devSignInEmail: nil
+            devSignInEmail: nil,
+            deviceId: deviceId
         )
         #endif
         setupGoogleSignIn()

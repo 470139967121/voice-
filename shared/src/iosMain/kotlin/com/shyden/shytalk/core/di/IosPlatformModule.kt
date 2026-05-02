@@ -1,5 +1,6 @@
 package com.shyden.shytalk.core.di
 
+import com.shyden.shytalk.core.BuildVariant
 import com.shyden.shytalk.core.push.PushTokenManager
 import com.shyden.shytalk.core.push.getPushBridge
 import com.shyden.shytalk.core.room.ActiveRoomManager
@@ -91,18 +92,27 @@ val iosPlatformModule =
             )
         }
 
-        // Named qualifiers required by AuthViewModel
-        // Stable per-device identifier: `UIDevice.identifierForVendor` returns
-        // the same UUID for every app from the same vendor on the same device,
-        // and persists across app launches. It IS reset when the user uninstalls
-        // every app from this vendor, which matches Android's `ANDROID_ID`
-        // behaviour after a factory reset / settings reset. Falls back to a
-        // generated UUID if iOS returns null (rare — happens before the device
-        // is unlocked for the first time after boot).
+        // Named qualifiers required by AuthViewModel.
+        //
+        // The deviceId is computed eagerly in `iOSApp.swift` `init()`
+        // (`UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString`),
+        // passed via `KoinHelper.doInitKoin(deviceId:)`, and stored in
+        // `BuildVariant.iosDeviceId`. This Koin factory just reads the
+        // pre-computed value — it does NOT call `UIDevice.currentDevice`
+        // here. A previous attempt to invoke UIKit lazily inside this
+        // factory crashed with `ClassCastException: HashMap cannot be cast
+        // to CPointer` during AuthViewModel construction → Firebase
+        // Firestore init (K/N + GitLive Firebase + Kotlin 2.4.0-Beta2
+        // timing fragility). See `project-ios-device-id-revert-rca.md`.
+        // The `?: error(...)` fail-closed gate surfaces a misconfigured
+        // boot order rather than passing a placeholder to the Express API.
         single(named("deviceId")) {
-            platform.UIKit.UIDevice.currentDevice.identifierForVendor
-                ?.UUIDString
-                ?: platform.Foundation.NSUUID().UUIDString
+            BuildVariant.iosDeviceId
+                ?: error(
+                    "BuildVariant.iosDeviceId not set — iOSApp.swift must call " +
+                        "KoinHelper.doInitKoin(deviceId:) before any Koin " +
+                        "resolution that depends on `named(\"deviceId\")`",
+                )
         }
         single(named("bypassDeviceChecks")) { true }
 
