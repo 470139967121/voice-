@@ -19,6 +19,7 @@ credentials = "1.6.0"
 googleid = "1.2.0"
 koin = "4.2.1"
 kotlinxDatetime = "0.7.1"
+kotlinxSerialization = "1.9.0"
 mockk = "1.14.9"
 turbine = "1.2.1"
 junit = "4.13.2"
@@ -90,6 +91,7 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 # KMP
 firebase-common = { group = "com.google.firebase", name = "firebase-common", version = "22.0.1" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 
 # Coil (image loading - KMP)
 coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
