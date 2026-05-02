@@ -27,6 +27,7 @@ const { generateId, now, todayStr, yesterdayStr } = require('../utils/helpers');
 const { requireAdmin } = require('../middleware/auth');
 const log = require('../utils/log');
 const { verifyProductPurchase, verifySubscription } = require('../utils/playStore');
+const { verifyApplePurchase } = require('../utils/appleStore');
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -1272,10 +1273,14 @@ router.post('/economy/purchase', async (req, res) => {
   try {
     const uniqueId = req.auth.uniqueId;
     const body = req.body;
-    const { productId, purchaseToken, isSubscription } = body || {};
+    const { productId, purchaseToken, isSubscription, platform } = body || {};
 
     if (!productId || !purchaseToken)
       return res.status(400).json({ error: 'productId and purchaseToken required' });
+
+    // Default to Google Play for backward-compat — every Android client
+    // historically omitted the field. iOS clients MUST send `platform: 'apple'`.
+    const purchasePlatform = platform === 'apple' ? 'apple' : 'google';
 
     // Check for duplicate purchase token to prevent replay attacks
     const existingSnap = await db
@@ -1288,12 +1293,17 @@ router.post('/economy/purchase', async (req, res) => {
       return res.status(409).json({ error: 'Purchase already processed' });
     }
 
-    // Verify purchase with Google Play
+    // Verify purchase with the appropriate store (Google Play or Apple App Store)
     const packageName = 'com.shyden.shytalk';
     let verification;
     if (process.env.NODE_ENV === 'production') {
       try {
-        if (isSubscription) {
+        if (purchasePlatform === 'apple') {
+          // iOS sends `Transaction.jwsRepresentation` as `purchaseToken`.
+          // verifyApplePurchase enforces bundleId, productId, revocation,
+          // and (for subs) expiry — see appleStore.js.
+          verification = await verifyApplePurchase(productId, purchaseToken, !!isSubscription);
+        } else if (isSubscription) {
           verification = await verifySubscription(packageName, productId, purchaseToken);
         } else {
           verification = await verifyProductPurchase(packageName, productId, purchaseToken);
@@ -1302,6 +1312,7 @@ router.post('/economy/purchase', async (req, res) => {
         log.warn('economy', 'Purchase verification rejected', {
           userId: uniqueId,
           productId,
+          platform: purchasePlatform,
           isSubscription: !!isSubscription,
           error: verifyErr.message,
         });
@@ -1311,6 +1322,7 @@ router.post('/economy/purchase', async (req, res) => {
       log.warn('economy', 'Skipping purchase verification in non-production environment', {
         userId: uniqueId,
         productId,
+        platform: purchasePlatform,
         isSubscription: !!isSubscription,
       });
       verification = { orderId: 'dev-unverified' };
@@ -1324,6 +1336,7 @@ router.post('/economy/purchase', async (req, res) => {
       userId: uniqueId,
       productId,
       purchaseToken,
+      platform: purchasePlatform,
       isSubscription: !!isSubscription,
       createdAt: now(),
       verified: true,

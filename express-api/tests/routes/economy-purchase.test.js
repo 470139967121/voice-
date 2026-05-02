@@ -80,6 +80,12 @@ jest.mock('../../src/utils/playStore', () => ({
   verifySubscription: jest.fn(),
 }));
 
+// appleStore likewise — iOS purchase verification needs Apple root certs
+// in production; tests stay decoupled from real cert files.
+jest.mock('../../src/utils/appleStore', () => ({
+  verifyApplePurchase: jest.fn(),
+}));
+
 jest.mock('../../src/utils/log', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -371,9 +377,157 @@ describe('POST /api/economy/purchase', () => {
         userId: 'user-A',
         productId: 'coins_100',
         purchaseToken: 'receipt-token',
+        platform: 'google',
         verified: true,
       }),
     );
+  });
+
+  // ─── Apple / iOS branch ────────────────────────────────────────
+
+  describe('platform=apple branch', () => {
+    const { verifyApplePurchase } = require('../../src/utils/appleStore');
+    const { verifyProductPurchase } = require('../../src/utils/playStore');
+
+    test('routes consumable purchase through verifyApplePurchase, NOT playStore', async () => {
+      let collectionCallCount = 0;
+      mockCollectionGet = jest.fn().mockImplementation(() => {
+        collectionCallCount++;
+        if (collectionCallCount === 1) return Promise.resolve({ empty: true, docs: [] });
+        return Promise.resolve({
+          empty: false,
+          docs: [
+            {
+              id: 'pkg-100',
+              data: () => ({ productId: 'coins_100', coins: 100, bonusCoins: 0 }),
+            },
+          ],
+        });
+      });
+      mockDocGet.mockResolvedValue({ exists: true, data: () => ({ shyCoins: 0, shyBeans: 0 }) });
+
+      // Force production branch — non-prod skips verification entirely.
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      verifyApplePurchase.mockResolvedValueOnce({
+        orderId: '2000000123456789',
+        productId: 'coins_100',
+        purchaseDate: 1700000000000,
+      });
+
+      try {
+        const app = createApp('user-A');
+        const res = await request(app).post('/api/economy/purchase').send({
+          productId: 'coins_100',
+          purchaseToken: 'mock-jws-payload',
+          platform: 'apple',
+        });
+        expect(res.status).toBe(200);
+        expect(verifyApplePurchase).toHaveBeenCalledWith('coins_100', 'mock-jws-payload', false);
+        expect(verifyProductPurchase).not.toHaveBeenCalled();
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+      }
+    });
+
+    test('records platform: apple on the purchaseReceipts doc', async () => {
+      let collectionCallCount = 0;
+      mockCollectionGet = jest.fn().mockImplementation(() => {
+        collectionCallCount++;
+        if (collectionCallCount === 1) return Promise.resolve({ empty: true, docs: [] });
+        return Promise.resolve({
+          empty: false,
+          docs: [
+            {
+              id: 'pkg-100',
+              data: () => ({ productId: 'coins_100', coins: 100, bonusCoins: 0 }),
+            },
+          ],
+        });
+      });
+      mockDocGet.mockResolvedValue({ exists: true, data: () => ({ shyCoins: 0, shyBeans: 0 }) });
+
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      verifyApplePurchase.mockResolvedValueOnce({
+        orderId: '2000000abcdef',
+        productId: 'coins_100',
+        purchaseDate: 1700000000000,
+      });
+
+      try {
+        const app = createApp('user-A');
+        await request(app)
+          .post('/api/economy/purchase')
+          .send({
+            productId: 'coins_100',
+            purchaseToken: 'mock-jws',
+            platform: 'apple',
+          })
+          .expect(200);
+
+        expect(mockDocSet).toHaveBeenCalledWith(
+          expect.objectContaining({
+            platform: 'apple',
+            orderId: '2000000abcdef',
+          }),
+        );
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+      }
+    });
+
+    test('returns 403 when verifyApplePurchase rejects (e.g. revoked transaction)', async () => {
+      mockCollectionGet = jest.fn().mockResolvedValue({ empty: true, docs: [] });
+
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      verifyApplePurchase.mockRejectedValueOnce(new Error('Apple transaction revoked'));
+
+      try {
+        const app = createApp('user-A');
+        const res = await request(app).post('/api/economy/purchase').send({
+          productId: 'coins_100',
+          purchaseToken: 'mock-jws',
+          platform: 'apple',
+        });
+        expect(res.status).toBe(403);
+        expect(res.body.error).toMatch(/verification failed/i);
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+      }
+    });
+
+    test('routes subscription through verifyApplePurchase with isSubscription=true', async () => {
+      mockCollectionGet = jest.fn().mockResolvedValue({ empty: true, docs: [] });
+      mockDocGet.mockResolvedValue({ exists: true, data: () => ({}) });
+
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      verifyApplePurchase.mockResolvedValueOnce({
+        orderId: '2000000sub',
+        productId: 'super_shy_monthly',
+        purchaseDate: 1700000000000,
+        expiresDate: 1700000000000 + 30 * 86400000,
+      });
+
+      try {
+        const app = createApp('user-A');
+        await request(app)
+          .post('/api/economy/purchase')
+          .send({
+            productId: 'super_shy_monthly',
+            purchaseToken: 'mock-jws-sub',
+            platform: 'apple',
+            isSubscription: true,
+          })
+          .expect(200);
+
+        expect(verifyApplePurchase).toHaveBeenCalledWith('super_shy_monthly', 'mock-jws-sub', true);
+      } finally {
+        process.env.NODE_ENV = prevEnv;
+      }
+    });
   });
 });
 
