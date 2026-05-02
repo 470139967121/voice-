@@ -62,17 +62,20 @@ test.describe('Roadmap Page — Theme & Layout', () => {
   });
 
   test('per-phase progress bar shows correct fraction', async ({ page }) => {
-    // The progress text lives in .phase-progress-text. The first one may be "In Progress"
-    // section which shows "N active" format. Phase sections show "X/Y" fraction format.
+    // The progress text lives in .phase-progress-text. The first element is
+    // the top "In Progress" summary which renders as "N In Progress" (no
+    // fraction). Phase sections render as "Complete (X/Y)" / "In Progress
+    // (X/Y)" / "Planned (X/Y)" — fraction in parens.
     const allProgress = page.locator('.phase-progress-text');
     await allProgress.first().waitFor({ timeout: 10_000 });
     const texts = await allProgress.allTextContents();
-    // At least one must show fraction format (X/Y) and at least one may show "N active"
+    // At least one must show fraction format (X/Y).
     const hasFraction = texts.some((t) => /\d+\/\d+/.test(t));
-    const hasActive = texts.some((t) => /\d+\s+active/.test(t));
-    expect(hasFraction || hasActive).toBe(true);
-    // Phase sections (not In Progress) must use fraction format
-    const phaseTexts = texts.filter((t) => !/active/.test(t));
+    expect(hasFraction).toBe(true);
+    // Phase-section progress texts (not the top summary) must use fraction
+    // format. Filter out the summary by skipping any leading "N In Progress"
+    // / "N active" form.
+    const phaseTexts = texts.filter((t) => !/^\d+\s+(active|In Progress)$/i.test(t.trim()));
     for (const t of phaseTexts) {
       expect(t).toMatch(/\d+\/\d+/);
     }
