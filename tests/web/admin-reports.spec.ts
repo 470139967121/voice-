@@ -207,8 +207,17 @@ test.describe('Admin Reports', () => {
     const actionSelect = firstCard.locator(`select[data-action-select="${uid}"]`);
     await actionSelect.selectOption('warn');
 
-    // Select severity 2 (radio inputs are display:none, click the label instead)
-    await firstCard.locator(`label[for="sev-${uid}-2"]`).click();
+    // Select severity 2. Radio inputs are display:none in the .severity-radio
+    // markup — Playwright's label click does NOT trigger the native form-
+    // checked behaviour on the hidden input, so the radio stays unchecked
+    // and the resolve handler defaults to severity 1
+    // (`reports.js:694` falls back to 1 when no input is `:checked`).
+    // Set `checked` and dispatch `change` directly so the chosen severity
+    // is actually applied.
+    await firstCard.locator(`input[name="sev-${uid}"][value="2"]`).evaluate((el: HTMLInputElement) => {
+      el.checked = true;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     // Click Resolve Latest
     const resolveBtn = firstCard.locator(`button[data-resolve-first="${uid}"]`);
