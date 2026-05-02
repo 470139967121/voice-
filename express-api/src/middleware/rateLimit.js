@@ -3,10 +3,20 @@
  *
  * Uses in-memory store (no external deps, fits Oracle free tier's 1GB RAM).
  * Three tiers: general API, write-heavy routes, and sensitive operations.
+ *
+ * Local + dev are exempt: a single Playwright run easily exceeds 200
+ * req/min/IP because all loopback connections share `::1`, and the
+ * pre-push hook (or a manual-qa cycle) would deterministically trip
+ * dev-sanity assertions on `/api/health` once the suite is ~200 calls
+ * in. Production is the only environment that needs the limit; the
+ * `NODE_ENV !== 'production'` skip preserves that without making local
+ * test runs flake on rate-limit budgets.
  */
 
 const { rateLimit } = require('express-rate-limit');
 const log = require('../utils/log');
+
+const isNonProd = () => process.env.NODE_ENV !== 'production';
 
 // Key by authenticated user ID (falls back to IP for unauthenticated requests)
 const keyGenerator = (req) => req.auth?.uid || req.ip;
@@ -21,7 +31,7 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator,
   validate: false,
-  skip: (req) => req.auth?.token?.admin === true,
+  skip: (req) => isNonProd() || req.auth?.token?.admin === true,
   handler: (req, res) => {
     res.status(429).json({ error: 'Too many requests, please try again later' });
   },
@@ -35,6 +45,7 @@ const writeLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator,
   validate: false,
+  skip: () => isNonProd(),
   handler: (req, res) => {
     res.status(429).json({ error: 'Too many requests, slow down' });
   },
@@ -49,7 +60,7 @@ const sensitiveLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator,
   validate: false,
-  skip: (req) => req.auth?.token?.admin === true,
+  skip: (req) => isNonProd() || req.auth?.token?.admin === true,
   handler: (req, res) => {
     log.warn('rateLimit', 'Sensitive rate limit hit', {
       uid: req.auth?.uid,
@@ -69,6 +80,7 @@ const portalLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => req.auth?.uid || req.ip,
   validate: false,
+  skip: () => isNonProd(),
 });
 
 // Recovery endpoints (password reset, TOTP recovery): 3 per 24 hours per email
@@ -79,6 +91,7 @@ const recoveryLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => req.body?.email?.toLowerCase() || req.ip,
   validate: false,
+  skip: () => isNonProd(),
 });
 
 module.exports = { generalLimiter, writeLimiter, sensitiveLimiter, portalLimiter, recoveryLimiter };
