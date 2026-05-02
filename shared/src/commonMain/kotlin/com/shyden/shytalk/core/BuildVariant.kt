@@ -38,6 +38,21 @@ object BuildVariant {
         private set
 
     /**
+     * iOS-only stable per-device identifier, eagerly computed in
+     * `iOSApp.swift` and passed in via `KoinHelper.doInitKoin`. The Koin
+     * factory at `IosPlatformModule.kt`'s `named("deviceId")` reads from
+     * this slot rather than calling `UIDevice.currentDevice.identifierForVendor`
+     * lazily — PR #406 attempted that and crashed the Firebase Firestore
+     * init with a `ClassCastException: HashMap cannot be cast to CPointer`
+     * (K/N + GitLive Firebase + Kotlin 2.4.0-Beta2 timing fragility, see
+     * `project-ios-device-id-revert-rca.md`). On Android this slot is
+     * unused — `Settings.Secure.ANDROID_ID` is read directly elsewhere.
+     */
+    @kotlin.concurrent.Volatile
+    var iosDeviceId: String? = null
+        private set
+
+    /**
      * One-shot initialiser called from platform entry points before UI mounts.
      * Public (rather than `internal`) so the `app` module's MainActivity (and
      * iOS's `KoinHelper.doInitKoin`) can invoke it; the named function makes
@@ -65,5 +80,17 @@ object BuildVariant {
         localDevPassword = devPassword?.takeIf { it.isNotEmpty() }
         localDevEmail = devEmail?.takeIf { it.isNotEmpty() }
         this.googleWebClientId = googleWebClientId?.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * One-shot iOS deviceId initialiser. Called from
+     * `KoinHelper.doInitKoin(deviceId = ...)`, which is in turn called from
+     * Swift's `iOSApp.swift` `init()` after `UIApplication` is fully set up
+     * but before Firebase init runs. Empty/blank values are coerced to
+     * null so a downstream `?: error(...)` in the Koin factory fails
+     * loudly rather than passing an empty string to the Express API.
+     */
+    fun initIosDeviceId(value: String?) {
+        iosDeviceId = value?.takeIf { it.isNotBlank() }
     }
 }

@@ -11,6 +11,7 @@ class BuildVariantTest {
     @AfterTest
     fun resetState() {
         BuildVariant.initLocalEmulator(false)
+        BuildVariant.initIosDeviceId(null)
     }
 
     @Test
@@ -85,6 +86,43 @@ class BuildVariantTest {
     fun `googleWebClientId coerces empty string to null`() {
         BuildVariant.initLocalEmulator(value = false, googleWebClientId = "")
         assertNull(BuildVariant.googleWebClientId)
+    }
+
+    @Test
+    fun `iosDeviceId defaults to null`() {
+        assertNull(BuildVariant.iosDeviceId)
+    }
+
+    @Test
+    fun `iosDeviceId captures non-blank value`() {
+        BuildVariant.initIosDeviceId("AAAA-BBBB-CCCC-DDDD")
+        assertEquals("AAAA-BBBB-CCCC-DDDD", BuildVariant.iosDeviceId)
+    }
+
+    @Test
+    fun `iosDeviceId coerces empty string to null so Koin factory fails closed`() {
+        BuildVariant.initIosDeviceId("")
+        assertNull(BuildVariant.iosDeviceId)
+    }
+
+    @Test
+    fun `iosDeviceId coerces blank-whitespace string to null`() {
+        // Defends against a future Swift bridge bug that forwards "   " for
+        // a UUID stringification edge case — the Koin factory's `?: error`
+        // fail-closed gate must trigger, not pass a junk ID to the Express
+        // API where it would land in deviceBindings/<deviceId>.
+        BuildVariant.initIosDeviceId("   ")
+        assertNull(BuildVariant.iosDeviceId)
+    }
+
+    @Test
+    fun `iosDeviceId persists independently of initLocalEmulator state`() {
+        // Boot order in iOSApp.swift sets deviceId BEFORE doInitKoin's
+        // emulator flag — verify the deviceId isn't clobbered by a
+        // subsequent initLocalEmulator(false) reset.
+        BuildVariant.initIosDeviceId("device-uuid-1")
+        BuildVariant.initLocalEmulator(value = false, devPassword = null)
+        assertEquals("device-uuid-1", BuildVariant.iosDeviceId)
     }
 
     @Test
