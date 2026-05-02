@@ -185,14 +185,59 @@ class IosEconomyRepositoryImpl(
     override suspend fun purchaseCoins(
         productId: String,
         purchaseToken: String,
-    ): Resource<Map<String, Any?>> =
-        // iOS uses StoreKit, not Google Play tokens — stub until StoreKit integration
-        Resource.Error("iOS purchases not yet implemented (needs StoreKit)")
+    ): Resource<Map<String, Any?>> = doApplePurchase(productId, isSubscription = false)
 
     override suspend fun purchaseSubscription(
         productId: String,
         purchaseToken: String,
-    ): Resource<Map<String, Any?>> = Resource.Error("iOS subscriptions not yet implemented (needs StoreKit)")
+    ): Resource<Map<String, Any?>> = doApplePurchase(productId, isSubscription = true)
+
+    /**
+     * Common Apple StoreKit + Express purchase flow. The `purchaseToken`
+     * caller-supplied parameter is unused on iOS — Android passes the
+     * Google Play token, but on iOS we obtain the signed JWS from
+     * StoreKit ourselves via the bridge. Tagged `internal` so the iOS
+     * test infrastructure can substitute a fake bridge.
+     *
+     * Mirrors Android's `EconomyRepositoryImpl.purchaseCoins` /
+     * `purchaseSubscription` shape (post `productId` + `purchaseToken`
+     * + `isSubscription` to `/economy/purchase`) plus `platform: 'apple'`
+     * so the Express server-side validator routes to `verifyApplePurchase`.
+     *
+     * Cancellation surfaces as a `Resource.Error` with a stable message
+     * so the wallet UI can branch silent-on-cancel without depending on
+     * exception classes from this module.
+     */
+    private suspend fun doApplePurchase(
+        productId: String,
+        isSubscription: Boolean,
+    ): Resource<Map<String, Any?>> {
+        val signedJws =
+            try {
+                com.shyden.shytalk.economy
+                    .storeKitPurchase(productId, isSubscription)
+            } catch (_: com.shyden.shytalk.economy.StoreKitCancelledException) {
+                return Resource.Error("Purchase cancelled by user")
+            } catch (e: Exception) {
+                return Resource.Error(e.message ?: "StoreKit purchase failed")
+            }
+
+        return firebaseCall("Failed to validate purchase") {
+            val json =
+                api.post(
+                    "/api/economy/purchase",
+                    JsonObject(
+                        mapOf(
+                            "productId" to JsonPrimitive(productId),
+                            "purchaseToken" to JsonPrimitive(signedJws),
+                            "platform" to JsonPrimitive("apple"),
+                            "isSubscription" to JsonPrimitive(isSubscription),
+                        ),
+                    ),
+                )
+            jsonToMap(json)
+        }
+    }
 
     override suspend fun getCoinPackages(): Resource<List<CoinPackage>> =
         firebaseCall("Failed to get coin packages") {
