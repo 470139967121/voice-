@@ -30,27 +30,30 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.shyden.shytalk.BuildConfig
 import com.shyden.shytalk.core.BuildVariant
 import com.shyden.shytalk.core.ui.StyledSnackbarHost
 import com.shyden.shytalk.core.util.SecureStorage
 import com.shyden.shytalk.core.util.logW
-import com.shyden.shytalk.feature.auth.AppleSignInCancelledException
-import com.shyden.shytalk.feature.auth.GoogleSignInCancelledException
-import com.shyden.shytalk.feature.auth.GoogleSignInNoAccountException
+import com.shyden.shytalk.core.util.rememberPlatformActivity
 import com.shyden.shytalk.feature.auth.components.AppleSignInButton
 import com.shyden.shytalk.feature.auth.components.GoogleSignInButton
-import com.shyden.shytalk.feature.auth.performAppleSignInFlow
-import com.shyden.shytalk.feature.auth.performDevSignIn
-import com.shyden.shytalk.feature.auth.performGoogleSignIn
 import com.shyden.shytalk.feature.suspension.BanScreen
 import com.shyden.shytalk.feature.suspension.SuspensionScreen
-import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
+import com.shyden.shytalk.resources.account_restricted
+import com.shyden.shytalk.resources.apple_sign_in_failed
+import com.shyden.shytalk.resources.connection_trouble
+import com.shyden.shytalk.resources.contact_support_hint
+import com.shyden.shytalk.resources.device_locked_description
+import com.shyden.shytalk.resources.google_sign_in_failed
+import com.shyden.shytalk.resources.ok
+import com.shyden.shytalk.resources.retry
+import com.shyden.shytalk.resources.retrying
+import com.shyden.shytalk.resources.unable_to_connect
+import com.shyden.shytalk.resources.voice_chat_reimagined
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -58,10 +61,12 @@ import org.koin.compose.viewmodel.koinViewModel
 
 private const val KEY_EMAIL_FOR_LINK = "email_for_sign_in_link"
 
-// Exact literal that AuthRepositoryImpl.signInWithAppleViaProvider
-// emits for FirebaseAuthWebException (user cancelled the WebView OAuth
-// flow). Matched literally (not substring) in the error LaunchedEffect
-// so other error copy mentioning "cancellation" stays visible.
+// Exact literal that AuthRepositoryImpl.signInWithAppleViaProvider emits
+// for FirebaseAuthWebException (user cancelled the WebView OAuth flow on
+// Android). Matched literally (not substring) in the error LaunchedEffect
+// so other error copy mentioning "cancellation" stays visible. Harmless
+// on iOS — that path uses the typed AppleSignInCancelledException at the
+// button level and never lands the literal in `uiState.error`.
 private const val APPLE_SIGN_IN_CANCELLED_MESSAGE = "Sign-in was cancelled"
 
 @Composable
@@ -74,7 +79,9 @@ fun SignInScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    // Returns the hosting Activity on Android (Compose host's `LocalContext`
+    // walked for the wrapping ContextWrapper), `null` on iOS / JVM.
+    val activity = rememberPlatformActivity()
     val scope = rememberCoroutineScope()
     val googleSignInFailed = stringResource(Res.string.google_sign_in_failed)
     val appleSignInFailed = stringResource(Res.string.apple_sign_in_failed)
@@ -169,7 +176,10 @@ fun SignInScreen(
                 Button(
                     onClick = { viewModel.retryConnection() },
                     enabled = !uiState.isLoading,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .testTag("signIn_retryConnection"),
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
@@ -204,7 +214,10 @@ fun SignInScreen(
                 Text(stringResource(Res.string.device_locked_description))
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.clearDeviceLocked() }) {
+                TextButton(
+                    onClick = { viewModel.clearDeviceLocked() },
+                    modifier = Modifier.testTag("signIn_deviceLockedOk"),
+                ) {
                     Text(stringResource(Res.string.ok))
                 }
             },
@@ -224,8 +237,7 @@ fun SignInScreen(
             // Match the LITERAL string, not a substring, so future error
             // copy that happens to mention "cancellation" (e.g. an
             // account-scheduled-for-cancellation banner) doesn't get
-            // silently swallowed. The repo emits exactly this string at
-            // app/src/main/.../AuthRepositoryImpl.kt for Apple cancel.
+            // silently swallowed.
             if (message != APPLE_SIGN_IN_CANCELLED_MESSAGE) {
                 snackbarHostState.showSnackbar(message)
             }
@@ -265,10 +277,6 @@ fun SignInScreen(
             // `clearError()`, but `requiresAppDataClear` is sticky — without rendering it
             // explicitly the user sees disabled sign-in buttons with no explanation.
             if (uiState.requiresAppDataClear) {
-                // UiText.resolve() — toString() returns Kotlin's auto-generated
-                // data-class form (`Plain(text=...)`) which leaks the type wrapper
-                // to users; resolve() returns the localised string for both
-                // `Plain` and `Res` arms.
                 val bannerMessage = uiState.error?.resolve().orEmpty()
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
@@ -291,7 +299,6 @@ fun SignInScreen(
             // Track which provider is actively signing in (null = none)
             var signingInProvider by remember { mutableStateOf<String?>(null) }
 
-            // Clear local signing-in state when ViewModel finishes loading (success, error, or cancel)
             LaunchedEffect(uiState.isLoading, uiState.error) {
                 if (!uiState.isLoading && signingInProvider != null) {
                     signingInProvider = null
@@ -303,11 +310,11 @@ fun SignInScreen(
             // provider would just hit the same broken storage. User must clear app data.
             val isBusy = uiState.isLoading || signingInProvider != null || uiState.requiresAppDataClear
 
-            // Google Sign-In button (branded). The CredentialManager flow lives
-            // in shared/androidMain/.../GoogleSignInHelper.android.kt as the
-            // Android actual of `performGoogleSignIn` — keeping the screen
-            // close to the iOS counterpart and unblocking SignInScreen
-            // consolidation into commonMain.
+            // Google Sign-In button. The CredentialManager flow lives in
+            // `shared/androidMain/.../GoogleSignInHelper.android.kt`; iOS
+            // routes through the Swift bridge registered in iOSApp.swift.
+            // Both paths throw `GoogleSignInCancelledException` on user
+            // dismiss so the catch block is uniform here.
             GoogleSignInButton(
                 onClick = {
                     if (isBusy) return@GoogleSignInButton
@@ -316,35 +323,32 @@ fun SignInScreen(
                         try {
                             val googleIdToken =
                                 performGoogleSignIn(
-                                    context = context,
-                                    webClientId = BuildConfig.WEB_CLIENT_ID,
+                                    context = activity,
+                                    webClientId = BuildVariant.googleWebClientId,
                                 )
                             viewModel.signInWithGoogle(googleIdToken)
                         } catch (e: kotlinx.coroutines.CancellationException) {
-                            // Structured concurrency: never swallow cancellation
-                            // (composition tear-down, parent scope cancel) —
-                            // rethrow so the launched job propagates correctly.
                             throw e
                         } catch (_: GoogleSignInCancelledException) {
                             // User dismissed the picker — silent, no toast.
                         } catch (e: GoogleSignInNoAccountException) {
-                            // User-fixable: no Google account on device. Show
-                            // the actionable message verbatim ("Add a Google
-                            // account in Settings…") rather than the generic
-                            // "Google sign-in failed".
+                            // User-fixable: no Google account on device.
+                            // The exception's message is hand-authored to be
+                            // user-actionable ("Add a Google account in
+                            // Settings…"), so we surface it verbatim.
                             snackbarHostState.showSnackbar(
                                 e.message ?: googleSignInFailed,
                             )
                         } catch (e: Exception) {
+                            // Generic catch: do NOT pass `e.message` to the
+                            // snackbar — Firebase / CredentialManager / Swift
+                            // bridge messages are developer-grade and would
+                            // leak SDK internals to users. Log the full
+                            // exception for triage and show the localised
+                            // string only.
                             logW("SignInScreen", "Google sign-in failed", e)
-                            snackbarHostState.showSnackbar(
-                                e.message ?: googleSignInFailed,
-                            )
+                            snackbarHostState.showSnackbar(googleSignInFailed)
                         } finally {
-                            // Always clear the local busy marker — covers both
-                            // success (where the original code left it stale
-                            // until LaunchedEffect caught up) and exceptional
-                            // exits including the rethrown CancellationException.
                             signingInProvider = null
                         }
                     }
@@ -355,31 +359,26 @@ fun SignInScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Apple Sign-In button (branded). Routed through the
-            // cross-platform performAppleSignInFlow expect/actual —
-            // Android wraps Firebase's WebView OAuth provider, iOS
-            // (when this screen later moves to commonMain) will use
-            // ASAuthorizationController. Same call site, platform
-            // mechanics behind the abstraction.
+            // Apple Sign-In button. Cross-platform `performAppleSignInFlow`
+            // wraps Firebase WebView OAuth on Android (needs the Activity)
+            // and ASAuthorizationController on iOS (ignores the activity).
             AppleSignInButton(
                 onClick = {
                     if (isBusy) return@AppleSignInButton
-                    val activity = context as? android.app.Activity ?: return@AppleSignInButton
                     signingInProvider = "apple"
                     scope.launch {
                         try {
                             performAppleSignInFlow(viewModel = viewModel, activity = activity)
                         } catch (e: kotlinx.coroutines.CancellationException) {
-                            // Structured concurrency: rethrow cancellation; see
-                            // Google block for the reasoning.
                             throw e
                         } catch (_: AppleSignInCancelledException) {
                             // User dismissed — silent, no toast.
                         } catch (e: Exception) {
+                            // Generic catch: do NOT pass `e.message` — Apple
+                            // SDK / Firebase WebView messages are developer-
+                            // grade. See Google catch for full reasoning.
                             logW("SignInScreen", "Apple sign-in failed", e)
-                            snackbarHostState.showSnackbar(
-                                e.message ?: appleSignInFailed,
-                            )
+                            snackbarHostState.showSnackbar(appleSignInFailed)
                         } finally {
                             signingInProvider = null
                         }
@@ -394,11 +393,11 @@ fun SignInScreen(
             // Spacer(modifier = Modifier.height(12.dp))
             // EmailSignInButton(onClick = onNavigateToEmail)
 
-            // Dev-only sign-in for local emulator testing. Gate via the
-            // cross-platform BuildVariant flag (= BuildConfig.FLAVOR ==
-            // "local" on Android, set in MainActivity at boot) so the
-            // SignInScreen migration to commonMain in Phase 4 doesn't
-            // need a platform-specific check here.
+            // Dev-only sign-in for local emulator testing. The outer flag
+            // hides the button on dev / prod; the inner re-check + empty
+            // credential probes are defence-in-depth against a Frida-style
+            // runtime flip and a misconfigured non-local build that somehow
+            // rendered the button.
             if (BuildVariant.isLocalEmulator) {
                 Spacer(modifier = Modifier.height(24.dp))
                 TextButton(
@@ -411,19 +410,14 @@ fun SignInScreen(
                             )
                             return@TextButton
                         }
-                        // Read credentials from build-time injection. The email
-                        // is a `buildConfigField` (non-secret identifier; empty
-                        // on dev / prod). The password is read from
-                        // `BuildVariant.localDevPassword` — populated on Android
-                        // by `MainActivity` from `BuildConfig.LOCAL_DEV_PASSWORD`
-                        // (also empty on dev / prod via per-flavour
-                        // `buildConfigField`). On iOS the same `BuildVariant`
-                        // slot is populated by the `#if DEBUG` block in
-                        // `iOSApp.swift`, keeping the password literal out of
-                        // every Release iOS binary at compile time.
-                        val devEmail = BuildConfig.LOCAL_DEV_EMAIL
+                        // Both values come from `BuildVariant`, populated at
+                        // boot from Android's per-flavour `BuildConfig.LOCAL_DEV_*`
+                        // (empty on dev / prod) and from iOS's `#if DEBUG`
+                        // block in `iOSApp.swift` (nil on Release IPAs). The
+                        // empty / null check fails closed in either case.
+                        val devEmail = BuildVariant.localDevEmail
                         val devPassword = BuildVariant.localDevPassword
-                        if (devEmail.isEmpty() || devPassword.isNullOrEmpty()) {
+                        if (devEmail.isNullOrEmpty() || devPassword.isNullOrEmpty()) {
                             logW(
                                 "SignInScreen",
                                 "Dev sign-in invoked but credentials are empty — non-local flavor or BuildVariant uninitialised",

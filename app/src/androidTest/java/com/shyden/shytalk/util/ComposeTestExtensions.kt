@@ -19,6 +19,16 @@ import androidx.compose.ui.test.performTextInput
  *      semantics tree is inspected.
  *   3. [assertExists] checks the semantics tree (with autoAdvance=false,
  *      its internal [waitForIdle] returns quickly without driving animations).
+ *
+ * **Use this before EVERY direct assertion.** Since the migration to
+ * `androidx.compose.ui.test.junit4.v2.createComposeRule`, the test rule uses
+ * `StandardTestDispatcher` instead of v1's `UnconfinedTestDispatcher`. That
+ * means coroutines on `Dispatchers.Main` (including ViewModel-init `viewModelScope.launch`
+ * blocks) no longer execute eagerly — they're queued until the clock
+ * advances. Any direct `onNodeWithTag(...).assertIsDisplayed()` without a
+ * preceding `waitForTag` may silently fail to see state set by an unyielded
+ * coroutine. The `mainClock.advanceTimeBy(500)` + `waitForIdle()` loop here
+ * is what makes the dispatcher swap safe for existing tests.
  */
 fun ComposeTestRule.waitForTag(
     tag: String,

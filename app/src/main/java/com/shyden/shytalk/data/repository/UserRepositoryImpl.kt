@@ -393,7 +393,7 @@ class UserRepositoryImpl(
                 scheduled = response.optBoolean("scheduled", false),
                 scheduledAt = if (response.isNull("scheduledAt")) null else response.optLong("scheduledAt"),
                 executeAt = if (response.isNull("executeAt")) null else response.optLong("executeAt"),
-                reason = response.optString("reason", null),
+                reason = if (response.isNull("reason")) null else response.optString("reason"),
                 daysRemaining = if (response.isNull("daysRemaining")) null else response.optInt("daysRemaining"),
             )
         }

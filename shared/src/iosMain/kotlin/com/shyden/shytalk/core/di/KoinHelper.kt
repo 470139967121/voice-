@@ -14,22 +14,38 @@ import org.koin.mp.KoinPlatformTools
  * Initializes Firebase and Koin for the iOS app.
  *
  * Called from Swift inside the `#if DEBUG` block — the Swift side reads the
- * emulator seed literal from a `let` local in iOSApp.swift and forwards it.
- * The Release branch passes `nil` so the literal does NOT end up in the
- * production iOS binary — Xcode strips `#if DEBUG` text at compile time.
- * This closes the "reverse-engineer the IPA to learn the seed credential"
- * leak. Source of truth for the value is `local/seed.js`.
+ * emulator seed literals (email + password) from `let` locals in iOSApp.swift
+ * and forwards them. The Release branch passes `nil` for both so the literals
+ * do NOT end up in the production iOS binary — Xcode strips `#if DEBUG` text
+ * at compile time. This closes the "reverse-engineer the IPA to learn the
+ * seed credential" leak. Source of truth for both values is `local/seed.js`.
+ *
+ * `googleWebClientId` is intentionally not a parameter here: iOS reads its
+ * Google OAuth client ID from `FirebaseApp.app().options.clientID` (set via
+ * the bundled `GoogleService-Info.plist`), so the Android-only
+ * `BuildConfig.WEB_CLIENT_ID` slot is left `null` for iOS.
  *
  * @param useEmulators If true, connects Firebase to local emulators (localhost).
  * @param devSignInPassword Plaintext password for the dev-only one-tap sign-in
  *   button on `SignInScreen`. MUST be `nil` outside `#if DEBUG`. The runtime
  *   gate also requires `useEmulators=true` to even render the button.
+ * @param devSignInEmail Email paired with `devSignInPassword`. Same `#if DEBUG`
+ *   strip rule applies. Both must be non-null/non-empty for the dev-sign-in
+ *   path's empty-credentials guard to allow the call to proceed.
  */
 fun doInitKoin(
     useEmulators: Boolean = false,
     devSignInPassword: String? = null,
+    devSignInEmail: String? = null,
 ) {
-    BuildVariant.initLocalEmulator(useEmulators, devSignInPassword)
+    BuildVariant.initLocalEmulator(
+        value = useEmulators,
+        devPassword = devSignInPassword,
+        devEmail = devSignInEmail,
+        // iOS uses Firebase's bundled clientID via FirebaseApp.app().options
+        // — the Android-only CredentialManager webClientId is not needed.
+        googleWebClientId = null,
+    )
     if (KoinPlatformTools.defaultContext().getOrNull() != null) {
         logI("KoinHelper", "Koin already initialised — skipping")
         return

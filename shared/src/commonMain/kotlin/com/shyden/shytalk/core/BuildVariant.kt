@@ -29,23 +29,41 @@ object BuildVariant {
     var localDevPassword: String? = null
         private set
 
+    @kotlin.concurrent.Volatile
+    var localDevEmail: String? = null
+        private set
+
+    @kotlin.concurrent.Volatile
+    var googleWebClientId: String? = null
+        private set
+
     /**
      * One-shot initialiser called from platform entry points before UI mounts.
      * Public (rather than `internal`) so the `app` module's MainActivity (and
      * iOS's `KoinHelper.doInitKoin`) can invoke it; the named function makes
      * the "set once at boot" contract explicit at every call site.
      *
-     * `devPassword` should be `null` on every non-local build. Android passes
-     * `BuildConfig.LOCAL_DEV_PASSWORD` (empty string when the field is built
-     * out via the `dev` / `prod` `buildConfigField` to `""`); iOS passes
-     * `nil` from the `#else` branch of `#if DEBUG`. The setter coerces empty
-     * strings to `null` so callers don't need to translate.
+     * `devPassword` and `devEmail` should be `null` on every non-local build.
+     * Android passes the corresponding `BuildConfig.LOCAL_DEV_*` field (empty
+     * string when the field is built out via the `dev` / `prod`
+     * `buildConfigField` to `""`); iOS passes `nil` from the `#else` branch
+     * of `#if DEBUG`. The setter coerces empty strings to `null` so callers
+     * can read with a uniform `isNullOrEmpty()` guard.
+     *
+     * `googleWebClientId` is needed only by Android's CredentialManager flow
+     * for Google Sign-In; iOS reads its OAuth client ID from
+     * `FirebaseApp.app().options.clientID` and ignores this slot, so iOS
+     * passes `nil`.
      */
     fun initLocalEmulator(
         value: Boolean,
         devPassword: String? = null,
+        devEmail: String? = null,
+        googleWebClientId: String? = null,
     ) {
         isLocalEmulator = value
         localDevPassword = devPassword?.takeIf { it.isNotEmpty() }
+        localDevEmail = devEmail?.takeIf { it.isNotEmpty() }
+        this.googleWebClientId = googleWebClientId?.takeIf { it.isNotEmpty() }
     }
 }

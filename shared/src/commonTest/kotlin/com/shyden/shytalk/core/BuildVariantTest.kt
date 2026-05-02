@@ -59,4 +59,47 @@ class BuildVariantTest {
         BuildVariant.initLocalEmulator(false)
         assertNull(BuildVariant.localDevPassword)
     }
+
+    @Test
+    fun `localDevEmail captures non-empty value`() {
+        BuildVariant.initLocalEmulator(value = true, devEmail = "claude-test@shytalk.dev")
+        assertEquals("claude-test@shytalk.dev", BuildVariant.localDevEmail)
+    }
+
+    @Test
+    fun `localDevEmail coerces empty string to null`() {
+        BuildVariant.initLocalEmulator(value = true, devEmail = "")
+        assertNull(BuildVariant.localDevEmail)
+    }
+
+    @Test
+    fun `googleWebClientId captures non-empty value`() {
+        BuildVariant.initLocalEmulator(
+            value = true,
+            googleWebClientId = "1234-test.apps.googleusercontent.com",
+        )
+        assertEquals("1234-test.apps.googleusercontent.com", BuildVariant.googleWebClientId)
+    }
+
+    @Test
+    fun `googleWebClientId coerces empty string to null`() {
+        BuildVariant.initLocalEmulator(value = false, googleWebClientId = "")
+        assertNull(BuildVariant.googleWebClientId)
+    }
+
+    @Test
+    fun `all build-time slots cleared on toggle to non-emulator without args`() {
+        // Test fixture credentials — emulator-only, see local/seed.js.
+        val seedPwd = "localdev123"
+        BuildVariant.initLocalEmulator(
+            value = true,
+            devPassword = seedPwd,
+            devEmail = "claude-test@shytalk.dev",
+            googleWebClientId = "client-id",
+        )
+        BuildVariant.initLocalEmulator(false)
+        assertNull(BuildVariant.localDevPassword)
+        assertNull(BuildVariant.localDevEmail)
+        assertNull(BuildVariant.googleWebClientId)
+    }
 }
