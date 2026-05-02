@@ -13,7 +13,9 @@
       "Skill(update-config)",
       "Skill(commit-commands:commit)",
       "Bash(mkdir -p ~/.claude/projects/-Users-shyden-Developer-Repos-ShyTalk/memory)",
-      "Bash(mv ~/.claude/projects/Users-shyden-Developer-Repos-ShyTalk/memory/* ~/.claude/projects/-Users-shyden-Developer-Repos-ShyTalk/memory/)"
+      "Bash(mv ~/.claude/projects/Users-shyden-Developer-Repos-ShyTalk/memory/* ~/.claude/projects/-Users-shyden-Developer-Repos-ShyTalk/memory/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/api/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8888)"
     ]
   }
 }

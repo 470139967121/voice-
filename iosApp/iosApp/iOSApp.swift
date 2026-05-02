@@ -52,20 +52,43 @@ struct iOSApp: App {
         // with a K/N CPointer cast bug (PR #406, reverted by 043cdf47ce).
         // See `project-ios-device-id-revert-rca.md`.
         let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        // PreviewWatermark inputs — version + build come from Info.plist
+        // (CFBundleShortVersionString = "1.2.3", CFBundleVersion = "456"),
+        // device label from UIDevice. The Kotlin side decides whether to
+        // render the watermark based on `environment != "prod"`.
+        let appShortVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "?"
+        let appBuildNumber = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? "?"
+        let buildVersion = "\(appShortVersion) (\(appBuildNumber))"
+        let deviceInfo = "\(UIDevice.current.model) · iOS \(UIDevice.current.systemVersion)"
         KoinHelperKt.doInitKoin(
             useEmulators: true,
             devSignInPassword: emulatorSeed,
             devSignInEmail: emulatorEmail,
-            deviceId: deviceId
+            deviceId: deviceId,
+            environment: "local",
+            buildVersion: buildVersion,
+            deviceInfo: deviceInfo
         )
         #else
         FirebaseApp.configure()
         let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let appShortVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "?"
+        let appBuildNumber = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? "?"
+        let buildVersion = "\(appShortVersion) (\(appBuildNumber))"
+        let deviceInfo = "\(UIDevice.current.model) · iOS \(UIDevice.current.systemVersion)"
+        // Release builds default to dev — the App Store / TestFlight
+        // distribution targets are dev for now (prod app is a separate
+        // bundle ID flow that doesn't yet exist). When the prod target
+        // ships, switch the Release env to "prod" by config rather than
+        // by `#if DEBUG`.
         KoinHelperKt.doInitKoin(
             useEmulators: false,
             devSignInPassword: nil,
             devSignInEmail: nil,
-            deviceId: deviceId
+            deviceId: deviceId,
+            environment: "dev",
+            buildVersion: buildVersion,
+            deviceInfo: deviceInfo
         )
         #endif
         setupGoogleSignIn()

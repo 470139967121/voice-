@@ -38,6 +38,9 @@ fun doInitKoin(
     devSignInPassword: String? = null,
     devSignInEmail: String? = null,
     deviceId: String? = null,
+    environment: String = "prod",
+    buildVersion: String = "?",
+    deviceInfo: String = "?",
 ) {
     BuildVariant.initLocalEmulator(
         value = useEmulators,
@@ -46,6 +49,15 @@ fun doInitKoin(
         // iOS uses Firebase's bundled clientID via FirebaseApp.app().options
         // — the Android-only CredentialManager webClientId is not needed.
         googleWebClientId = null,
+    )
+    // Drives the PreviewWatermark overlay — non-prod iOS builds get a
+    // "ShyTalk Preview" badge on every screen so leaked screenshots
+    // are unmistakably staging. Swift forwards `"local"` for `#if DEBUG`
+    // and `"prod"` (or whatever the user-facing env is) for Release.
+    BuildVariant.initBuildInfo(
+        environment = environment,
+        buildVersion = buildVersion,
+        deviceInfo = deviceInfo,
     )
     // Eagerly persist the iOS deviceId before any Firebase / Koin
     // resolution. PR #406 attempted lazy `UIDevice.identifierForVendor`

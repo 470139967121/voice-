@@ -53,6 +53,71 @@ object BuildVariant {
         private set
 
     /**
+     * Build environment: `"local"`, `"dev"`, or `"prod"`. Drives the
+     * `PreviewWatermark` overlay — any value other than `"prod"` shows
+     * the red "ShyTalk Preview" badge on every screen so screenshots
+     * accidentally shared from non-prod builds are unmistakable.
+     * Set once at boot via [initBuildInfo]. Defaults to `"prod"` so a
+     * misconfigured platform initialiser fails safe (false-positive
+     * watermarks on real prod erode trust in the signal more than a
+     * missed watermark on a dev build, which is visually obvious during
+     * development and self-corrects).
+     */
+    @kotlin.concurrent.Volatile
+    var environment: String = "prod"
+        private set
+
+    /**
+     * Human-readable build identifier shown in the watermark, e.g.
+     * `"1.2.3 (456)"`. Set once at boot via [initBuildInfo]. Defaults
+     * to `"?"` so an absent initialiser is visible at a glance rather
+     * than rendering as an empty badge.
+     */
+    @kotlin.concurrent.Volatile
+    var buildVersion: String = "?"
+        private set
+
+    /**
+     * Device label shown in the watermark, e.g. `"Pixel 6 · Android 14"`
+     * or `"iPhone 17 · iOS 26.4"`. Lets a screenshot reader trace a
+     * leak back to a specific physical device or simulator. Set once at
+     * boot via [initBuildInfo].
+     *
+     * Format is platform-defined:
+     * - Android: `"${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}"`
+     * - iOS: `"${UIDevice.model} · iOS ${UIDevice.systemVersion}"`
+     */
+    @kotlin.concurrent.Volatile
+    var deviceInfo: String = "?"
+        private set
+
+    /**
+     * Convenience: any environment that isn't prod is a "preview"
+     * build. The PreviewWatermark composable / web overlay reads this
+     * to decide whether to render.
+     */
+    val isPreviewBuild: Boolean
+        get() = environment != "prod"
+
+    /**
+     * One-shot initialiser for the watermark slots. Called from
+     * platform entry points (Android `MainActivity.onCreate`, iOS
+     * `KoinHelper.doInitKoin`) before UI mounts. Empty/blank
+     * `environment` is coerced to `"prod"` for fail-safe behaviour;
+     * empty `buildVersion` / `deviceInfo` are coerced to `"?"` so a
+     * misconfigured initialiser is loud rather than silent.
+     */
+    fun initBuildInfo(
+        environment: String,
+        buildVersion: String,
+        deviceInfo: String = "",
+    ) {
+        this.environment = environment.takeIf { it.isNotBlank() } ?: "prod"
+        this.buildVersion = buildVersion.takeIf { it.isNotBlank() } ?: "?"
+        this.deviceInfo = deviceInfo.takeIf { it.isNotBlank() } ?: "?"
+    }
+
+    /**
      * One-shot initialiser called from platform entry points before UI mounts.
      * Public (rather than `internal`) so the `app` module's MainActivity (and
      * iOS's `KoinHelper.doInitKoin`) can invoke it; the named function makes
