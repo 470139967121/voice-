@@ -61,6 +61,7 @@ async function reseedAppeal(testData: TestData): Promise<string> {
     appealText: 'I did not do this (reseeded)',
     status: 'pending',
     createdAt: Date.now(),
+    _testRun: testData.testRunId,
   });
   return result.id;
 }

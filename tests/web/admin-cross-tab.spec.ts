@@ -23,17 +23,28 @@ async function filterReports(page: Page, status: 'pending' | 'resolved' | 'archi
   await waitForReportsLoaded(page);
 }
 
-/** Seed a report via API. */
+/**
+ * Seed a report via the test-write endpoint so the doc is tagged with
+ * `_testRun` and the per-test teardown picks it up. Going through the
+ * regular `POST /api/reports` path leaves the report untagged, so it
+ * survives teardown and accumulates as orphaned data — every prior
+ * test run's report shows up at the top of the Reports tab with
+ * `data-uid="undefined"` (the reported user is gone), and `firstCard`
+ * selectors silently latch onto those orphans.
+ */
 async function seedReport(testData: TestData): Promise<string> {
-  const result = await testData.api.post('/api/reports', {
+  const result = await testData.api.testWrite('reports', {
     reportedUserId: testData.user.uid,
     reportedUserUniqueId: testData.user.uniqueId,
     reporterId: testData.secondUser.uid,
     reporterUniqueId: testData.secondUser.uniqueId,
     reason: 'Spam',
     description: 'E2E cross-tab test',
+    status: 'pending',
+    createdAt: Date.now(),
+    _testRun: testData.testRunId,
   });
-  return result.id || result.reportId;
+  return result.id;
 }
 
 /** Unsuspend user and reset GCS. */
@@ -87,16 +98,33 @@ test.describe('Admin Cross-Tab Interactions', () => {
     await waitForReportsLoaded(page);
     await filterReports(page, 'pending');
 
-    // Find the first card and resolve as "warn" with severity 2
-    const firstCard = page.locator('.report-card').first();
-    await expect(firstCard).toBeVisible();
+    // Target THIS test's user specifically — not `.first()`. The Reports
+    // tab can have orphaned reports at the top of the list from prior
+    // test runs whose users were torn down (testTeardown deletes users
+    // but reports against them survive, rendering as
+    // `data-uid="undefined"` / "Unknown user" cards). Picking the first
+    // card silently resolves the wrong report.
+    const uid = String(testData.user.uniqueId);
+    const firstCard = page.locator(`.report-card[data-uid="${uid}"]`).first();
+    await expect(firstCard).toBeVisible({ timeout: 10_000 });
 
-    const uid = await firstCard.getAttribute('data-uid');
     const actionSelect = firstCard.locator(`select[data-action-select="${uid}"]`);
     await actionSelect.selectOption('warn');
 
-    // Radio inputs are display:none — click the label instead
-    await firstCard.locator(`label[for="sev-${uid}-2"]`).click();
+    // Radio inputs are display:none in the .severity-radio markup — clicking
+    // the label LOOKS like it works but Playwright's click doesn't trigger
+    // the native form-checked behaviour on the hidden input. Result: the
+    // radio stays unchecked, the resolve handler falls back to severity 1
+    // (`reports.js:694`: `const severity = sevInput ? Number(...) : 1`),
+    // and this test then asserts "Severity 2" against an actual Severity 1
+    // warning. Set `checked` and fire `change` directly on the hidden input
+    // so the resolve handler reads our chosen severity. `setChecked()` and
+    // `click({force:true})` both fail Playwright's visibility check on the
+    // display:none input, so we go straight to evaluate.
+    await firstCard.locator(`input[name="sev-${uid}"][value="2"]`).evaluate((el: HTMLInputElement) => {
+      el.checked = true;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     const resolveBtn = firstCard.locator(`button[data-resolve-first="${uid}"]`);
     await resolveBtn.click();
