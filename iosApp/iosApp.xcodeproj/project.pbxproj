@@ -37,7 +37,6 @@
 		E1B5C2D49A3F8E7B6C4D1A02 /* StoreKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A4F7B83C8E1F2D5B6A9C01 /* StoreKitBridge.swift */; };
 		E1B5C2D49A3F8E7B6C4D1A03 /* StoreKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A4F7B83C8E1F2D5B6A9C01 /* StoreKitBridge.swift */; };
 		DFFC47D68E0648FF823F0574 /* GoogleSignInHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3441E4A3689761DFC9CF90 /* GoogleSignInHelper.swift */; };
-		F75B4ECEB8B107ED07E36BE5 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5B3F476BAA9E046270D4248E /* Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */

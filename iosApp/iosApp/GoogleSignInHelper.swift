@@ -35,6 +35,7 @@ func setupGoogleSignIn() {
 private class SwiftGoogleSignInHandler: shared.GoogleSignInHandler {
     func signIn(completion: @escaping (String?, String?) -> Void) {
         guard let clientID = FirebaseApp.app()?.options.clientID else {
+            NSLog("[ShyTalk] GoogleSignIn pre-flight: Firebase client ID not found — FirebaseApp.configure() not yet called or GoogleService-Info.plist missing")
             completion(nil, "Firebase client ID not found")
             return
         }
@@ -51,6 +52,7 @@ private class SwiftGoogleSignInHandler: shared.GoogleSignInHandler {
             .first,
               let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first,
               let rootViewController = window.rootViewController else {
+            NSLog("[ShyTalk] GoogleSignIn pre-flight: No root view controller — connectedScenes/windows enumeration empty (cold-start race or background launch)")
             completion(nil, "No root view controller found")
             return
         }
@@ -78,6 +80,11 @@ private class SwiftGoogleSignInHandler: shared.GoogleSignInHandler {
             }
 
             guard let idToken = result?.user.idToken?.tokenString else {
+                // Sign-in succeeded but no idToken — this is the regression mode
+                // NSLog was added to surface. Without this breadcrumb the device
+                // console would be silent for an Apple Sign-In-style "sheet
+                // appears, dismisses, no token" failure.
+                NSLog("[ShyTalk] GoogleSignIn returned no idToken — result=\(String(describing: result)) user=\(String(describing: result?.user))")
                 completion(nil, "No ID token returned from Google")
                 return
             }
