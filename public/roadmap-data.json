@@ -1,6 +1,90 @@
 {
-  "lastUpdated": "2026-04-24",
-  "currentlyWorkingOn": [],
+  "lastUpdated": "2026-05-02",
+  "currentlyWorkingOn": [
+    {
+      "name": "Billing v7→v8",
+      "description": "Google Play Billing major version, deprecation deadline",
+      "phase": "Platform & iOS",
+      "i18n": {
+        "ar": {
+          "n": "ترقية الفواتير",
+          "d": "عمليات شراء أكثر سلاسة"
+        },
+        "de": {
+          "n": "Billing-Upgrade",
+          "d": "Reibungslosere Käufe"
+        },
+        "es": {
+          "n": "Actualización de pagos",
+          "d": "Compras más fluidas"
+        },
+        "fr": {
+          "n": "Mise à jour paiements",
+          "d": "Achats plus fluides"
+        },
+        "hi": {
+          "n": "बिलिंग अपग्रेड",
+          "d": "आसान खरीदारी"
+        },
+        "id": {
+          "n": "Upgrade billing",
+          "d": "Pembelian lebih lancar"
+        },
+        "it": {
+          "n": "Aggiornamento billing",
+          "d": "Acquisti più fluidi"
+        },
+        "ja": {
+          "n": "課金アップグレード",
+          "d": "よりスムーズな購入"
+        },
+        "ko": {
+          "n": "결제 업그레이드",
+          "d": "더 원활한 구매"
+        },
+        "nl": {
+          "n": "Billing-upgrade",
+          "d": "Soepelere aankopen"
+        },
+        "pl": {
+          "n": "Aktualizacja płatności",
+          "d": "Płynniejsze zakupy"
+        },
+        "pt": {
+          "n": "Atualização de pagamento",
+          "d": "Compras mais suaves"
+        },
+        "ru": {
+          "n": "Обновление оплаты",
+          "d": "Более плавные покупки"
+        },
+        "sv": {
+          "n": "Betalningsuppgradering",
+          "d": "Smidigare köp"
+        },
+        "th": {
+          "n": "อัปเกรดการชำระเงิน",
+          "d": "การซื้อที่ราบรื่นขึ้น"
+        },
+        "tr": {
+          "n": "Ödeme yükseltme",
+          "d": "Daha akıcı satın alma"
+        },
+        "uk": {
+          "n": "Оновлення оплати",
+          "d": "Зручніші покупки"
+        },
+        "vi": {
+          "n": "Nâng cấp thanh toán",
+          "d": "Mua hàng mượt mà hơn"
+        },
+        "zh": {
+          "n": "支付升级",
+          "d": "更流畅的购买体验"
+        }
+      }
+    }
+  ],
   "phases": [
     {
       "title": "Safety & Compliance",
@@ -28,7 +112,7 @@
       "status": "in-progress",
       "progress": {
         "done": 2,
-        "total": 10
+        "total": 19
       },
       "features": [
         {
@@ -552,6 +636,60 @@
           "description": "AI-powered detection: image nudity, voice toxicity (speech-to-text), text profanity. Auto-flag or auto-action based on severity",
           "status": "planned",
           "i18n": {}
+        },
+        {
+          "name": "EU DSA transparency reporting + designated point-of-contact",
+          "description": "annual transparency report on moderation actions; named EU point-of-contact published on the website",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "CCPA \"Do Not Sell My Personal Information\" link",
+          "description": "required on all pages for CA users. Even though we don't sell, the link is mandatory for compliance",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Granular consent mechanism",
+          "description": "separate opt-ins per processing purpose (analytics, marketing, etc.) instead of single blanket accept",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Consent withdrawal mechanism",
+          "description": "users can revoke each previously-granted consent at any time, persisted server-side",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Defined retention periods + UI surfacing",
+          "description": "publish per-data-type retention windows in the privacy policy + show users in-app",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Data-breach notification process",
+          "description": "defined runbook + 72-hour notification template + user-facing in-app banner mechanism for triggered breaches",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Gift-blocked-but-profile-viewable gap",
+          "description": "block-list integrity bug: blocked user can still view profile + see public gifts even though they can't send",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Age-gating per feature",
+          "description": "separate age gates for voice rooms / gifting / DMs-with-strangers. Currently single 13+ gate at signup; needs per-feature age sensitivity",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Voice content reporting",
+          "description": "reporting mechanism for live voice content (record-on-report, server-side review). UK OSA + Apple guidelines",
+          "status": "planned",
+          "i18n": {}
         }
       ]
     },
@@ -580,13 +718,13 @@
       },
       "status": "in-progress",
       "progress": {
-        "done": 2,
-        "total": 3
+        "done": 9,
+        "total": 17
       },
       "features": [
         {
           "name": "iOS build fix",
-          "description": "cinterop errors, iOS compilation",
+          "description": "K/N AutoboxingTransformer crash blocking iOS linking; resolved by upgrading to Kotlin 2.4.0-Beta2 + static frameworks + Koin init fix",
           "status": "done",
           "i18n": {
             "ar": {
@@ -668,15 +806,99 @@
           }
         },
         {
-          "name": "iOS app",
-          "description": "real Firebase repos, same data as Android, all screens functional",
+          "name": "iOS sign-in helpers",
+          "description": "",
           "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "iOS SignInScreen consolidation to commonMain",
+          "description": "",
+          "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "iOS app",
+          "description": "",
+          "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "iOS StartingScreen to commonMain",
+          "description": "",
+          "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "iOS GachaSoundPlayer port (AVAudioEngine)",
+          "description": "",
+          "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "iOS push notifications (APNs/FCM) with Mutex-serialised token sync",
+          "description": "",
+          "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "iOS image upload (PHPicker)",
+          "description": "",
+          "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "iOS `getPendingReports` Firestore query port + JSON-key bug fix",
+          "description": "",
+          "status": "done",
+          "i18n": {}
+        },
+        {
+          "name": "iOS `deviceId` expect/actual via `UIDevice.identifierForVendor`",
+          "description": "replace `\"ios-device-placeholder\"` in `IosSmallRepositories.kt`",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "iOS StoreKit billing integration",
+          "description": "mirrors Android Billing v8",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Apple Sign-In Android typed cancellation exception",
+          "description": "replace English-literal cancel detection in `AuthRepositoryImpl.signInWithAppleViaProvider` with a typed exception (Phase 4 follow-up)",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "`resolveReport` partial-failure flag surfacing",
+          "description": "admin UI must show per-sub-action failures (`warning.failed`, `suspension.failed`, `auditLog.failed`, `pms.failed`, `cascade`) currently swallowed by `Resource<Unit>`",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "`BuildVariant` atomic config holder",
+          "description": "multi-write race window between `isLocalEmulator` / `localDevPassword` / `localDevEmail` / `googleWebClientId`. Wrap into a single immutable holder to remove the window",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Local-flavour Google Sign-In button conditional render",
+          "description": "currently rendered with placeholder `WEB_CLIENT_ID = \"placeholder-local\"`; tap fails with cryptic Google framework error. Hide on local flavour or set empty + treat as unavailable",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "iOS dev sign-in multi-account picker",
+          "description": "Phase 4 simplified iOS to single-account dev sign-in (parity with Android). Restoring the picker on both platforms requires `BuildVariant.localDevEmails: List<String>`. Defer pending UX decision",
+          "status": "planned",
           "i18n": {}
         },
         {
           "name": "Billing v7→v8",
           "description": "Google Play Billing major version, deprecation deadline",
-          "status": "planned",
+          "status": "in-progress",
           "i18n": {
             "ar": {
               "n": "ترقية الفواتير",
@@ -2382,8 +2604,8 @@
       },
       "status": "in-progress",
       "progress": {
-        "done": 3,
-        "total": 14
+        "done": 2,
+        "total": 22
       },
       "features": [
         {
@@ -2887,7 +3109,7 @@
         {
           "name": "Web page i18n completion",
           "description": "full translations for all web pages including admin panel, legal pages. Language selector on every page",
-          "status": "done",
+          "status": "planned",
           "i18n": {
             "ar": {
               "n": "ترجمة موقع الويب",
@@ -2968,8 +3190,50 @@
           }
         },
         {
+          "name": "Khmer New Year event page i18n cleanup",
+          "description": "remaining hardcoded strings on `public/events/khmer-new-year.html`: hero `<h1 lang=\"km\">`, year-badge, individual greeting cards (lines ~593-622)",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
           "name": "Portal CSS/i18n unification",
           "description": "migrate portal from separate portal-translations.js + portal.css to shared language-selector.js + inline styles",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Shared header component on all web pages",
+          "description": "single source of truth for nav/auth/language across all `public/*.html` pages. Bundled bugs to fix in same PR: COOP errors on prod, `/api/firebase-config` 503 on prod (FIREBASE_WEB_API_KEY missing in Cloudflare Pages env), watch bells re-prompt sign-in, `prompt: 'select_account'` on Google sign-in. Tracked at `project-shared-header.md` (NOT STARTED)",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Homepage redesign",
+          "description": "fix non-clickable \"coming soon\" elements, general design pass",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Slogan rebrand",
+          "description": "replace \"Voice chat rooms, reimagined\" with language-learning + cultural-exchange positioning (matches the user's core mission). Coordinated with W2 above",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Roadmap page redesign",
+          "description": "replace Star Wars theme with standard ShyTalk dark theme; remove crawl/intro/audio assets",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Roadmap page features",
+          "description": "subscribe-to-updates form (email) + comments/suggestions form on the public roadmap",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Shyden Ltd company website",
+          "description": "professional company site at shyden.co.uk with portfolio, mission page, AI-powered open-source software focus. Coordinated with #58 (org migration)",
           "status": "planned",
           "i18n": {}
         },
@@ -3055,6 +3319,12 @@
               "d": "具有特定权限的管理员角色"
             }
           }
+        },
+        {
+          "name": "Admin auth-management UI (Security subtab)",
+          "description": "Express admin routes + UI for PIN lockout reset, biometric key revoke, OTP metrics dashboard. Distinct from #41",
+          "status": "planned",
+          "i18n": {}
         },
         {
           "name": "MC Host dedicated panel",
@@ -3516,7 +3786,7 @@
         },
         {
           "name": "Video & screen sharing",
-          "description": "camera toggle + screen share in voice rooms",
+          "description": "camera toggle + screen share in voice rooms (depends on self-hosted LiveKit #76 for cost reasons)",
           "status": "planned",
           "i18n": {
             "ar": {
