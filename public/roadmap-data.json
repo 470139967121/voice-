@@ -2,6 +2,12 @@
   "lastUpdated": "2026-05-02",
   "currentlyWorkingOn": [
     {
+      "name": "`resolveReport` partial-failure flag surfacing",
+      "description": "admin UI must show per-sub-action failures (`warning.failed`, `suspension.failed`, `auditLog.failed`, `pms.failed`, `cascade`) currently swallowed by `Resource<Unit>`. Mostly DONE for admin-bans / economy / devices / warn / backpack PMs (PRs #385, #392, #393). Remaining: re-audit `resolveReport` itself + `reportMessage` / `reportUser` paths and any iOS admin surface when added",
+      "phase": "Platform & iOS",
+      "i18n": {}
+    },
+    {
       "name": "Billing v7→v8",
       "description": "Google Play Billing major version, deprecation deadline",
       "phase": "Platform & iOS",
@@ -836,14 +842,14 @@
           "i18n": {}
         },
         {
-          "name": "iOS push notifications (APNs/FCM) with Mutex-serialised token sync",
-          "description": "",
+          "name": "iOS push notifications (APNs/FCM)",
+          "description": "Mutex-serialised token sync, fail-closed deep-link authz with timeout/identity/block-list/conversation-membership gates, single commonMain `verifyPushNavigation` helper for cross-platform parity, 32 unit tests",
           "status": "done",
           "i18n": {}
         },
         {
           "name": "iOS image upload (PHPicker)",
-          "description": "",
+          "description": "`PlatformImagePicker.ios.kt` → `IosImagePicker`, all three pickers wired",
           "status": "done",
           "i18n": {}
         },
@@ -861,7 +867,7 @@
         },
         {
           "name": "iOS StoreKit billing integration",
-          "description": "mirrors Android Billing v8",
+          "description": "mirrors Android Billing v8. Full 4-step plan at `.project/plans/2026-04-30-ios-storekit-blocker.md`",
           "status": "planned",
           "i18n": {}
         },
@@ -873,8 +879,8 @@
         },
         {
           "name": "`resolveReport` partial-failure flag surfacing",
-          "description": "admin UI must show per-sub-action failures (`warning.failed`, `suspension.failed`, `auditLog.failed`, `pms.failed`, `cascade`) currently swallowed by `Resource<Unit>`",
-          "status": "planned",
+          "description": "admin UI must show per-sub-action failures (`warning.failed`, `suspension.failed`, `auditLog.failed`, `pms.failed`, `cascade`) currently swallowed by `Resource<Unit>`. Mostly DONE for admin-bans / economy / devices / warn / backpack PMs (PRs #385, #392, #393). Remaining: re-audit `resolveReport` itself + `reportMessage` / `reportUser` paths and any iOS admin surface when added",
+          "status": "in-progress",
           "i18n": {}
         },
         {
@@ -3203,7 +3209,7 @@
         },
         {
           "name": "Shared header component on all web pages",
-          "description": "single source of truth for nav/auth/language across all `public/*.html` pages. Bundled bugs to fix in same PR: COOP errors on prod, `/api/firebase-config` 503 on prod (FIREBASE_WEB_API_KEY missing in Cloudflare Pages env), watch bells re-prompt sign-in, `prompt: 'select_account'` on Google sign-in. Tracked at `project-shared-header.md` (NOT STARTED)",
+          "description": "single source of truth for nav/auth/language across all `public/*.html` pages. Bundled bugs to fix in same PR: COOP errors on prod, `/api/firebase-config` 503 on prod (FIREBASE_WEB_API_KEY missing in Cloudflare Pages env), watch bells re-prompt sign-in, `prompt: 'select_account'` on Google sign-in. Tracked at `project-shared-header.md`",
           "status": "planned",
           "i18n": {}
         },
@@ -3221,7 +3227,7 @@
         },
         {
           "name": "Roadmap page redesign",
-          "description": "replace Star Wars theme with standard ShyTalk dark theme; remove crawl/intro/audio assets",
+          "description": "replace Star Wars theme with standard ShyTalk dark theme; remove crawl/intro/audio assets., `test/clear/:collection` endpoint, `refreshSuggestionsList()` fix, factCard `.first()`) and resolving the rotating ~10 inter-file dependency failures (admin-funfacts, admin-keyboard, admin-economy-config, admin-cross-tab, admin-suggestions, admin-reports, admin-logs)",
           "status": "planned",
           "i18n": {}
         },
