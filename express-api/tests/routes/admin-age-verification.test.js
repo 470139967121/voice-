@@ -67,11 +67,19 @@ jest.mock('../../src/utils/r2', () => ({
 const mockLogApproved = jest.fn().mockResolvedValue();
 const mockLogRejected = jest.fn().mockResolvedValue();
 const mockLogDobModified = jest.fn().mockResolvedValue();
-jest.mock('../../src/utils/age-verification-audit', () => ({
-  logVerificationApproved: (...args) => mockLogApproved(...args),
-  logVerificationRejected: (...args) => mockLogRejected(...args),
-  logVerificationDobModified: (...args) => mockLogDobModified(...args),
-}));
+// `requirePlausibleDob` is preserved (not mocked) — the route's
+// pre-transaction bounds check needs real validation logic, not a
+// no-op stub. The three log* helpers are mocked because tests assert
+// on calls and we don't want real Firestore writes.
+jest.mock('../../src/utils/age-verification-audit', () => {
+  const actual = jest.requireActual('../../src/utils/age-verification-audit');
+  return {
+    requirePlausibleDob: actual.requirePlausibleDob,
+    logVerificationApproved: (...args) => mockLogApproved(...args),
+    logVerificationRejected: (...args) => mockLogRejected(...args),
+    logVerificationDobModified: (...args) => mockLogDobModified(...args),
+  };
+});
 
 jest.mock('../../src/utils/helpers', () => ({
   now: () => 1709913600000,
@@ -155,7 +163,10 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
 
   test('flips ageVerified=true on user, marks submission approved, deletes image, writes audit', async () => {
     const app = createApp();
-    await request(app).post('/api/admin/age-verification/sub-1/approve').expect(200);
+    await request(app)
+      .post('/api/admin/age-verification/sub-1/approve')
+      .send({ reason: 'ID verified by passport' })
+      .expect(200);
 
     // Submission doc updated
     expect(mockTxUpdate).toHaveBeenCalledWith(
@@ -200,7 +211,10 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
     });
 
     const app = createApp();
-    await request(app).post('/api/admin/age-verification/sub-1/approve').expect(409);
+    await request(app)
+      .post('/api/admin/age-verification/sub-1/approve')
+      .send({ reason: 'ok' })
+      .expect(409);
 
     expect(mockTxUpdate).not.toHaveBeenCalled();
     expect(mockDeleteObject).not.toHaveBeenCalled();
@@ -210,13 +224,51 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
   test('rejects unknown submission (404)', async () => {
     mockTxGet.mockResolvedValue({ exists: false });
     const app = createApp();
-    await request(app).post('/api/admin/age-verification/missing/approve').expect(404);
+    await request(app)
+      .post('/api/admin/age-verification/missing/approve')
+      .send({ reason: 'ok' })
+      .expect(404);
   });
 
   test('rejects non-admin with 403', async () => {
     const app = createApp({ admin: false });
-    await request(app).post('/api/admin/age-verification/sub-1/approve').expect(403);
+    await request(app)
+      .post('/api/admin/age-verification/sub-1/approve')
+      .send({ reason: 'ok' })
+      .expect(403);
     expect(mockTxUpdate).not.toHaveBeenCalled();
+  });
+
+  test('rejects empty reason on approve (symmetric audit trail)', async () => {
+    const app = createApp();
+    await request(app)
+      .post('/api/admin/age-verification/sub-1/approve')
+      .send({ reason: '' })
+      .expect(400);
+    expect(mockTxUpdate).not.toHaveBeenCalled();
+  });
+
+  test('returns auditWritten=false flag when audit-log write fails (decision still committed)', async () => {
+    // Per partial-failure-contracts feedback rule: a failed audit
+    // write must be surfaced as a flag, not masked as 500. Decision
+    // is committed; ops sees the flag and back-fills.
+    mockLogApproved.mockRejectedValue(new Error('auditLog write rejected by rules'));
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/admin/age-verification/sub-1/approve')
+      .send({ reason: 'ok' })
+      .expect(200);
+    expect(res.body).toMatchObject({ ok: true, auditWritten: false });
+  });
+
+  test('returns imageDeleted=false flag when R2 delete fails (decision still committed)', async () => {
+    mockDeleteObject.mockRejectedValue(new Error('R2 timeout'));
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/admin/age-verification/sub-1/approve')
+      .send({ reason: 'ok' })
+      .expect(200);
+    expect(res.body).toMatchObject({ ok: true, imageDeleted: false });
   });
 });
 
@@ -379,5 +431,22 @@ describe('POST /api/admin/age-verification/:id/modify-dob', () => {
       .post('/api/admin/age-verification/sub-1/modify-dob')
       .send({ reason: 'forgot dob' })
       .expect(400);
+  });
+
+  test('rejects implausible newDob (pre-1900 / far-future) BEFORE the transaction commits', async () => {
+    // Validation must happen pre-transaction; otherwise the user doc
+    // is mutated with a bogus DOB and the audit write throws after.
+    // -1e15 ms is ~year -29688 (well pre-1900); 99999999999999 ms is
+    // ~year 5138 (far future). Both must be rejected.
+    const app = createApp();
+    await request(app)
+      .post('/api/admin/age-verification/sub-1/modify-dob')
+      .send({ newDob: -1e15, reason: 'pre-1900 fail' })
+      .expect(400);
+    await request(app)
+      .post('/api/admin/age-verification/sub-1/modify-dob')
+      .send({ newDob: 99999999999999, reason: 'far-future fail' })
+      .expect(400);
+    expect(mockTxUpdate).not.toHaveBeenCalled();
   });
 });
