@@ -194,7 +194,14 @@ jobs:
     # `inputs.backend=false` web-only redeploy. Block only on `failure`
     # / `cancelled` so a crashed backend can't ship a working-looking
     # client (incident 2026-05-03 run 25276782190).
-    if: inputs.web && (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped')
+    # See deploy-dev.yml deploy-web-dev for `always()` + allowlist
+    # rationale (run 25280868804 — implicit "needs success" gate skips
+    # dependent jobs whenever upstream is `skipped`, even when explicit
+    # `if:` checks for `result == 'skipped'`).
+    if: |
+      always() &&
+      inputs.web &&
+      (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -225,7 +232,11 @@ jobs:
     # be visible to every prod user on next app open.
     needs: [validate-release, build-android, deploy-backend-prod]
     # See deploy-web-prod for `success || skipped` rationale.
-    if: inputs.android && (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped')
+    # See deploy-web-prod / deploy-dev.yml for `always()` + allowlist rationale.
+    if: |
+      always() &&
+      inputs.android &&
+      (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -266,7 +277,11 @@ jobs:
     # against the live backend; a broken-backend build risks rejection.
     needs: [validate-release, deploy-backend-prod]
     # See deploy-web-prod for `success || skipped` rationale.
-    if: inputs.ios && (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped')
+    # See deploy-web-prod / deploy-dev.yml for `always()` + allowlist rationale.
+    if: |
+      always() &&
+      inputs.ios &&
+      (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped')
     runs-on: [self-hosted, macOS, ARM64, shytalk-mac]
     # Bumped from 45 -> 90 on 2026-04-28: K/Native linkReleaseFrameworkIosArm64
     # plus xcodebuild archive plus App Store upload total ~50 min worst case
