@@ -15,7 +15,8 @@
       "bash .claude/hooks/check-gherkin.sh"
     ],
     "*.{kt,kts}": [
-      "ktlint --relative"
+      "ktlint --relative",
+      "bash .claude/hooks/check-kmp-compat.sh"
     ]
   },
   "devDependencies": {
