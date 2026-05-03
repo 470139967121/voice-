@@ -117,7 +117,7 @@
       },
       "status": "in-progress",
       "progress": {
-        "done": 2,
+        "done": 3,
         "total": 19
       },
       "features": [
@@ -652,7 +652,7 @@
         {
           "name": "CCPA \"Do Not Sell My Personal Information\" link",
           "description": "required on all pages for CA users. Even though we don't sell, the link is mandatory for compliance",
-          "status": "planned",
+          "status": "done",
           "i18n": {}
         },
         {
