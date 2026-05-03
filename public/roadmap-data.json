@@ -724,7 +724,7 @@
       },
       "status": "in-progress",
       "progress": {
-        "done": 11,
+        "done": 12,
         "total": 17
       },
       "features": [
@@ -892,7 +892,7 @@
         {
           "name": "Local-flavour Google Sign-In button conditional render",
           "description": "currently rendered with placeholder `WEB_CLIENT_ID = \"placeholder-local\"`; tap fails with cryptic Google framework error. Hide on local flavour or set empty + treat as unavailable",
-          "status": "planned",
+          "status": "done",
           "i18n": {}
         },
         {

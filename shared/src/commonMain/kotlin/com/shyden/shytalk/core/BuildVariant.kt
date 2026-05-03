@@ -140,6 +140,18 @@ object BuildVariant {
         get() = holder.environment != "prod"
 
     /**
+     * Convenience: `true` only when a real Google OAuth web-client ID
+     * is configured. Local-flavour builds talk to Firebase emulators
+     * without a real OAuth client — tapping the Google Sign-In button
+     * there used to hit `performGoogleSignIn` with a placeholder
+     * client ID and surface a cryptic Google framework error.
+     * `SignInScreen` reads this to decide whether to render the Google
+     * button at all.
+     */
+    val isGoogleSignInAvailable: Boolean
+        get() = holder.googleWebClientId != null
+
+    /**
      * One-shot initialiser for the watermark slots. Called from
      * platform entry points (Android `MainActivity.onCreate`, iOS
      * `KoinHelper.doInitKoin`) before UI mounts. Empty/blank

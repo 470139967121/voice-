@@ -89,7 +89,14 @@ android {
             buildConfigField("String", "RTDB_URL", "\"http://$localHostAlias:9000\"")
             buildConfigField("String", "LOCAL_HOST", "\"$localHostAlias\"")
             buildConfigField("String", "EMAIL_LINK_DOMAIN", "\"localhost\"")
-            buildConfigField("String", "WEB_CLIENT_ID", "\"placeholder-local\"")
+            // Local flavour talks to Firebase emulators which don't have a
+            // real Google OAuth web client. Empty string here coerces to
+            // null in `BuildVariant.googleWebClientId` (per the
+            // `takeIf { it.isNotEmpty() }` guard), and SignInScreen hides
+            // the Google button when `BuildVariant.isGoogleSignInAvailable`
+            // is false. Was `"placeholder-local"` — that produced a cryptic
+            // Google framework error when tapped on local builds.
+            buildConfigField("String", "WEB_CLIENT_ID", "\"\"")
             buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "true")
             // Dev sign-in shortcut — only present on local-emulator builds.
             // Empty on dev / prod so reverse-engineering the production APK
