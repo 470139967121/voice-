@@ -143,7 +143,19 @@ jobs:
 
   deploy-web-dev:
     name: Deploy Web to Dev
-    if: inputs.web
+    # Web depends on the dev API to function (firebase-config, /api/health,
+    # admin panel API calls). Shipping the web bundle when the backend
+    # deploy crashed leaves testers staring at a working-looking site
+    # whose every interaction errors. Discovered 2026-05-03 (run
+    # 25276782190): web deployed with the new auth lockdown but
+    # backend deploy failed in the same run, so dev was simultaneously
+    # locked down AND functionally broken. Gating prevents that drift.
+    needs: deploy-backend-dev
+    # Allow `success` OR `skipped` — `skipped` covers the legitimate
+    # `inputs.backend=false` case where the operator deliberately runs
+    # web-only / mobile-only. Block only on `failure` / `cancelled` so
+    # a crashed backend deploy can't ship a working-looking client.
+    if: inputs.web && (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -187,7 +199,14 @@ jobs:
 
   distribute-android:
     name: Distribute Android to Testers
-    if: inputs.android-testers
+    # Same gating rationale as deploy-web-dev — Android dev builds
+    # talk to dev-api and break if the backend deploy didn't succeed.
+    # Pushing a build to internal testers that's guaranteed to error
+    # on the first sign-in attempt wastes their day.
+    needs: deploy-backend-dev
+    # See deploy-web-dev for `success || skipped` rationale (preserves
+    # `inputs.backend=false` Android-only hotfix path).
+    if: inputs.android-testers && (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -314,7 +333,15 @@ jobs:
 
   distribute-ios:
     name: Distribute iOS to TestFlight
-    if: inputs.ios-testers
+    # Same gating rationale as deploy-web-dev / distribute-android —
+    # iOS TestFlight builds talk to dev-api and break if the backend
+    # deploy didn't succeed. TestFlight build numbers are also a finite
+    # resource (Apple-rate-limited per session); skipping a doomed
+    # build saves a slot and keeps testers on the last known-good IPA.
+    needs: deploy-backend-dev
+    # See deploy-web-dev for `success || skipped` rationale (preserves
+    # `inputs.backend=false` iOS-only hotfix path).
+    if: inputs.ios-testers && (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
     runs-on: [self-hosted, macOS, ARM64, shytalk-mac]
     # Bumped from 45 -> 90 on 2026-04-28: K/Native linkReleaseFrameworkIosArm64
     # has been taking 24-29 min on the macos-15 runner pool (was ~10 min in

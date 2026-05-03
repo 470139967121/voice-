@@ -22,13 +22,43 @@
  * and noindex closes that.
  */
 
-const {
-  PROD_API_HOSTNAME,
-  isProdApiHostname,
-  blockingRobotsBody,
-  noIndexHeaderValue,
-} = require('../../../functions/_lib/lockdown.js');
+// NOTE: helpers are inlined below rather than required from
+// `../../../functions/_lib/lockdown.js` because the deploy workflow's
+// backend tarball is built with `cd express-api && tar czf api.tar.gz .`
+// and cannot reach files outside that directory. The first deploy of
+// this middleware (run 25276782190) crashed the dev API at startup
+// with `MODULE_NOT_FOUND: ../../functions/_lib/lockdown.js`. The
+// Cloudflare Pages middleware in `functions/_middleware.js` continues
+// to use the shared `_lib/lockdown.js` because Pages deploys both
+// `public/` and `functions/` together.
+//
+// Drift risk between the two copies is mitigated by `dev-lockdown-middleware.test.js`
+// pinning the rules from one side and `no-index.test.js` pinning the
+// integration on the other; if the constants ever diverge the dev API
+// or Pages function behaviour will fail those tests.
 const log = require('../utils/log');
+
+const PROD_API_HOSTNAME = 'api.shytalk.shyden.co.uk';
+
+function isProdApiHostname(hostname) {
+  if (typeof hostname !== 'string' || hostname.length === 0) return false;
+  return hostname.toLowerCase() === PROD_API_HOSTNAME;
+}
+
+function noIndexHeaderValue() {
+  return 'noindex, nofollow, noarchive';
+}
+
+function blockingRobotsBody() {
+  return [
+    '# Non-prod ShyTalk environment — blocked from indexing.',
+    '# See express-api/src/middleware/no-index.js (and',
+    '# functions/_lib/lockdown.js for the web side).',
+    'User-agent: *',
+    'Disallow: /',
+    '',
+  ].join('\n');
+}
 
 // Hostnames we expect to see at runtime. Anything outside this set is a
 // misconfiguration — most likely Caddy / a future reverse-proxy edit
