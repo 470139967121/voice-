@@ -61,7 +61,11 @@ router.post('/users', async (req, res) => {
         .json({ error: `Invalid provider. Must be one of: ${VALID_PROVIDERS.join(', ')}` });
     }
 
-    // Server-side age validation — UK OSA + COPPA require minimum age 13
+    // Server-side age validation. Floor bumped 13 → 16 on 2026-05-03 for
+    // Apple App Store content-guideline compliance — see
+    // `.project/plans/2026-05-03-age-verification.md`. The 16-17 cohort
+    // signs up but cannot use 18+ gated features (private messages,
+    // gacha) until they age in or complete ID verification.
     if (!dateOfBirth) {
       return res.status(400).json({ error: 'Date of birth is required' });
     }
@@ -72,9 +76,15 @@ router.post('/users', async (req, res) => {
     const ageDiff = Date.now() - dob.getTime();
     const ageDate = new Date(ageDiff);
     const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-    if (age < 13) {
+    // Minimum sign-up age bumped 13 → 16 on 2026-05-03 for Apple App
+    // Store content-guideline compliance — see
+    // `.project/plans/2026-05-03-age-verification.md`. The 16-17 cohort
+    // can still create accounts but cannot use 18+ gated features
+    // (private messages, gacha) until they age into them OR complete
+    // ID-based age verification (handled in later PRs of this plan).
+    if (age < 16) {
       log.warn('users', 'Age validation rejected', { dateOfBirth });
-      return res.status(403).json({ error: 'Must be at least 13 years old' });
+      return res.status(403).json({ error: 'Must be at least 16 years old' });
     }
 
     const identityDocId = `${provider}:${identifier}`;

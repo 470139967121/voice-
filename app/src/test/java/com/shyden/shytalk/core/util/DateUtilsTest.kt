@@ -85,40 +85,52 @@ class DateUtilsTest {
     }
 
     @Test
-    fun `isAtLeast13 returns true for 13 year old`() {
+    fun `isAtLeast16 returns true for 16 year old`() {
         val cal =
             Calendar.getInstance().apply {
-                add(Calendar.YEAR, -13)
-                add(Calendar.DAY_OF_YEAR, -1) // One day past 13th birthday
+                add(Calendar.YEAR, -16)
+                add(Calendar.DAY_OF_YEAR, -1) // One day past 16th birthday
             }
-        assertTrue(isAtLeast13(cal.timeInMillis))
+        assertTrue(isAtLeast16(cal.timeInMillis))
     }
 
     @Test
-    fun `isAtLeast13 returns true for 25 year old`() {
+    fun `isAtLeast16 returns true for 25 year old`() {
         val cal =
             Calendar.getInstance().apply {
                 add(Calendar.YEAR, -25)
             }
-        assertTrue(isAtLeast13(cal.timeInMillis))
+        assertTrue(isAtLeast16(cal.timeInMillis))
     }
 
     @Test
-    fun `isAtLeast13 returns false for 12 year old`() {
+    fun `isAtLeast16 returns false for 15 year old`() {
         val cal =
             Calendar.getInstance().apply {
-                add(Calendar.YEAR, -12)
+                add(Calendar.YEAR, -15)
             }
-        assertFalse(isAtLeast13(cal.timeInMillis))
+        assertFalse(isAtLeast16(cal.timeInMillis))
     }
 
     @Test
-    fun `isAtLeast13 returns false for baby`() {
+    fun `isAtLeast16 returns false for 13 year old (was the old minimum)`() {
+        // Regression guard: 13-y/o used to be allowed (old `isAtLeast13`
+        // returned true). Pin that the bumped helper rejects them so a
+        // future revert of the threshold fails this test loudly.
+        val cal =
+            Calendar.getInstance().apply {
+                add(Calendar.YEAR, -13)
+            }
+        assertFalse(isAtLeast16(cal.timeInMillis))
+    }
+
+    @Test
+    fun `isAtLeast16 returns false for baby`() {
         val cal =
             Calendar.getInstance().apply {
                 add(Calendar.YEAR, -1)
             }
-        assertFalse(isAtLeast13(cal.timeInMillis))
+        assertFalse(isAtLeast16(cal.timeInMillis))
     }
 
     // ===== formatRelativeTime =====
@@ -384,25 +396,25 @@ class DateUtilsTest {
         assertTrue("Expected 'Mar 25, 2025': $result", result.contains("Mar 25, 2025"))
     }
 
-    // ===== isAtLeast13 additional edge cases =====
+    // ===== isAtLeast16 additional edge cases =====
 
     @Test
-    fun `isAtLeast13 returns true for exactly 13th birthday`() {
+    fun `isAtLeast16 returns true for exactly 16th birthday`() {
         val cal =
             Calendar.getInstance().apply {
-                add(Calendar.YEAR, -13)
+                add(Calendar.YEAR, -16)
             }
-        // On exactly the 13th birthday, calculateAge returns 13
-        assertTrue(isAtLeast13(cal.timeInMillis))
+        // On exactly the 16th birthday, calculateAge returns 16
+        assertTrue(isAtLeast16(cal.timeInMillis))
     }
 
     @Test
-    fun `isAtLeast13 returns false for one day before 13th birthday`() {
+    fun `isAtLeast16 returns false for one day before 16th birthday`() {
         val cal =
             Calendar.getInstance().apply {
-                add(Calendar.YEAR, -13)
-                add(Calendar.DAY_OF_YEAR, 1) // born one day later -> hasn't turned 13 yet
+                add(Calendar.YEAR, -16)
+                add(Calendar.DAY_OF_YEAR, 1) // born one day later -> hasn't turned 16 yet
             }
-        assertFalse(isAtLeast13(cal.timeInMillis))
+        assertFalse(isAtLeast16(cal.timeInMillis))
     }
 }

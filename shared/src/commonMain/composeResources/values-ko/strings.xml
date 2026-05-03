@@ -605,7 +605,7 @@
     <string name="mic_permission_denied">Microphone permission denied. You won\'t be able to use voice chat.</string>
     <string name="microphone">Microphone</string>
     <string name="microphone_description">Required for voice chat in rooms.</string>
-    <string name="must_be_13">You must be at least 13 years old</string>
+    <string name="must_be_16">만 16세 이상이어야 합니다</string>
     <string name="no_blocked_users">No blocked users</string>
     <string name="no_one">No one</string>
     <string name="not_allowed_to_enter">You are not allowed to enter this room.</string>

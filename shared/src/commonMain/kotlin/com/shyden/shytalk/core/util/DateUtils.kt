@@ -17,7 +17,18 @@ fun calculateAge(dateOfBirthMillis: Long): Int {
     return age
 }
 
-fun isAtLeast13(dateOfBirthMillis: Long): Boolean = calculateAge(dateOfBirthMillis) >= 13
+/**
+ * Minimum sign-up age. Bumped from 13 to 16 on 2026-05-03 for Apple
+ * App Store content-guideline compliance — the app surfaces 18+ gated
+ * features (private messages, gacha) and the 16-17 cohort is allowed
+ * on the app but cannot use those features. Users under 16 are
+ * blocked at the DOB picker.
+ *
+ * Plan: `.project/plans/2026-05-03-age-verification.md`.
+ */
+const val MINIMUM_SIGNUP_AGE: Int = 16
+
+fun isAtLeast16(dateOfBirthMillis: Long): Boolean = calculateAge(dateOfBirthMillis) >= MINIMUM_SIGNUP_AGE
 
 /**
  * Localized labels for [formatRelativeTime].

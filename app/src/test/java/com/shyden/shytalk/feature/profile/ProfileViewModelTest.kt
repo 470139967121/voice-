@@ -1674,7 +1674,7 @@ class ProfileViewModelTest {
             val underageDob = System.currentTimeMillis() - (2L * 365 * 24 * 60 * 60 * 1000) // ~2 years old
             coEvery {
                 identityRepository.createUser(any(), any(), any(), any(), any(), eq(underageDob), any())
-            } returns Resource.Error("User must be at least 13 years old")
+            } returns Resource.Error("User must be at least 16 years old")
 
             val vm = createViewModel()
             vm.saveProfile("Young User", underageDob)
@@ -1689,11 +1689,14 @@ class ProfileViewModelTest {
     @Test
     fun `createProfile accepts user at minimum age boundary`() =
         runTest {
-            // A user who is exactly 13 years old passes through to the repository successfully
+            // A user who is exactly 16 years old (the new minimum)
+            // passes through to the repository successfully. Was 13
+            // pre-2026-05-03 (Apple App Store guideline compliance —
+            // see .project/plans/2026-05-03-age-verification.md).
             every { authRepository.getProviderInfo() } returns ("google" to "test@example.com")
-            val exactly13Dob = System.currentTimeMillis() - (13L * 365 * 24 * 60 * 60 * 1000)
+            val exactly16Dob = System.currentTimeMillis() - (16L * 365 * 24 * 60 * 60 * 1000)
             coEvery {
-                identityRepository.createUser(any(), any(), any(), any(), any(), eq(exactly13Dob), any())
+                identityRepository.createUser(any(), any(), any(), any(), any(), eq(exactly16Dob), any())
             } returns
                 Resource.Success(
                     com.shyden.shytalk.data.repository
@@ -1702,7 +1705,7 @@ class ProfileViewModelTest {
             coEvery { identityRepository.forceRefreshToken() } returns Resource.Success(Unit)
 
             val vm = createViewModel()
-            vm.saveProfile("Teen User", exactly13Dob)
+            vm.saveProfile("Teen User", exactly16Dob)
             advanceUntilIdle()
 
             assertTrue(vm.uiState.value.profileSaved)
