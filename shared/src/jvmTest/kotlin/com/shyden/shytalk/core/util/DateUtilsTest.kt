@@ -257,43 +257,68 @@ class DateUtilsTest {
         assertTrue(age >= 0, "Age should be non-negative, got: $age")
     }
 
-    // ── isAtLeast13 ─────────────────────────────────────────────────
+    // ── isAtLeast16 ─────────────────────────────────────────────────
+    //
+    // Minimum sign-up age was bumped from 13 to 16 (Apple App Store
+    // content-guideline compliance — see
+    // `.project/plans/2026-05-03-age-verification.md`). The helper was
+    // renamed `isAtLeast13` → `isAtLeast16`. Existing 13-15-y/o accounts
+    // enter a restricted state (private messages + gacha disabled) until
+    // they reach 16 — handled in a later PR; this test only pins the
+    // helper boundary.
 
     @Test
-    fun `isAtLeast13 returns true for 18 year old`() {
+    fun `isAtLeast16 returns true for 18 year old`() {
         val eighteenYearsAgo = currentTimeMillis() - 18L * 365 * 24 * 60 * 60 * 1000
-        assertTrue(isAtLeast13(eighteenYearsAgo))
+        assertTrue(isAtLeast16(eighteenYearsAgo))
     }
 
     @Test
-    fun `isAtLeast13 returns true for 13 year old`() {
-        // 13 years and some extra days to be safe
+    fun `isAtLeast16 returns true for 16 year old`() {
+        // 16 years and some extra days to be safe against leap-year drift.
+        val sixteenYearsAgo = currentTimeMillis() - (16L * 365 + 30) * 24 * 60 * 60 * 1000
+        assertTrue(isAtLeast16(sixteenYearsAgo))
+    }
+
+    @Test
+    fun `isAtLeast16 returns false for 15 year old`() {
+        // 15 years exactly — boundary case: must fail. The new minimum is
+        // 16, so a 15-year-old cannot sign up.
+        val fifteenYearsAgo = currentTimeMillis() - 15L * 365 * 24 * 60 * 60 * 1000
+        assertFalse(isAtLeast16(fifteenYearsAgo))
+    }
+
+    @Test
+    fun `isAtLeast16 returns false for 13 year old (boundary that PASSED before the bump)`() {
+        // Regression guard: a 13-y/o user used to be allowed
+        // (`isAtLeast13` returned true). Pin that the new helper
+        // rejects them so a future revert of the threshold is loud.
         val thirteenYearsAgo = currentTimeMillis() - (13L * 365 + 30) * 24 * 60 * 60 * 1000
-        assertTrue(isAtLeast13(thirteenYearsAgo))
+        assertFalse(isAtLeast16(thirteenYearsAgo))
     }
 
     @Test
-    fun `isAtLeast13 returns false for 10 year old`() {
+    fun `isAtLeast16 returns false for 10 year old`() {
         val tenYearsAgo = currentTimeMillis() - 10L * 365 * 24 * 60 * 60 * 1000
-        assertFalse(isAtLeast13(tenYearsAgo))
+        assertFalse(isAtLeast16(tenYearsAgo))
     }
 
     @Test
-    fun `isAtLeast13 returns false for 1 year old`() {
+    fun `isAtLeast16 returns false for 1 year old`() {
         val oneYearAgo = currentTimeMillis() - 1L * 365 * 24 * 60 * 60 * 1000
-        assertFalse(isAtLeast13(oneYearAgo))
+        assertFalse(isAtLeast16(oneYearAgo))
     }
 
     @Test
-    fun `isAtLeast13 returns true for very old date`() {
-        // Jan 1, 1980
+    fun `isAtLeast16 returns true for very old date`() {
+        // Jan 1, 1980 — definitely 16+
         val oldDate = 315532800000L
-        assertTrue(isAtLeast13(oldDate))
+        assertTrue(isAtLeast16(oldDate))
     }
 
     @Test
-    fun `isAtLeast13 returns false for current time`() {
-        assertFalse(isAtLeast13(currentTimeMillis()))
+    fun `isAtLeast16 returns false for current time`() {
+        assertFalse(isAtLeast16(currentTimeMillis()))
     }
 
     // ── RelativeTimeStrings defaults ────────────────────────────────

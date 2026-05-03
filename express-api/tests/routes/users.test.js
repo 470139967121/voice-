@@ -144,6 +144,82 @@ describe('POST /api/users', () => {
 
     expect(res.body.error).toBe('Invalid date of birth format');
   });
+
+  // Minimum sign-up age bumped 13 → 16 on 2026-05-03 for Apple App
+  // Store content-guideline compliance. The 16-17 cohort is allowed to
+  // sign up but cannot use 18+ gated features (private messages,
+  // gacha) until they age in or complete ID-based verification.
+  // Plan: `.project/plans/2026-05-03-age-verification.md`.
+
+  test('rejects 13 year old (was the old minimum)', async () => {
+    // Regression guard: 13-y/o sign-ups used to succeed under the
+    // pre-bump threshold. Pin that they now fail with 403 + the new
+    // error message.
+    const today = new Date();
+    const thirteenAgo = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
+    const app = createApp('new-user-uid', null);
+    const res = await request(app)
+      .post('/api/users')
+      .send({
+        provider: 'google',
+        identifier: 'too-young@gmail.com',
+        dateOfBirth: thirteenAgo.toISOString().slice(0, 10),
+      })
+      .expect(403);
+
+    expect(res.body.error).toBe('Must be at least 16 years old');
+  });
+
+  test('rejects 15 year old (boundary just below new minimum)', async () => {
+    const today = new Date();
+    const fifteenAgo = new Date(today.getFullYear() - 15, today.getMonth(), today.getDate());
+    const app = createApp('new-user-uid', null);
+    const res = await request(app)
+      .post('/api/users')
+      .send({
+        provider: 'google',
+        identifier: 'fifteen@gmail.com',
+        dateOfBirth: fifteenAgo.toISOString().slice(0, 10),
+      })
+      .expect(403);
+
+    expect(res.body.error).toBe('Must be at least 16 years old');
+  });
+
+  test('accepts 16 year old (new minimum)', async () => {
+    mockTransactionGet.mockResolvedValue({ exists: false });
+    const today = new Date();
+    // 16 years and a few days ago to clear month/day boundaries.
+    const sixteenAgo = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate() - 5);
+    const app = createApp('new-user-uid', null);
+    const res = await request(app)
+      .post('/api/users')
+      .send({
+        provider: 'google',
+        identifier: 'sixteen@gmail.com',
+        dateOfBirth: sixteenAgo.toISOString().slice(0, 10),
+      })
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+  });
+
+  test('accepts 18 year old (above new minimum, will be eligible for verification)', async () => {
+    mockTransactionGet.mockResolvedValue({ exists: false });
+    const today = new Date();
+    const eighteenAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate() - 5);
+    const app = createApp('new-user-uid', null);
+    const res = await request(app)
+      .post('/api/users')
+      .send({
+        provider: 'google',
+        identifier: 'eighteen@gmail.com',
+        dateOfBirth: eighteenAgo.toISOString().slice(0, 10),
+      })
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+  });
 });
 
 // ─── PATCH /api/users/:uniqueId ─────────────────────────────────
