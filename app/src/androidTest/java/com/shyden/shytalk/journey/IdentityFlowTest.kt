@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.shyden.shytalk.core.BuildVariant
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.DeviceRepository
@@ -47,6 +48,10 @@ class IdentityFlowTest : KoinTest {
         fakeAuth.fakeUserId = null
         fakeAuth.fakeUserEmail = null
         fakeAuth.resolvedUniqueId = null
+        // The local flavor's empty `WEB_CLIENT_ID` (PR #42 / B6.14)
+        // hides the Google sign-in button. Inject a non-empty fake so
+        // the visibility-based test assertions below can find it.
+        BuildVariant.initLocalEmulator(true, googleWebClientId = "test-google-client-id")
     }
 
     @Test
