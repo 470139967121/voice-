@@ -7,6 +7,14 @@
  *   - `functions/_middleware.js` (Cloudflare Pages, edge runtime)
  *   - `express-api/tests/scripts/dev-lockdown-middleware.test.js` (Jest)
  *
+ * Location convention: `functions/` MUST sit at the project root, NOT
+ * inside the deploy directory (`public/`). `wrangler pages deploy public`
+ * scans `<repo>/functions/` for routes; a sibling `public/functions/`
+ * is silently ignored (and was the cause of the first failed deploy
+ * after the lockdown rewrite — run 25282826361, 2026-05-03). The
+ * Cloudflare docs are explicit about this:
+ *   https://developers.cloudflare.com/pages/functions/get-started/
+ *
  * Plan: protect dev / preview deployments from public discovery and
  * scrape access. Apple-content-guideline / 18+ work is in flight on
  * dev; leaking the in-progress UI to Google search results is a

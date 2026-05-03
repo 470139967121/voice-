@@ -23,20 +23,22 @@
  * via early `next()`.
  */
 
-const {
-  isProdHostname,
-  blockingRobotsBody,
-  noIndexHeaderValue,
-  basicAuthOk,
-  basicAuthChallenge,
-} = require('./_lib/lockdown.js');
+// ESM exports are required: Cloudflare Pages wrangler refuses to
+// compile a Function file that uses CommonJS `exports.onRequest` and
+// silently logs `WARNING: No routes found when building Functions
+// directory ... - skipping`. The deploy then completes "successfully"
+// but ships zero Functions. Discovered 2026-05-03 in run 25277707676
+// (PR #439's first deploy). Helper module `_lib/lockdown.js` stays
+// CommonJS so the Jest test suite (`dev-lockdown-middleware.test.js`)
+// can `require()` it without an ESM transform — Pages Functions
+// support `import`-from-CommonJS via wrangler's bundler, so the cross-
+// module-system call works at runtime.
+import lockdown from './_lib/lockdown.js';
 
-// CommonJS module syntax (supported by Cloudflare Pages Functions per
-// https://developers.cloudflare.com/pages/functions/api-reference/).
-// Chosen here so the `./_lib/lockdown.js` helper module can be shared
-// verbatim with `express-api/src/middleware/no-index.js` and the Jest
-// test suite without a separate ESM build target.
-exports.onRequest = async ({ request, env, next }) => {
+const { isProdHostname, blockingRobotsBody, noIndexHeaderValue, basicAuthOk, basicAuthChallenge } =
+  lockdown;
+
+export const onRequest = async ({ request, env, next }) => {
   const url = new URL(request.url);
   const hostname = url.hostname;
 
