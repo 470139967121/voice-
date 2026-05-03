@@ -453,5 +453,22 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow write: if false;
     }
+
+    // ── Age verification submissions — admin read, server write ──
+    // Apple-content-guideline 18+ enforcement (PR #441 plan). Holds
+    // the in-flight ID-review submission per user (status: pending /
+    // approved / rejected / dob_modified). The doc references an R2
+    // image key; the image itself is deleted on admin decision so
+    // the doc is the only persistent record.
+    //
+    // Clients DO NOT read or write this collection directly — both
+    // sides go through Express. The submitter's user doc surfaces
+    // their verification status via the `ageVerified` field instead.
+    // Admin reads via the Express admin route (which uses Firebase
+    // Admin SDK; rules are bypassed).
+    match /ageVerificationSubmissions/{submissionId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;
+    }
   }
 }
