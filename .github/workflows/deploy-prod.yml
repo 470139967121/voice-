@@ -185,8 +185,12 @@ jobs:
 
   deploy-web-prod:
     name: Deploy Web to Prod
-    needs: [validate-release]
-    if: inputs.web
+    # Gate web on backend success — same rationale as deploy-dev.yml
+    # (incident 2026-05-03 run 25276782190 where web shipped with a
+    # broken backend deploy and testers got a working-looking site
+    # whose every API call errored). Prod stakes are higher than dev.
+    needs: [validate-release, deploy-backend-prod]
+    if: inputs.web && needs.deploy-backend-prod.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -212,8 +216,11 @@ jobs:
 
   deploy-android-prod:
     name: Deploy Android to Play Store
-    needs: [validate-release, build-android]
-    if: inputs.android
+    # Gate Android on backend success — see deploy-web-prod for the
+    # rationale. Pushing a broken-backend build to Play Store would
+    # be visible to every prod user on next app open.
+    needs: [validate-release, build-android, deploy-backend-prod]
+    if: inputs.android && needs.deploy-backend-prod.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -249,8 +256,11 @@ jobs:
 
   deploy-ios-prod:
     name: Deploy iOS to App Store
-    needs: [validate-release]
-    if: inputs.ios
+    # Gate iOS on backend success — see deploy-web-prod for the
+    # rationale. Apple App Store review pulls and exercises the binary
+    # against the live backend; a broken-backend build risks rejection.
+    needs: [validate-release, deploy-backend-prod]
+    if: inputs.ios && needs.deploy-backend-prod.result == 'success'
     runs-on: [self-hosted, macOS, ARM64, shytalk-mac]
     # Bumped from 45 -> 90 on 2026-04-28: K/Native linkReleaseFrameworkIosArm64
     # plus xcodebuild archive plus App Store upload total ~50 min worst case
