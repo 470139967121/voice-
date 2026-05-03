@@ -13,6 +13,7 @@ class BuildVariantTest {
         BuildVariant.initLocalEmulator(false)
         BuildVariant.initIosDeviceId(null)
         BuildVariant.initBuildInfo(environment = "prod", buildVersion = "?", deviceInfo = "?")
+        BuildVariant.initApiBaseUrl(null)
     }
 
     @Test
@@ -301,5 +302,64 @@ class BuildVariantTest {
     @Test
     fun `watermark badge alpha is at least faintly visible`() {
         assertTrue(PreviewWatermarkConstants.BADGE_BACKGROUND_ALPHA >= 0.1f)
+    }
+
+    // ── apiBaseUrl — env-aware Express API endpoint ──
+    //
+    // iOS hardcoded `http://localhost:3000` for every build, so the DEV
+    // TestFlight IPA tried to hit localhost from the user's iPhone after
+    // a successful Apple/Google sign-in and Firebase auth — the API
+    // call to `POST /api/identity/resolve` failed, the error didn't
+    // match any auth-error pattern, and AuthViewModel set
+    // `isBackendUnreachable = true`, locking the user on the "Unable to
+    // connect" screen. Android avoids this by reading `BuildConfig.API_BASE_URL`
+    // per flavour. Mirrored on iOS via this BuildVariant slot, set from
+    // Swift in `iOSApp.swift`'s `#if DEBUG / #else` block before
+    // `doInitKoin` runs.
+    //
+    // Default `null` so a misconfigured initialiser is loud at the
+    // Koin factory site (downstream `?: error(...)`) rather than
+    // silently posting to nowhere.
+
+    @Test
+    fun `apiBaseUrl defaults to null so misconfiguration fails loudly`() {
+        assertNull(BuildVariant.apiBaseUrl)
+    }
+
+    @Test
+    fun `initApiBaseUrl captures localhost for local emulator builds`() {
+        BuildVariant.initApiBaseUrl("http://localhost:3000")
+        assertEquals("http://localhost:3000", BuildVariant.apiBaseUrl)
+    }
+
+    @Test
+    fun `initApiBaseUrl captures dev https URL for TestFlight builds`() {
+        BuildVariant.initApiBaseUrl("https://dev-api.shytalk.shyden.co.uk")
+        assertEquals("https://dev-api.shytalk.shyden.co.uk", BuildVariant.apiBaseUrl)
+    }
+
+    @Test
+    fun `initApiBaseUrl coerces empty string to null`() {
+        // Mirrors the existing slot pattern (devPassword/devEmail/googleWebClientId):
+        // an empty BuildConfig field on Android or empty Swift bridge value on iOS
+        // should NOT be passed to the HTTP client — it would post to "$path"
+        // (relative URL) which Ktor either errors on or silently rewrites to
+        // the wrong scheme. Coerce to null so the Koin factory's `?: error(...)`
+        // gate trips instead.
+        BuildVariant.initApiBaseUrl("")
+        assertNull(BuildVariant.apiBaseUrl)
+    }
+
+    @Test
+    fun `initApiBaseUrl coerces blank string to null`() {
+        BuildVariant.initApiBaseUrl("   ")
+        assertNull(BuildVariant.apiBaseUrl)
+    }
+
+    @Test
+    fun `initApiBaseUrl can be cleared by passing null`() {
+        BuildVariant.initApiBaseUrl("http://localhost:3000")
+        BuildVariant.initApiBaseUrl(null)
+        assertNull(BuildVariant.apiBaseUrl)
     }
 }

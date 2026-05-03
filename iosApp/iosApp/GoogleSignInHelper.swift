@@ -40,7 +40,25 @@ private class SwiftGoogleSignInHandler: shared.GoogleSignInHandler {
             return
         }
 
-        let config = GIDConfiguration(clientID: clientID)
+        // Server-client-ID (the WEB OAuth client for the same Firebase
+        // project) tells Google to issue tokens whose audience Firebase
+        // Auth's signInWithCredential will accept. Without it, GIDSignIn
+        // can return success with `result.user.idToken == nil` because
+        // the iOS-only client isn't asking for an OpenID-spec idToken
+        // bound to a server-known audience. Mirrors Android's
+        // CredentialManager `setServerClientId(BuildConfig.WEB_CLIENT_ID)`.
+        // BuildVariant.googleWebClientId is populated from Swift in
+        // iOSApp.init() — nil on local (no real Google OAuth client),
+        // dev/prod values mirror Android's per-flavour BuildConfig.
+        let serverClientID = BuildVariant.shared.googleWebClientId
+        let config: GIDConfiguration
+        if let serverID = serverClientID, !serverID.isEmpty {
+            config = GIDConfiguration(clientID: clientID, serverClientID: serverID)
+            NSLog("[ShyTalk] GoogleSignIn config: clientID=\(clientID.prefix(20))… + serverClientID=\(serverID.prefix(20))…")
+        } else {
+            config = GIDConfiguration(clientID: clientID)
+            NSLog("[ShyTalk] GoogleSignIn config: clientID=\(clientID.prefix(20))… (no serverClientID — local build)")
+        }
         GIDSignIn.sharedInstance.configuration = config
 
         // Prefer the key window — multi-window scenes (iPad split-view) can

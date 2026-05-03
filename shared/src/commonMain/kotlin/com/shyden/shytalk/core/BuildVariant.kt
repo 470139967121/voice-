@@ -92,6 +92,18 @@ object BuildVariant {
         private set
 
     /**
+     * Express API base URL — same pattern as deviceInfo above. Set once
+     * at boot via [initApiBaseUrl]. iOS used to hardcode localhost in
+     * `IosPlatformModule.kt`, locking TestFlight builds on "Unable to
+     * connect" after sign-in. Default `null` so a missing initialiser
+     * trips the Koin factory's `?: error(...)` instead of silently
+     * posting to a relative URL.
+     */
+    @kotlin.concurrent.Volatile
+    var apiBaseUrl: String? = null
+        private set
+
+    /**
      * Convenience: any environment that isn't prod is a "preview"
      * build. The PreviewWatermark composable / web overlay reads this
      * to decide whether to render.
@@ -157,5 +169,16 @@ object BuildVariant {
      */
     fun initIosDeviceId(value: String?) {
         iosDeviceId = value?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * One-shot API base URL initialiser. Called from
+     * `KoinHelper.doInitKoin(apiBaseUrl = ...)` which is in turn called
+     * from Swift's `iOSApp.swift` with the env-specific URL. Empty/blank
+     * values coerce to null — see [apiBaseUrl] doc for the fail-closed
+     * rationale.
+     */
+    fun initApiBaseUrl(value: String?) {
+        apiBaseUrl = value?.takeIf { it.isNotBlank() }
     }
 }
