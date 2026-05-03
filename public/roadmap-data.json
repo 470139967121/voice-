@@ -724,7 +724,7 @@
       },
       "status": "in-progress",
       "progress": {
-        "done": 10,
+        "done": 11,
         "total": 17
       },
       "features": [
@@ -886,7 +886,7 @@
         {
           "name": "`BuildVariant` atomic config holder",
           "description": "multi-write race window between `isLocalEmulator` / `localDevPassword` / `localDevEmail` / `googleWebClientId`. Wrap into a single immutable holder to remove the window",
-          "status": "planned",
+          "status": "done",
           "i18n": {}
         },
         {
