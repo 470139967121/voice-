@@ -1,0 +1,35 @@
+{
+  "_comment": "Registry of test suites surfaced on the gh-pages Allure landing. Each suite is rendered as a card by scripts/generate-allure-landing.js. Adding a new suite (e.g. when a future workflow starts publishing allure-results-* artifacts) is now a single-entry append here — no separate PR to edit gh-pages/index.html. Slug must match the gh-pages directory name the suite's allure-report.yml call uses (`suite_name` input).",
+  "suites": [
+    {
+      "slug": "android-e2e",
+      "displayName": "Android E2E",
+      "icon": "📱",
+      "description": "Full user journey tests on real Android emulators"
+    },
+    {
+      "slug": "playwright",
+      "displayName": "Playwright",
+      "icon": "🌐",
+      "description": "Admin panel tests across 5 browsers"
+    },
+    {
+      "slug": "express",
+      "displayName": "Express",
+      "icon": "⚡",
+      "description": "API unit tests with Jest coverage reports"
+    },
+    {
+      "slug": "kotlin",
+      "displayName": "Kotlin",
+      "icon": "🟣",
+      "description": "Business logic unit tests (JVM + Android)"
+    },
+    {
+      "slug": "ios-e2e",
+      "displayName": "iOS E2E",
+      "icon": "🍎",
+      "description": "iOS app tests on simulators via XCTest"
+    }
+  ]
+}
