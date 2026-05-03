@@ -97,6 +97,79 @@ describe('logVerificationApproved', () => {
     await expect(logVerificationApproved(fakeDb, {})).rejects.toThrow();
     expect(mockAdd).not.toHaveBeenCalled();
   });
+
+  test('rejects empty / blank targetUserId', async () => {
+    // A blank target uid would persist a useless audit row
+    // ("approved nobody"). Pin that the validator catches it.
+    await expect(
+      logVerificationApproved(fakeDb, {
+        adminUid: 10000001,
+        targetUserId: '',
+        method: 'passport',
+      }),
+    ).rejects.toThrow(/targetUserId/i);
+    await expect(
+      logVerificationApproved(fakeDb, {
+        adminUid: 10000001,
+        targetUserId: '   ',
+        method: 'passport',
+      }),
+    ).rejects.toThrow(/targetUserId/i);
+    expect(mockAdd).not.toHaveBeenCalled();
+  });
+
+  test('rejects non-positive / non-integer adminUid', async () => {
+    // Real adminUids are always positive 8-digit integers. Block
+    // 0, negatives, NaN, Infinity, and floats.
+    for (const bad of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(
+        logVerificationApproved(fakeDb, {
+          adminUid: bad,
+          targetUserId: '10000050',
+          method: 'passport',
+        }),
+      ).rejects.toThrow(/adminUid/i);
+    }
+    expect(mockAdd).not.toHaveBeenCalled();
+  });
+
+  test('extra unknown input fields are NOT persisted (no-image contract)', async () => {
+    // Compliance: image / id contents must never reach auditLog.
+    // The helper signatures destructure only the named typed params;
+    // any extra fields the caller spreads in must be ignored. Pin
+    // that contract so a future refactor that switches to spread-
+    // through can't silently leak.
+    await logVerificationApproved(fakeDb, {
+      adminUid: 10000001,
+      targetUserId: '10000050',
+      method: 'passport',
+      // Hostile / accidental extras:
+      imageUrl: 'https://r2/evil.jpg',
+      imageBase64: 'data:image/png;base64,iVBORw0K...',
+      ssn: '123-45-6789',
+    });
+    const written = mockAdd.mock.calls[0][0];
+    expect(written.details).toEqual({ method: 'passport' });
+    expect(written).not.toHaveProperty('imageUrl');
+    expect(written).not.toHaveProperty('imageBase64');
+    expect(written).not.toHaveProperty('ssn');
+    expect(written.details).not.toHaveProperty('imageUrl');
+  });
+
+  test('Firestore write failure is logged AND propagated', async () => {
+    // A Firestore rules violation / network drop would otherwise be
+    // silent at this layer if a caller forgot to await. The helper
+    // catches and logs (visible in pm2) before re-throwing — so the
+    // compliance gap "decision made, audit not written" can't hide.
+    const failingDb = { collection: () => ({ add: () => Promise.reject(new Error('boom')) }) };
+    await expect(
+      logVerificationApproved(failingDb, {
+        adminUid: 10000001,
+        targetUserId: '10000050',
+        method: 'passport',
+      }),
+    ).rejects.toThrow('boom');
+  });
 });
 
 describe('logVerificationRejected', () => {
