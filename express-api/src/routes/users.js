@@ -140,6 +140,12 @@ router.post('/users', async (req, res) => {
         language: language || 'en',
         stalkerCount: 0,
         newStalkerCount: 0,
+        // Age verification (Apple App Store 18+ enforcement on PMs +
+        // gacha). New users start unverified; admin approves a manual
+        // ID review to flip to verified. See age-verification PR plan.
+        ageVerified: false,
+        ageVerifiedAt: null,
+        ageVerificationMethod: null,
         createdAt: timestamp,
         lastSeenAt: timestamp,
       });

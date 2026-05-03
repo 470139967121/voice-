@@ -5,6 +5,85 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * Single source of truth for the expected `User.toMap()` shape. Any
+ * change to the User data class fields MUST update this set. The two
+ * pinning tests (count + key set) reference this so a mismatch surfaces
+ * the specific missing / extra key, not just a number.
+ */
+private val EXPECTED_USER_MAP_KEYS =
+    setOf(
+        "uid",
+        "displayName",
+        "avatarUrl",
+        "profilePhotoUrl",
+        "coverPhotoUrl",
+        "description",
+        "nationality",
+        "uniqueId",
+        "firebaseUid",
+        "providers",
+        "blockedUserIds",
+        "followingIds",
+        "followerIds",
+        "dateOfBirth",
+        "hideFollowing",
+        "hideOnlineStatus",
+        "hideAge",
+        "email",
+        "currentRoomId",
+        "lastRoomName",
+        "userType",
+        "createdAt",
+        "lastSeenAt",
+        "stalkerCount",
+        "newStalkerCount",
+        "stalkersLastViewedAt",
+        "isSuspended",
+        "suspensionReason",
+        "suspensionStartDate",
+        "suspensionEndDate",
+        "suspensionCanAppeal",
+        "suspendedBy",
+        "suspensionAppealStatus",
+        "fcmTokens",
+        "pmNotificationsEnabled",
+        "pmPrivacy",
+        "pmSoundEnabled",
+        "pmShowTimestamps",
+        "pmShowDateSeparators",
+        "pmNotificationPreview",
+        "acceptedLegalVersion",
+        "dndEnabled",
+        "dndStartHour",
+        "dndStartMinute",
+        "dndEndHour",
+        "dndEndMinute",
+        "shyCoins",
+        "shyBeans",
+        "isSuperShy",
+        "superShyExpiry",
+        "superShyTier",
+        "tempUniqueId",
+        "tempUniqueIdExpiry",
+        "luckScore",
+        "pityCounter",
+        "loginStreak",
+        "lastLoginDate",
+        "lastLoginRewardDate",
+        "aliases",
+        "minGiftAnimationValue",
+        "selfDestructAlertEnabled",
+        "hasClaimedSuperShyTrial",
+        "language",
+        "deletionScheduledAt",
+        "deletionReason",
+        "deletionExecuteAt",
+        "ageVerified",
+        "ageVerifiedAt",
+        "ageVerificationMethod",
+    )
+
 class UserToMapTest {
     @Test
     fun `toMap contains all fields`() {
@@ -64,85 +143,21 @@ class UserToMapTest {
     }
 
     @Test
-    fun `toMap contains exactly 63 keys`() {
+    fun `toMap key count matches the expected key set size`() {
+        // Single source of truth for the expected count is the
+        // expectedKeys set in the test below. This test guards against
+        // a User.toMap() change that adds a key without updating the
+        // set, OR removing a key without updating the set. Either way
+        // the size mismatch will trip first, then the set-equality
+        // test will surface the specific delta.
         val user = TestData.createTestUser()
-        val map = user.toMap()
-        assertEquals(66, map.size)
+        assertEquals(EXPECTED_USER_MAP_KEYS.size, user.toMap().keys.size)
     }
 
     @Test
     fun `toMap keys match expected field names`() {
-        val expectedKeys =
-            setOf(
-                "uid",
-                "displayName",
-                "avatarUrl",
-                "profilePhotoUrl",
-                "coverPhotoUrl",
-                "description",
-                "nationality",
-                "uniqueId",
-                "firebaseUid",
-                "providers",
-                "blockedUserIds",
-                "followingIds",
-                "followerIds",
-                "dateOfBirth",
-                "hideFollowing",
-                "hideOnlineStatus",
-                "hideAge",
-                "email",
-                "currentRoomId",
-                "lastRoomName",
-                "userType",
-                "createdAt",
-                "lastSeenAt",
-                "stalkerCount",
-                "newStalkerCount",
-                "stalkersLastViewedAt",
-                "isSuspended",
-                "suspensionReason",
-                "suspensionStartDate",
-                "suspensionEndDate",
-                "suspensionCanAppeal",
-                "suspendedBy",
-                "suspensionAppealStatus",
-                "fcmTokens",
-                "pmNotificationsEnabled",
-                "pmPrivacy",
-                "pmSoundEnabled",
-                "pmShowTimestamps",
-                "pmShowDateSeparators",
-                "pmNotificationPreview",
-                "acceptedLegalVersion",
-                "dndEnabled",
-                "dndStartHour",
-                "dndStartMinute",
-                "dndEndHour",
-                "dndEndMinute",
-                "shyCoins",
-                "shyBeans",
-                "isSuperShy",
-                "superShyExpiry",
-                "superShyTier",
-                "tempUniqueId",
-                "tempUniqueIdExpiry",
-                "luckScore",
-                "pityCounter",
-                "loginStreak",
-                "lastLoginDate",
-                "lastLoginRewardDate",
-                "aliases",
-                "minGiftAnimationValue",
-                "selfDestructAlertEnabled",
-                "hasClaimedSuperShyTrial",
-                "language",
-                "deletionScheduledAt",
-                "deletionReason",
-                "deletionExecuteAt",
-            )
         val user = TestData.createTestUser()
-        assertEquals(expectedKeys, user.toMap().keys)
+        assertEquals(EXPECTED_USER_MAP_KEYS, user.toMap().keys)
     }
 
     @Test

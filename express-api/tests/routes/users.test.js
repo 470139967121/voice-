@@ -105,6 +105,34 @@ describe('POST /api/users', () => {
     expect(res.body.uniqueId).toBeGreaterThanOrEqual(10000000);
   });
 
+  test('new users start unverified (ageVerified: false defaults)', async () => {
+    // Apple App Store guideline 1.1.4: 18+ enforcement on private
+    // messages + gacha. New accounts must default to unverified so an
+    // admin manual ID review is required to flip the flag. Pin the
+    // exact field shape — the User model + Firestore rules match.
+    mockTransactionGet.mockResolvedValue({ exists: false });
+
+    const app = createApp('new-user-uid', null);
+    await request(app)
+      .post('/api/users')
+      .send({
+        provider: 'google',
+        identifier: 'newcomer@gmail.com',
+        displayName: 'Newcomer',
+        dateOfBirth: '2000-01-01',
+      })
+      .expect(200);
+
+    const userDocSet = mockTransactionSet.mock.calls.find(([path]) => path?.startsWith?.('users/'));
+    expect(userDocSet).toBeDefined();
+    const docPayload = userDocSet[1];
+    expect(docPayload).toMatchObject({
+      ageVerified: false,
+      ageVerifiedAt: null,
+      ageVerificationMethod: null,
+    });
+  });
+
   test('rejects missing provider', async () => {
     const app = createApp('new-user-uid', null);
     await request(app).post('/api/users').send({ identifier: 'alice@gmail.com' }).expect(400);

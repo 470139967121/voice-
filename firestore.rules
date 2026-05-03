@@ -34,7 +34,17 @@ service cloud.firestore {
                      'preSuspensionCoverPhotoUrl', 'roleChanged',
                      'unique_id', 'firebase_uid',
                      'fcmTokens',
-                     'pmNotificationsEnabled']);
+                     'pmNotificationsEnabled',
+                     // Age verification — server-only, set by Express on
+                     // admin approval. Clients writing these directly
+                     // would bypass the manual ID review and unlock 18+
+                     // gated features. See `2026-05-03-age-verification.md`.
+                     // Both camel and snake variants — matches the
+                     // dual-read pattern other server-only fields use
+                     // (e.g. `gcsScore` / `gcs_score`) so a future
+                     // legacy-compat fallback can't open the gate.
+                     'ageVerified', 'ageVerifiedAt', 'ageVerificationMethod',
+                     'age_verified', 'age_verified_at', 'age_verification_method']);
 
       // Backpack — read own, write only via API
       match /backpack/{giftId} {

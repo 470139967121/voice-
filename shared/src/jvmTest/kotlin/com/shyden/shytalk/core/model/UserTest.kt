@@ -573,4 +573,107 @@ class UserTest {
             assertTrue(user.isPendingDeletion)
         }
     }
+
+    // ── Age verification fields ──────────────────────────────────────
+    //
+    // Apple App Store guidelines require 18+ enforcement on the gated
+    // private-message + gacha features. The verification status is held
+    // server-side via the API; the client never writes these fields
+    // directly (Firestore rules enforce that — see firestore.rules diff
+    // alongside this PR). Method strings are an enumerated set of
+    // "passport" / "drivers-license" / "national-id" — the admin panel
+    // picks one when approving a submission.
+
+    @Test
+    fun `default age verification fields are unverified`() {
+        val user = User()
+        assertFalse(user.ageVerified)
+        assertNull(user.ageVerifiedAt)
+        assertNull(user.ageVerificationMethod)
+    }
+
+    @Test
+    fun `fromMap parses age verification fields`() {
+        val map =
+            mapOf<String, Any?>(
+                "ageVerified" to true,
+                "ageVerifiedAt" to 1705326600000L,
+                "ageVerificationMethod" to "passport",
+            )
+        val user = User.fromMap(map, "u1")
+        assertTrue(user.ageVerified)
+        assertEquals(1705326600000L, user.ageVerifiedAt)
+        assertEquals("passport", user.ageVerificationMethod)
+    }
+
+    @Test
+    fun `fromMap handles null age verification fields`() {
+        // Reverted-to-unverified shape: admin can revert ageVerified to
+        // false with a reason note, in which case we want the timestamp
+        // and method cleared. Pin that null on the wire round-trips to
+        // null on the model.
+        val map =
+            mapOf<String, Any?>(
+                "ageVerified" to false,
+                "ageVerifiedAt" to null,
+                "ageVerificationMethod" to null,
+            )
+        val user = User.fromMap(map, "u1")
+        assertFalse(user.ageVerified)
+        assertNull(user.ageVerifiedAt)
+        assertNull(user.ageVerificationMethod)
+    }
+
+    @Test
+    fun `fromMap handles missing age verification fields`() {
+        // Existing user docs in Firestore predate this feature. They
+        // have NO `ageVerified` field at all — must default to false.
+        val map = emptyMap<String, Any?>()
+        val user = User.fromMap(map, "u1")
+        assertFalse(user.ageVerified)
+        assertNull(user.ageVerifiedAt)
+        assertNull(user.ageVerificationMethod)
+    }
+
+    @Test
+    fun `toMap includes age verification fields when verified`() {
+        val user =
+            User(
+                ageVerified = true,
+                ageVerifiedAt = 1705326600000L,
+                ageVerificationMethod = "drivers-license",
+            )
+        val map = user.toMap()
+        assertEquals(true, map["ageVerified"])
+        assertEquals(1705326600000L, map["ageVerifiedAt"])
+        assertEquals("drivers-license", map["ageVerificationMethod"])
+    }
+
+    @Test
+    fun `toMap includes default age verification fields when unverified`() {
+        // The default-unverified shape MUST round-trip cleanly so a
+        // newly-created user document writes the explicit `ageVerified:
+        // false`. Without it Firestore queries that filter on
+        // `ageVerified == false` (admin "find unverified users" view)
+        // would silently miss legacy / new accounts.
+        val user = User()
+        val map = user.toMap()
+        assertEquals(false, map["ageVerified"])
+        assertNull(map["ageVerifiedAt"])
+        assertNull(map["ageVerificationMethod"])
+    }
+
+    @Test
+    fun `ageVerificationMethod accepts the three approved id types`() {
+        listOf("passport", "drivers-license", "national-id").forEach { method ->
+            val user =
+                User(
+                    ageVerified = true,
+                    ageVerifiedAt = currentTimeMillis(),
+                    ageVerificationMethod = method,
+                )
+            assertEquals(method, user.ageVerificationMethod)
+            assertTrue(user.ageVerified)
+        }
+    }
 }

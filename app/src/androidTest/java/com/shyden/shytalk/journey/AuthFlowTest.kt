@@ -47,6 +47,14 @@ class AuthFlowTest : KoinTest {
             fakeUserEmail = "test@example.com"
         }
         (userRepository as FakeUserRepository).userFlagsFlow.value = UserFlags()
+        // The local flavor's `BuildConfig.WEB_CLIENT_ID = ""` (PR #42 /
+        // B6.14) makes `BuildVariant.isGoogleSignInAvailable` false, so
+        // the SignIn screen hides the Google button. E2E tests run on
+        // the local flavor (`connectedLocalDebugAndroidTest`) and want
+        // to assert the Google button — inject a non-empty fake so the
+        // button renders. This does not exercise the real Google flow,
+        // it just makes the visibility check pass.
+        BuildVariant.initLocalEmulator(true, googleWebClientId = "test-google-client-id")
     }
 
     @Test
@@ -92,12 +100,18 @@ class AuthFlowTest : KoinTest {
         // Test fixtures must not leak isLocalEmulator=true into other suites,
         // since the dev sign-in path is unreachable on prod and a leaked
         // `true` would let unrelated tests trip the dev-only branch.
+        // Also clear the test-only googleWebClientId so subsequent test
+        // classes pick up the real (or empty) flavor value via setUp().
         BuildVariant.initLocalEmulator(false)
     }
 
     @Test
     fun signInScreen_devButton_hiddenWhenNotLocalEmulator() {
-        BuildVariant.initLocalEmulator(false)
+        // Pass through the fake googleWebClientId so the Google button
+        // remains rendered (the assertion below is on `dev_sign_in`,
+        // not on Google, but `waitForTag("signIn_googleButton")` is
+        // used as a "page is fully rendered" anchor).
+        BuildVariant.initLocalEmulator(false, googleWebClientId = "test-google-client-id")
         val fakeAuth = authRepository as FakeAuthRepository
         fakeAuth.fakeAuthenticated = false
         fakeAuth.fakeUserId = null
@@ -112,7 +126,7 @@ class AuthFlowTest : KoinTest {
 
     @Test
     fun signInScreen_devButton_visibleOnLocalEmulator() {
-        BuildVariant.initLocalEmulator(true)
+        BuildVariant.initLocalEmulator(true, googleWebClientId = "test-google-client-id")
         val fakeAuth = authRepository as FakeAuthRepository
         fakeAuth.fakeAuthenticated = false
         fakeAuth.fakeUserId = null
