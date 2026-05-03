@@ -14,6 +14,7 @@ const {
   DeleteObjectsCommand,
   ListObjectsV2Command,
 } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 const isLocal = process.env.NODE_ENV === 'local';
 const bucketName = process.env.R2_BUCKET_NAME || 'shytalk-media';
@@ -132,6 +133,34 @@ async function listObjectsWithMetadata(prefix) {
   return objects;
 }
 
+/**
+ * Issues a short-lived signed PUT URL the client can upload directly
+ * to (no Express proxy). Used by age-verification submission flow:
+ * the client gets a URL for `age-verification/<uid>/<random>.jpg`,
+ * PUTs the ID image, then notifies the API of the R2 key.
+ *
+ * Defaults to 5-minute expiry to limit replay if the URL is
+ * intercepted. Hard-caps overrides at 1 hour — anything longer is a
+ * code smell and the helper refuses.
+ */
+async function getSignedPutUrl(key, contentType, expiresInSec = 300) {
+  if (typeof key !== 'string' || key.length === 0) {
+    throw new Error('r2.getSignedPutUrl: key must be a non-empty string');
+  }
+  if (typeof contentType !== 'string' || contentType.length === 0) {
+    throw new Error('r2.getSignedPutUrl: contentType must be a non-empty string');
+  }
+  if (typeof expiresInSec !== 'number' || expiresInSec <= 0 || expiresInSec > 3600) {
+    throw new Error('r2.getSignedPutUrl: expiresInSec must be in (0, 3600]');
+  }
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    ContentType: contentType,
+  });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSec });
+}
+
 module.exports = {
   s3,
   bucketName,
@@ -141,5 +170,6 @@ module.exports = {
   deleteObjects,
   listObjects,
   listObjectsWithMetadata,
+  getSignedPutUrl,
   CDN_URL,
 };
