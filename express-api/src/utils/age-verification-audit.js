@@ -155,6 +155,12 @@ async function logVerificationDobModified(db, { adminUid, targetUserId, oldDob, 
 
 module.exports = {
   AGE_VERIFICATION_ACTIONS,
+  // Re-exported so route handlers can validate DOB bounds BEFORE
+  // committing the decision transaction. Catching an out-of-range
+  // DOB at the audit-write stage means the user doc is already
+  // mutated with the bogus value (silent-failure-hunter HIGH on PR
+  // #446). Routes call this up-front instead.
+  requirePlausibleDob,
   logVerificationApproved,
   logVerificationRejected,
   logVerificationDobModified,
