@@ -117,3 +117,31 @@ describe('sendAgeVerificationDobModifiedPm', () => {
     expect(mockSendSystemPm).not.toHaveBeenCalled();
   });
 });
+
+describe('sanitiseReason', () => {
+  // Required for HIGH XSS finding on PR #447: admin-supplied reason
+  // text is echoed into the PM body. If any current or future client
+  // renderer treats `text` as HTML, an admin pasting `<script>...`
+  // into the reason would inject. Strip <, >, & at template-render
+  // time so the message is safe regardless of renderer.
+  const {
+    sanitiseReason,
+    sendAgeVerificationRejectedPm,
+  } = require('../../src/utils/age-verification-system-pm');
+
+  test('strips HTML angle brackets and ampersand from reason', () => {
+    expect(sanitiseReason('<script>alert(1)</script>')).toBe(' script alert(1) /script ');
+    expect(sanitiseReason('a & b < c > d')).toBe('a   b   c   d');
+  });
+
+  test('preserves non-HTML special characters (quotes, slashes, etc.)', () => {
+    expect(sanitiseReason("can't / won't")).toBe("can't / won't");
+  });
+
+  test('rejection PM text is sanitised end-to-end', async () => {
+    await sendAgeVerificationRejectedPm('u1', '<img src=x onerror=alert(1)>');
+    const [, text] = mockSendSystemPm.mock.calls[0];
+    expect(text).not.toContain('<');
+    expect(text).not.toContain('>');
+  });
+});
