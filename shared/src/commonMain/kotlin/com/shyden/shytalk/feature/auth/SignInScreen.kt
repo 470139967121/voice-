@@ -300,49 +300,58 @@ fun SignInScreen(
             // routes through the Swift bridge registered in iOSApp.swift.
             // Both paths throw `GoogleSignInCancelledException` on user
             // dismiss so the catch block is uniform here.
-            GoogleSignInButton(
-                onClick = {
-                    if (isBusy) return@GoogleSignInButton
-                    signingInProvider = "google"
-                    scope.launch {
-                        try {
-                            val googleIdToken =
-                                performGoogleSignIn(
-                                    context = activity,
-                                    webClientId = BuildVariant.googleWebClientId,
+            //
+            // Hidden on local-flavour builds where `googleWebClientId` is
+            // null (no real Google OAuth client wired to the demo Firebase
+            // project) — without this guard, tapping the button would call
+            // `performGoogleSignIn` with a placeholder web client ID and
+            // surface a cryptic Google framework error. Dev sign-in covers
+            // local flow.
+            if (BuildVariant.isGoogleSignInAvailable) {
+                GoogleSignInButton(
+                    onClick = {
+                        if (isBusy) return@GoogleSignInButton
+                        signingInProvider = "google"
+                        scope.launch {
+                            try {
+                                val googleIdToken =
+                                    performGoogleSignIn(
+                                        context = activity,
+                                        webClientId = BuildVariant.googleWebClientId,
+                                    )
+                                viewModel.signInWithGoogle(googleIdToken)
+                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                throw e
+                            } catch (_: GoogleSignInCancelledException) {
+                                // User dismissed the picker — silent, no toast.
+                            } catch (e: GoogleSignInNoAccountException) {
+                                // User-fixable: no Google account on device.
+                                // The exception's message is hand-authored to be
+                                // user-actionable ("Add a Google account in
+                                // Settings…"), so we surface it verbatim.
+                                snackbarHostState.showSnackbar(
+                                    e.message ?: googleSignInFailed,
                                 )
-                            viewModel.signInWithGoogle(googleIdToken)
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (_: GoogleSignInCancelledException) {
-                            // User dismissed the picker — silent, no toast.
-                        } catch (e: GoogleSignInNoAccountException) {
-                            // User-fixable: no Google account on device.
-                            // The exception's message is hand-authored to be
-                            // user-actionable ("Add a Google account in
-                            // Settings…"), so we surface it verbatim.
-                            snackbarHostState.showSnackbar(
-                                e.message ?: googleSignInFailed,
-                            )
-                        } catch (e: Exception) {
-                            // Generic catch: do NOT pass `e.message` to the
-                            // snackbar — Firebase / CredentialManager / Swift
-                            // bridge messages are developer-grade and would
-                            // leak SDK internals to users. Log the full
-                            // exception for triage and show the localised
-                            // string only.
-                            logW("SignInScreen", "Google sign-in failed", e)
-                            snackbarHostState.showSnackbar(googleSignInFailed)
-                        } finally {
-                            signingInProvider = null
+                            } catch (e: Exception) {
+                                // Generic catch: do NOT pass `e.message` to the
+                                // snackbar — Firebase / CredentialManager / Swift
+                                // bridge messages are developer-grade and would
+                                // leak SDK internals to users. Log the full
+                                // exception for triage and show the localised
+                                // string only.
+                                logW("SignInScreen", "Google sign-in failed", e)
+                                snackbarHostState.showSnackbar(googleSignInFailed)
+                            } finally {
+                                signingInProvider = null
+                            }
                         }
-                    }
-                },
-                isLoading = signingInProvider == "google" || (uiState.isLoading && signingInProvider == "google"),
-                enabled = !isBusy,
-            )
+                    },
+                    isLoading = signingInProvider == "google" || (uiState.isLoading && signingInProvider == "google"),
+                    enabled = !isBusy,
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+            } // close if (BuildVariant.isGoogleSignInAvailable)
 
             // Apple Sign-In button. Cross-platform `performAppleSignInFlow`
             // wraps Firebase WebView OAuth on Android (needs the Activity)

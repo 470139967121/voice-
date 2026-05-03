@@ -391,6 +391,40 @@ class BuildVariantTest {
         assertEquals("prod", emulatorState.environment)
     }
 
+    // ── isGoogleSignInAvailable (B6.14) ──
+    //
+    // Local-flavour builds talk to Firebase emulators without a real
+    // Google OAuth web client. Tapping the Google Sign-In button on
+    // local previously hit `performGoogleSignIn` with the placeholder
+    // (Android: `"placeholder-local"`, iOS: `nil`) and surfaced a
+    // cryptic Google framework error. The button must hide on builds
+    // where googleWebClientId is unset / a placeholder. SignInScreen
+    // reads this convenience property to decide whether to render.
+
+    @Test
+    fun `isGoogleSignInAvailable returns false when googleWebClientId is null`() {
+        BuildVariant.initLocalEmulator(false, googleWebClientId = null)
+        assertFalse(BuildVariant.isGoogleSignInAvailable)
+    }
+
+    @Test
+    fun `isGoogleSignInAvailable returns true when googleWebClientId is a real OAuth ID`() {
+        BuildVariant.initLocalEmulator(
+            value = false,
+            googleWebClientId = "881846974606-abcdef.apps.googleusercontent.com",
+        )
+        assertTrue(BuildVariant.isGoogleSignInAvailable)
+    }
+
+    @Test
+    fun `isGoogleSignInAvailable returns false when googleWebClientId is empty`() {
+        // Android local flavour now sets `BuildConfig.WEB_CLIENT_ID = ""`
+        // (was `"placeholder-local"`); empty coerces to null in the
+        // BuildVariant slot, so the Google button hides on local.
+        BuildVariant.initLocalEmulator(true, googleWebClientId = "")
+        assertFalse(BuildVariant.isGoogleSignInAvailable)
+    }
+
     @Test
     fun `config snapshot survives subsequent inits — captured-then-mutated reader sees old state`() {
         // The motivating use case: a Compose composable captures
