@@ -75,6 +75,14 @@ data class User(
     val deletionScheduledAt: Long? = null,
     val deletionReason: String? = null,
     val deletionExecuteAt: Long? = null,
+    // Age verification (Apple App Store 18+ enforcement on PMs + gacha).
+    // Server-side only — Firestore rules block client write of these
+    // three fields. `ageVerificationMethod` is one of "passport" /
+    // "drivers-license" / "national-id" when set; null when unverified
+    // (or when admin reverts a verification with a reason note).
+    val ageVerified: Boolean = false,
+    val ageVerifiedAt: Long? = null,
+    val ageVerificationMethod: String? = null,
 ) {
     val isActivelySuspended: Boolean
         get() {
@@ -173,6 +181,9 @@ data class User(
             "deletionScheduledAt" to deletionScheduledAt,
             "deletionReason" to deletionReason,
             "deletionExecuteAt" to deletionExecuteAt,
+            "ageVerified" to ageVerified,
+            "ageVerifiedAt" to ageVerifiedAt,
+            "ageVerificationMethod" to ageVerificationMethod,
         )
 
     companion object {
@@ -283,6 +294,9 @@ data class User(
                 deletionScheduledAt = map["deletionScheduledAt"]?.let { timestampToMillis(it) },
                 deletionReason = map["deletionReason"] as? String,
                 deletionExecuteAt = map["deletionExecuteAt"]?.let { timestampToMillis(it) },
+                ageVerified = map["ageVerified"].asBool(),
+                ageVerifiedAt = map["ageVerifiedAt"]?.let { timestampToMillis(it) },
+                ageVerificationMethod = map["ageVerificationMethod"] as? String,
             )
     }
 }
