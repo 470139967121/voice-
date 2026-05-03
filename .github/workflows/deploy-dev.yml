@@ -155,7 +155,20 @@ jobs:
     # `inputs.backend=false` case where the operator deliberately runs
     # web-only / mobile-only. Block only on `failure` / `cancelled` so
     # a crashed backend deploy can't ship a working-looking client.
-    if: inputs.web && (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
+    #
+    # `always()` is required: GitHub Actions's implicit "needs success"
+    # gate skips dependent jobs whenever ANY upstream is non-success
+    # (including `skipped`). The implicit gate fires BEFORE the explicit
+    # `if:` evaluates, so a custom condition checking
+    # `result == 'skipped'` is silently ignored. `always()` opts out of
+    # the implicit gate and lets the explicit comparisons run. Discovered
+    # 2026-05-03 in run 25280868804 (web=true backend=false → web
+    # silently skipped).
+    if: |
+      always() &&
+      inputs.web &&
+      needs.deploy-backend-dev.result != 'failure' &&
+      needs.deploy-backend-dev.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -206,7 +219,12 @@ jobs:
     needs: deploy-backend-dev
     # See deploy-web-dev for `success || skipped` rationale (preserves
     # `inputs.backend=false` Android-only hotfix path).
-    if: inputs.android-testers && (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
+    # See deploy-web-dev `always()` rationale (run 25280868804).
+    if: |
+      always() &&
+      inputs.android-testers &&
+      needs.deploy-backend-dev.result != 'failure' &&
+      needs.deploy-backend-dev.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -341,7 +359,12 @@ jobs:
     needs: deploy-backend-dev
     # See deploy-web-dev for `success || skipped` rationale (preserves
     # `inputs.backend=false` iOS-only hotfix path).
-    if: inputs.ios-testers && (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
+    # See deploy-web-dev `always()` rationale (run 25280868804).
+    if: |
+      always() &&
+      inputs.ios-testers &&
+      needs.deploy-backend-dev.result != 'failure' &&
+      needs.deploy-backend-dev.result != 'cancelled'
     runs-on: [self-hosted, macOS, ARM64, shytalk-mac]
     # Bumped from 45 -> 90 on 2026-04-28: K/Native linkReleaseFrameworkIosArm64
     # has been taking 24-29 min on the macos-15 runner pool (was ~10 min in
