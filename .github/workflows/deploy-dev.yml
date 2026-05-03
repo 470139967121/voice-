@@ -164,11 +164,13 @@ jobs:
     # the implicit gate and lets the explicit comparisons run. Discovered
     # 2026-05-03 in run 25280868804 (web=true backend=false → web
     # silently skipped).
+    # Allowlist (not denylist) so a typo'd `needs:` reference — which
+    # would make `result` evaluate to empty/null — fails closed instead
+    # of running with no gate. Defence in depth on top of `always()`.
     if: |
       always() &&
       inputs.web &&
-      needs.deploy-backend-dev.result != 'failure' &&
-      needs.deploy-backend-dev.result != 'cancelled'
+      (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -219,12 +221,11 @@ jobs:
     needs: deploy-backend-dev
     # See deploy-web-dev for `success || skipped` rationale (preserves
     # `inputs.backend=false` Android-only hotfix path).
-    # See deploy-web-dev `always()` rationale (run 25280868804).
+    # See deploy-web-dev `always()` + allowlist rationale (run 25280868804).
     if: |
       always() &&
       inputs.android-testers &&
-      needs.deploy-backend-dev.result != 'failure' &&
-      needs.deploy-backend-dev.result != 'cancelled'
+      (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -359,12 +360,11 @@ jobs:
     needs: deploy-backend-dev
     # See deploy-web-dev for `success || skipped` rationale (preserves
     # `inputs.backend=false` iOS-only hotfix path).
-    # See deploy-web-dev `always()` rationale (run 25280868804).
+    # See deploy-web-dev `always()` + allowlist rationale (run 25280868804).
     if: |
       always() &&
       inputs.ios-testers &&
-      needs.deploy-backend-dev.result != 'failure' &&
-      needs.deploy-backend-dev.result != 'cancelled'
+      (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
     runs-on: [self-hosted, macOS, ARM64, shytalk-mac]
     # Bumped from 45 -> 90 on 2026-04-28: K/Native linkReleaseFrameworkIosArm64
     # has been taking 24-29 min on the macos-15 runner pool (was ~10 min in
