@@ -28,6 +28,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -1158,6 +1159,101 @@ class AuthViewModelIdentityTest {
                 authRepo.signedOut,
                 "Network errors must NOT clear the Firebase session in the iOS path either",
             )
+        }
+
+    // ─── Apple Sign-In typed cancellation (Android parity with iOS) ───
+    //
+    // The Android Apple Sign-In path historically relied on a string
+    // match in SignInScreen against `Resource.Error("Sign-in was
+    // cancelled")` — fragile because the literal is in English and
+    // depends on AuthRepositoryImpl never changing its wording. The
+    // iOS path already routes cancels through the typed
+    // AppleSignInCancelledException. These tests pin the new
+    // cross-platform contract: AuthRepository signals cancellation by
+    // attaching `AppleSignInCancelledException` to the
+    // `Resource.Error.exception` slot, AuthViewModel branches on the
+    // type and silences the error without leaking it to the snackbar.
+
+    @Test
+    fun signInWithAppleViaProvider_typedCancellation_doesNotSurfaceAsError() =
+        runTest {
+            val authRepo =
+                FakeAuthRepository(
+                    firebaseUid = null,
+                    isAuthenticated = false,
+                    currentUserEmail = null,
+                    providerInfo = null,
+                ).apply {
+                    // Repository signals cancel via the typed exception
+                    // attached to Resource.Error — same pattern iOS has
+                    // used since launch.
+                    signInResult =
+                        Resource.Error(
+                            message = "Apple Sign-In cancelled by user",
+                            exception = AppleSignInCancelledException(),
+                        )
+                }
+
+            val vm =
+                AuthViewModel(
+                    authRepo,
+                    FakeUserRepository(),
+                    FakeDeviceRepository(),
+                    FakeIdentityRepository(),
+                    "device-1",
+                    bypassDeviceChecks = true,
+                )
+            advanceUntilIdle()
+
+            vm.signInWithAppleViaProvider(activity = "fake-activity-stub")
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(
+                null,
+                state.error,
+                "Typed AppleSignInCancelledException must NOT surface as a user-visible error",
+            )
+            assertFalse(state.isLoading, "Cancellation must clear the loading spinner")
+        }
+
+    @Test
+    fun signInWithAppleViaProvider_genericError_stillSurfacesAsError() =
+        runTest {
+            // Counter-test: a real failure (not a cancellation) still
+            // produces a snackbar. Without this we'd risk a future
+            // refactor that swallows ALL Apple errors as "cancellations"
+            // and silently breaks the failure UX.
+            val authRepo =
+                FakeAuthRepository(
+                    firebaseUid = null,
+                    isAuthenticated = false,
+                    currentUserEmail = null,
+                    providerInfo = null,
+                ).apply {
+                    signInResult = Resource.Error("Network unreachable", exception = null)
+                }
+
+            val vm =
+                AuthViewModel(
+                    authRepo,
+                    FakeUserRepository(),
+                    FakeDeviceRepository(),
+                    FakeIdentityRepository(),
+                    "device-1",
+                    bypassDeviceChecks = true,
+                )
+            advanceUntilIdle()
+
+            vm.signInWithAppleViaProvider(activity = "fake-activity-stub")
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertNotNull(
+                state.error,
+                "Real Apple Sign-In failure (no typed cancel exception) must still set uiState.error",
+            )
+            assertFalse(state.isLoading, "Failed sign-in must clear loading spinner")
         }
 
     @Test

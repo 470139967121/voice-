@@ -252,7 +252,19 @@ class AuthViewModel(
                 }
 
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
+                    // Apple's WebView OAuth on Android surfaces user
+                    // cancellation as `FirebaseAuthWebException`, which
+                    // `AuthRepositoryImpl` now wraps as a typed
+                    // `AppleSignInCancelledException` on the
+                    // `Resource.Error.exception` slot — same shape iOS has
+                    // used since launch. Branch on the type so cancel is
+                    // silent without depending on an English-literal
+                    // `result.message` string match in SignInScreen.
+                    if (result.exception is AppleSignInCancelledException) {
+                        _uiState.update { it.copy(isLoading = false) }
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, error = UiText.plain(result.message)) }
+                    }
                 }
 
                 is Resource.Loading -> Unit

@@ -6,6 +6,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.firebaseCall
 import com.shyden.shytalk.core.util.logE
+import com.shyden.shytalk.feature.auth.AppleSignInCancelledException
 import kotlinx.coroutines.tasks.await
 
 class AuthRepositoryImpl(
@@ -109,7 +110,14 @@ class AuthRepositoryImpl(
         } catch (e: com.google.firebase.auth.FirebaseAuthUserCollisionException) {
             Resource.Error("An account already exists with this email using a different sign-in method")
         } catch (e: com.google.firebase.auth.FirebaseAuthWebException) {
-            Resource.Error("Sign-in was cancelled")
+            // Cross-platform parity with iOS — both platforms now signal
+            // user cancel via the typed `AppleSignInCancelledException`
+            // attached to `Resource.Error.exception`. AuthViewModel
+            // branches on the type and silences the snackbar without
+            // an English-literal `result.message` string match.
+            // The `message` is kept human-readable for log breadcrumbs
+            // (Sentry, logcat) — it is NOT shown to the user.
+            Resource.Error("Apple Sign-In cancelled by user", AppleSignInCancelledException())
         } catch (e: Exception) {
             Resource.Error("Apple sign-in failed. Please try again.")
         }
