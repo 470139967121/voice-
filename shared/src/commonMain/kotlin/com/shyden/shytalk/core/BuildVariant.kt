@@ -1,15 +1,46 @@
 package com.shyden.shytalk.core
 
 /**
+ * Immutable snapshot of all build-time flags. Wrapping the nine
+ * previously-independent vars into a single data class lets callers
+ * `BuildVariant.config` once per frame and navigate fields without
+ * seeing a half-applied init — the reference swap inside `BuildVariant`
+ * is the single visible boundary, so a reader observes either the
+ * entire old state or the entire new state.
+ *
+ * Every field has a fail-safe default so an absent platform initialiser
+ * is loud rather than silent: emulator slots default to off+null,
+ * environment defaults to `"prod"` (no false-positive watermark on real
+ * production), buildVersion / deviceInfo default to `"?"`, apiBaseUrl
+ * defaults to null (downstream Koin factory `?: error(...)` trips).
+ */
+data class BuildVariantConfig(
+    val isLocalEmulator: Boolean = false,
+    val localDevPassword: String? = null,
+    val localDevEmail: String? = null,
+    val googleWebClientId: String? = null,
+    val iosDeviceId: String? = null,
+    val environment: String = "prod",
+    val buildVersion: String = "?",
+    val deviceInfo: String = "?",
+    val apiBaseUrl: String? = null,
+)
+
+/**
  * Shared build-time flags accessible from common code. Set exactly once at
  * platform startup before any UI runs (Android: when `BuildConfig.FLAVOR ==
  * "local"`; iOS: when the `#if DEBUG` configuration is active).
  *
- * `@kotlin.concurrent.Volatile` establishes a happens-before edge between the
- * boot-time write on the main thread and Compose-thread reads on iOS, where
- * recomposition can read the flag from a different thread than the one that
- * wrote it. The property setter is private so feature code cannot flip the
- * flag at runtime — initialisation must go through `initLocalEmulator()`.
+ * `@kotlin.concurrent.Volatile` on the holder reference establishes a
+ * happens-before edge between the boot-time write on the main thread
+ * and Compose-thread reads on iOS, where recomposition can read flags
+ * from a different thread than the one that wrote them. The setter is
+ * private so feature code cannot flip flags at runtime — initialisation
+ * must go through the `init*()` functions, each of which `copy()`s the
+ * current holder and replaces the reference in a single volatile
+ * write. That closes the multi-write race window where a reader could
+ * observe `isLocalEmulator == true` while `localDevPassword` was still
+ * null mid-init (the failure mode B6.13 addresses).
  *
  * `localDevPassword` is injected from outside the binary on the local flavor
  * only — Android reads from `BuildConfig.LOCAL_DEV_PASSWORD` (empty string on
@@ -22,20 +53,27 @@ package com.shyden.shytalk.core
  */
 object BuildVariant {
     @kotlin.concurrent.Volatile
-    var isLocalEmulator: Boolean = false
-        private set
+    private var holder: BuildVariantConfig = BuildVariantConfig()
 
-    @kotlin.concurrent.Volatile
-    var localDevPassword: String? = null
-        private set
+    /**
+     * Current immutable snapshot of all flags. Capture once at the top
+     * of a render frame / cold-start path and read its fields — the
+     * captured reference will not be mutated by any subsequent init.
+     */
+    val config: BuildVariantConfig
+        get() = holder
 
-    @kotlin.concurrent.Volatile
-    var localDevEmail: String? = null
-        private set
+    // ── Property accessors — backward-compatible API surface ──
+    //
+    // Existing call sites read `BuildVariant.isLocalEmulator` etc.
+    // directly. Keep the same surface delegating to the holder so the
+    // refactor is a no-op for callers, while internal state is now a
+    // single atomically-swapped reference.
 
-    @kotlin.concurrent.Volatile
-    var googleWebClientId: String? = null
-        private set
+    val isLocalEmulator: Boolean get() = holder.isLocalEmulator
+    val localDevPassword: String? get() = holder.localDevPassword
+    val localDevEmail: String? get() = holder.localDevEmail
+    val googleWebClientId: String? get() = holder.googleWebClientId
 
     /**
      * iOS-only stable per-device identifier, eagerly computed in
@@ -48,9 +86,7 @@ object BuildVariant {
      * `project-ios-device-id-revert-rca.md`). On Android this slot is
      * unused — `Settings.Secure.ANDROID_ID` is read directly elsewhere.
      */
-    @kotlin.concurrent.Volatile
-    var iosDeviceId: String? = null
-        private set
+    val iosDeviceId: String? get() = holder.iosDeviceId
 
     /**
      * Build environment: `"local"`, `"dev"`, or `"prod"`. Drives the
@@ -63,9 +99,7 @@ object BuildVariant {
      * missed watermark on a dev build, which is visually obvious during
      * development and self-corrects).
      */
-    @kotlin.concurrent.Volatile
-    var environment: String = "prod"
-        private set
+    val environment: String get() = holder.environment
 
     /**
      * Human-readable build identifier shown in the watermark, e.g.
@@ -73,9 +107,7 @@ object BuildVariant {
      * to `"?"` so an absent initialiser is visible at a glance rather
      * than rendering as an empty badge.
      */
-    @kotlin.concurrent.Volatile
-    var buildVersion: String = "?"
-        private set
+    val buildVersion: String get() = holder.buildVersion
 
     /**
      * Device label shown in the watermark, e.g. `"Pixel 6 · Android 14"`
@@ -87,9 +119,7 @@ object BuildVariant {
      * - Android: `"${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}"`
      * - iOS: `"${UIDevice.model} · iOS ${UIDevice.systemVersion}"`
      */
-    @kotlin.concurrent.Volatile
-    var deviceInfo: String = "?"
-        private set
+    val deviceInfo: String get() = holder.deviceInfo
 
     /**
      * Express API base URL — same pattern as deviceInfo above. Set once
@@ -99,9 +129,7 @@ object BuildVariant {
      * trips the Koin factory's `?: error(...)` instead of silently
      * posting to a relative URL.
      */
-    @kotlin.concurrent.Volatile
-    var apiBaseUrl: String? = null
-        private set
+    val apiBaseUrl: String? get() = holder.apiBaseUrl
 
     /**
      * Convenience: any environment that isn't prod is a "preview"
@@ -109,7 +137,7 @@ object BuildVariant {
      * to decide whether to render.
      */
     val isPreviewBuild: Boolean
-        get() = environment != "prod"
+        get() = holder.environment != "prod"
 
     /**
      * One-shot initialiser for the watermark slots. Called from
@@ -124,9 +152,12 @@ object BuildVariant {
         buildVersion: String,
         deviceInfo: String = "",
     ) {
-        this.environment = environment.takeIf { it.isNotBlank() } ?: "prod"
-        this.buildVersion = buildVersion.takeIf { it.isNotBlank() } ?: "?"
-        this.deviceInfo = deviceInfo.takeIf { it.isNotBlank() } ?: "?"
+        holder =
+            holder.copy(
+                environment = environment.takeIf { it.isNotBlank() } ?: "prod",
+                buildVersion = buildVersion.takeIf { it.isNotBlank() } ?: "?",
+                deviceInfo = deviceInfo.takeIf { it.isNotBlank() } ?: "?",
+            )
     }
 
     /**
@@ -153,10 +184,13 @@ object BuildVariant {
         devEmail: String? = null,
         googleWebClientId: String? = null,
     ) {
-        isLocalEmulator = value
-        localDevPassword = devPassword?.takeIf { it.isNotEmpty() }
-        localDevEmail = devEmail?.takeIf { it.isNotEmpty() }
-        this.googleWebClientId = googleWebClientId?.takeIf { it.isNotEmpty() }
+        holder =
+            holder.copy(
+                isLocalEmulator = value,
+                localDevPassword = devPassword?.takeIf { it.isNotEmpty() },
+                localDevEmail = devEmail?.takeIf { it.isNotEmpty() },
+                googleWebClientId = googleWebClientId?.takeIf { it.isNotEmpty() },
+            )
     }
 
     /**
@@ -168,7 +202,7 @@ object BuildVariant {
      * loudly rather than passing an empty string to the Express API.
      */
     fun initIosDeviceId(value: String?) {
-        iosDeviceId = value?.takeIf { it.isNotBlank() }
+        holder = holder.copy(iosDeviceId = value?.takeIf { it.isNotBlank() })
     }
 
     /**
@@ -179,6 +213,6 @@ object BuildVariant {
      * rationale.
      */
     fun initApiBaseUrl(value: String?) {
-        apiBaseUrl = value?.takeIf { it.isNotBlank() }
+        holder = holder.copy(apiBaseUrl = value?.takeIf { it.isNotBlank() })
     }
 }

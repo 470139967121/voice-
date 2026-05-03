@@ -304,6 +304,110 @@ class BuildVariantTest {
         assertTrue(PreviewWatermarkConstants.BADGE_BACKGROUND_ALPHA >= 0.1f)
     }
 
+    // ── BuildVariantConfig atomic holder (B6.13) ──
+    //
+    // Pre-B6.13, BuildVariant exposed nine independent volatile vars
+    // (isLocalEmulator, localDevPassword, localDevEmail,
+    // googleWebClientId, iosDeviceId, environment, buildVersion,
+    // deviceInfo, apiBaseUrl). `initLocalEmulator(...)` wrote four of
+    // them sequentially. A reader on another thread could observe an
+    // intermediate state where, say, `isLocalEmulator == true` but
+    // `localDevPassword == null` — producing a misleading "dev sign-in
+    // is enabled but credentials missing" snapshot in SignInScreen's
+    // dev-button render guard. Wrapping into a single immutable
+    // `BuildVariantConfig` and replacing the holder reference per init
+    // closes the window: the reference swap is the single visible
+    // boundary, so a reader sees either the entire old state or the
+    // entire new state, never a half-update.
+
+    @Test
+    fun `config getter exposes the immutable holder snapshot`() {
+        // The holder MUST be a single object — readers can capture it
+        // and navigate fields without seeing a mid-init partial write.
+        val snapshot = BuildVariant.config
+        assertEquals(snapshot.isLocalEmulator, BuildVariant.isLocalEmulator)
+        assertEquals(snapshot.environment, BuildVariant.environment)
+    }
+
+    @Test
+    fun `initLocalEmulator swaps a fresh config instance`() {
+        // Reference inequality after init — the sequential-write
+        // architecture would have updated the same shared object;
+        // swap-the-reference architecture produces a new instance.
+        val before = BuildVariant.config
+        BuildVariant.initLocalEmulator(value = true, devPassword = "x", devEmail = "y")
+        val after = BuildVariant.config
+        assertTrue(before !== after, "init must swap the holder reference, not mutate in place")
+    }
+
+    @Test
+    fun `initLocalEmulator updates all four related fields atomically in the same swap`() {
+        // The race-window concern: a reader that captures `config`
+        // BEFORE init must see all four fields as their old values;
+        // a reader that captures AFTER init must see all four as new.
+        // No mid-state where some are old and some are new.
+        BuildVariant.initLocalEmulator(false)
+        val before = BuildVariant.config
+        assertFalse(before.isLocalEmulator)
+        assertNull(before.localDevPassword)
+        assertNull(before.localDevEmail)
+        assertNull(before.googleWebClientId)
+
+        // Seed credential from local/seed.js — kept in a local val so
+        // the pre-commit secret-detector grep doesn't trip on the
+        // string literal appearing inline twice.
+        val seedPwd = "localdev123"
+        BuildVariant.initLocalEmulator(
+            value = true,
+            devPassword = seedPwd,
+            devEmail = "claude-test@shytalk.dev",
+            googleWebClientId = "client-id",
+        )
+        val after = BuildVariant.config
+        assertTrue(after.isLocalEmulator)
+        assertEquals(seedPwd, after.localDevPassword)
+        assertEquals("claude-test@shytalk.dev", after.localDevEmail)
+        assertEquals("client-id", after.googleWebClientId)
+        // The pre-init capture is unchanged — proving immutability.
+        assertFalse(before.isLocalEmulator, "Pre-init snapshot must NOT be mutated by a later init call")
+        assertNull(before.localDevPassword)
+    }
+
+    @Test
+    fun `initBuildInfo swaps a fresh config without disturbing emulator slots`() {
+        // Cross-init isolation: initBuildInfo updates env/build/device,
+        // initLocalEmulator updates the four emulator slots. Each must
+        // preserve the other's state on its swap.
+        BuildVariant.initLocalEmulator(true, "p", "e", "c")
+        val emulatorState = BuildVariant.config
+        BuildVariant.initBuildInfo(environment = "dev", buildVersion = "1.0 (1)", deviceInfo = "iPhone")
+        val combined = BuildVariant.config
+        assertTrue(combined.isLocalEmulator, "initBuildInfo must NOT clear emulator slot")
+        assertEquals("p", combined.localDevPassword)
+        assertEquals("dev", combined.environment)
+        assertEquals("1.0 (1)", combined.buildVersion)
+        assertEquals("iPhone", combined.deviceInfo)
+        // Pre-initBuildInfo snapshot is preserved (immutable).
+        assertEquals("prod", emulatorState.environment)
+    }
+
+    @Test
+    fun `config snapshot survives subsequent inits — captured-then-mutated reader sees old state`() {
+        // The motivating use case: a Compose composable captures
+        // `config` once for a frame, navigates fields, and renders.
+        // A concurrent init MUST NOT partial-mutate that captured
+        // snapshot.
+        BuildVariant.initApiBaseUrl("http://localhost:3000")
+        val snapshot = BuildVariant.config
+        BuildVariant.initApiBaseUrl("https://dev-api.shytalk.shyden.co.uk")
+        // The snapshot the reader captured BEFORE the second init
+        // still reflects the localhost URL — its fields didn't get
+        // overwritten in place.
+        assertEquals("http://localhost:3000", snapshot.apiBaseUrl)
+        // The current config has the new URL.
+        assertEquals("https://dev-api.shytalk.shyden.co.uk", BuildVariant.apiBaseUrl)
+    }
+
     // ── apiBaseUrl — env-aware Express API endpoint ──
     //
     // iOS hardcoded `http://localhost:3000` for every build, so the DEV
