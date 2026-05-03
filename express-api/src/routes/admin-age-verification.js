@@ -52,6 +52,7 @@ const router = express.Router();
 const { db } = require('../utils/firebase');
 const r2 = require('../utils/r2');
 const audit = require('../utils/age-verification-audit');
+const systemPm = require('../utils/age-verification-system-pm');
 const { now } = require('../utils/helpers');
 const log = require('../utils/log');
 const { requireAdmin } = require('../middleware/auth');
@@ -90,12 +91,25 @@ async function writeAuditBestEffort(action, submissionId, payload) {
     await action(db, payload);
     return true;
   } catch (err) {
-    // The decision is already committed in Firestore. An audit-log
-    // failure means the compliance trail is incomplete. Logged with
-    // submissionId so ops can locate the decision and back-fill.
     log.error('admin-age-verification', 'Audit-log write failed', {
       submissionId,
       payload,
+      error: err?.message,
+    });
+    return false;
+  }
+}
+
+async function sendPmBestEffort(action, submissionId, args) {
+  // Same partial-failure shape as audit / R2 — a failed PM doesn't
+  // roll back the decision. Surfaced via the response so the admin
+  // UI can flag "decision committed, user not notified".
+  try {
+    await action(...args);
+    return true;
+  } catch (err) {
+    log.error('admin-age-verification', 'System PM send failed', {
+      submissionId,
       error: err?.message,
     });
     return false;
@@ -179,8 +193,12 @@ router.post('/admin/age-verification/:id/approve', async (req, res) => {
       targetUserId: submission.userId,
       method: submission.idMethod,
     });
+    const userNotified = await sendPmBestEffort(systemPm.sendAgeVerificationApprovedPm, id, [
+      submission.userId,
+      submission.idMethod,
+    ]);
 
-    return res.json({ ok: true, imageDeleted, auditWritten });
+    return res.json({ ok: true, imageDeleted, auditWritten, userNotified });
   } catch (err) {
     log.error('admin-age-verification', `${errorId} failed`, { id, error: err?.message });
     return res.status(500).json({ error: 'Failed to approve submission', errorId });
@@ -233,8 +251,12 @@ router.post('/admin/age-verification/:id/reject', async (req, res) => {
       targetUserId: submission.userId,
       reason,
     });
+    const userNotified = await sendPmBestEffort(systemPm.sendAgeVerificationRejectedPm, id, [
+      submission.userId,
+      reason,
+    ]);
 
-    return res.json({ ok: true, imageDeleted, auditWritten });
+    return res.json({ ok: true, imageDeleted, auditWritten, userNotified });
   } catch (err) {
     log.error('admin-age-verification', `${errorId} failed`, { id, error: err?.message });
     return res.status(500).json({ error: 'Failed to reject submission', errorId });
@@ -317,12 +339,21 @@ router.post('/admin/age-verification/:id/modify-dob', async (req, res) => {
       newDob,
       reason,
     });
+    const userNotified = await sendPmBestEffort(systemPm.sendAgeVerificationDobModifiedPm, id, [
+      submission.userId,
+      {
+        ageVerified: isAtLeast18FromDob(newDob),
+        method: submission.idMethod,
+        reason,
+      },
+    ]);
 
     return res.json({
       ok: true,
       ageVerified: isAtLeast18FromDob(newDob),
       imageDeleted,
       auditWritten,
+      userNotified,
     });
   } catch (err) {
     log.error('admin-age-verification', `${errorId} failed`, { id, error: err?.message });

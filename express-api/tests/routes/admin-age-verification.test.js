@@ -81,6 +81,15 @@ jest.mock('../../src/utils/age-verification-audit', () => {
   };
 });
 
+const mockSendApprovedPm = jest.fn().mockResolvedValue();
+const mockSendRejectedPm = jest.fn().mockResolvedValue();
+const mockSendDobModifiedPm = jest.fn().mockResolvedValue();
+jest.mock('../../src/utils/age-verification-system-pm', () => ({
+  sendAgeVerificationApprovedPm: (...args) => mockSendApprovedPm(...args),
+  sendAgeVerificationRejectedPm: (...args) => mockSendRejectedPm(...args),
+  sendAgeVerificationDobModifiedPm: (...args) => mockSendDobModifiedPm(...args),
+}));
+
 jest.mock('../../src/utils/helpers', () => ({
   now: () => 1709913600000,
 }));
@@ -161,7 +170,7 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
     });
   });
 
-  test('flips ageVerified=true on user, marks submission approved, deletes image, writes audit', async () => {
+  test('flips ageVerified=true on user, marks submission approved, deletes image, writes audit, sends PM', async () => {
     const app = createApp();
     await request(app)
       .post('/api/admin/age-verification/sub-1/approve')
@@ -197,6 +206,8 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
         method: 'passport',
       }),
     );
+    // User notified via system PM
+    expect(mockSendApprovedPm).toHaveBeenCalledWith('10000050', 'passport');
   });
 
   test('rejects when submission is not pending (already decided)', async () => {
@@ -269,6 +280,19 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
       .send({ reason: 'ok' })
       .expect(200);
     expect(res.body).toMatchObject({ ok: true, imageDeleted: false });
+  });
+
+  test('returns userNotified=false flag when system PM fails (decision still committed)', async () => {
+    // Same partial-failure shape as audit / R2 — failed PM doesn't
+    // roll back the decision; admin UI surfaces "decision committed,
+    // user not notified" so ops can DM the user manually.
+    mockSendApprovedPm.mockRejectedValue(new Error('conversations write rejected'));
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/admin/age-verification/sub-1/approve')
+      .send({ reason: 'ok' })
+      .expect(200);
+    expect(res.body).toMatchObject({ ok: true, userNotified: false });
   });
 });
 
