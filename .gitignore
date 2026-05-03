@@ -81,6 +81,11 @@ firebase-export-*/
 apple-edit-profile.png
 apple-signin.png
 
+# Generator output for the gh-pages Allure landing — built by
+# `scripts/generate-allure-landing.js` and deployed by the
+# allure-report workflow. Should never be committed on main.
+gh-pages/
+
 # Test results
 test-results/
 allure-results/
