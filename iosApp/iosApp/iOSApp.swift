@@ -52,20 +52,62 @@ struct iOSApp: App {
         // with a K/N CPointer cast bug (PR #406, reverted by 043cdf47ce).
         // See `project-ios-device-id-revert-rca.md`.
         let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        // PreviewWatermark inputs — version + build come from Info.plist
+        // (CFBundleShortVersionString = "1.2.3", CFBundleVersion = "456"),
+        // device label from UIDevice. The Kotlin side decides whether to
+        // render the watermark based on `environment != "prod"`.
+        let appShortVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "?"
+        let appBuildNumber = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? "?"
+        let buildVersion = "\(appShortVersion) (\(appBuildNumber))"
+        let deviceInfo = "\(UIDevice.current.model) · iOS \(UIDevice.current.systemVersion)"
+        // Local builds talk to the dockerised emulator stack on the dev
+        // laptop. apiBaseUrl is the Express API endpoint — the device
+        // accesses it via `adb reverse` (Android) / direct localhost
+        // (iOS Simulator). googleWebClientId is unused on local because
+        // the Google Sign-In button is hidden against the emulator (no
+        // real Google OAuth client wired up to the demo project).
         KoinHelperKt.doInitKoin(
             useEmulators: true,
             devSignInPassword: emulatorSeed,
             devSignInEmail: emulatorEmail,
-            deviceId: deviceId
+            deviceId: deviceId,
+            environment: "local",
+            buildVersion: buildVersion,
+            deviceInfo: deviceInfo,
+            apiBaseUrl: "http://localhost:3000",
+            googleWebClientId: nil
         )
         #else
         FirebaseApp.configure()
         let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let appShortVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "?"
+        let appBuildNumber = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? "?"
+        let buildVersion = "\(appShortVersion) (\(appBuildNumber))"
+        let deviceInfo = "\(UIDevice.current.model) · iOS \(UIDevice.current.systemVersion)"
+        // Release builds default to dev — the App Store / TestFlight
+        // distribution targets are dev for now (prod app is a separate
+        // bundle ID flow that doesn't yet exist). When the prod target
+        // ships, switch the Release env to "prod" by config rather than
+        // by `#if DEBUG`, and update apiBaseUrl + googleWebClientId to
+        // their prod values (mirrors Android's per-flavour BuildConfig).
+        //
+        // googleWebClientId is the WEB OAuth client ID for the
+        // shytalk-dev Firebase project — Android passes the same value
+        // via BuildConfig.WEB_CLIENT_ID for CredentialManager. Without
+        // this server-client-ID, GoogleSignIn iOS SDK 9.x returns
+        // tokens that may not be accepted by Firebase Auth's
+        // signInWithCredential, surfacing as a "no idToken" failure on
+        // the user side.
         KoinHelperKt.doInitKoin(
             useEmulators: false,
             devSignInPassword: nil,
             devSignInEmail: nil,
-            deviceId: deviceId
+            deviceId: deviceId,
+            environment: "dev",
+            buildVersion: buildVersion,
+            deviceInfo: deviceInfo,
+            apiBaseUrl: "https://dev-api.shytalk.shyden.co.uk",
+            googleWebClientId: "881846974606-kv99pjv92i6me0emb2j3uacbhnqqvfj4.apps.googleusercontent.com"
         )
         #endif
         setupGoogleSignIn()

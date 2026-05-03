@@ -602,6 +602,14 @@ async function deleteTestData(testRunId) {
 
 // POST /api/test/clear/:collection — delete all documents in a collection.
 // Used by Playwright global-setup to clear test-generated data between runs.
+//
+// `reports` and `suspensionAppeals` are clearable because untagged
+// reports/appeals from earlier test runs (created via `POST /api/reports`
+// before the test helpers were updated to use `testWrite` with
+// `_testRun`) accumulate as orphaned data with `data-uid="undefined"`
+// (the reported user has been torn down) and silently break selectors
+// like `.report-card.first()` in admin-cross-tab and admin-appeals
+// tests.
 const CLEARABLE_COLLECTIONS = new Set([
   'suggestions',
   'notifications',
@@ -610,6 +618,8 @@ const CLEARABLE_COLLECTIONS = new Set([
   'adminAuditLog',
   'blockedTopics',
   'funFacts',
+  'reports',
+  'suspensionAppeals',
 ]);
 
 router.post('/test/clear/:collection', async (req, res) => {

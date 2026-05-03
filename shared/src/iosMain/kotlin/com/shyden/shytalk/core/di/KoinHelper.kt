@@ -38,14 +38,33 @@ fun doInitKoin(
     devSignInPassword: String? = null,
     devSignInEmail: String? = null,
     deviceId: String? = null,
+    environment: String = "prod",
+    buildVersion: String = "?",
+    deviceInfo: String = "?",
+    apiBaseUrl: String? = null,
+    googleWebClientId: String? = null,
 ) {
     BuildVariant.initLocalEmulator(
         value = useEmulators,
         devPassword = devSignInPassword,
         devEmail = devSignInEmail,
-        // iOS uses Firebase's bundled clientID via FirebaseApp.app().options
-        // — the Android-only CredentialManager webClientId is not needed.
-        googleWebClientId = null,
+        // GoogleSignIn iOS SDK 9.x can take a `serverClientID` alongside
+        // the iOS clientID — without it, the issued token's audience is
+        // the iOS OAuth client only, and Firebase Auth's
+        // signInWithCredential rejects it on some configurations. Passing
+        // the same web client ID Android uses (per-flavour BuildConfig
+        // value, mirrored from Swift) makes Firebase happy. nil on local
+        // (no real Google flow against emulator).
+        googleWebClientId = googleWebClientId,
+    )
+    // Drives the PreviewWatermark overlay — non-prod iOS builds get a
+    // "ShyTalk Preview" badge on every screen so leaked screenshots
+    // are unmistakably staging. Swift forwards `"local"` for `#if DEBUG`
+    // and `"prod"` (or whatever the user-facing env is) for Release.
+    BuildVariant.initBuildInfo(
+        environment = environment,
+        buildVersion = buildVersion,
+        deviceInfo = deviceInfo,
     )
     // Eagerly persist the iOS deviceId before any Firebase / Koin
     // resolution. PR #406 attempted lazy `UIDevice.identifierForVendor`
@@ -54,6 +73,13 @@ fun doInitKoin(
     // `project-ios-device-id-revert-rca.md`. Eager Swift-side compute +
     // BuildVariant slot avoids the K/N + GitLive Firebase init race.
     BuildVariant.initIosDeviceId(deviceId)
+    // API base URL must be set BEFORE startKoin runs — IosPlatformModule's
+    // `single { IosApiClient(...) }` factory reads BuildVariant.apiBaseUrl
+    // and fail-closes via `?: error(...)` if it's null. Without this slot
+    // populated, every `POST /api/identity/resolve` after sign-in tried
+    // localhost:3000 from real iPhones and locked the user on "Unable to
+    // connect".
+    BuildVariant.initApiBaseUrl(apiBaseUrl)
     if (KoinPlatformTools.defaultContext().getOrNull() != null) {
         logI("KoinHelper", "Koin already initialised — skipping")
         return

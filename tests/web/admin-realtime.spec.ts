@@ -24,17 +24,26 @@ async function filterPendingReports(page: Page): Promise<void> {
   await waitForReportsLoaded(page);
 }
 
-/** Seed a report via API — reports secondUser (not the fixture user) to create a new card. */
+/**
+ * Seed a report via the test-write endpoint so the doc is tagged with
+ * `_testRun` and the per-test teardown picks it up. See the same helper
+ * in admin-cross-tab.spec.ts for the rationale (orphaned reports from
+ * untagged `POST /api/reports` calls accumulate at the top of the
+ * Reports tab as `data-uid="undefined"` cards).
+ */
 async function seedReport(testData: TestData): Promise<string> {
-  const result = await testData.api.post('/api/reports', {
+  const result = await testData.api.testWrite('reports', {
     reportedUserId: testData.secondUser.uid,
     reportedUserUniqueId: testData.secondUser.uniqueId,
     reporterId: testData.user.uid,
     reporterUniqueId: testData.user.uniqueId,
     reason: 'Spam',
     description: 'E2E realtime test',
+    status: 'pending',
+    createdAt: Date.now(),
+    _testRun: testData.testRunId,
   });
-  return result.id || result.reportId;
+  return result.id;
 }
 
 /** Wait for logs to load. */

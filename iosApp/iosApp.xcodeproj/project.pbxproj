@@ -30,11 +30,13 @@
 		A10001012600000000000021 /* StartingScreenCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000021 /* StartingScreenCacheTests.swift */; };
 		A10001012600000000000022 /* StartingScreenViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000022 /* StartingScreenViewTests.swift */; };
 		A10001012600000000000023 /* StartingScreenCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000023 /* StartingScreenCoordinatorTests.swift */; };
+		A10001012600000000000024 /* GoogleSignInHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001002600000000000024 /* GoogleSignInHelperTests.swift */; };
 		B730411FA36F2ECB9E56182C /* LiveKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */; };
 		C0DD48EFA35A27E6DE3FF992 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 27B546F78FF904CF3A1203A3 /* GoogleService-Info.plist */; };
 		CC7F41EE90273AC8C670F9E0 /* LiveKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */; };
+		E1B5C2D49A3F8E7B6C4D1A02 /* StoreKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A4F7B83C8E1F2D5B6A9C01 /* StoreKitBridge.swift */; };
+		E1B5C2D49A3F8E7B6C4D1A03 /* StoreKitBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A4F7B83C8E1F2D5B6A9C01 /* StoreKitBridge.swift */; };
 		DFFC47D68E0648FF823F0574 /* GoogleSignInHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3441E4A3689761DFC9CF90 /* GoogleSignInHelper.swift */; };
-		F75B4ECEB8B107ED07E36BE5 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5B3F476BAA9E046270D4248E /* Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,10 +76,12 @@
 		A10001002600000000000021 /* StartingScreenCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartingScreenCacheTests.swift; sourceTree = "<group>"; };
 		A10001002600000000000022 /* StartingScreenViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartingScreenViewTests.swift; sourceTree = "<group>"; };
 		A10001002600000000000023 /* StartingScreenCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartingScreenCoordinatorTests.swift; sourceTree = "<group>"; };
+		A10001002600000000000024 /* GoogleSignInHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInHelperTests.swift; sourceTree = "<group>"; };
 		A10003002600000000000001 /* iosAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4194D2DAF7801EEB19415A3 /* StartingScreenCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreenCache.swift; path = iosApp/feature/starting/StartingScreenCache.swift; sourceTree = SOURCE_ROOT; };
 		BE254B9C06195293860934D8 /* iosApp.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = iosApp.entitlements; path = iosApp/iosApp.entitlements; sourceTree = SOURCE_ROOT; };
 		E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveKitBridge.swift; path = iosApp/LiveKitBridge.swift; sourceTree = SOURCE_ROOT; };
+		D0A4F7B83C8E1F2D5B6A9C01 /* StoreKitBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StoreKitBridge.swift; path = iosApp/StoreKitBridge.swift; sourceTree = SOURCE_ROOT; };
 		F6914C8FB414C2D00F27D96C /* StartingScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreen.swift; path = iosApp/feature/starting/StartingScreen.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -111,6 +115,7 @@
 				032EDB9B046ECB142E47395B /* Frameworks */,
 				0B3441E4A3689761DFC9CF90 /* GoogleSignInHelper.swift */,
 				E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */,
+				D0A4F7B83C8E1F2D5B6A9C01 /* StoreKitBridge.swift */,
 				F6914C8FB414C2D00F27D96C /* StartingScreen.swift */,
 				A4194D2DAF7801EEB19415A3 /* StartingScreenCache.swift */,
 				0259442BA0EB1D29F51D11FF /* StartingScreenCoordinator.swift */,
@@ -153,6 +158,7 @@
 				A10001002600000000000021 /* StartingScreenCacheTests.swift */,
 				A10001002600000000000022 /* StartingScreenViewTests.swift */,
 				A10001002600000000000023 /* StartingScreenCoordinatorTests.swift */,
+				A10001002600000000000024 /* GoogleSignInHelperTests.swift */,
 			);
 			path = iosAppTests;
 			sourceTree = "<group>";
@@ -302,7 +308,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0DD48EFA35A27E6DE3FF992 /* GoogleService-Info.plist in Resources */,
-				F75B4ECEB8B107ED07E36BE5 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -399,6 +404,7 @@
 				A10001012600000000000005 /* StartingScreenCoordinator.swift in Sources */,
 				4BAC4643AF77198FAA4511FA /* GoogleSignInHelper.swift in Sources */,
 				CC7F41EE90273AC8C670F9E0 /* LiveKitBridge.swift in Sources */,
+				E1B5C2D49A3F8E7B6C4D1A02 /* StoreKitBridge.swift in Sources */,
 				336672D1F166200A14293D3C /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -411,8 +417,10 @@
 				A10001012600000000000021 /* StartingScreenCacheTests.swift in Sources */,
 				A10001012600000000000022 /* StartingScreenViewTests.swift in Sources */,
 				A10001012600000000000023 /* StartingScreenCoordinatorTests.swift in Sources */,
+				A10001012600000000000024 /* GoogleSignInHelperTests.swift in Sources */,
 				DFFC47D68E0648FF823F0574 /* GoogleSignInHelper.swift in Sources */,
 				B730411FA36F2ECB9E56182C /* LiveKitBridge.swift in Sources */,
+				E1B5C2D49A3F8E7B6C4D1A03 /* StoreKitBridge.swift in Sources */,
 				115345A7BFC5B39CE7E9C4A3 /* StartingScreen.swift in Sources */,
 				9C8F4EE19FFC3BA19250BF8C /* StartingScreenCache.swift in Sources */,
 				2BB749AEBFC35FADE18D2078 /* StartingScreenCoordinator.swift in Sources */,

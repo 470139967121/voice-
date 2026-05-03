@@ -65,9 +65,21 @@ backups/
 # iOS / Xcode
 iosApp/iosApp.xcodeproj/xcuserdata/
 iosApp/iosApp.xcodeproj/project.xcworkspace/xcuserdata/
+iosApp/iosApp.xcworkspace/xcuserdata/
 iosApp/DerivedData/
 iosApp/Pods/
 *.xcarchive
+*.xcuserstate
+
+# Local Firebase emulator exports (manual `firebase emulators:export` output)
+firebase-export-*/
+
+# Claude Code session-local state
+.claude/scheduled_tasks.lock
+
+# Investigation screenshots that don't belong in source
+apple-edit-profile.png
+apple-signin.png
 
 # Test results
 test-results/

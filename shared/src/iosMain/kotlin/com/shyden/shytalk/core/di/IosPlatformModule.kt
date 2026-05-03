@@ -84,12 +84,24 @@ val iosPlatformModule =
         single<FirebaseFirestore> { Firebase.firestore }
         single<FirebaseDatabase> { Firebase.database }
 
-        // API client (Express.js backend)
+        // API client (Express.js backend). baseUrl is per-environment,
+        // pre-populated from Swift via `KoinHelper.doInitKoin(apiBaseUrl)`:
+        //   local  → http://localhost:3000
+        //   dev    → https://dev-api.shytalk.shyden.co.uk
+        //   prod   → https://api.shytalk.shyden.co.uk
+        // The `?: error(...)` gate trips loudly if Swift forgot to pass it,
+        // surfacing as a Koin DI failure at app launch rather than every
+        // post-sign-in API call silently posting to nowhere (which is what
+        // the previous hardcoded localhost:3000 did on TestFlight).
         single {
-            IosApiClient(
-                baseUrl = "http://localhost:3000",
-                deviceId = get(named("deviceId")),
-            )
+            val baseUrl =
+                BuildVariant.apiBaseUrl
+                    ?: error(
+                        "BuildVariant.apiBaseUrl not set — iOSApp.swift must call " +
+                            "KoinHelper.doInitKoin(apiBaseUrl:) with the env-specific URL " +
+                            "(http://localhost:3000 for local, https://dev-api.shytalk.shyden.co.uk for dev, etc.)",
+                    )
+            IosApiClient(baseUrl = baseUrl, deviceId = get(named("deviceId")))
         }
 
         // Named qualifiers required by AuthViewModel.

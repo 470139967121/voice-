@@ -34,17 +34,26 @@ async function getReportStatsViaApi(testData: TestData, period = '7d'): Promise<
   return testData.api.get(`/api/reports/stats?period=${period}`);
 }
 
-/** Seed an additional report via API. */
+/**
+ * Seed an additional report via the test-write endpoint so the doc is
+ * tagged with `_testRun` and the per-test teardown picks it up. Going
+ * through the regular `POST /api/reports` path leaves the doc untagged
+ * and it accumulates as orphaned data ("Unknown user" cards at the top
+ * of the Reports tab) once the test user is torn down.
+ */
 async function seedReportViaApi(testData: TestData): Promise<string> {
-  const result = await testData.api.post('/api/reports', {
+  const result = await testData.api.testWrite('reports', {
     reportedUserId: testData.user.uid,
     reportedUserUniqueId: testData.user.uniqueId,
     reporterId: testData.secondUser.uid,
     reporterUniqueId: testData.secondUser.uniqueId,
     reason: 'Spam',
     description: 'E2E seeded report',
+    status: 'pending',
+    createdAt: Date.now(),
+    _testRun: testData.testRunId,
   });
-  return result.id || result.reportId;
+  return result.id;
 }
 
 /** Unsuspend user and reset GCS. */
@@ -198,8 +207,17 @@ test.describe('Admin Reports', () => {
     const actionSelect = firstCard.locator(`select[data-action-select="${uid}"]`);
     await actionSelect.selectOption('warn');
 
-    // Select severity 2 (radio inputs are display:none, click the label instead)
-    await firstCard.locator(`label[for="sev-${uid}-2"]`).click();
+    // Select severity 2. Radio inputs are display:none in the .severity-radio
+    // markup — Playwright's label click does NOT trigger the native form-
+    // checked behaviour on the hidden input, so the radio stays unchecked
+    // and the resolve handler defaults to severity 1
+    // (`reports.js:694` falls back to 1 when no input is `:checked`).
+    // Set `checked` and dispatch `change` directly so the chosen severity
+    // is actually applied.
+    await firstCard.locator(`input[name="sev-${uid}"][value="2"]`).evaluate((el: HTMLInputElement) => {
+      el.checked = true;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     // Click Resolve Latest
     const resolveBtn = firstCard.locator(`button[data-resolve-first="${uid}"]`);

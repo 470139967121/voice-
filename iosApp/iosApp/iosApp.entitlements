@@ -21,5 +21,19 @@
 	-->
 	<key>aps-environment</key>
 	<string>production</string>
+	<!--
+	    com.apple.developer.applesignin enables Sign In with Apple via
+	    ASAuthorizationController. Without this key, performRequests()
+	    returns immediately with an error and no token, so the Apple
+	    Sign-In sheet never finishes loading from the user's perspective —
+	    DEV TestFlight builds were affected by this exact regression.
+	    "Default" is the standard value for a first-party app — Apple's
+	    docs reserve other values for sibling-app scenarios that don't
+	    apply here.
+	-->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

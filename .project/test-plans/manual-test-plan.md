@@ -2341,3 +2341,144 @@ These cases prove the policy gates inside `ChatRoom.canKickUser/canRemoveFromSea
 - **Expected**: Step 1: invite sent (FCM push fires). Step 2: invite UI not exposed / rejected.
 - **Priority**: P1
 
+## 34. Apple StoreKit Purchases + Refund Webhook (B6.10)
+
+These tests cover the iOS StoreKit 2 purchase flow (B6.10b) and the
+Apple App Store Server Notifications V2 webhook for refunds, revokes,
+expiries, and renewals (B6.10c). Local + dev MUST simulate purchases
+without real charges (StoreKit Configuration File on iOS, Play Store
+license testing on Android); only prod settles real money.
+
+### TC-294: iOS coin-pack purchase via StoreKit -> receipt persisted with coinsGranted
+- **Area**: Apple StoreKit purchase + receipt schema
+- **Platform**: iOS Simulator (or physical device with sandbox account)
+- **Steps**: 1. Open Wallet on iOS app, buy a coin pack via StoreKit Configuration File (no real charge). 2. Backend `/api/economy/purchase` called with `platform: 'apple'` and JWS receipt. 3. Inspect Firestore `purchaseReceipts/{receiptId}` doc.
+- **Expected**: Receipt doc has `platform: 'apple'`, `isSubscription: false`, `coinsGranted: <pack.coins>`, `bonusCoinsGranted: <pack.bonusCoins||0>`, `orderId: <verified transactionId>`, `verified: true`. User's `shyCoins` increases by `coinsGranted + bonusCoinsGranted`.
+- **Priority**: P0
+
+### TC-295: iOS subscription purchase via StoreKit -> receipt persisted with tierGranted
+- **Area**: Apple subscription purchase
+- **Platform**: iOS Simulator
+- **Steps**: 1. Open SuperShy bottom sheet, buy `super_shy_monthly`. 2. Backend grants subscription. 3. Inspect Firestore receipt.
+- **Expected**: Receipt has `isSubscription: true`, `tierGranted: 'monthly'`, `daysGranted: 30`, `orderId`. User `isSuperShy: true`, `superShyTier: 'monthly'`, `superShyExpiry` set ~30 days ahead.
+- **Priority**: P0
+
+### TC-296: Apple webhook -- POST /api/apple-notifications/v2 is NOT auth-gated
+- **Area**: Webhook auth bypass (B6.10c showstopper)
+- **Platform**: Backend / curl
+- **Steps**: 1. `curl -X POST http://localhost:3000/api/apple-notifications/v2 -H "Content-Type: application/json" -d '{}'`.
+- **Expected**: HTTP 400 `{"error":"signedPayload required"}`. NOT 401 (auth middleware would block Apple's notifications without this skip).
+- **Priority**: P0
+
+### TC-297: Apple webhook -- bad JWS signature returns 400 (no DB writes)
+- **Area**: JWS verification fail-closed
+- **Platform**: Backend / curl
+- **Steps**: 1. `curl -X POST .../apple-notifications/v2 -d '{"signedPayload":"invalid"}'`. 2. Check Firestore `appleNotifications` collection.
+- **Expected**: HTTP 400 `{"error":"Invalid notification signature"}`. No dedupe row written. No state mutation.
+- **Priority**: P0
+
+### TC-298: Apple webhook -- duplicate notificationUUID is deduped
+- **Area**: Webhook idempotency
+- **Platform**: Backend (sandbox notification or fixture)
+- **Steps**: 1. Apple sends a notification with `notificationUUID=X`. 2. Apple retries with same UUID.
+- **Expected**: First request: HTTP 200, side effect applied, dedupe row written. Second request: HTTP 200 `{"ok":true,"deduped":true}` immediately, no side effect re-applied.
+- **Priority**: P0
+
+### TC-299: Apple webhook -- REFUND coin pack reverses coins from receipt (not live config)
+- **Area**: Money-safe refund reversal
+- **Platform**: Backend
+- **Steps**: 1. User purchases medium_pack (gets 500 coins). 2. Admin changes `coinPackages.medium_pack.coins` to 600 in Firestore. 3. Apple sends REFUND notification. 4. Inspect user's `shyCoins` and the REFUND transaction row.
+- **Expected**: User loses exactly 500 coins (the original `receipt.coinsGranted`), NOT 600 (today's config). REFUND tx row has `amount: -500`, `originOrderId: <transactionId>`. Dedupe row written atomically.
+- **Priority**: P0
+
+### TC-300: Apple webhook -- REFUND subscription clears entitlement immediately
+- **Area**: Subscription refund
+- **Platform**: Backend
+- **Steps**: 1. User has active SuperShy monthly subscription. 2. Apple sends REFUND notification.
+- **Expected**: `isSuperShy: false`, `superShyExpiry: null`, `superShyTier: null`. REFUND tx row written with `details: "Subscription refund: Super Shy monthly"`. Dedupe row written atomically.
+- **Priority**: P0
+
+### TC-301: Apple webhook -- REVOKE behaves identically to REFUND
+- **Area**: Family-share revoke handling
+- **Platform**: Backend
+- **Steps**: Send REVOKE notification for a coin-pack purchase.
+- **Expected**: Same reversal as REFUND -- coins clawed back from receipt, REFUND tx row, dedupe written atomically.
+- **Priority**: P0
+
+### TC-302: Apple webhook -- orphan refund (no matching receipt) -> alert + worklist + dedupe
+- **Area**: Orphan-refund operator visibility
+- **Platform**: Backend
+- **Steps**: 1. Apple sends REFUND for a `transactionId` we have no `purchaseReceipt` for (e.g., a pre-B6.10 purchase, or receipt write failed silently). 2. Check `orphanRefunds` collection, alerts, dedupe.
+- **Expected**: HTTP 200. `orphanRefunds/{notificationUUID}` doc created with `orderId`, `productId`, `notificationType`, `resolved: false`. Critical-style alert fired (`orphan_refund`, severity high). Dedupe row written so Apple stops retrying. Admin panel can list these for manual resolution.
+- **Priority**: P0
+
+### TC-303: Apple webhook -- REFUND_REVERSED -> critical alert + worklist (no auto-restore)
+- **Area**: Charge-back / dispute reversal
+- **Platform**: Backend
+- **Steps**: Apple sends REFUND_REVERSED.
+- **Expected**: HTTP 200. `pendingRefundReversals/{notificationUUID}` doc created. `refund_reversed` critical alert fired. NO automatic re-grant -- entitlement restoration is delegated to ops. Dedupe row written.
+- **Priority**: P0
+
+### TC-304: Apple webhook -- EXPIRED clears subscription state
+- **Area**: Subscription expiry
+- **Platform**: Backend
+- **Steps**: User has active sub. Apple sends EXPIRED.
+- **Expected**: `isSuperShy/Expiry/Tier` all cleared. Dedupe row written atomically. No REFUND tx row (no money moved).
+- **Priority**: P1
+
+### TC-305: Apple webhook -- DID_FAIL_TO_RENEW + GRACE_PERIOD_EXPIRED also clear entitlement
+- **Area**: Renewal-failure paths
+- **Platform**: Backend
+- **Steps**: Send DID_FAIL_TO_RENEW, then GRACE_PERIOD_EXPIRED.
+- **Expected**: Both clear `isSuperShy` etc. Each writes its own dedupe row.
+- **Priority**: P1
+
+### TC-306: Apple webhook -- CONSUMPTION_REQUEST fires high alert (12h SLA)
+- **Area**: Consumption-decision request
+- **Platform**: Backend
+- **Steps**: Apple sends CONSUMPTION_REQUEST.
+- **Expected**: HTTP 200 ack. `consumption_request` high alert fired ("must respond within 12h or Apple auto-decides"). Dedupe row written.
+- **Priority**: P1
+
+### TC-307: Apple webhook -- TEST notification ack'd cleanly
+- **Area**: Sandbox test notification
+- **Platform**: Backend / App Store Connect "Send test notification"
+- **Steps**: Trigger TEST from App Store Connect.
+- **Expected**: HTTP 200, log-only ("Received TEST notification"), dedupe row written, NO alerts.
+- **Priority**: P1
+
+### TC-308: Apple webhook -- crash returns 500 (Apple retries) + critical alert
+- **Area**: Failure-mode visibility
+- **Platform**: Backend
+- **Steps**: Trigger a crash (e.g., kill Firestore emulator mid-handler).
+- **Expected**: HTTP 500. `apple_notification_crash` critical alert fired with `notificationUUID`, `notificationType`, stack trace. Logger-throw wrapped in try/catch so response always sends. Atomic batch guarantees no partial side effect.
+- **Priority**: P0
+
+### TC-309: Apple webhook -- concurrent retry race resolved by transaction
+- **Area**: Read-then-write race
+- **Platform**: Backend (concurrent curl)
+- **Steps**: 1. Send same notification twice in parallel via two curl processes (simulates Apple timeout + retry within ms).
+- **Expected**: Only ONE side effect applied (Firestore transaction serialises the inside-tx dedupe check). Second request short-circuits with no double-debit. User's coin balance reflects exactly one refund.
+- **Priority**: P0
+
+### TC-310: Firestore rules -- new collections (appleNotifications/orphanRefunds/pendingRefundReversals) reject client writes
+- **Area**: Server-only collection safety
+- **Platform**: Firestore Emulator UI / Web SDK
+- **Steps**: 1. As a regular user, attempt to write to `appleNotifications/test`, `orphanRefunds/test`, `pendingRefundReversals/test` via Firestore Web SDK.
+- **Expected**: All writes rejected with `permission-denied`. Reads on `orphanRefunds` + `pendingRefundReversals` succeed only when admin claim is present; reads on `appleNotifications` are always rejected.
+- **Priority**: P0
+
+### TC-311: APPLE_APP_STORE_APP_ID env var enforcement in PROD
+- **Area**: Verifier configuration fail-closed
+- **Platform**: Backend (deploy)
+- **Steps**: Boot Express with `APPLE_APP_STORE_ENV=production` and `APPLE_APP_STORE_APP_ID` unset.
+- **Expected**: First call to verifyApplePurchase or verifyAppleNotification throws "APPLE_APP_STORE_APP_ID environment variable is required when APPLE_APP_STORE_ENV=production". Sandbox unaffected.
+- **Priority**: P0
+
+### TC-312: Local + Dev MUST NOT charge real money on either platform
+- **Area**: Environment isolation for purchases (Android + iOS symmetric)
+- **Platform**: Both
+- **Steps**: 1. iOS Simulator + Android local: complete purchase flow. 2. Inspect: was a real card charged? 3. Verify backend skips Apple/Play verification in non-prod.
+- **Expected**: iOS uses StoreKit Configuration File (no real charge). Android uses Play license-test SKUs. Backend logs "Skipping purchase verification in non-production environment". Production-only path runs verifyApplePurchase / verifyProductPurchase with real signature checks.
+- **Priority**: P0
+

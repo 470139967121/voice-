@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * Cross-platform tests for the [GoogleSignInCancelledException] marker.
@@ -37,5 +38,60 @@ class GoogleSignInHelperTest {
         // toast-on-error split in SignInScreen.
         assertIs<GoogleSignInCancelledException>(cancelled)
         assertNotNull(generic.message)
+    }
+
+    // ─── GoogleSignInNoAccountException ───
+    //
+    // Distinct typed exception for the "no Google account on device"
+    // case. The user-visible message is intentionally actionable
+    // ("Add a Google account in Settings…") because SignInScreen
+    // forwards it to the snackbar verbatim — not the generic
+    // "Google sign-in failed" used for unrecoverable failures.
+
+    @Test
+    fun `no-account exception is throwable`() {
+        val e = GoogleSignInNoAccountException()
+        assertIs<Throwable>(e)
+    }
+
+    @Test
+    fun `no-account exception message is user-actionable`() {
+        // SignInScreen.kt line 339 forwards `e.message` straight to
+        // `snackbarHostState.showSnackbar`. The wording must remain
+        // actionable — pin the text so a future refactor doesn't
+        // accidentally drop the "in Settings" guidance and degrade
+        // the error UX.
+        val e = GoogleSignInNoAccountException()
+        val msg = e.message ?: ""
+        assertTrue(
+            msg.contains("Google account", ignoreCase = true),
+            "Message must mention Google account so the user knows which provider failed",
+        )
+        assertTrue(
+            msg.contains("Settings", ignoreCase = true),
+            "Message must direct the user to system Settings (the actionable fix)",
+        )
+    }
+
+    @Test
+    fun `no-account is distinct type from cancelled so SignInScreen catches them separately`() {
+        // SignInScreen.kt has a `catch (e: GoogleSignInNoAccountException)`
+        // arm BEFORE the generic catch — its surface differs (snackbar
+        // shows e.message instead of the localised "google_sign_in_failed"
+        // string). Pinning the type relationship guards against a
+        // future refactor that makes either inherit from the other and
+        // breaks the catch-order branching.
+        val noAccount: Throwable = GoogleSignInNoAccountException()
+        val cancelled: Throwable = GoogleSignInCancelledException()
+        assertIs<GoogleSignInNoAccountException>(noAccount)
+        assertIs<GoogleSignInCancelledException>(cancelled)
+        assertTrue(
+            noAccount !is GoogleSignInCancelledException,
+            "no-account must NOT match the cancelled catch arm",
+        )
+        assertTrue(
+            cancelled !is GoogleSignInNoAccountException,
+            "cancelled must NOT match the no-account catch arm",
+        )
     }
 }

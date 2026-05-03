@@ -53,6 +53,83 @@ object BuildVariant {
         private set
 
     /**
+     * Build environment: `"local"`, `"dev"`, or `"prod"`. Drives the
+     * `PreviewWatermark` overlay — any value other than `"prod"` shows
+     * the red "ShyTalk Preview" badge on every screen so screenshots
+     * accidentally shared from non-prod builds are unmistakable.
+     * Set once at boot via [initBuildInfo]. Defaults to `"prod"` so a
+     * misconfigured platform initialiser fails safe (false-positive
+     * watermarks on real prod erode trust in the signal more than a
+     * missed watermark on a dev build, which is visually obvious during
+     * development and self-corrects).
+     */
+    @kotlin.concurrent.Volatile
+    var environment: String = "prod"
+        private set
+
+    /**
+     * Human-readable build identifier shown in the watermark, e.g.
+     * `"1.2.3 (456)"`. Set once at boot via [initBuildInfo]. Defaults
+     * to `"?"` so an absent initialiser is visible at a glance rather
+     * than rendering as an empty badge.
+     */
+    @kotlin.concurrent.Volatile
+    var buildVersion: String = "?"
+        private set
+
+    /**
+     * Device label shown in the watermark, e.g. `"Pixel 6 · Android 14"`
+     * or `"iPhone 17 · iOS 26.4"`. Lets a screenshot reader trace a
+     * leak back to a specific physical device or simulator. Set once at
+     * boot via [initBuildInfo].
+     *
+     * Format is platform-defined:
+     * - Android: `"${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}"`
+     * - iOS: `"${UIDevice.model} · iOS ${UIDevice.systemVersion}"`
+     */
+    @kotlin.concurrent.Volatile
+    var deviceInfo: String = "?"
+        private set
+
+    /**
+     * Express API base URL — same pattern as deviceInfo above. Set once
+     * at boot via [initApiBaseUrl]. iOS used to hardcode localhost in
+     * `IosPlatformModule.kt`, locking TestFlight builds on "Unable to
+     * connect" after sign-in. Default `null` so a missing initialiser
+     * trips the Koin factory's `?: error(...)` instead of silently
+     * posting to a relative URL.
+     */
+    @kotlin.concurrent.Volatile
+    var apiBaseUrl: String? = null
+        private set
+
+    /**
+     * Convenience: any environment that isn't prod is a "preview"
+     * build. The PreviewWatermark composable / web overlay reads this
+     * to decide whether to render.
+     */
+    val isPreviewBuild: Boolean
+        get() = environment != "prod"
+
+    /**
+     * One-shot initialiser for the watermark slots. Called from
+     * platform entry points (Android `MainActivity.onCreate`, iOS
+     * `KoinHelper.doInitKoin`) before UI mounts. Empty/blank
+     * `environment` is coerced to `"prod"` for fail-safe behaviour;
+     * empty `buildVersion` / `deviceInfo` are coerced to `"?"` so a
+     * misconfigured initialiser is loud rather than silent.
+     */
+    fun initBuildInfo(
+        environment: String,
+        buildVersion: String,
+        deviceInfo: String = "",
+    ) {
+        this.environment = environment.takeIf { it.isNotBlank() } ?: "prod"
+        this.buildVersion = buildVersion.takeIf { it.isNotBlank() } ?: "?"
+        this.deviceInfo = deviceInfo.takeIf { it.isNotBlank() } ?: "?"
+    }
+
+    /**
      * One-shot initialiser called from platform entry points before UI mounts.
      * Public (rather than `internal`) so the `app` module's MainActivity (and
      * iOS's `KoinHelper.doInitKoin`) can invoke it; the named function makes
@@ -92,5 +169,16 @@ object BuildVariant {
      */
     fun initIosDeviceId(value: String?) {
         iosDeviceId = value?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * One-shot API base URL initialiser. Called from
+     * `KoinHelper.doInitKoin(apiBaseUrl = ...)` which is in turn called
+     * from Swift's `iOSApp.swift` with the env-specific URL. Empty/blank
+     * values coerce to null — see [apiBaseUrl] doc for the fail-closed
+     * rationale.
+     */
+    fun initApiBaseUrl(value: String?) {
+        apiBaseUrl = value?.takeIf { it.isNotBlank() }
     }
 }

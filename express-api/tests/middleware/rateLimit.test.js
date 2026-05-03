@@ -7,7 +7,15 @@ jest.mock('../../src/utils/log', () => ({
   error: jest.fn(),
 }));
 
+// The rateLimit middleware skips ALL limiters when NODE_ENV !== 'production'
+// (rationale: a single Playwright suite easily exhausts 200 req/min/IP
+// because all loopback connections share `::1`, and dev-sanity assertions
+// on /api/health would deterministically 429). Production behaviour is
+// the contract under test, so force NODE_ENV='production' for these tests.
+let _originalNodeEnv;
 beforeEach(() => {
+  _originalNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
   jest.clearAllMocks();
   jest.resetModules();
   // Re-apply the log mock after resetModules so the fresh rateLimit module picks it up
@@ -16,6 +24,11 @@ beforeEach(() => {
     warn: jest.fn(),
     error: jest.fn(),
   }));
+});
+
+afterEach(() => {
+  if (_originalNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = _originalNodeEnv;
 });
 
 // ─── App setup helpers ──────────────────────────────────────────
@@ -323,5 +336,75 @@ describe('keyGenerator', () => {
     // Should be rate limited by IP
     const res = await request(app).post('/report').expect(429);
     expect(res.body.error).toBe('Rate limit exceeded for this operation');
+  });
+});
+
+describe('non-production skip', () => {
+  // Counter-test the suite-wide `process.env.NODE_ENV = 'production'` setup:
+  // when NODE_ENV is anything other than 'production', ALL limiters become
+  // no-ops. This is the contract that lets local dev / Playwright runs make
+  // 1000+ calls without dev-sanity tests tripping a 429.
+
+  function withNonProd(envValue, runWithApp) {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = envValue;
+    jest.resetModules();
+    jest.mock('../../src/utils/log', () => ({
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }));
+    const {
+      generalLimiter,
+      writeLimiter,
+      sensitiveLimiter,
+    } = require('../../src/middleware/rateLimit');
+    const app = express();
+    app.use(generalLimiter);
+    app.use(writeLimiter);
+    app.use(sensitiveLimiter);
+    app.get('/probe', (req, res) => res.json({ ok: true }));
+    return runWithApp(app).finally(() => {
+      process.env.NODE_ENV = previous || 'production';
+    });
+  }
+
+  test('NODE_ENV=local bypasses general/write/sensitive limiters', async () => {
+    await withNonProd('local', async (app) => {
+      // Make many more requests than ANY of the production limits combined
+      // (general 200 + sensitive 5 = 205); all must succeed.
+      for (let i = 0; i < 250; i++) {
+        await request(app).get('/probe').expect(200);
+      }
+    });
+  });
+
+  test('NODE_ENV=test bypasses limiters', async () => {
+    await withNonProd('test', async (app) => {
+      const res = await request(app).get('/probe').expect(200);
+      expect(res.body.ok).toBe(true);
+    });
+  });
+
+  test('NODE_ENV unset (undefined) bypasses limiters', async () => {
+    const previous = process.env.NODE_ENV;
+    delete process.env.NODE_ENV;
+    jest.resetModules();
+    jest.mock('../../src/utils/log', () => ({
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }));
+    const { generalLimiter } = require('../../src/middleware/rateLimit');
+    const app = express();
+    app.use(generalLimiter);
+    app.get('/probe', (req, res) => res.json({ ok: true }));
+    try {
+      for (let i = 0; i < 250; i++) {
+        await request(app).get('/probe').expect(200);
+      }
+    } finally {
+      process.env.NODE_ENV = previous || 'production';
+    }
   });
 });

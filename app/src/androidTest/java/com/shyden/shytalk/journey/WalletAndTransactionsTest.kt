@@ -1,12 +1,10 @@
 package com.shyden.shytalk.journey
 
-import android.view.KeyEvent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.shyden.shytalk.navigation.Screen
 import com.shyden.shytalk.util.ResetFakesRule
 import com.shyden.shytalk.util.ScreenshotRule
@@ -56,16 +54,19 @@ class WalletAndTransactionsTest {
         composeTestRule.waitForTag("wallet_transactionsButton")
         composeTestRule.onNodeWithTag("wallet_transactionsButton").performClick()
         composeTestRule.waitForTag("transactions_list")
-        composeTestRule.waitForIdle()
-        // Use the Instrumentation key-event API instead of Espresso.pressBack().
-        // Espresso polls for window focus before dispatching the back press,
-        // and that poll deterministically times out (RootViewWithoutFocusException
-        // after 10s) when running with `mainClock.autoAdvance = false` because
-        // the Compose nav-transition frames don't render to drive focus
-        // settlement. sendKeyDownUpSync bypasses the focus poll — it sends
-        // the KEYCODE_BACK event directly to the Activity, matching what a
-        // real hardware/gesture back press does at the system layer.
-        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        // Tap the top-bar back arrow (testTag `transactions_backButton`)
+        // instead of dispatching a system KEYCODE_BACK. The previous
+        // approaches — Espresso.pressBack() and
+        // InstrumentationRegistry.sendKeyDownUpSync(KEYCODE_BACK) — both
+        // rely on the platform input system delivering the keypress to a
+        // window with settled focus, which is unreliable under
+        // `mainClock.autoAdvance = false` (animation frames don't drive
+        // focus settlement, and CI emulator latency makes it flake
+        // deterministically). Tapping the UI back arrow exercises the
+        // same NavController.popBackStack() callback wired to
+        // `onNavigateBack`, with none of the focus / dispatcher timing.
+        composeTestRule.waitForTag("transactions_backButton")
+        composeTestRule.onNodeWithTag("transactions_backButton").performClick()
         composeTestRule.waitForTag("wallet_balance")
         composeTestRule.onNodeWithTag("wallet_balance").assertIsDisplayed()
     }

@@ -995,4 +995,208 @@ class AuthViewModelIdentityTest {
             assertEquals(null, after.error, "clearError must clear error in normal (non-sticky) state")
             assertFalse(after.requiresAppDataClear)
         }
+
+    // ─── Integration tests: native sign-in -> identity-resolve flow ───
+    //
+    // These tests pin the contract that a successful native sign-in
+    // (Apple ASAuthorizationController, Google ID token, or Firebase
+    // WebView OAuth via signInWithAppleViaProvider) followed by an
+    // identity-resolve API failure routes through `handleBackendError`
+    // and surfaces as either:
+    //   - `isBackendUnreachable=true` for network-style failures
+    //   - session clear for auth-style failures (HTTP 401, etc.)
+    //
+    // Specifically pins the iOS DEV TestFlight bug fixed in this branch:
+    // a hardcoded `baseUrl = "http://localhost:3000"` made every
+    // post-sign-in `POST /api/identity/resolve` fail with a network
+    // error on real iPhones, locking the user on the "Unable to
+    // connect" screen with no recovery path. With the fixed env-aware
+    // URL the API call succeeds and isBackendUnreachable stays false.
+
+    @Test
+    fun signInWithAppleViaProvider_apiUnreachable_setsBackendUnreachable() =
+        runTest {
+            val identityRepo =
+                FakeIdentityRepository().apply {
+                    // Simulates the hardcoded localhost:3000 talking to no
+                    // server on a real iPhone — the failure mode the user
+                    // saw on iOS DEV TestFlight.
+                    resolveResult = Resource.Error("Connection refused: localhost:3000")
+                }
+            val authRepo =
+                FakeAuthRepository(
+                    firebaseUid = "firebase-uid-apple",
+                    isAuthenticated = false,
+                    currentUserEmail = null,
+                    providerInfo = "apple" to "apple-sub-id-1",
+                )
+
+            val vm =
+                AuthViewModel(
+                    authRepo,
+                    FakeUserRepository(),
+                    FakeDeviceRepository(),
+                    identityRepo,
+                    "device-1",
+                    bypassDeviceChecks = true,
+                )
+            advanceUntilIdle()
+
+            // Android Apple Sign-In path: WebView OAuth via Firebase provider
+            vm.signInWithAppleViaProvider(activity = "fake-activity-stub")
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertTrue(
+                state.isBackendUnreachable,
+                "Network-style failure on resolveIdentity must surface as 'Unable to Connect' for the user",
+            )
+            assertFalse(
+                authRepo.signedOut,
+                "Network errors must NOT clear the Firebase session — the credential is still valid",
+            )
+        }
+
+    @Test
+    fun signInWithAppleViaProvider_apiSuccess_doesNotSetBackendUnreachable() =
+        runTest {
+            // The fix path: env-aware apiBaseUrl reaches the real API,
+            // identity-resolve succeeds, and the user is signed in
+            // without ever seeing the "Unable to connect" screen.
+            val identityRepo =
+                FakeIdentityRepository().apply {
+                    resolveResult = Resource.Success(SignInResult.Found(20000001))
+                }
+            val userRepo =
+                FakeUserRepository().apply {
+                    existsResult = Resource.Success(true)
+                    getUserResult =
+                        Resource.Success(
+                            User(
+                                uid = "20000001",
+                                uniqueId = 20000001,
+                                displayName = "AppleUser",
+                                acceptedLegalVersion = 999,
+                            ),
+                        )
+                }
+            val authRepo =
+                FakeAuthRepository(
+                    firebaseUid = "firebase-uid-apple",
+                    isAuthenticated = false,
+                    currentUserEmail = null,
+                    providerInfo = "apple" to "apple-sub-id-2",
+                )
+
+            val vm =
+                AuthViewModel(
+                    authRepo,
+                    userRepo,
+                    FakeDeviceRepository(),
+                    identityRepo,
+                    "device-1",
+                    bypassDeviceChecks = true,
+                )
+            advanceUntilIdle()
+
+            vm.signInWithAppleViaProvider(activity = "fake-activity-stub")
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertFalse(
+                state.isBackendUnreachable,
+                "Healthy API path must NOT show 'Unable to connect'",
+            )
+            assertTrue(
+                state.isAuthenticated,
+                "Successful Apple Sign-In + identity-resolve must land in authenticated state",
+            )
+            assertEquals("apple", identityRepo.resolvedProvider)
+        }
+
+    @Test
+    fun signInWithAppleIdToken_apiUnreachable_setsBackendUnreachable() =
+        runTest {
+            // iOS-native Apple Sign-In path: ASAuthorizationController
+            // returns an idToken + rawNonce, AuthViewModel.signInWithApple
+            // calls Firebase signInWithCredential, then resolveIdentity.
+            // The resolve API failure here mirrors the iOS DEV TestFlight
+            // bug from a different entry point so a future regression in
+            // either path gets caught.
+            val identityRepo =
+                FakeIdentityRepository().apply {
+                    resolveResult = Resource.Error("Connection timeout reaching dev-api.shytalk.shyden.co.uk")
+                }
+            val authRepo =
+                FakeAuthRepository(
+                    firebaseUid = "firebase-uid-ios-apple",
+                    isAuthenticated = false,
+                    currentUserEmail = null,
+                    providerInfo = "apple" to "apple-ios-sub",
+                )
+
+            val vm =
+                AuthViewModel(
+                    authRepo,
+                    FakeUserRepository(),
+                    FakeDeviceRepository(),
+                    identityRepo,
+                    "device-1",
+                    bypassDeviceChecks = true,
+                )
+            advanceUntilIdle()
+
+            vm.signInWithApple("fake-apple-id-token", rawNonce = "fake-nonce-xyz")
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertTrue(
+                state.isBackendUnreachable,
+                "iOS native Apple Sign-In must also route through backend-unreachable on API failure",
+            )
+            assertFalse(
+                authRepo.signedOut,
+                "Network errors must NOT clear the Firebase session in the iOS path either",
+            )
+        }
+
+    @Test
+    fun signInWithGoogle_apiUnreachable_setsBackendUnreachable() =
+        runTest {
+            val identityRepo =
+                FakeIdentityRepository().apply {
+                    resolveResult = Resource.Error("Connection refused: localhost:3000")
+                }
+            val authRepo =
+                FakeAuthRepository(
+                    firebaseUid = "firebase-uid-google",
+                    isAuthenticated = false,
+                    currentUserEmail = "user@gmail.com",
+                    providerInfo = "google" to "user@gmail.com",
+                )
+
+            val vm =
+                AuthViewModel(
+                    authRepo,
+                    FakeUserRepository(),
+                    FakeDeviceRepository(),
+                    identityRepo,
+                    "device-1",
+                    bypassDeviceChecks = true,
+                )
+            advanceUntilIdle()
+
+            vm.signInWithGoogle("fake-google-id-token")
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertTrue(
+                state.isBackendUnreachable,
+                "Google sign-in -> resolveIdentity network failure must surface as 'Unable to connect'",
+            )
+            assertFalse(
+                authRepo.signedOut,
+                "Google network failure must NOT clear the Firebase session",
+            )
+        }
 }

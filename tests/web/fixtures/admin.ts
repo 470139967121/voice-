@@ -48,6 +48,23 @@ export const test = base.extend<{}, { adminContext: BrowserContext; testData: Te
     await context.close();
   }, { scope: 'worker' }],
 
+  // testData is worker-scoped — the same user/report/appeal/etc set is
+  // reused across every test in the worker for speed. Tests that mutate
+  // user state (suspend, warn, GCS deduct) MUST clean up after
+  // themselves so the next test sees a clean baseline. Earlier we
+  // experimented with test scope to dodge the cleanup-discipline
+  // problem, but that broke ~50 tests that take only `{ page }` and
+  // depend on the fixture-created data persisting (Playwright lazily
+  // initialises fixtures, so a `{ page }` parameter list never triggers
+  // testSetup). The two real cross-tab/appeals failure modes were
+  // independent of fixture scope:
+  //   1. orphaned reports/appeals from earlier untagged
+  //      `POST /api/reports` writes accumulating as
+  //      `data-uid="undefined"` cards (fixed by tagging seed helpers
+  //      with `_testRun` AND wiping reports/suspensionAppeals in
+  //      global-setup).
+  //   2. The hidden severity radio not being checked by `label.click()`
+  //      — fixed by `setChecked`/`evaluate` on the input directly.
   testData: [async ({ adminContext }, use, workerInfo) => {
     const page = await adminContext.newPage();
     const api = new AdminApi(page);
