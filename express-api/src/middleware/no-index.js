@@ -23,16 +23,45 @@
  */
 
 const {
+  PROD_API_HOSTNAME,
   isProdApiHostname,
   blockingRobotsBody,
   noIndexHeaderValue,
 } = require('../../../functions/_lib/lockdown.js');
+const log = require('../utils/log');
+
+// Hostnames we expect to see at runtime. Anything outside this set is a
+// misconfiguration — most likely Caddy / a future reverse-proxy edit
+// dropped or rewrote the Host header. We log a warning ONCE per unseen
+// hostname so the misclassification surfaces in logs instead of silently
+// shipping noindex on prod (or, worse, NOT shipping noindex on a
+// dev hostname that doesn't match our pattern).
+//
+// Memoised in module scope so the warning fires at most once per process
+// per hostname — without memoisation a misconfigured proxy floods logs.
+const KNOWN_NON_PROD_HOSTNAME_PATTERNS = [/^dev-api\./i, /^localhost$/i, /^127\.0\.0\.1$/];
+const seenUnexpectedHostnames = new Set();
+
+function warnIfUnexpectedHostname(hostname) {
+  if (typeof hostname !== 'string' || hostname.length === 0) return;
+  if (isProdApiHostname(hostname)) return;
+  if (KNOWN_NON_PROD_HOSTNAME_PATTERNS.some((p) => p.test(hostname))) return;
+  if (seenUnexpectedHostnames.has(hostname)) return;
+  seenUnexpectedHostnames.add(hostname);
+  log.warn(
+    'no-index',
+    'Unexpected hostname classified non-prod — verify reverse proxy is forwarding the public Host header. ' +
+      'Misclassification could ship X-Robots-Tag: noindex on prod or break dev SEO defence.',
+    { hostname, expectedProd: PROD_API_HOSTNAME },
+  );
+}
 
 /**
  * Mounted via `app.use(noIndex)` BEFORE any other route so the header
  * is set on every downstream response (errors, 404s, etc.).
  */
 function noIndex(req, res, next) {
+  warnIfUnexpectedHostname(req.hostname);
   if (!isProdApiHostname(req.hostname)) {
     res.set('X-Robots-Tag', noIndexHeaderValue());
   }
@@ -48,6 +77,10 @@ function noIndex(req, res, next) {
  * crawlers fetch `https://<host>/robots.txt` at the root.
  */
 function robotsTxt(req, res) {
+  // /robots.txt is the highest-impact silent-failure surface — a
+  // misclassified hostname here would deindex prod. Warn loudly the
+  // first time we see an unexpected hostname.
+  warnIfUnexpectedHostname(req.hostname);
   if (isProdApiHostname(req.hostname)) {
     // Prod robots.txt — permissive. Strictly speaking the API root
     // hostname doesn't need a robots.txt at all (no HTML to index),

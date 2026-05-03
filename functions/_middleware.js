@@ -75,14 +75,23 @@ exports.onRequest = async ({ request, env, next }) => {
   }
 
   // Auth passed → fetch the underlying static asset / next handler,
-  // then graft the noindex header onto its response. We have to clone
-  // the response because `next()` returns an immutable Response.
+  // then graft the noindex header onto its response.
+  //
+  // `response.body` is a ReadableStream that can only be consumed
+  // once. Re-using `response.body` directly works today because
+  // nothing else reads it before we re-emit, but ANY future code path
+  // (logging plugin, observability layer) that calls
+  // `response.text()` / `.json()` first would silently strand the
+  // body — page would render empty with status 200 and no error.
+  // `response.clone()` returns a fresh Response sharing the body's
+  // buffered bytes via tee'd streams, defending against that.
   const response = await next();
-  const newHeaders = new Headers(response.headers);
+  const cloned = response.clone();
+  const newHeaders = new Headers(cloned.headers);
   newHeaders.set('X-Robots-Tag', noIndexHeaderValue());
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
+  return new Response(cloned.body, {
+    status: cloned.status,
+    statusText: cloned.statusText,
     headers: newHeaders,
   });
 };
