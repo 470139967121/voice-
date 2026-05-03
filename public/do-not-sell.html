@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="theme-color" content="#0f0d15">
+<title>ShyTalk — Do Not Sell or Share My Personal Information</title>
+<style>
+  :root {
+    --bg: #0f0d15;
+    --surface: #1c1a24;
+    --border: #3a3550;
+    --text: #e8e0f0;
+    --text2: #a89ec0;
+    --primary: #6750a4;
+    --primary-glow: #9a82db;
+    --accent: #d0bcff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    position: relative;
+    line-height: 1.7;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    width: min(600px, 100vw);
+    height: min(600px, 100vh);
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(103,80,164,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 3rem 2rem 4rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  header { text-align: center; margin-bottom: 3rem; }
+  .logo { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; color: var(--accent); }
+  h1 { font-size: 2rem; margin: 1rem 0 0.5rem; color: var(--text); }
+  .updated { color: var(--text2); font-size: 0.9rem; }
+
+  main section { margin-bottom: 2.5rem; }
+  main h2 { font-size: 1.3rem; color: var(--accent); margin-bottom: 1rem; }
+  main p { color: var(--text2); margin-bottom: 1rem; }
+  main p:last-child { margin-bottom: 0; }
+  main a { color: var(--primary-glow); text-decoration: none; }
+  main a:hover { text-decoration: underline; }
+
+  footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; margin: 0 0.5rem; }
+  footer a:hover { color: var(--primary-glow); }
+  footer .copyright { display: block; margin-top: 1rem; opacity: 0.7; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">ShyTalk</div>
+      <h1>Do Not Sell or Share My Personal Information</h1>
+      <p class="updated">Last updated: May 2026</p>
+    </header>
+
+    <main>
+      <section>
+        <h2>1. We Do Not Sell Your Personal Information</h2>
+        <p>ShyTalk does not sell, rent, or trade your personal information to third parties for monetary or other valuable consideration. This applies to every user of ShyTalk worldwide, including residents of California.</p>
+        <p>We also do not "share" your personal information for cross-context behavioural advertising as defined under the California Consumer Privacy Act (CCPA / CPRA).</p>
+      </section>
+
+      <section>
+        <h2>2. What Personal Information We Collect</h2>
+        <p>For the full list of personal information categories we collect and why, see our <a href="/privacy.html">Privacy Policy</a>. In summary: account identifiers (email, display name, profile photo), device and network metadata (manufacturer, model, OS version, IP-derived approximate location), and usage logs (app actions, crash reports, voice-room connection metadata — never voice audio).</p>
+      </section>
+
+      <section>
+        <h2>3. Service Providers We Share With</h2>
+        <p>To operate ShyTalk we share data with a small number of service providers under contracts that prohibit them from selling your information or using it for their own purposes:</p>
+        <p>Firebase (Google) for authentication and database; Cloudflare for CDN, storage, and page hosting; LiveKit (self-hosted on Oracle Cloud) for voice-room connections; ip-api.com for IP-based geolocation. Disclosure to a service provider operating on our behalf is not a "sale" or "share" under the CCPA.</p>
+      </section>
+
+      <section>
+        <h2>4. Your California Privacy Rights</h2>
+        <p>If you are a California resident, you have the right to:</p>
+        <ul style="color: var(--text2); margin-left: 1.5rem;">
+          <li>Know what personal information we collect, use, disclose, and (if applicable) sell</li>
+          <li>Delete the personal information we hold about you</li>
+          <li>Correct inaccurate personal information</li>
+          <li>Opt out of the sale or sharing of your personal information — already the default state for every ShyTalk user, since we do not sell or share</li>
+          <li>Limit the use of sensitive personal information</li>
+          <li>Not be discriminated against for exercising any of these rights</li>
+        </ul>
+        <p>To request access, deletion, or correction, contact us at <a href="mailto:shytalk.help@gmail.com">shytalk.help@gmail.com</a> from the email address associated with your account, or use the in-app <strong>Settings → Account</strong> data-export and account-deletion controls (which fulfil the same right under GDPR Article 17 / 20).</p>
+      </section>
+
+      <section>
+        <h2>5. Authorised Agents</h2>
+        <p>You may designate an authorised agent to make a request on your behalf. We will require written proof of the agent's authority and may verify your identity directly before fulfilling the request.</p>
+      </section>
+
+      <section>
+        <h2>6. Contact</h2>
+        <p>For questions about this notice or to exercise any of the rights above, email <a href="mailto:shytalk.help@gmail.com">shytalk.help@gmail.com</a>. The data controller is Shyden Ltd (UK company number 17110487), 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom.</p>
+      </section>
+    </main>
+
+    <footer>
+      <a href="/privacy.html">Privacy Policy</a> &nbsp;&middot;&nbsp;
+      <a href="/terms.html">Terms of Service</a> &nbsp;&middot;&nbsp;
+      <a href="/community-guidelines.html">Community Guidelines</a> &nbsp;&middot;&nbsp;
+      <a href="/cyber-bullying.html">Cyber Bullying Policy</a>
+      <p class="copyright">&copy; 2026 Shyden Ltd. All rights reserved.</p>
+    </footer>
+  </div>
+<script src="/js/shared-header.js"></script>
+<script src="/js/language-selector.js"></script>
+<script src="/js/preview-watermark.js" defer></script>
+</body>
+</html>
