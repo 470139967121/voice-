@@ -643,4 +643,11 @@ jobs:
         env:
           WEB_BASE_URL: https://dev.shytalk.shyden.co.uk
           API_BASE_URL: https://dev-api.shytalk.shyden.co.uk
+          # Dev web is behind HTTP Basic auth as part of the lockdown
+          # (PR #441 — Cloudflare Pages Function `_middleware.js`). The
+          # spec passes this via Playwright's `httpCredentials` option
+          # so the sanity check can reach the page after deploy. The
+          # API surface (dev-api) does NOT have basic auth, so it's
+          # untouched.
+          DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npx playwright test tests/web/dev-sanity.spec.ts --project=chromium --reporter=list

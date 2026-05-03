@@ -5,10 +5,27 @@ import { test, expect } from '@playwright/test';
  * are up and pages load after deployment. NOT a full test suite.
  *
  * Used by deploy-dev.yml instead of the full Playwright matrix.
+ *
+ * Auth: dev web is gated behind HTTP Basic auth (PR #441 lockdown).
+ * The deploy workflow passes the shared password via
+ * DEV_BASIC_AUTH_PASSWORD; we plug it into Playwright's built-in
+ * `httpCredentials` option via `test.use(...)` so every page.goto() /
+ * request.get() against WEB_BASE includes the Authorization header.
+ * When the env var is unset (e.g. running locally against
+ * `localhost:8888`), the conditional `use` is skipped — localhost has
+ * no Pages Function gate.
  */
 
 const WEB_BASE = process.env.WEB_BASE_URL || 'http://localhost:8888';
 const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
+const DEV_BASIC_AUTH_PASSWORD = process.env.DEV_BASIC_AUTH_PASSWORD;
+
+if (DEV_BASIC_AUTH_PASSWORD) {
+  // Username is ignored by the lockdown helper — only the password
+  // matters — but 'dev' is a stable canonical value so the
+  // Authorization header has a fixed shape between runs.
+  test.use({ httpCredentials: { username: 'dev', password: DEV_BASIC_AUTH_PASSWORD } });
+}
 
 test.describe('Dev Sanity Checks', () => {
 
