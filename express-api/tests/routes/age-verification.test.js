@@ -18,9 +18,13 @@ const request = require('supertest');
 
 const mockDocGet = jest.fn();
 const mockDocSet = jest.fn().mockResolvedValue();
-const mockCollectionAdd = jest.fn();
-const mockCollectionWhere = jest.fn();
-const mockCollectionGet = jest.fn();
+// Used by the submit handler's transaction. The transaction shape is
+// `await db.runTransaction(async (tx) => { tx.get(query); tx.set(ref, ...); })`.
+// We control the snapshot returned by `tx.get(...)` and capture the
+// `tx.set` payload so tests can assert it.
+const mockTxGet = jest.fn();
+const mockTxSet = jest.fn();
+const mockNewDocRef = { id: 'new-submission-id' };
 
 jest.mock('../../src/utils/firebase', () => ({
   db: {
@@ -29,20 +33,22 @@ jest.mock('../../src/utils/firebase', () => ({
       get: () => mockDocGet(path),
       set: (...args) => mockDocSet(path, ...args),
     })),
-    collection: jest.fn((name) => ({
-      add: (...args) => mockCollectionAdd(name, ...args),
-      where: (...args) => {
-        mockCollectionWhere(name, ...args);
-        return {
-          where: (...inner) => {
-            mockCollectionWhere(name, ...inner);
-            return { limit: () => ({ get: () => mockCollectionGet() }) };
-          },
-          limit: () => ({ get: () => mockCollectionGet() }),
-          get: () => mockCollectionGet(),
-        };
-      },
+    collection: jest.fn(() => ({
+      // For submit: `db.collection(...).doc()` returns a fresh ref.
+      doc: jest.fn(() => mockNewDocRef),
+      // For submit: `db.collection(...).where(...).where(...).limit(1)`
+      // returns a query passed to `tx.get(...)` — we don't need the
+      // chain to do anything because the tx mock handles it.
+      where: () => ({
+        where: () => ({ limit: () => ({}) }),
+      }),
     })),
+    runTransaction: jest.fn(async (fn) => {
+      return fn({
+        get: () => mockTxGet(),
+        set: (ref, payload) => mockTxSet(ref, payload),
+      });
+    }),
   },
 }));
 
@@ -60,8 +66,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockGetSignedPutUrl.mockResolvedValue('https://r2-signed/abc');
   mockDocGet.mockResolvedValue({ exists: false });
-  mockCollectionGet.mockResolvedValue({ empty: true, docs: [] });
-  mockCollectionAdd.mockResolvedValue({ id: 'new-submission-id' });
+  mockTxGet.mockResolvedValue({ empty: true, docs: [] });
 });
 
 // ─── App setup ──────────────────────────────────────────────────────
@@ -103,7 +108,10 @@ function createApp(authOverride = {}, userDoc = null) {
 
 describe('POST /api/age-verification/upload-url', () => {
   test('returns a signed URL + r2Key for the authenticated user', async () => {
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
+    // 25 years ago to be safely past the calendar 18+ boundary.
+    const dob = new Date();
+    dob.setUTCFullYear(dob.getUTCFullYear() - 25);
+    const eighteenYearsAgo = dob.getTime();
     const app = createApp({}, { dateOfBirth: eighteenYearsAgo, ageVerified: false });
 
     const res = await request(app)
@@ -121,7 +129,10 @@ describe('POST /api/age-verification/upload-url', () => {
   });
 
   test('rejects unsupported contentType (only image/* allowed)', async () => {
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
+    // 25 years ago to be safely past the calendar 18+ boundary.
+    const dob = new Date();
+    dob.setUTCFullYear(dob.getUTCFullYear() - 25);
+    const eighteenYearsAgo = dob.getTime();
     const app = createApp({}, { dateOfBirth: eighteenYearsAgo, ageVerified: false });
 
     await request(app)
@@ -133,7 +144,10 @@ describe('POST /api/age-verification/upload-url', () => {
   });
 
   test('rejects missing contentType', async () => {
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
+    // 25 years ago to be safely past the calendar 18+ boundary.
+    const dob = new Date();
+    dob.setUTCFullYear(dob.getUTCFullYear() - 25);
+    const eighteenYearsAgo = dob.getTime();
     const app = createApp({}, { dateOfBirth: eighteenYearsAgo, ageVerified: false });
 
     await request(app).post('/api/age-verification/upload-url').send({}).expect(400);
@@ -143,8 +157,9 @@ describe('POST /api/age-verification/upload-url', () => {
   test('rejects sub-18 user (cannot start verification)', async () => {
     // User spec: 16-17 cohort cannot submit; tap on restricted feature
     // shows "Contact support" copy. Must enforce server-side too.
-    const sixteenYearsAgo = new Date(Date.now() - 16 * 365.25 * 86400 * 1000).getTime();
-    const app = createApp({}, { dateOfBirth: sixteenYearsAgo, ageVerified: false });
+    const sixteen = new Date();
+    sixteen.setUTCFullYear(sixteen.getUTCFullYear() - 16);
+    const app = createApp({}, { dateOfBirth: sixteen.getTime(), ageVerified: false });
 
     const res = await request(app)
       .post('/api/age-verification/upload-url')
@@ -156,7 +171,10 @@ describe('POST /api/age-verification/upload-url', () => {
   });
 
   test('rejects already-verified user (no re-submission needed)', async () => {
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
+    // 25 years ago to be safely past the calendar 18+ boundary.
+    const dob = new Date();
+    dob.setUTCFullYear(dob.getUTCFullYear() - 25);
+    const eighteenYearsAgo = dob.getTime();
     const app = createApp(
       {},
       { dateOfBirth: eighteenYearsAgo, ageVerified: true, ageVerifiedAt: 1700000000000 },
@@ -174,9 +192,20 @@ describe('POST /api/age-verification/upload-url', () => {
 // ─── POST /api/age-verification/submit ──────────────────────────────
 
 describe('POST /api/age-verification/submit', () => {
+  // Helper — 25 years ago is safely past the calendar 18+ boundary
+  // and avoids leap-year drift that the 365.25*MS approximation
+  // produced. See `isAtLeast18FromDob` calendar-aware comparison.
+  function dobAge(years) {
+    const d = new Date();
+    d.setUTCFullYear(d.getUTCFullYear() - years);
+    return d.getTime();
+  }
+
   test('creates pending submission for valid 18+ unverified user', async () => {
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
-    const app = createApp({}, { dateOfBirth: eighteenYearsAgo, ageVerified: false });
+    // Use 25 years ago to be safely past the calendar 18+ boundary.
+    const dob = new Date();
+    dob.setUTCFullYear(dob.getUTCFullYear() - 25);
+    const app = createApp({}, { dateOfBirth: dob.getTime(), ageVerified: false });
 
     const res = await request(app)
       .post('/api/age-verification/submit')
@@ -186,8 +215,8 @@ describe('POST /api/age-verification/submit', () => {
     expect(res.body.submissionId).toBe('new-submission-id');
     expect(res.body.status).toBe('pending');
 
-    expect(mockCollectionAdd).toHaveBeenCalledWith(
-      'ageVerificationSubmissions',
+    expect(mockTxSet).toHaveBeenCalledWith(
+      mockNewDocRef,
       expect.objectContaining({
         userId: '10000001',
         status: 'pending',
@@ -199,7 +228,10 @@ describe('POST /api/age-verification/submit', () => {
   });
 
   test('rejects unknown idMethod', async () => {
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
+    // 25 years ago to be safely past the calendar 18+ boundary.
+    const dob = new Date();
+    dob.setUTCFullYear(dob.getUTCFullYear() - 25);
+    const eighteenYearsAgo = dob.getTime();
     const app = createApp({}, { dateOfBirth: eighteenYearsAgo, ageVerified: false });
 
     await request(app)
@@ -207,14 +239,17 @@ describe('POST /api/age-verification/submit', () => {
       .send({ r2Key: 'x', idMethod: 'birth-certificate' })
       .expect(400);
 
-    expect(mockCollectionAdd).not.toHaveBeenCalled();
+    expect(mockTxSet).not.toHaveBeenCalled();
   });
 
   test("rejects r2Key not under user prefix (cannot upload someone else's image)", async () => {
     // The signed URL forces the prefix on upload; pin server-side
     // re-validation so a hand-rolled API call can't smuggle a key
     // under another user's prefix.
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
+    // 25 years ago to be safely past the calendar 18+ boundary.
+    const dob = new Date();
+    dob.setUTCFullYear(dob.getUTCFullYear() - 25);
+    const eighteenYearsAgo = dob.getTime();
     const app = createApp({}, { dateOfBirth: eighteenYearsAgo, ageVerified: false });
 
     await request(app)
@@ -222,23 +257,25 @@ describe('POST /api/age-verification/submit', () => {
       .send({ r2Key: 'age-verification/99999999/abc.jpg', idMethod: 'passport' })
       .expect(403);
 
-    expect(mockCollectionAdd).not.toHaveBeenCalled();
+    expect(mockTxSet).not.toHaveBeenCalled();
   });
 
   test('rejects sub-18 user', async () => {
-    const sixteenYearsAgo = new Date(Date.now() - 16 * 365.25 * 86400 * 1000).getTime();
-    const app = createApp({}, { dateOfBirth: sixteenYearsAgo, ageVerified: false });
+    const app = createApp({}, { dateOfBirth: dobAge(16), ageVerified: false });
 
     await request(app)
       .post('/api/age-verification/submit')
       .send({ r2Key: 'age-verification/10000001/abc.jpg', idMethod: 'passport' })
       .expect(403);
 
-    expect(mockCollectionAdd).not.toHaveBeenCalled();
+    expect(mockTxSet).not.toHaveBeenCalled();
   });
 
   test('rejects already-verified user', async () => {
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
+    // 25 years ago to be safely past the calendar 18+ boundary.
+    const dob = new Date();
+    dob.setUTCFullYear(dob.getUTCFullYear() - 25);
+    const eighteenYearsAgo = dob.getTime();
     const app = createApp({}, { dateOfBirth: eighteenYearsAgo, ageVerified: true });
 
     await request(app)
@@ -246,20 +283,87 @@ describe('POST /api/age-verification/submit', () => {
       .send({ r2Key: 'age-verification/10000001/abc.jpg', idMethod: 'passport' })
       .expect(409);
 
-    expect(mockCollectionAdd).not.toHaveBeenCalled();
+    expect(mockTxSet).not.toHaveBeenCalled();
   });
 
   test('rejects when there is already a pending submission (only 1 at a time)', async () => {
-    // User spec: "can only submit 1 attempt at a time".
-    const eighteenYearsAgo = new Date(Date.now() - 18 * 365.25 * 86400 * 1000).getTime();
-    const app = createApp({}, { dateOfBirth: eighteenYearsAgo, ageVerified: false });
-    mockCollectionGet.mockResolvedValue({ empty: false, docs: [{ id: 'existing-pending' }] });
+    // User spec: "can only submit 1 attempt at a time". Now enforced
+    // atomically inside `db.runTransaction` so the check is consistent
+    // with the create — a check-then-add TOCTOU window can't let
+    // duplicates through.
+    const app = createApp({}, { dateOfBirth: dobAge(25), ageVerified: false });
+    mockTxGet.mockResolvedValue({ empty: false, docs: [{ id: 'existing-pending' }] });
 
     await request(app)
       .post('/api/age-verification/submit')
       .send({ r2Key: 'age-verification/10000001/abc.jpg', idMethod: 'passport' })
       .expect(409);
 
-    expect(mockCollectionAdd).not.toHaveBeenCalled();
+    expect(mockTxSet).not.toHaveBeenCalled();
+  });
+
+  test('allows re-submission after a previous submission was rejected', async () => {
+    // User spec: "Retry as many times as they want." A rejected
+    // submission has status 'rejected', which the 'pending'-only
+    // query inside the transaction does NOT match, so a fresh
+    // submit succeeds.
+    const app = createApp({}, { dateOfBirth: dobAge(25), ageVerified: false });
+    // tx.get returns empty (no pending) — same default as setup; the
+    // rejected historical doc would be at a different status.
+    mockTxGet.mockResolvedValue({ empty: true, docs: [] });
+
+    await request(app)
+      .post('/api/age-verification/submit')
+      .send({ r2Key: 'age-verification/10000001/retry.jpg', idMethod: 'national-id' })
+      .expect(200);
+
+    expect(mockTxSet).toHaveBeenCalled();
+  });
+
+  test('rejects path-traversal attempt in r2Key (cannot escape user prefix)', async () => {
+    // The startsWith() check passes for `age-verification/<uid>/../<other>/x.jpg`
+    // — pin the explicit `..` rejection that defends against R2 / CDN
+    // path normalisation collapsing the segment.
+    const app = createApp({}, { dateOfBirth: dobAge(25), ageVerified: false });
+
+    await request(app)
+      .post('/api/age-verification/submit')
+      .send({
+        r2Key: 'age-verification/10000001/../99999999/img.jpg',
+        idMethod: 'passport',
+      })
+      .expect(403);
+
+    expect(mockTxSet).not.toHaveBeenCalled();
+  });
+
+  test('rejects multi-segment r2Key under user prefix (must be single file)', async () => {
+    // `age-verification/<uid>/sub/dir/x.jpg` could escape into
+    // unintended bucket areas if a CDN config strips the prefix
+    // boundary. Require a single segment after the prefix.
+    const app = createApp({}, { dateOfBirth: dobAge(25), ageVerified: false });
+
+    await request(app)
+      .post('/api/age-verification/submit')
+      .send({ r2Key: 'age-verification/10000001/sub/x.jpg', idMethod: 'passport' })
+      .expect(403);
+
+    expect(mockTxSet).not.toHaveBeenCalled();
+  });
+
+  test('returns errorId in 500 response so support can correlate logs', async () => {
+    // A Firestore failure inside the transaction propagates here.
+    // Pin that the response body includes `errorId: 'AGE_VERIF_SUBMIT'`
+    // so a user reporting a failure can quote it to support and the
+    // engineer can find the pm2 log entry by the same code.
+    const app = createApp({}, { dateOfBirth: dobAge(25), ageVerified: false });
+    mockTxGet.mockRejectedValue(new Error('firestore-down'));
+
+    const res = await request(app)
+      .post('/api/age-verification/submit')
+      .send({ r2Key: 'age-verification/10000001/abc.jpg', idMethod: 'passport' })
+      .expect(500);
+
+    expect(res.body).toMatchObject({ errorId: 'AGE_VERIF_SUBMIT' });
   });
 });
