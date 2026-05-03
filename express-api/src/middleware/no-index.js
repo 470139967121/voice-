@@ -29,8 +29,8 @@
 // this middleware (run 25276782190) crashed the dev API at startup
 // with `MODULE_NOT_FOUND: ../../functions/_lib/lockdown.js`. The
 // Cloudflare Pages middleware in `functions/_middleware.js` continues
-// to use the shared `_lib/lockdown.js` because Pages deploys both
-// `public/` and `functions/` together.
+// to use the shared `_lib/lockdown.js` because Pages deploys it from
+// the `functions/` directory at the project root (sibling of `public/`).
 //
 // Drift risk between the two copies is mitigated by `dev-lockdown-middleware.test.js`
 // pinning the rules from one side and `no-index.test.js` pinning the
