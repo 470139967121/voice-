@@ -30,6 +30,17 @@ app.use(helmet());
 app.use(corsMiddleware);
 app.use(express.json({ limit: '1mb' }));
 
+// Lockdown middleware — adds `X-Robots-Tag: noindex, nofollow,
+// noarchive` to every response from non-prod hostnames so search
+// engines drop dev-api URLs from their index. The `/robots.txt`
+// endpoint serves a Disallow:/ body on non-prod and a permissive
+// Allow:/ on prod. Detection is by `req.hostname` (not NODE_ENV) so
+// the dev VM's pm2 NODE_ENV=production setup doesn't accidentally
+// disable the gate.
+const { noIndex, robotsTxt } = require('./middleware/no-index');
+app.use(noIndex);
+app.get('/robots.txt', robotsTxt);
+
 // Request/response logging (after body parsing, before auth)
 const logger = require('./utils/loggerInstance');
 const { createRequestLogger } = require('./middleware/requestLogger');

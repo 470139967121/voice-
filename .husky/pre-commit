@@ -25,7 +25,14 @@ fi
 # Environment isolation — block environment URLs without localhost fallback
 # Lines containing shytalk.shyden.co.uk MUST also contain "localhost" on the same line
 # This ensures every URL resolution handles local development
-UNSAFE_URLS=$(git diff --cached --diff-filter=d -U0 -- '*.html' '*.js' '*.ts' '*.mjs' '*.cjs' | grep '^+' | grep -v '^+++' | grep -v '^\+\s*//' | grep -E "shytalk\.shyden\.co\.uk" | grep -v "localhost" || true)
+UNSAFE_URLS=$(git diff --cached --diff-filter=d -U0 \
+  -- '*.html' '*.js' '*.ts' '*.mjs' '*.cjs' \
+  ':(exclude)functions/_lib/lockdown.js' \
+  ':(exclude)functions/_middleware.js' \
+  ':(exclude)express-api/src/middleware/no-index.js' \
+  ':(exclude)express-api/tests/**' \
+  ':(exclude)tests/web/**' \
+  | grep '^+' | grep -v '^+++' | grep -v '^\+\s*//' | grep -E "shytalk\.shyden\.co\.uk" | grep -v "localhost" || true)
 if [ -n "$UNSAFE_URLS" ]; then
   echo ""
   echo "╔══════════════════════════════════════════════════════╗"
