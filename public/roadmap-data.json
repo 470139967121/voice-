@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-05-02",
+  "lastUpdated": "2026-05-03",
   "currentlyWorkingOn": [
     {
       "name": "`resolveReport` partial-failure flag surfacing",
@@ -724,7 +724,7 @@
       },
       "status": "in-progress",
       "progress": {
-        "done": 9,
+        "done": 10,
         "total": 17
       },
       "features": [
@@ -874,7 +874,7 @@
         {
           "name": "Apple Sign-In Android typed cancellation exception",
           "description": "replace English-literal cancel detection in `AuthRepositoryImpl.signInWithAppleViaProvider` with a typed exception (Phase 4 follow-up)",
-          "status": "planned",
+          "status": "done",
           "i18n": {}
         },
         {

@@ -61,14 +61,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 private const val KEY_EMAIL_FOR_LINK = "email_for_sign_in_link"
 
-// Exact literal that AuthRepositoryImpl.signInWithAppleViaProvider emits
-// for FirebaseAuthWebException (user cancelled the WebView OAuth flow on
-// Android). Matched literally (not substring) in the error LaunchedEffect
-// so other error copy mentioning "cancellation" stays visible. Harmless
-// on iOS — that path uses the typed AppleSignInCancelledException at the
-// button level and never lands the literal in `uiState.error`.
-private const val APPLE_SIGN_IN_CANCELLED_MESSAGE = "Sign-in was cancelled"
-
 @Composable
 fun SignInScreen(
     pendingEmailLink: String? = null,
@@ -226,21 +218,14 @@ fun SignInScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            val message = it.resolveAsync()
-            // Suppress snackbar for the exact user-cancellation signal
-            // that Android's Apple Sign-In via Firebase WebView OAuth
-            // produces (FirebaseAuthWebException → repo emits this exact
-            // literal). The iOS path already routes cancels through the
-            // typed AppleSignInCancelledException at the Apple button,
-            // so this keeps the cancel UX consistent — silent on both.
-            //
-            // Match the LITERAL string, not a substring, so future error
-            // copy that happens to mention "cancellation" (e.g. an
-            // account-scheduled-for-cancellation banner) doesn't get
-            // silently swallowed.
-            if (message != APPLE_SIGN_IN_CANCELLED_MESSAGE) {
-                snackbarHostState.showSnackbar(message)
-            }
+            // Both Android and iOS Apple Sign-In paths now route user
+            // cancellations through the typed
+            // `AppleSignInCancelledException` attached to
+            // `Resource.Error.exception` — `AuthViewModel` branches on
+            // the type and never lands a "cancelled" string in
+            // `uiState.error`. So whatever lands here is a real failure
+            // worth surfacing to the user.
+            snackbarHostState.showSnackbar(it.resolveAsync())
             viewModel.clearError()
         }
     }
