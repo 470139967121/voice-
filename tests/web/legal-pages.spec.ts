@@ -20,6 +20,24 @@ test.describe('Privacy Policy', () => {
     await expect(body).toContainText('Data Storage');
   });
 
+  test('age verification section is present and explains ID-image lifetime', async ({
+    page,
+  }) => {
+    // PR 12 (age-verification feature) added a dedicated section
+    // documenting DOB collection, ID image collection + retention
+    // (deleted on decision), legal basis, and the under-18 path.
+    // Pin the headline + the load-bearing claims so a future privacy
+    // refactor can't silently drop the compliance text.
+    const body = page.locator('body');
+    await expect(body).toContainText('Age Verification');
+    await expect(body).toContainText('permanently deleted as part of the same admin action');
+    await expect(body).toContainText(
+      'we will not accept ID submissions to override the date of birth on file',
+    );
+    // Non-prod warning so dev testers know not to upload real IDs.
+    await expect(body).toContainText('do NOT');
+  });
+
 });
 
 test.describe('Terms of Service', () => {
