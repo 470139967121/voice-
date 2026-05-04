@@ -44,7 +44,14 @@ service cloud.firestore {
                      // (e.g. `gcsScore` / `gcs_score`) so a future
                      // legacy-compat fallback can't open the gate.
                      'ageVerified', 'ageVerifiedAt', 'ageVerificationMethod',
-                     'age_verified', 'age_verified_at', 'age_verification_method']);
+                     'age_verified', 'age_verified_at', 'age_verification_method',
+                     // PM-lock state (PR 11). Sub-18 users have these
+                     // set by the migration / modify-DOB handler / cron;
+                     // a client write to either bypasses the lock and
+                     // re-grants PM access. Both camelCase and
+                     // snake_case for the dual-read defence.
+                     'pmLocked', 'lastPmLockCheck',
+                     'pm_locked', 'last_pm_lock_check']);
 
       // Backpack — read own, write only via API
       match /backpack/{giftId} {

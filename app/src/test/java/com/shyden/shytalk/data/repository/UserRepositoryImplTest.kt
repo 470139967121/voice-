@@ -288,6 +288,41 @@ class UserRepositoryImplTest {
             assertTrue(result is Resource.Success)
         }
 
+    // region PM-lock auto-unlock (PR 11)
+
+    @Test
+    fun `checkPmLockOnLogin posts to pm-lock-check endpoint`() =
+        runTest {
+            // Route is server-only because Firestore rules deny client
+            // writes to `pmLocked` / `lastPmLockCheck`. Body is empty —
+            // the server identifies the user from the auth context.
+            // Note: WorkerApiClient.post has a default JSONObject() body,
+            // so calling `api.post(path)` actually invokes the 2-arg form
+            // at runtime. coVerify matches the 2-arg form here; we pass
+            // any() for the body because JSONObject lacks value equality.
+            coEvery { api.post(any(), any<JSONObject>()) } returns JSONObject()
+
+            val result = repo.checkPmLockOnLogin("user-1")
+
+            assertTrue(result is Resource.Success)
+            coVerify { api.post("/api/users/user-1/pm-lock-check", any<JSONObject>()) }
+        }
+
+    @Test
+    fun `checkPmLockOnLogin returns Error on API failure`() =
+        runTest {
+            // Failure is non-fatal at the AuthViewModel call site (next
+            // launch / counterparty surfaces state) but the repo MUST
+            // surface an Error so unit-tests / future callers can react.
+            coEvery { api.post(any(), any<JSONObject>()) } throws RuntimeException("Network error")
+
+            val result = repo.checkPmLockOnLogin("user-1")
+
+            assertTrue(result is Resource.Error)
+        }
+
+    // endregion
+
     @Test
     fun `acknowledgeWarning returns Success`() =
         runTest {

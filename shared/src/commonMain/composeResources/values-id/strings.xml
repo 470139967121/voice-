@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Semua admin &amp; mod</string>
     <string name="attach_evidence">Lampirkan Bukti</string>
     <string name="cant_message_user">Kamu tidak bisa mengirim pesan ke pengguna ini</string>
+    <string name="pm_locked_other_user_notice">Anda tidak dapat mengirim pesan ke orang ini karena kami yakin mereka di bawah 18 tahun.</string>
     <string name="chat">Chat</string>
     <string name="close_group">Tutup Grup</string>
     <string name="close_group_warning">Ini akan menutup grup untuk semua orang. Pesan akan disimpan untuk moderasi.</string>

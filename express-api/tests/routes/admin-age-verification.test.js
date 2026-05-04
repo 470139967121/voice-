@@ -402,6 +402,9 @@ describe('POST /api/admin/age-verification/:id/modify-dob', () => {
         ageVerified: true,
         ageVerifiedAt: 1709913600000,
         ageVerificationMethod: 'passport',
+        // PR 11: ≥18 ⇒ unlock. Defends against the modify-DOB path
+        // leaving a now-aged-up user permanently locked.
+        pmLocked: false,
       }),
     );
     expect(mockDeleteObject).toHaveBeenCalled();
@@ -437,6 +440,10 @@ describe('POST /api/admin/age-verification/:id/modify-dob', () => {
         ageVerified: false,
         ageVerifiedAt: null,
         ageVerificationMethod: null,
+        // PR 11: <18 ⇒ lock. The modify-DOB path is the primary
+        // entry point for retroactively age-gating a user whose ID
+        // contradicted their self-reported DOB.
+        pmLocked: true,
       }),
     );
   });

@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">所有管理员 &amp; 版主</string>
     <string name="attach_evidence">附上证据</string>
     <string name="cant_message_user">无法向此用户发送消息</string>
+    <string name="pm_locked_other_user_notice">您无法向此人发送消息，因为我们认为他们未满18岁。</string>
     <string name="chat">聊天</string>
     <string name="close_group">关闭群组</string>
     <string name="close_group_warning">这将为所有人关闭群组。消息将保留以供审核。</string>

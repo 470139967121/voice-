@@ -272,6 +272,8 @@ class AuthViewModelIdentityTest {
 
         override suspend fun liftExpiredSuspension(userId: String) = Resource.Success(Unit)
 
+        override suspend fun checkPmLockOnLogin(userId: String) = Resource.Success(Unit)
+
         override suspend fun getAliases(userId: String) = Resource.Success(emptyMap<String, String>())
 
         override suspend fun setAlias(

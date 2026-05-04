@@ -60,6 +60,18 @@ data class PrivateChatUiState(
     val error: String? = null,
     val isBlocked: Boolean = false,
     val blockReason: String? = null,
+    /**
+     * The COUNTERPARTY is sub-18 and PM-locked (PR 11). Distinct from
+     * `isBlocked`: the input is disabled and a notice is shown, but
+     * the conversation history remains visible. This is the soft-
+     * disabled-input state for an 18+ viewer messaging a minor.
+     *
+     * Mirrors the user-doc `pmLocked` field at the moment the chat is
+     * opened. Not reactive to live counterparty state changes — that
+     * would be a future enhancement (server moderation lifting a lock
+     * mid-session is rare).
+     */
+    val otherUserPmLocked: Boolean = false,
     val isMuted: Boolean = false,
     val isPinned: Boolean = false,
     val conversationId: String = "",
@@ -205,6 +217,15 @@ class PrivateChatViewModel(
                     otherUser = otherUser,
                     currentUserName = currentUser?.displayName ?: "",
                     isSystemConversation = isSystem,
+                    // Counterparty PM-lock: 18+ viewer keeps conversation
+                    // history but the input row is disabled. (PR 11.)
+                    // Fail-closed: a null `otherUser` (failed fetch) is
+                    // treated as locked here too — defence-in-depth so
+                    // that even if `checkRestrictions` is bypassed the
+                    // soft-disabled-input state still kicks in. The
+                    // hard-block isBlocked path takes precedence in the
+                    // screen via `if (canRenderInput)`.
+                    otherUserPmLocked = otherUser == null || otherUser.pmLocked,
                 )
             }
 
@@ -304,8 +325,29 @@ class PrivateChatViewModel(
         currentUser: User?,
         otherUser: User?,
     ): String? {
-        if (currentUser == null || otherUser == null) return null
+        // Fail-CLOSED on either user-doc fetch failure (PR 11 / Apple
+        // guideline 1.1.4). The previous `return null` here let the
+        // input render with no restriction, which would let a sub-18
+        // user message via deep-link if their getUser hit a transient
+        // Firestore error. The blockReason here drives `isBlocked` in
+        // the caller, so a non-null return triggers the same hard-
+        // block UI as a real ban.
+        if (currentUser == null) {
+            logE(TAG, "PM-lock fail-closed: currentUser null in checkRestrictions")
+            return "Could not verify your account. Please try again."
+        }
+        if (otherUser == null) {
+            logE(TAG, "PM-lock fail-closed: otherUser null in checkRestrictions")
+            return "Could not load this conversation. Please try again."
+        }
 
+        // Sub-18 (currentUser PM-locked): hard-block all PM access.
+        // The conversation list filter normally hides these threads,
+        // but a deep-link / Saver restore could land here — second-line
+        // defence. (PR 11.)
+        if (currentUser.pmLocked) {
+            return "Private messages are not available for your account."
+        }
         // Check if blocked by target
         if (otherUser.blockedUserIds.contains(currentUserId)) {
             return "You are blocked by this user and cannot send messages."
@@ -381,6 +423,10 @@ class PrivateChatViewModel(
         if (trimmed.isEmpty() || trimmed.length > Constants.MAX_PM_MESSAGE_LENGTH) return
         val conversationId = _uiState.value.conversationId
         if (conversationId.isEmpty()) return
+        // Counterparty PM-lock backstop (PR 11). The screen disables
+        // the input when otherUserPmLocked is true, but a deep-link or
+        // automation could still call sendMessage. Refuse here.
+        if (_uiState.value.otherUserPmLocked) return
 
         // Moderation checks
         val moderationWarning = ModerationFilter.checkMessage(trimmed)

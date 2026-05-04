@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Tüm yöneticiler &amp; moderatörler</string>
     <string name="attach_evidence">Kanıt Ekle</string>
     <string name="cant_message_user">Bu kullanıcıya mesaj gönderemezsiniz</string>
+    <string name="pm_locked_other_user_notice">Bu kişiyi 18 yaşından küçük olduğuna inandığımız için mesaj gönderemezsiniz.</string>
     <string name="chat">Sohbet</string>
     <string name="close_group">Grubu Kapat</string>
     <string name="close_group_warning">Bu, grubu herkes için kapatacaktır. Mesajlar moderasyon için korunur.</string>

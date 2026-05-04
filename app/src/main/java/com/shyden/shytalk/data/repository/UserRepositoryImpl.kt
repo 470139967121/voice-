@@ -85,6 +85,11 @@ class UserRepositoryImpl(
             api.post("/api/users/$userId/lift-suspension")
         }
 
+    override suspend fun checkPmLockOnLogin(userId: String): Resource<Unit> =
+        firebaseCall("Failed to check PM lock state") {
+            api.post("/api/users/$userId/pm-lock-check")
+        }
+
     // ---- Read methods (unchanged — all use Firestore SDK) ----
 
     // Read from Firestore (offline cache replaces in-memory LRU cache)

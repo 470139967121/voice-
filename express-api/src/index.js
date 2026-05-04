@@ -152,6 +152,11 @@ app.use('/api/reports', sensitiveLimiter);
 app.use('/api/appeals', sensitiveLimiter);
 app.use('/api/users/:uniqueId/delete', sensitiveLimiter);
 app.use('/api/users/:uniqueId/data-export', sensitiveLimiter);
+// First-of-day PM-lock auto-unlock check (PR 11). Sensitive: it can
+// flip a server-only field (`pmLocked`). Throttled inside the route
+// to one Firestore write per user per UTC day, but the limiter caps
+// any one client from spinning the auth-then-403 path in a tight loop.
+app.use('/api/users/:uniqueId/pm-lock-check', sensitiveLimiter);
 // Age verification — sensitive because it issues short-lived R2
 // upload tokens and creates pending submissions. Rate limit prevents
 // a malicious client from spamming submissions or harvesting upload
@@ -181,6 +186,7 @@ app.use('/api', require('./routes/notifications'));
 app.use('/api', require('./routes/rooms'));
 app.use('/api', require('./routes/data-export'));
 app.use('/api', require('./routes/age-verification'));
+app.use('/api', require('./routes/pm-lock-check'));
 app.use('/api', require('./routes/conversations'));
 app.use('/api', require('./routes/banners'));
 app.use('/api', require('./routes/fun-facts'));

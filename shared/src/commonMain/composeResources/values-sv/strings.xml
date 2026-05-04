@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Alla admins &amp; mods</string>
     <string name="attach_evidence">Bifoga bevis</string>
     <string name="cant_message_user">Du kan inte skicka meddelande till denna användare</string>
+    <string name="pm_locked_other_user_notice">Du kan inte skicka meddelanden till den här personen eftersom vi tror att de är under 18 år.</string>
     <string name="chat">Chatt</string>
     <string name="close_group">Stäng grupp</string>
     <string name="close_group_warning">Detta stänger gruppen för alla. Meddelanden bevaras för moderering.</string>

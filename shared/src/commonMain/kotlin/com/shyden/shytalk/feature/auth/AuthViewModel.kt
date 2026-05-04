@@ -503,6 +503,23 @@ class AuthViewModel(
                             if (user.isSuspended) {
                                 userRepository.liftExpiredSuspension(userId)
                             }
+                            // Age-in auto-unlock check (PR 11). Once per
+                            // user per UTC day: the server-side endpoint
+                            // at `POST /api/users/:uniqueId/pm-lock-check`
+                            // reads the user doc, computes whether to
+                            // lift the lock, and writes if yes. Client
+                            // cannot write `pmLocked` (Firestore rules
+                            // deny it), so the auto-unlock has to go
+                            // through Express. Failure is non-fatal —
+                            // the next login or a counterparty's send
+                            // will surface the current state — but we
+                            // still log so a permanently-broken endpoint
+                            // is visible in Sentry rather than vanishing
+                            // into a silent fire-and-forget.
+                            when (val r = userRepository.checkPmLockOnLogin(userId)) {
+                                is Resource.Error -> logW(TAG, "PM-lock check failed (non-fatal): ${r.message}")
+                                else -> Unit
+                            }
                             var needsLegal = user.acceptedLegalVersion < CURRENT_LEGAL_VERSION
                             // If user already accepted locally (pre-sign-in screen),
                             // sync to Firestore and skip showing the legal screen again

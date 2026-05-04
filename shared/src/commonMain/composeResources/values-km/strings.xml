@@ -260,6 +260,7 @@
     <string name="all_admins_and_mods">អ្នកគ្រប់គ្រង &amp; ម៉ូដ</string>
     <string name="attach_evidence">ភ្ជាប់ភស្តុតាង</string>
     <string name="cant_message_user">អ្នកមិនអាចផ្ញើសារទៅអ្នកប្រើនេះ</string>
+    <string name="pm_locked_other_user_notice">អ្នកមិនអាចផ្ញើសារទៅកាន់មនុស្សនេះបានទេ ព្រោះយើងគិតថាគាត់មានអាយុក្រោម 18 ឆ្នាំ។</string>
     <string name="chat">ជំនួញ</string>
     <string name="close_group">បិទក្រុម</string>
     <string name="close_group_warning">នេះនឹងបិទក្រុមសម្រាប់អ្នកទាំងអស់។</string>

@@ -322,6 +322,11 @@ router.post('/admin/age-verification/:id/modify-dob', async (req, res) => {
         ageVerified: verifiedNow,
         ageVerifiedAt: verifiedNow ? now() : null,
         ageVerificationMethod: verifiedNow ? data.idMethod : null,
+        // PR 11 PM-lock side effect. New DOB <18 → lock the user out
+        // of PMs (their list hides + counterparties see disabled
+        // input). New DOB ≥18 → unlock. Same transaction so the
+        // ageVerified flip and the lock state can never diverge.
+        pmLocked: !verifiedNow,
       });
       committed = true;
     });

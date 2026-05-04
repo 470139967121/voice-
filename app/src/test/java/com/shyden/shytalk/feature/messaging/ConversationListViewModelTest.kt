@@ -150,6 +150,65 @@ class ConversationListViewModelTest {
             assertEquals("FAILED_PRECONDITION: index required", vm.uiState.value.error)
         }
 
+    // ===== PM-lock — sub-18 currentUser sees no threads (PR 11) =====
+    //
+    // The migration script + admin Modify-DOB path mark sub-18 users
+    // with `pmLocked=true`. Their PM list must be empty: even seeing
+    // a conversation summary leaks counterparty identity, and the
+    // chat-screen second-line gate would only fire after a tap.
+
+    @Test
+    fun `currentUser pmLocked hides all conversations from list`() =
+        runTest {
+            val currentUser = TestData.createTestUser(uid = currentUserId).copy(pmLocked = true)
+            coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(currentUser)
+
+            val otherUser = TestData.createTestUser(uid = "other-user")
+            coEvery { userRepository.getUsers(any()) } returns Resource.Success(listOf(otherUser))
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            val conv =
+                TestData.createTestConversation(
+                    conversationId = "conv-1",
+                    participantIds = listOf(currentUserId, "other-user"),
+                )
+            conversationsFlow.emit(listOf(conv))
+            advanceUntilIdle()
+
+            assertEquals(0, vm.uiState.value.conversations.size)
+            assertEquals(0L, vm.uiState.value.totalUnreadCount)
+        }
+
+    @Test
+    fun `getUser failure fails CLOSED — list is empty until verified`() =
+        runTest {
+            // Regulatory boundary (Apple guideline 1.1.4): if we cannot
+            // read the user-doc to check pmLocked, we must NOT render
+            // any threads. A transient Firestore error (offline / rate
+            // limit / brief permission glitch) would otherwise leak PMs
+            // to a sub-18 account. Fail-closed.
+            coEvery { userRepository.getUser(currentUserId) } returns Resource.Error("transient firestore error")
+
+            val otherUser = TestData.createTestUser(uid = "other-user")
+            coEvery { userRepository.getUsers(any()) } returns Resource.Success(listOf(otherUser))
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            val conv =
+                TestData.createTestConversation(
+                    conversationId = "conv-1",
+                    participantIds = listOf(currentUserId, "other-user"),
+                )
+            conversationsFlow.emit(listOf(conv))
+            advanceUntilIdle()
+
+            assertEquals(0, vm.uiState.value.conversations.size)
+            assertEquals(0L, vm.uiState.value.totalUnreadCount)
+        }
+
     // ===== Blocked conversations filtered =====
 
     @Test
@@ -713,8 +772,14 @@ class ConversationListViewModelTest {
     // ===== Graceful degradation on user fetch failures =====
 
     @Test
-    fun `conversations still load when current user fetch fails for blocklist`() =
+    fun `current user fetch failure now fails CLOSED — conversations hidden`() =
         runTest {
+            // Updated for PR 11: this test previously asserted fail-OPEN
+            // (conversations rendered with empty-blocklist fallback) but
+            // that semantic leaks PMs to a possibly-locked sub-18 user
+            // when getUser hits a transient Firestore error. The new
+            // contract is fail-CLOSED — return empty list until we can
+            // verify pmLocked. Apple guideline 1.1.4.
             coEvery { userRepository.getUser(currentUserId) } returns Resource.Error("Network error")
 
             val otherUser = TestData.createTestUser(uid = "other-user", displayName = "Other")
@@ -731,9 +796,8 @@ class ConversationListViewModelTest {
             conversationsFlow.emit(listOf(conv))
             advanceUntilIdle()
 
-            // Should still show conversations (empty blocklist fallback)
             assertFalse(vm.uiState.value.isLoading)
-            assertEquals(1, vm.uiState.value.conversations.size)
+            assertEquals(0, vm.uiState.value.conversations.size)
         }
 
     @Test

@@ -676,4 +676,57 @@ class UserTest {
             assertTrue(user.ageVerified)
         }
     }
+
+    // ── PM-lock fields (PR 11) ──────────────────────────────────────
+
+    @Test
+    fun `default pmLocked is false and lastPmLockCheck is null`() {
+        val user = User()
+        assertFalse(user.pmLocked)
+        assertNull(user.lastPmLockCheck)
+    }
+
+    @Test
+    fun `fromMap parses pmLocked + lastPmLockCheck`() {
+        val map =
+            mapOf<String, Any?>(
+                "pmLocked" to true,
+                "lastPmLockCheck" to 1709913600000L,
+            )
+        val user = User.fromMap(map, "u1")
+        assertTrue(user.pmLocked)
+        assertEquals(1709913600000L, user.lastPmLockCheck)
+    }
+
+    @Test
+    fun `fromMap defaults pmLocked false when absent`() {
+        // Existing user docs predate PR 11 and have neither field.
+        // Default fail-OPEN here — sub-18 users got their lock applied
+        // by the migration script; an unmigrated 18+ user should NOT
+        // be locked. The migration is idempotent so any subsequent
+        // run catches anyone the first run missed.
+        val user = User.fromMap(emptyMap(), "u1")
+        assertFalse(user.pmLocked)
+        assertNull(user.lastPmLockCheck)
+    }
+
+    @Test
+    fun `toMap round-trips pmLocked + lastPmLockCheck`() {
+        val user = User(pmLocked = true, lastPmLockCheck = 1709913600000L)
+        val map = user.toMap()
+        assertEquals(true, map["pmLocked"])
+        assertEquals(1709913600000L, map["lastPmLockCheck"])
+    }
+
+    @Test
+    fun `toMap includes default pmLocked false for new users`() {
+        // Pin that newly-created user docs write the explicit `pmLocked
+        // = false` field so an admin "find unlocked users" query on
+        // `where('pmLocked', '==', false)` catches them. Same defence
+        // as the ageVerified pattern.
+        val user = User()
+        val map = user.toMap()
+        assertEquals(false, map["pmLocked"])
+        assertNull(map["lastPmLockCheck"])
+    }
 }

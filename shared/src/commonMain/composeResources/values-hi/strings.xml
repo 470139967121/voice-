@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">सभी एडमिन &amp; मॉड</string>
     <string name="attach_evidence">सबूत संलग्न करें</string>
     <string name="cant_message_user">आप इस उपयोगकर्ता को संदेश नहीं भेज सकते</string>
+    <string name="pm_locked_other_user_notice">आप इस व्यक्ति को संदेश नहीं भेज सकते क्योंकि हमें लगता है कि वे 18 वर्ष से कम के हैं।</string>
     <string name="chat">चैट</string>
     <string name="close_group">ग्रुप बंद करें</string>
     <string name="close_group_warning">यह सभी के लिए ग्रुप बंद कर देगा। संदेश मॉडरेशन के लिए सुरक्षित रहेंगे।</string>
