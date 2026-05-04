@@ -12,8 +12,12 @@ import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.core.util.logE
 import com.shyden.shytalk.core.util.logI
 import com.shyden.shytalk.core.util.logW
+import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.GiftRepository
+import com.shyden.shytalk.data.repository.UserRepository
+import com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState
+import com.shyden.shytalk.feature.ageverification.AgeRestrictionService
 import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,9 +50,23 @@ data class GachaUiState(
 class GachaViewModel(
     private val economyRepository: EconomyRepository,
     private val giftRepository: GiftRepository,
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
+    private val ageRestrictionService: AgeRestrictionService,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(GachaUiState())
     val uiState: StateFlow<GachaUiState> = _uiState.asStateFlow()
+
+    /**
+     * State for the age-restriction dialog. The screen observes this
+     * and renders [com.shyden.shytalk.feature.ageverification.AgeRestrictionDialog]
+     * when non-Hidden. Set by [pull] when the current user fails the
+     * 18+ gate; cleared by [dismissAgeRestrictionDialog].
+     */
+    private val _ageRestrictionDialogState =
+        MutableStateFlow<AgeRestrictionDialogState>(AgeRestrictionDialogState.Hidden)
+    val ageRestrictionDialogState: StateFlow<AgeRestrictionDialogState> =
+        _ageRestrictionDialogState.asStateFlow()
 
     // Guard against stale Firestore snapshots overwriting the pull result balance
     private var pullBalanceSetAt = 0L
@@ -171,6 +189,21 @@ class GachaViewModel(
             return
         }
         viewModelScope.launch {
+            // 18+ age-restriction gate. If the current user is sub-18 or
+            // unverified-but-eligible-to-verify, surface the appropriate
+            // dialog and bail BEFORE charging coins.
+            //
+            // A null user (anonymous, unauth, or load failure) is treated
+            // as restricted — proceeding would let an attacker who pulls
+            // the auth token before identity-resolve completes hit the
+            // gate. UserRepository load errors are similarly fail-closed.
+            val restriction = checkAgeRestriction()
+            if (restriction != AgeRestrictionDialogState.Hidden) {
+                _ageRestrictionDialogState.value = restriction
+                logI(TAG, "Gacha pull blocked by age restriction: $restriction")
+                return@launch
+            }
+
             _uiState.update { it.copy(isPulling = true, error = null, currentWin = null) }
             when (val result = economyRepository.pullGacha(count, expectedCost = cost)) {
                 is Resource.Success -> {
@@ -263,5 +296,32 @@ class GachaViewModel(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    fun dismissAgeRestrictionDialog() {
+        _ageRestrictionDialogState.value = AgeRestrictionDialogState.Hidden
+    }
+
+    /**
+     * Loads the current user from [userRepository] and runs the 18+
+     * gate via [ageRestrictionService]. Returns the dialog state that
+     * should surface — [AgeRestrictionDialogState.Hidden] when the
+     * pull should proceed normally, otherwise the restriction variant
+     * to show.
+     *
+     * Fail-closed semantics: a missing currentUserId, a Resource.Error
+     * on load, or any unexpected exception returns [SubEighteen] (most
+     * restrictive) rather than [Hidden]. The user can re-try once
+     * sign-in completes.
+     */
+    private suspend fun checkAgeRestriction(): AgeRestrictionDialogState {
+        val uid = authRepository.currentUserId ?: return AgeRestrictionDialogState.SubEighteen
+        val user =
+            when (val result = userRepository.getUser(uid)) {
+                is Resource.Success -> result.data
+                else -> return AgeRestrictionDialogState.SubEighteen
+            }
+        val state = ageRestrictionService.checkGachaAccess(user)
+        return AgeRestrictionDialogState.showOnBlocked(state)
     }
 }

@@ -5,10 +5,15 @@ import com.shyden.shytalk.core.model.EconomyConfig
 import com.shyden.shytalk.core.model.GachaGift
 import com.shyden.shytalk.core.model.GachaResult
 import com.shyden.shytalk.core.model.Gift
+import com.shyden.shytalk.core.model.User
 import com.shyden.shytalk.core.util.Resource
 import com.shyden.shytalk.core.util.UiText
+import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.GiftRepository
+import com.shyden.shytalk.data.repository.UserRepository
+import com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState
+import com.shyden.shytalk.feature.ageverification.AgeRestrictionService
 import com.shyden.shytalk.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.every
@@ -39,6 +44,21 @@ class GachaViewModelTest {
 
     private val economyRepository = mockk<EconomyRepository>(relaxed = true)
     private val giftRepository = mockk<GiftRepository>(relaxed = true)
+    private val authRepository = mockk<AuthRepository>(relaxed = true)
+    private val userRepository = mockk<UserRepository>(relaxed = true)
+    private val ageRestrictionService = AgeRestrictionService()
+
+    /**
+     * 25 years ago — used as the default DOB for the mocked current
+     * user so existing tests pass the 18+ gate without setup.
+     * Calendar-aware (matches `AgeRestrictionService` boundary check).
+     */
+    private val twentyFiveYearsAgoMs: Long
+        get() {
+            val cal = java.util.Calendar.getInstance()
+            cal.add(java.util.Calendar.YEAR, -25)
+            return cal.timeInMillis
+        }
 
     private val giftsFlow = MutableSharedFlow<List<Gift>>()
 
@@ -88,6 +108,17 @@ class GachaViewModelTest {
             flowOf(
                 EconomyConfig(pullCosts = mapOf(1 to 10, 10 to 100, 100 to 1000)),
             )
+        // Default: 25-year-old verified user. Pre-existing tests don't
+        // set up the gate explicitly, so this default keeps them green.
+        every { authRepository.currentUserId } returns "u1"
+        coEvery { userRepository.getUser("u1") } returns
+            Resource.Success(
+                User(
+                    uid = "u1",
+                    dateOfBirth = twentyFiveYearsAgoMs,
+                    ageVerified = true,
+                ),
+            )
     }
 
     @After
@@ -100,7 +131,14 @@ class GachaViewModelTest {
             activeViewModels.clear()
         }
 
-    private fun createViewModel(): GachaViewModel = GachaViewModel(economyRepository, giftRepository).also { activeViewModels.add(it) }
+    private fun createViewModel(): GachaViewModel =
+        GachaViewModel(
+            economyRepository = economyRepository,
+            giftRepository = giftRepository,
+            authRepository = authRepository,
+            userRepository = userRepository,
+            ageRestrictionService = ageRestrictionService,
+        ).also { activeViewModels.add(it) }
 
     @Test
     fun `winnableGifts filters out zero coinValue and pads to 16`() =
@@ -613,5 +651,129 @@ class GachaViewModelTest {
             // VM should still be alive (balance stays at default 0)
             assertNotNull(vm.uiState.value)
             assertEquals(0L, vm.uiState.value.coinBalance)
+        }
+
+    // ── Age-restriction gate (PR 8b) ──────────────────────────────
+
+    @Test
+    fun `pull blocked with NeedsVerification dialog when user is unverified 18+`() =
+        runTest {
+            // 25-y/o but ageVerified=false → NeedsVerification.
+            coEvery { userRepository.getUser("u1") } returns
+                Resource.Success(
+                    User(uid = "u1", dateOfBirth = twentyFiveYearsAgoMs, ageVerified = false),
+                )
+
+            val vm = createViewModel()
+            vm.updateBalance(100, 0)
+            vm.pullSingle()
+            advanceUntilIdle()
+
+            assertEquals(
+                AgeRestrictionDialogState.NeedsVerification,
+                vm.ageRestrictionDialogState.value,
+            )
+            // Crucially: pullGacha is NOT called — coins not charged.
+            io.mockk.verify(exactly = 0) {
+                runBlocking { economyRepository.pullGacha(any(), any()) }
+            }
+        }
+
+    @Test
+    fun `pull blocked with SubEighteen dialog when user is sub-18`() =
+        runTest {
+            val cal = java.util.Calendar.getInstance()
+            cal.add(java.util.Calendar.YEAR, -16)
+            coEvery { userRepository.getUser("u1") } returns
+                Resource.Success(
+                    User(uid = "u1", dateOfBirth = cal.timeInMillis, ageVerified = false),
+                )
+
+            val vm = createViewModel()
+            vm.updateBalance(100, 0)
+            vm.pullSingle()
+            advanceUntilIdle()
+
+            assertEquals(
+                AgeRestrictionDialogState.SubEighteen,
+                vm.ageRestrictionDialogState.value,
+            )
+            io.mockk.verify(exactly = 0) {
+                runBlocking { economyRepository.pullGacha(any(), any()) }
+            }
+        }
+
+    @Test
+    fun `pull blocked fail-closed when currentUserId is null`() =
+        runTest {
+            // Auth not yet resolved (e.g. mid-sign-in). Treat as
+            // restricted — proceeding would skip the gate.
+            every { authRepository.currentUserId } returns null
+
+            val vm = createViewModel()
+            vm.updateBalance(100, 0)
+            vm.pullSingle()
+            advanceUntilIdle()
+
+            assertEquals(
+                AgeRestrictionDialogState.SubEighteen,
+                vm.ageRestrictionDialogState.value,
+            )
+        }
+
+    @Test
+    fun `pull blocked fail-closed when userRepository returns Error`() =
+        runTest {
+            // Network failure / Firestore rules block — treat as
+            // restricted.
+            coEvery { userRepository.getUser("u1") } returns Resource.Error("network")
+
+            val vm = createViewModel()
+            vm.updateBalance(100, 0)
+            vm.pullSingle()
+            advanceUntilIdle()
+
+            assertEquals(
+                AgeRestrictionDialogState.SubEighteen,
+                vm.ageRestrictionDialogState.value,
+            )
+        }
+
+    @Test
+    fun `pull proceeds normally when user is verified — dialog stays Hidden`() =
+        runTest {
+            // Default setup is verified 25-y/o; this test pins the
+            // happy path (dialog stays Hidden).
+            coEvery { economyRepository.pullGacha(1, any()) } returns Resource.Success(singleResult)
+
+            val vm = createViewModel()
+            vm.updateBalance(100, 0)
+            vm.pullSingle()
+            advanceUntilIdle()
+
+            assertEquals(AgeRestrictionDialogState.Hidden, vm.ageRestrictionDialogState.value)
+            // Pull DID happen (coin balance updated)
+            assertEquals(90L, vm.uiState.value.coinBalance)
+        }
+
+    @Test
+    fun `dismissAgeRestrictionDialog resets to Hidden`() =
+        runTest {
+            coEvery { userRepository.getUser("u1") } returns
+                Resource.Success(
+                    User(uid = "u1", dateOfBirth = twentyFiveYearsAgoMs, ageVerified = false),
+                )
+
+            val vm = createViewModel()
+            vm.updateBalance(100, 0)
+            vm.pullSingle()
+            advanceUntilIdle()
+            assertEquals(
+                AgeRestrictionDialogState.NeedsVerification,
+                vm.ageRestrictionDialogState.value,
+            )
+
+            vm.dismissAgeRestrictionDialog()
+            assertEquals(AgeRestrictionDialogState.Hidden, vm.ageRestrictionDialogState.value)
         }
 }
