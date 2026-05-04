@@ -23,6 +23,7 @@ import com.shyden.shytalk.data.remote.IosTypingRepositoryImpl
 import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
+import com.shyden.shytalk.data.repository.AgeVerificationRepository
 import com.shyden.shytalk.data.repository.AppLockRepository
 import com.shyden.shytalk.data.repository.AppLockRepositoryImpl
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -33,6 +34,7 @@ import com.shyden.shytalk.data.repository.EconomyRepository
 import com.shyden.shytalk.data.repository.FunFactRepository
 import com.shyden.shytalk.data.repository.GiftRepository
 import com.shyden.shytalk.data.repository.IdentityRepository
+import com.shyden.shytalk.data.repository.IosAgeVerificationRepositoryImpl
 import com.shyden.shytalk.data.repository.IosAuthRepositoryImpl
 import com.shyden.shytalk.data.repository.IosBannerRepositoryImpl
 import com.shyden.shytalk.data.repository.IosBiometricRepositoryImpl
@@ -140,6 +142,7 @@ val iosPlatformModule =
         single<MessageRepository> { IosMessageRepositoryImpl(get()) }
         single<SeatRequestRepository> { IosSeatRequestRepositoryImpl(get(), get()) }
         single<StorageRepository> { IosStorageRepositoryImpl(get()) }
+        single<AgeVerificationRepository> { IosAgeVerificationRepositoryImpl(get()) }
         single<DeviceRepository> { IosDeviceRepositoryImpl(get(), get()) }
         single<IdentityRepository> { IosIdentityRepositoryImpl(get(), get()) }
         single<PrivateMessageRepository> { IosPrivateMessageRepositoryImpl(get(), get(), get()) }

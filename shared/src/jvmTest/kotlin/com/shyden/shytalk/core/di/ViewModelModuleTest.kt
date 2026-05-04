@@ -9,6 +9,7 @@ import com.shyden.shytalk.data.remote.ConversationWebSocketService
 import com.shyden.shytalk.data.remote.PresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
+import com.shyden.shytalk.data.repository.AgeVerificationRepository
 import com.shyden.shytalk.data.repository.AppLockRepository
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.BannerRepository
@@ -53,6 +54,7 @@ class ViewModelModuleTest {
                     MessageRepository::class,
                     SeatRequestRepository::class,
                     StorageRepository::class,
+                    AgeVerificationRepository::class,
                     DeviceRepository::class,
                     IdentityRepository::class,
                     PrivateMessageRepository::class,
