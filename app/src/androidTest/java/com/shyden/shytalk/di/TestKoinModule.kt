@@ -49,6 +49,7 @@ import com.shyden.shytalk.fake.FakeTranslationRepository
 import com.shyden.shytalk.fake.FakeTypingRepository
 import com.shyden.shytalk.fake.FakeUserRepository
 import com.shyden.shytalk.fake.FakeVoiceService
+import com.shyden.shytalk.feature.ageverification.AgeRestrictionService
 import com.shyden.shytalk.feature.auth.AuthViewModel
 import com.shyden.shytalk.feature.daily.DailyRewardViewModel
 import com.shyden.shytalk.feature.gacha.GachaViewModel
@@ -84,6 +85,9 @@ val testModule =
         // the test emulator's app private dir; safe because instrumented
         // tests run in a sandboxed package).
         single { SecureStorage(androidContext()) }
+
+        // Pure-logic services (no fake needed)
+        single { AgeRestrictionService() }
 
         // Fake services
         single { FakeTokenService() } bind TokenService::class
@@ -165,7 +169,7 @@ val testModule =
         viewModel { ReportReviewViewModel(get(), get()) }
         viewModel { NewMessageViewModel(get(), get(), get()) }
         viewModel { params -> GroupSetupViewModel(params[0], get(), get(), get(), get()) }
-        viewModel { GachaViewModel(get(), get()) }
+        viewModel { GachaViewModel(get(), get(), get(), get(), get()) }
         viewModel { WalletViewModel(get(), get(), get()) }
         viewModel { TransactionHistoryViewModel(get()) }
         viewModel { GiftingViewModel(get(), get(), get()) }

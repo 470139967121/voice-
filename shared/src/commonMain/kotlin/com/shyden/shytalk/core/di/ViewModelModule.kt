@@ -1,5 +1,6 @@
 package com.shyden.shytalk.core.di
 
+import com.shyden.shytalk.feature.ageverification.AgeRestrictionService
 import com.shyden.shytalk.feature.auth.AuthViewModel
 import com.shyden.shytalk.feature.auth.EmailOtpViewModel
 import com.shyden.shytalk.feature.auth.LockScreenViewModel
@@ -36,6 +37,11 @@ import org.koin.dsl.module
  */
 val viewModelModule =
     module {
+        // Age-verification service — pure logic, no construction args.
+        // Bound here so VMs that gate on age (PR 8b GachaViewModel,
+        // future PrivateMessageViewModel) can `get()` it.
+        single { AgeRestrictionService() }
+
         viewModel { AuthViewModel(get(), get(), get(), get(), get(named("deviceId")), get(named("bypassDeviceChecks")), get(), get()) }
         viewModel { LockScreenViewModel(get(), get(), get(), get(), get()) }
         viewModel { PinSetupViewModel(get(), get()) }
@@ -68,7 +74,7 @@ val viewModelModule =
         viewModel { ReportReviewViewModel(get(), get()) }
         viewModel { NewMessageViewModel(get(), get(), get()) }
         viewModel { params -> GroupSetupViewModel(params[0], get(), get(), get(), get()) }
-        viewModel { GachaViewModel(get(), get()) }
+        viewModel { GachaViewModel(get(), get(), get(), get(), get()) }
         viewModel { WalletViewModel(get(), get(), get()) }
         viewModel { TransactionHistoryViewModel(get()) }
         viewModel { GiftingViewModel(get(), get(), get()) }
