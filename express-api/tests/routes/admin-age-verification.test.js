@@ -172,10 +172,7 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
 
   test('flips ageVerified=true on user, marks submission approved, deletes image, writes audit, sends PM', async () => {
     const app = createApp();
-    await request(app)
-      .post('/api/admin/age-verification/sub-1/approve')
-      .send({ reason: 'ID verified by passport' })
-      .expect(200);
+    await request(app).post('/api/admin/age-verification/sub-1/approve').expect(200);
 
     // Submission doc updated
     expect(mockTxUpdate).toHaveBeenCalledWith(
@@ -222,10 +219,7 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
     });
 
     const app = createApp();
-    await request(app)
-      .post('/api/admin/age-verification/sub-1/approve')
-      .send({ reason: 'ok' })
-      .expect(409);
+    await request(app).post('/api/admin/age-verification/sub-1/approve').expect(409);
 
     expect(mockTxUpdate).not.toHaveBeenCalled();
     expect(mockDeleteObject).not.toHaveBeenCalled();
@@ -235,63 +229,60 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
   test('rejects unknown submission (404)', async () => {
     mockTxGet.mockResolvedValue({ exists: false });
     const app = createApp();
-    await request(app)
-      .post('/api/admin/age-verification/missing/approve')
-      .send({ reason: 'ok' })
-      .expect(404);
+    await request(app).post('/api/admin/age-verification/missing/approve').expect(404);
   });
 
   test('rejects non-admin with 403', async () => {
     const app = createApp({ admin: false });
-    await request(app)
-      .post('/api/admin/age-verification/sub-1/approve')
-      .send({ reason: 'ok' })
-      .expect(403);
+    await request(app).post('/api/admin/age-verification/sub-1/approve').expect(403);
     expect(mockTxUpdate).not.toHaveBeenCalled();
   });
 
-  test('rejects empty reason on approve (symmetric audit trail)', async () => {
+  test('approve does NOT require a reason — empty body succeeds', async () => {
+    // 2026-05-04 spec follow-up: original spec only required reason
+    // on outcomes the user needs explained (Reject / DOB-modified).
+    // Approve is the "everything is fine" path. Pin that the route
+    // accepts an empty body so a future regression that adds the
+    // reason gate trips this test.
+    const app = createApp();
+    await request(app).post('/api/admin/age-verification/sub-1/approve').expect(200);
+    expect(mockTxUpdate).toHaveBeenCalled();
+  });
+
+  test('approve does NOT persist decisionReason on the submission doc', async () => {
     const app = createApp();
     await request(app)
       .post('/api/admin/age-verification/sub-1/approve')
-      .send({ reason: '' })
-      .expect(400);
-    expect(mockTxUpdate).not.toHaveBeenCalled();
+      .send({ reason: 'ignored if sent' })
+      .expect(200);
+    // The submission update payload must NOT carry decisionReason.
+    const submissionUpdateCall = mockTxUpdate.mock.calls.find(
+      ([path]) => path === 'ageVerificationSubmissions/sub-1',
+    );
+    expect(submissionUpdateCall).toBeDefined();
+    expect(submissionUpdateCall[1]).not.toHaveProperty('decisionReason');
   });
 
   test('returns auditWritten=false flag when audit-log write fails (decision still committed)', async () => {
     // Per partial-failure-contracts feedback rule: a failed audit
-    // write must be surfaced as a flag, not masked as 500. Decision
-    // is committed; ops sees the flag and back-fills.
+    // write must be surfaced as a flag, not masked as 500.
     mockLogApproved.mockRejectedValue(new Error('auditLog write rejected by rules'));
     const app = createApp();
-    const res = await request(app)
-      .post('/api/admin/age-verification/sub-1/approve')
-      .send({ reason: 'ok' })
-      .expect(200);
+    const res = await request(app).post('/api/admin/age-verification/sub-1/approve').expect(200);
     expect(res.body).toMatchObject({ ok: true, auditWritten: false });
   });
 
   test('returns imageDeleted=false flag when R2 delete fails (decision still committed)', async () => {
     mockDeleteObject.mockRejectedValue(new Error('R2 timeout'));
     const app = createApp();
-    const res = await request(app)
-      .post('/api/admin/age-verification/sub-1/approve')
-      .send({ reason: 'ok' })
-      .expect(200);
+    const res = await request(app).post('/api/admin/age-verification/sub-1/approve').expect(200);
     expect(res.body).toMatchObject({ ok: true, imageDeleted: false });
   });
 
   test('returns userNotified=false flag when system PM fails (decision still committed)', async () => {
-    // Same partial-failure shape as audit / R2 — failed PM doesn't
-    // roll back the decision; admin UI surfaces "decision committed,
-    // user not notified" so ops can DM the user manually.
     mockSendApprovedPm.mockRejectedValue(new Error('conversations write rejected'));
     const app = createApp();
-    const res = await request(app)
-      .post('/api/admin/age-verification/sub-1/approve')
-      .send({ reason: 'ok' })
-      .expect(200);
+    const res = await request(app).post('/api/admin/age-verification/sub-1/approve').expect(200);
     expect(res.body).toMatchObject({ ok: true, userNotified: false });
   });
 });
