@@ -1,6 +1,7 @@
 package com.shyden.shytalk.core.di
 
 import com.shyden.shytalk.feature.ageverification.AgeRestrictionService
+import com.shyden.shytalk.feature.ageverification.AgeVerificationSubmitViewModel
 import com.shyden.shytalk.feature.auth.AuthViewModel
 import com.shyden.shytalk.feature.auth.EmailOtpViewModel
 import com.shyden.shytalk.feature.auth.LockScreenViewModel
@@ -49,6 +50,7 @@ val viewModelModule =
         viewModel { HomeViewModel(get(), get(), get(), get()) }
         viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get(), get()) }
         viewModel { RequiredDOBViewModel(get(), get()) }
+        viewModel { AgeVerificationSubmitViewModel(get()) }
         viewModel { params -> FollowListViewModel(params[0], params[1], get(), get()) }
         viewModel { params -> RoomViewModel(params[0], get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
         viewModel { AppSettingsViewModel(get(), get(), get(), get()) }

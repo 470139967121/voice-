@@ -28,6 +28,8 @@ import com.shyden.shytalk.data.remote.RtdbPresenceService
 import com.shyden.shytalk.data.remote.TokenService
 import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.remote.WorkerApiClient
+import com.shyden.shytalk.data.repository.AgeVerificationRepository
+import com.shyden.shytalk.data.repository.AgeVerificationRepositoryImpl
 import com.shyden.shytalk.data.repository.AppLockRepository
 import com.shyden.shytalk.data.repository.AppLockRepositoryImpl
 import com.shyden.shytalk.data.repository.AuthRepository
@@ -141,6 +143,7 @@ val appModule =
         singleOf(::MessageRepositoryImpl) bind MessageRepository::class
         singleOf(::SeatRequestRepositoryImpl) bind SeatRequestRepository::class
         single<StorageRepository> { StorageRepositoryImpl(get(), BuildConfig.WORKER_URL, get()) }
+        singleOf(::AgeVerificationRepositoryImpl) bind AgeVerificationRepository::class
         singleOf(::DeviceRepositoryImpl) bind DeviceRepository::class
         singleOf(::IdentityRepositoryImpl) bind IdentityRepository::class
         singleOf(::PrivateMessageRepositoryImpl) bind PrivateMessageRepository::class

@@ -77,4 +77,8 @@ sealed class Screen(
     data object PinSetup : Screen("pin_setup")
 
     data object SecuritySettings : Screen("security_settings")
+
+    /** Age-verification submit flow (PR 9). User reaches it from the
+     *  AgeRestrictionDialog "Verify now" CTA in PM / gacha. */
+    data object AgeVerificationSubmit : Screen("age_verification_submit")
 }

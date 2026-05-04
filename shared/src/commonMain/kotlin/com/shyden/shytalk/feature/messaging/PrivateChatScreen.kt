@@ -98,6 +98,7 @@ fun PrivateChatScreen(
     onPickImages: (() -> Unit)? = null,
     onPickStickerImage: (() -> Unit)? = null,
     onNavigateToRoom: ((String) -> Unit)? = null,
+    onNavigateToAgeVerification: () -> Unit = {},
     activeRoomId: String? = null,
     activeRoomName: String? = null,
     conversationId: String? = null,
@@ -105,6 +106,7 @@ fun PrivateChatScreen(
     viewModel: PrivateChatViewModel = koinViewModel(key = conversationId ?: otherUserId) { parametersOf(otherUserId) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val ageRestrictionDialogState by viewModel.ageRestrictionDialogState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val timeStrings = rememberRelativeTimeStrings()
@@ -981,6 +983,18 @@ fun PrivateChatScreen(
             _onAddParticipant = { viewModel.addGroupParticipant(it) },
         )
     }
+
+    // Age-verification gate dialog (PR 9). The dialog's own interactive
+    // elements carry testTags inside AgeRestrictionDialog.kt
+    // (TAG_NEEDS_VERIFICATION_CONFIRM etc.). NeedsVerification routes to
+    // the submit screen; SubEighteen offers contact-support (no entry
+    // into the verification flow — they need to age in).
+    com.shyden.shytalk.feature.ageverification.AgeRestrictionDialog(
+        state = ageRestrictionDialogState,
+        onDismiss = { viewModel.dismissAgeRestrictionDialog() },
+        onVerifyNow = onNavigateToAgeVerification,
+        onContactSupport = { viewModel.dismissAgeRestrictionDialog() },
+    )
 }
 
 private val reportReasons = listOf("Spam", "Harassment", "Inappropriate Content", "Other")

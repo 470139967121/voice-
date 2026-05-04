@@ -36,6 +36,7 @@ import com.shyden.shytalk.core.util.currentTimeMillis
 import com.shyden.shytalk.data.remote.VoiceService
 import com.shyden.shytalk.data.repository.AuthRepository
 import com.shyden.shytalk.data.repository.UserRepository
+import com.shyden.shytalk.feature.ageverification.AgeVerificationSubmitScreen
 import com.shyden.shytalk.feature.auth.EmailOtpScreen
 import com.shyden.shytalk.feature.daily.DailyRewardCelebrationDialog
 import com.shyden.shytalk.feature.daily.DailyRewardDialog
@@ -219,6 +220,16 @@ fun SharedNavGraph(
                             popUpTo(Screen.RequiredDOB.route) { inclusive = true }
                         }
                     },
+                )
+            }
+
+            // ── Age Verification submit (PR 9) ──
+            // Reached from the AgeRestrictionDialog "Verify now" CTA
+            // when the user is 18+ but unverified. The screen handles
+            // its own back/done navigation via onClose.
+            composable(Screen.AgeVerificationSubmit.route) {
+                AgeVerificationSubmitScreen(
+                    onClose = { navController.popBackStack() },
                 )
             }
 
@@ -447,6 +458,9 @@ fun SharedNavGraph(
                         }
                     },
                     onNavigateToRoom = { roomId -> navigateToRoom(roomId) },
+                    onNavigateToAgeVerification = {
+                        navController.navigate(Screen.AgeVerificationSubmit.route)
+                    },
                     activeRoomId = activeRoomId,
                     activeRoomName = activeRoom?.name,
                     viewModel = chatViewModel,

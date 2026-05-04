@@ -951,4 +951,32 @@
     <string name="age_restriction_sub_eighteen_confirm">Contact support</string>
     <string name="age_restriction_dismiss">Cancel</string>
 
+    <!-- Age verification submit flow (PR 9 of age-verification feature). PR 13 ships translations for the remaining 19 locales. -->
+    <string name="age_verif_submit_title">Verify your age</string>
+    <string name="age_verif_step_explanation_title">How this works</string>
+    <string name="age_verif_step_explanation_body">We need a photo of a government-issued ID to confirm you are at least 18. The image is encrypted in transit, reviewed by a human moderator, and permanently deleted as soon as a decision is recorded — usually within 24 hours. Only the date of birth and verification outcome are kept.</string>
+    <string name="age_verif_step_explanation_continue">I understand — continue</string>
+    <string name="age_verif_step_method_title">Which document?</string>
+    <string name="age_verif_step_method_body">Pick the type of ID you will submit. The DOB on the document must match the one on your account.</string>
+    <string name="age_verif_method_passport">Passport</string>
+    <string name="age_verif_method_drivers_license">Driver\'s license</string>
+    <string name="age_verif_method_national_id">National ID card</string>
+    <string name="age_verif_step_image_title">Add the photo</string>
+    <string name="age_verif_step_image_body">Choose a clear photo of the ID. Make sure the date of birth is fully readable.</string>
+    <string name="age_verif_step_image_pick">Choose photo</string>
+    <string name="age_verif_step_image_replace">Replace photo</string>
+    <string name="age_verif_step_confirm_title">Ready to submit?</string>
+    <string name="age_verif_step_confirm_body">Once submitted, the photo is sent for review. You\'ll get a system message when a decision is recorded.</string>
+    <string name="age_verif_field_method">ID type:</string>
+    <string name="age_verif_field_photo">Photo:</string>
+    <string name="age_verif_photo_attached">attached</string>
+    <string name="age_verif_step_confirm_submit">Submit for review</string>
+    <string name="age_verif_step_submitted_title">Thank you</string>
+    <string name="age_verif_step_submitted_body">Your submission is in the queue. We will message you here when a decision is recorded.</string>
+    <string name="age_verif_step_submitted_done">Done</string>
+    <string name="age_verif_back">Back</string>
+    <string name="age_verif_submit_error_no_method">Please pick an ID type before submitting.</string>
+    <string name="age_verif_submit_error_no_image">Please add a photo before submitting.</string>
+    <string name="age_verif_submit_error_generic">Could not submit — please check your connection and try again.</string>
+
 </resources>

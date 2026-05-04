@@ -11,6 +11,9 @@ import com.shyden.shytalk.data.firestore.dataMap
 import com.shyden.shytalk.data.remote.ApiException
 import com.shyden.shytalk.data.remote.IosApiClient
 import dev.gitlive.firebase.firestore.FirebaseFirestore
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.http.contentType
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -478,4 +481,73 @@ class IosStorageRepositoryImpl(
             logW("StorageRepository", "Best-effort image delete failed", e)
         }
     }
+}
+
+// ── AgeVerificationRepository (PR 9) ───────────────────────────────
+
+/**
+ * iOS impl of the user-facing age-verification submit flow. Uses
+ * [IosApiClient] for the two server-side calls and a fresh Ktor
+ * [io.ktor.client.HttpClient] for the direct R2 PUT (the signed URL
+ * IS the auth — no Bearer header to attach).
+ */
+class IosAgeVerificationRepositoryImpl(
+    private val api: IosApiClient,
+) : AgeVerificationRepository {
+    override suspend fun requestUploadUrl(
+        contentType: AgeVerificationRepository.ContentType,
+    ): Resource<AgeVerificationRepository.UploadHandle> =
+        firebaseCall("Failed to request upload URL") {
+            val body =
+                JsonObject(mapOf("contentType" to JsonPrimitive(contentType.wireValue)))
+            val resp = api.post("/api/age-verification/upload-url", body)
+            AgeVerificationRepository.UploadHandle(
+                uploadUrl =
+                    resp["uploadUrl"]?.jsonPrimitive?.contentOrNull
+                        ?: throw RuntimeException("uploadUrl missing"),
+                r2Key =
+                    resp["r2Key"]?.jsonPrimitive?.contentOrNull
+                        ?: throw RuntimeException("r2Key missing"),
+                expiresInSec = resp["expiresInSec"]?.jsonPrimitive?.int ?: 300,
+            )
+        }
+
+    override suspend fun uploadImage(
+        uploadUrl: String,
+        contentType: AgeVerificationRepository.ContentType,
+        bytes: ByteArray,
+    ): Resource<Unit> =
+        firebaseCall("Failed to upload ID image") {
+            val client = io.ktor.client.HttpClient()
+            try {
+                val response =
+                    client.put(uploadUrl) {
+                        contentType(
+                            io.ktor.http.ContentType
+                                .parse(contentType.wireValue),
+                        )
+                        setBody(bytes)
+                    }
+                if (response.status.value !in 200..299) {
+                    throw RuntimeException("R2 PUT failed: HTTP ${response.status.value}")
+                }
+            } finally {
+                client.close()
+            }
+        }
+
+    override suspend fun submit(
+        idMethod: AgeVerificationRepository.IdMethod,
+        r2Key: String,
+    ): Resource<Unit> =
+        firebaseCall("Failed to submit verification") {
+            val body =
+                JsonObject(
+                    mapOf(
+                        "idMethod" to JsonPrimitive(idMethod.wireValue),
+                        "r2Key" to JsonPrimitive(r2Key),
+                    ),
+                )
+            api.post("/api/age-verification/submit", body)
+        }
 }
