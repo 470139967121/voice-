@@ -150,7 +150,7 @@
     <header>
       <div class="logo"><a href="/">Shy<span>Talk</span></a></div>
       <h1 data-i18n="pp_title">Privacy Policy</h1>
-      <p class="last-updated" data-i18n="pp_updated">Last updated: March 2026</p>
+      <p class="last-updated" data-i18n="pp_updated">Last updated: May 2026</p>
     </header>
 
     <main>
@@ -162,6 +162,7 @@
         <p data-i18n="pp_s1_p4"><strong>Usage logs</strong> — app actions, page views, errors, and crash reports. These help us monitor performance and fix problems.</p>
         <p data-i18n="pp_s1_p5"><strong>Sign-in identities</strong> — if you link multiple sign-in methods (Google, Apple, Email) to your account, we store the associated provider identifiers (such as email addresses and Apple identifiers) in an identity map alongside your account to enable multi-provider sign-in.</p>
         <p data-i18n="pp_s1_p6"><strong>Voice chat data</strong> — connection metadata only (e.g., join/leave times, connection quality). We do <strong>not</strong> record audio.</p>
+        <p data-i18n="pp_s1_p7"><strong>Age verification data</strong> — your date of birth (entered at sign-up) and, if you choose to access 18+ features (private messages, gacha), a temporary copy of a government-issued ID (passport, driver's licence, or national ID card). The ID image is reviewed by a human admin and is permanently deleted as soon as a decision is recorded — we do not retain the image after review. Only the verification status, decision timestamp, and ID type (e.g. "passport") are kept on your account afterwards.</p>
       </section>
 
       <section>
@@ -173,6 +174,7 @@
           <li data-i18n="pp_s2_li4">Error monitoring and debugging</li>
           <li data-i18n="pp_s2_li5">Resolve your identity across multiple sign-in providers</li>
           <li data-i18n="pp_s2_li6">Prevent multi-account abuse</li>
+          <li data-i18n="pp_s2_li7">Verify that users of 18+ gated features (private messages, gacha) are 18 or older, in line with Apple App Store content guidelines and UK Online Safety Act requirements</li>
         </ul>
       </section>
 
@@ -183,6 +185,7 @@
           <li data-i18n="pp_s3_li2"><strong>Archived logs:</strong> stored in R2 with 90-day retention</li>
           <li data-i18n="pp_s3_li3"><strong>User data:</strong> stored in Firestore, backed up to R2 with 7-day backup retention</li>
           <li data-i18n="pp_s3_li4"><strong>Images and media:</strong> stored on Cloudflare R2 CDN</li>
+          <li data-i18n="pp_s3_li5"><strong>Age verification ID images:</strong> stored on Cloudflare R2 CDN ONLY until an admin records a decision (approve, reject, or DOB modify). The image is deleted as part of the same admin action. Worst-case retention is bounded by the admin queue review time, typically minutes to a few hours. Only the verification status, ID type, and decision timestamp persist after deletion.</li>
         </ul>
       </section>
 
@@ -226,6 +229,17 @@
       <section>
         <h2 data-i18n="pp_s9_h">9. Contact</h2>
         <p data-i18n="pp_s9_p1">If you have questions about this privacy policy, contact us at <a href="mailto:shytalk.help@gmail.com">shytalk.help@gmail.com</a>.</p>
+      </section>
+
+      <section>
+        <h2 data-i18n="pp_s10_h">10. Age Verification</h2>
+        <p data-i18n="pp_s10_p1"><strong>Why we collect this.</strong> ShyTalk's private messages and gacha features are 18+. Apple App Store guideline 1.1.4 and the UK Online Safety Act both require us to make a reasonable effort to confirm a user is 18 or older before granting access to those features.</p>
+        <p data-i18n="pp_s10_p2"><strong>How verification works.</strong> The 18+ features are gated behind a server-side flag on your account. To unlock them, you upload one government-issued ID image (passport, driver's licence, or national ID card) to a private review queue. An admin compares the date of birth on the ID against the date of birth on your account, then records a decision: approve, reject, or modify the date of birth on file.</p>
+        <p data-i18n="pp_s10_p3"><strong>Image lifetime.</strong> Your ID image is uploaded directly to encrypted storage (Cloudflare R2) using a short-lived signed URL — the upload bypasses our backend so the image never touches our application servers. The image is permanently deleted as part of the same admin action that records the decision; we do not retain copies, backups, or thumbnails. The only persistent record afterwards is the verification status, ID type (e.g. "passport"), decision timestamp, and an audit-log entry naming the admin who decided.</p>
+        <p data-i18n="pp_s10_p4"><strong>Sub-18 users.</strong> If your account's date of birth indicates you are under 18, you cannot enter the verification flow. The 18+ features remain disabled and you cannot override this by submitting an ID. If you believe the date of birth on your account is wrong, please contact support — we will not accept ID submissions to override the date of birth on file. Once you turn 18, the verification flow becomes available automatically.</p>
+        <p data-i18n="pp_s10_p5"><strong>Reverting verification.</strong> If an admin reviewing your ID determines that the date of birth on file is wrong AND that you are under 18, your verification status is reverted, the 18+ features are disabled, and any existing private-message threads on your account are locked until you reach 18. The admin records a written reason for this decision in the audit log, and you receive a system message explaining the change.</p>
+        <p data-i18n="pp_s10_p6"><strong>Legal basis (UK GDPR / EU GDPR).</strong> We process this data on the basis of legal obligation (Apple guideline 1.1.4, UK Online Safety Act) and legitimate interest (preventing minors from accessing 18+ features). You have all the rights described in section 6 above, including the right to request deletion of your verification records.</p>
+        <p data-i18n="pp_s10_p7"><strong>Non-prod environments.</strong> ShyTalk operates a development environment for internal testing. In that environment the verification flow runs end-to-end but the ID image is treated as test data — please <strong>do NOT</strong> submit a real government-issued ID in the dev environment. Upload any non-sensitive image (a screenshot, a photo of a book, etc.) to exercise the flow.</p>
       </section>
     </main>
 
