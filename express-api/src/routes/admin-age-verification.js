@@ -147,12 +147,12 @@ router.post('/admin/age-verification/:id/approve', async (req, res) => {
   const { id } = req.params;
   const errorId = 'AGE_VERIF_APPROVE';
   try {
-    const reason = (req.body?.reason || '').toString();
-    if (!requireNonBlankReason(reason)) {
-      // Symmetric with reject / modify-dob — every admin decision must
-      // carry a justification for the OSA / GDPR audit trail.
-      return res.status(400).json({ error: 'reason is required' });
-    }
+    // Approve does NOT require a reason. Original spec only asked for
+    // an admin justification on outcomes the user needs explained
+    // (Reject / DOB-modified). Approve is the "everything is fine"
+    // path; the audit log records WHO approved + WHEN, sufficient for
+    // the compliance trail. (Question 1 from 2026-05-04 spec
+    // follow-up — revisit if regulators ever ask for it.)
 
     let submission;
     let approved = false;
@@ -171,7 +171,6 @@ router.post('/admin/age-verification/:id/approve', async (req, res) => {
         status: 'approved',
         decisionAt: now(),
         decidedBy: req.auth.uniqueId,
-        decisionReason: reason,
         // r2Key tombstoned — original preserved in audit-log entry.
         r2Key: null,
       });
