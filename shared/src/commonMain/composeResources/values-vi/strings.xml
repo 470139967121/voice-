@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Tất cả quản trị viên &amp; điều hành viên</string>
     <string name="attach_evidence">Đính kèm Bằng chứng</string>
     <string name="cant_message_user">Bạn không thể nhắn tin cho người dùng này</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">Bạn không thể nhắn tin cho người này vì chúng tôi tin rằng họ dưới 18 tuổi.</string>
     <string name="chat">Trò chuyện</string>
     <string name="close_group">Đóng Nhóm</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Tìm hiểu về Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Đóng</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Xác minh tuổi của bạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Cách thức hoạt động</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Chúng tôi cần ảnh chụp giấy tờ tùy thân do chính phủ cấp để xác nhận bạn đủ 18 tuổi. Hình ảnh được mã hóa trong quá trình truyền, được người kiểm duyệt xem xét và xóa vĩnh viễn ngay sau khi quyết định được ghi lại — thường trong vòng 24 giờ. Chỉ có ngày sinh và kết quả xác minh được giữ lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Tôi hiểu - tiếp tục</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Tài liệu nào?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Chọn loại ID bạn sẽ gửi. DOB trên tài liệu phải khớp với DOB trên tài khoản của bạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Hộ chiếu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Bằng lái xe</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Chứng minh nhân dân</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Thêm ảnh</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Chọn một bức ảnh rõ ràng về ID. Đảm bảo ngày sinh hoàn toàn có thể đọc được.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Chọn ảnh</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Thay thế ảnh</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Sẵn sàng để nộp?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Sau khi gửi, ảnh sẽ được gửi để xem xét. Bạn sẽ nhận được thông báo hệ thống khi quyết định được ghi lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">Loại ID:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Ảnh:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">đính kèm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Gửi để xem xét</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Cảm ơn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Nội dung gửi của bạn đang trong hàng đợi. Chúng tôi sẽ nhắn tin cho bạn tại đây khi quyết định được ghi lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Xong</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Mặt sau</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Vui lòng chọn loại ID trước khi gửi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Vui lòng thêm ảnh trước khi gửi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Không thể gửi - vui lòng kiểm tra kết nối của bạn và thử lại.</string>
 </resources>

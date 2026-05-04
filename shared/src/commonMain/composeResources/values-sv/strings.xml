@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Alla admins &amp; mods</string>
     <string name="attach_evidence">Bifoga bevis</string>
     <string name="cant_message_user">Du kan inte skicka meddelande till denna användare</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">Du kan inte skicka meddelanden till den här personen eftersom vi tror att de är under 18 år.</string>
     <string name="chat">Chatt</string>
     <string name="close_group">Stäng grupp</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Lär dig om Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Stäng</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Verifiera din ålder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Hur det här fungerar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Vi behöver ett foto av ett myndighetsutfärdat ID för att bekräfta att du är minst 18. Bilden krypteras under överföring, granskas av en mänsklig moderator och raderas permanent så snart ett beslut har registrerats – vanligtvis inom 24 timmar. Endast födelsedatum och verifieringsresultat sparas.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Jag förstår - fortsätt</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Vilket dokument?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Välj vilken typ av ID du ska skicka. DOB på dokumentet måste matcha den på ditt konto.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Pass</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Körkort</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Nationellt ID-kort</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Lägg till fotot</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Välj ett tydligt foto av ID:t. Se till att födelsedatumet är fullt läsbart.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Välj foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Byt ut foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Redo att skicka in?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">När bilden har skickats in skickas den för granskning. Du får ett systemmeddelande när ett beslut registreras.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">ID-typ:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Bild:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">bunden</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Skicka in för granskning</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Tack</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Ditt bidrag står i kön. Vi kommer att meddela dig här när ett beslut har registrerats.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Gjort</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Tillbaka</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Välj en ID-typ innan du skickar in.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Lägg till ett foto innan du skickar in.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Det gick inte att skicka – kontrollera din anslutning och försök igen.</string>
 </resources>

@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">แอดมิน &amp; ผู้ดูแลทั้งหมด</string>
     <string name="attach_evidence">แนบหลักฐาน</string>
     <string name="cant_message_user">คุณไม่สามารถส่งข้อความถึงผู้ใช้นี้ได้</string>
-    <string name="pm_locked_other_user_notice">คุณไม่สามารถส่งข้อความถึงบุคคลนี้ได้ เพราะเราเชื่อว่าพวกเขาอายุต่ำกว่า 18 ปี</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">คุณไม่สามารถส่งข้อความถึงบุคคลนี้ได้เนื่องจากเราเชื่อว่าพวกเขาอายุต่ำกว่า 18 ปี</string>
     <string name="chat">แชท</string>
     <string name="close_group">ปิดกลุ่ม</string>
     <string name="close_group_warning">การกระทำนี้จะปิดกลุ่มสำหรับทุกคน ข้อความจะถูกเก็บไว้สำหรับการตรวจสอบ</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">เรียนรู้เกี่ยวกับจุลจนำทเมย</string>
     <string name="seasonal_event_dismiss">ปิด</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">ยืนยันอายุของคุณ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">วิธีการทำงานนี้</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">เราต้องการรูปถ่ายบัตรประจำตัวที่ออกโดยหน่วยงานราชการเพื่อยืนยันว่าคุณมีอายุไม่ต่ำกว่า 18 ปี รูปภาพดังกล่าวได้รับการเข้ารหัสระหว่างการส่ง ตรวจสอบโดยผู้ตรวจสอบที่เป็นมนุษย์ และจะถูกลบอย่างถาวรทันทีที่มีการบันทึกการตัดสินใจ ซึ่งโดยปกติจะใช้เวลาภายใน 24 ชั่วโมง จะเก็บเฉพาะวันเกิดและผลการตรวจสอบเท่านั้น</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">ฉันเข้าใจแล้ว - ดำเนินการต่อ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">เอกสารไหน?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">เลือกประเภทบัตรประจำตัวที่คุณจะส่ง วันเกิดในเอกสารจะต้องตรงกับวันเกิดในบัญชีของคุณ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">หนังสือเดินทาง</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">ใบขับขี่</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">บัตรประจำตัวประชาชน</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">เพิ่มรูปภาพ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">เลือกรูปถ่ายบัตรประจำตัวที่ชัดเจน ตรวจสอบให้แน่ใจว่าวันเกิดสามารถอ่านได้ครบถ้วน</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">เลือกรูปภาพ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">แทนที่รูปภาพ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">พร้อมส่งหรือยัง?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">เมื่อส่งแล้วภาพถ่ายจะถูกส่งไปตรวจสอบ คุณจะได้รับข้อความระบบเมื่อมีการบันทึกการตัดสินใจ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">ประเภทบัตรประจำตัว:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">รูปถ่าย:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">ที่แนบมา</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">ส่งเพื่อตรวจสอบ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">ขอบคุณ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">การส่งของคุณอยู่ในคิว เราจะส่งข้อความถึงคุณที่นี่เมื่อมีการบันทึกการตัดสินใจ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">เสร็จแล้ว</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">กลับ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">โปรดเลือกประเภทรหัสก่อนส่ง</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">กรุณาเพิ่มภาพถ่ายก่อนที่จะส่ง</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">ไม่สามารถส่งได้ — โปรดตรวจสอบการเชื่อมต่อของคุณแล้วลองอีกครั้ง</string>
 </resources>

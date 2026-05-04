@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">جميع المشرفين &amp; المراقبين</string>
     <string name="attach_evidence">إرفاق دليل</string>
     <string name="cant_message_user">لا يمكنك مراسلة هذا المستخدم</string>
-    <string name="pm_locked_other_user_notice">لا يمكنك مراسلة هذا الشخص لأننا نعتقد أنه دون سن 18 عامًا.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">لا يمكنك مراسلة هذا الشخص لأننا نعتقد أن عمره أقل من 18 عامًا.</string>
     <string name="chat">محادثة</string>
     <string name="close_group">إغلاق المجموعة</string>
     <string name="close_group_warning">سيؤدي هذا إلى إغلاق المجموعة للجميع. يتم الاحتفاظ بالرسائل للإشراف.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">تعرف على تشول تشنام ثمي</string>
     <string name="seasonal_event_dismiss">إغلاق</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">التحقق من عمرك</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">كيف يعمل هذا</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">نحتاج إلى صورة لبطاقة هوية صادرة عن جهة حكومية للتأكد من أن عمرك لا يقل عن 18 عامًا. ويتم تشفير الصورة أثناء النقل، ومراجعتها بواسطة وسيط بشري، وحذفها نهائيًا بمجرد تسجيل القرار - عادةً في غضون 24 ساعة. يتم الاحتفاظ فقط بتاريخ الميلاد ونتائج التحقق.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">أنا أفهم – استمر</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">أي وثيقة؟</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">اختر نوع الهوية التي ستقدمها. يجب أن يتطابق تاريخ الميلاد الموجود في المستند مع الرقم الموجود في حسابك.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">جواز سفر</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">رخصة السائق</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">بطاقة التعريف الوطنية</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">أضف الصورة</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">اختيار صورة واضحة لبطاقة الهوية. تأكد من أن تاريخ الميلاد قابل للقراءة بالكامل.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">اختر الصورة</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">استبدال الصورة</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">هل أنت جاهز للتقديم؟</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">بمجرد إرسالها، يتم إرسال الصورة للمراجعة. ستصلك رسالة النظام عند تسجيل القرار.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">نوع الهوية:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">صورة:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">مُرفَق</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">إرسال للمراجعة</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">شكرًا لك</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">إرسالك موجود في قائمة الانتظار. وسنقوم بمراسلتك هنا عند تسجيل القرار.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">منتهي</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">خلف</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">يرجى اختيار نوع الهوية قبل الإرسال.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">الرجاء إضافة صورة قبل الإرسال.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">تعذر الإرسال — يرجى التحقق من الاتصال والمحاولة مرة أخرى.</string>
 </resources>

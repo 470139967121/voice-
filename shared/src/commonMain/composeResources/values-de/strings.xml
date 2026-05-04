@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">Alle Admins &amp; Mods</string>
     <string name="attach_evidence">Beweis anhängen</string>
     <string name="cant_message_user">Du kannst diesem Benutzer keine Nachricht senden</string>
-    <string name="pm_locked_other_user_notice">Sie können diese Person nicht anschreiben, da wir glauben, dass sie unter 18 Jahre alt ist.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">Sie können dieser Person keine Nachricht senden, da wir davon ausgehen, dass sie unter 18 Jahre alt ist.</string>
     <string name="chat">Chat</string>
     <string name="close_group">Gruppe schließen</string>
     <string name="close_group_warning">Dies schließt die Gruppe für alle. Nachrichten bleiben zur Moderation erhalten.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Erfahre mehr über Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Schließen</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Überprüfen Sie Ihr Alter</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Wie das funktioniert</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Wir benötigen ein Foto eines amtlichen Ausweises, um zu bestätigen, dass Sie mindestens 18 Jahre alt sind. Das Bild wird während der Übertragung verschlüsselt, von einem menschlichen Moderator überprüft und endgültig gelöscht, sobald eine Entscheidung erfasst wird – normalerweise innerhalb von 24 Stunden. Lediglich das Geburtsdatum und das Ergebnis der Verifizierung werden gespeichert.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Ich verstehe – fahren Sie fort</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Welches Dokument?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Wählen Sie die Art des Ausweises aus, den Sie einreichen möchten. Das Geburtsdatum auf dem Dokument muss mit dem auf Ihrem Konto übereinstimmen.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Reisepass</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Führerschein</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Nationaler Personalausweis</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Fügen Sie das Foto hinzu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Wählen Sie ein klares Foto des Ausweises. Stellen Sie sicher, dass das Geburtsdatum vollständig lesbar ist.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Foto auswählen</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Foto ersetzen</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Bereit zum Einreichen?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Nach der Übermittlung wird das Foto zur Überprüfung gesendet. Sie erhalten eine Systemmeldung, wenn eine Entscheidung erfasst wird.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">ID-Typ:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Foto:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">beigefügt</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Zur Überprüfung einreichen</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Danke</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Ihre Einreichung befindet sich in der Warteschlange. Wir werden Sie hier benachrichtigen, wenn eine Entscheidung erfasst wird.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Erledigt</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Zurück</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Bitte wählen Sie vor dem Absenden einen ID-Typ aus.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Bitte fügen Sie vor dem Absenden ein Foto hinzu.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Konnte nicht gesendet werden. Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.</string>
 </resources>

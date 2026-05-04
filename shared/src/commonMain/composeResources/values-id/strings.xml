@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">Semua admin &amp; mod</string>
     <string name="attach_evidence">Lampirkan Bukti</string>
     <string name="cant_message_user">Kamu tidak bisa mengirim pesan ke pengguna ini</string>
-    <string name="pm_locked_other_user_notice">Anda tidak dapat mengirim pesan ke orang ini karena kami yakin mereka di bawah 18 tahun.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">Anda tidak dapat mengirim pesan kepada orang ini karena kami yakin mereka berusia di bawah 18 tahun.</string>
     <string name="chat">Chat</string>
     <string name="close_group">Tutup Grup</string>
     <string name="close_group_warning">Ini akan menutup grup untuk semua orang. Pesan akan disimpan untuk moderasi.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Pelajari tentang Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Tutup</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Verifikasi usia Anda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Cara kerjanya</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Kami memerlukan foto tanda pengenal yang dikeluarkan pemerintah untuk mengonfirmasi bahwa Anda setidaknya berusia 18 tahun. Gambar tersebut dienkripsi saat transit, ditinjau oleh moderator manusia, dan dihapus secara permanen segera setelah keputusan diambil — biasanya dalam waktu 24 jam. Hanya tanggal lahir dan hasil verifikasi yang disimpan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Saya mengerti — lanjutkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Dokumen yang mana?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Pilih jenis ID yang akan Anda kirimkan. DOB pada dokumen harus sesuai dengan yang ada di akun Anda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Paspor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">SIM</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Kartu Tanda Penduduk Nasional</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Tambahkan foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Pilih foto KTP yang jelas. Pastikan tanggal lahir dapat dibaca sepenuhnya.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Pilih foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Ganti foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Siap untuk mengirimkan?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Setelah dikirimkan, foto dikirim untuk ditinjau. Anda akan mendapatkan pesan sistem saat keputusan dicatat.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">Jenis tanda pengenal:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Foto:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">terlampir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Kirim untuk ditinjau</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Terima kasih</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Kiriman Anda sedang dalam antrian. Kami akan mengirimi Anda pesan di sini ketika keputusan telah dicatat.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Selesai</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Kembali</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Silakan pilih jenis ID sebelum mengirimkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Silakan tambahkan foto sebelum mengirimkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Tidak dapat mengirimkan — harap periksa koneksi Anda dan coba lagi.</string>
 </resources>

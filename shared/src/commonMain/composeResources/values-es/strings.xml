@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">Todos los admins &amp; mods</string>
     <string name="attach_evidence">Adjuntar evidencia</string>
     <string name="cant_message_user">No puedes enviar mensajes a este usuario</string>
-    <string name="pm_locked_other_user_notice">No puedes enviar mensajes a esta persona porque creemos que es menor de 18 años.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">No puede enviar mensajes a esta persona porque creemos que es menor de 18 años.</string>
     <string name="chat">Chat</string>
     <string name="close_group">Cerrar grupo</string>
     <string name="close_group_warning">Esto cerrar&#225; el grupo para todos. Los mensajes se conservan para moderaci&#243;n.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Descubre Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Cerrar</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Verifica tu edad</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">¿Cómo funciona esto?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Necesitamos una foto de una identificación emitida por el gobierno para confirmar que tienes al menos 18 años. La imagen se cifra en tránsito, es revisada por un moderador humano y se elimina permanentemente tan pronto como se registra una decisión, generalmente dentro de las 24 horas. Sólo se conservan la fecha de nacimiento y el resultado de la verificación.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Entiendo – continúa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">¿Qué documento?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Elija el tipo de identificación que enviará. La fecha de nacimiento del documento debe coincidir con la de su cuenta.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Pasaporte</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Licencia de conducir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">documento de identidad nacional</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Agrega la foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Elija una foto clara del documento de identidad. Asegúrese de que la fecha de nacimiento sea completamente legible.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Elige foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Reemplazar foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">¿Listo para enviar?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Una vez enviada, la foto se envía para su revisión. Recibirá un mensaje del sistema cuando se registre una decisión.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">tipo de identificación:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Foto:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">adjunto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Enviar para revisión</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Gracias</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Su envío está en la cola. Le enviaremos un mensaje aquí cuando se registre una decisión.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Hecho</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Atrás</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Elija un tipo de identificación antes de enviarlo.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Por favor agregue una foto antes de enviarla.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">No se pudo enviar. Verifique su conexión e inténtelo nuevamente.</string>
 </resources>

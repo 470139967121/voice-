@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">すべての管理者 &amp; モデレーター</string>
     <string name="attach_evidence">証拠を添付</string>
     <string name="cant_message_user">このユーザーにメッセージを送れません</string>
-    <string name="pm_locked_other_user_notice">この人物は18歳未満と判断されているため、メッセージを送ることができません。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">この人は 18 歳未満であると思われるため、メッセージを送信できません。</string>
     <string name="chat">チャット</string>
     <string name="close_group">グループを閉じる</string>
     <string name="close_group_warning">グループが全員に対して閉じられます。メッセージはモデレーションのために保持されます。</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">チョル・チュナム・トゥメイについて学ぶ</string>
     <string name="seasonal_event_dismiss">閉じる</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">年齢を確認してください</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">仕組み</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">あなたが 18 歳以上であることを確認するには、政府発行の身分証明書の写真が必要です。画像は転送中に暗号化され、人間のモデレーターによって確認され、決定が記録されるとすぐに (通常は 24 時間以内) 永久に削除されます。生年月日と認証結果のみが保持されます。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">わかりました — 続けます</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">どの書類ですか？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">送信する ID の種類を選択します。書類の生年月日はアカウントの生年月日と一致する必要があります。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">パスポート</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">運転免許証</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">国民IDカード</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">写真を追加</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">身分証明書の写真は鮮明なものを選択してください。生年月日が完全に判読できることを確認してください。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">写真を選択してください</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">写真を置き換える</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">提出する準備はできましたか?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">送信されると、写真は審査のために送信されます。決定が記録されると、システム メッセージが表示されます。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">IDタイプ:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">写真：</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">添付</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">レビューのために送信する</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">ありがとう</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">あなたの提出物はキューにあります。決定が記録されたら、ここでメッセージをお送りします。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">終わり</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">戻る</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">送信する前に ID タイプを選択してください。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">送信する前に写真を追加してください。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">送信できませんでした — 接続を確認して、もう一度試してください。</string>
 </resources>

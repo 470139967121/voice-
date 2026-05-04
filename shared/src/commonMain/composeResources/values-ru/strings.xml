@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">Все админы &amp; модераторы</string>
     <string name="attach_evidence">Прикрепить доказательство</string>
     <string name="cant_message_user">Вы не можете написать этому пользователю</string>
-    <string name="pm_locked_other_user_notice">Вы не можете отправить сообщение этому пользователю, потому что мы считаем, что ему меньше 18 лет.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">Вы не можете отправить сообщение этому человеку, поскольку мы считаем, что ему меньше 18 лет.</string>
     <string name="chat">Чат</string>
     <string name="close_group">Закрыть группу</string>
     <string name="close_group_warning">Это закроет группу для всех. Сообщения сохраняются для модерации.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Узнайте о Чол Чнам Тхмэй</string>
     <string name="seasonal_event_dismiss">Закрыть</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Подтвердите свой возраст</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Как это работает</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Нам нужна фотография государственного удостоверения личности, чтобы подтвердить, что вам уже исполнилось 18 лет. Изображение шифруется при передаче, проверяется модератором и безвозвратно удаляется, как только решение будет зафиксировано — обычно в течение 24 часов. Сохраняются только дата рождения и результат проверки.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Я понял — продолжай</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Какой документ?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Выберите тип удостоверения личности, которое вы отправите. Дата рождения в документе должна совпадать с той, что указана в вашей учетной записи.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Паспорт</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Водительское удостоверение</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Национальное удостоверение личности</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Добавить фото</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Выберите четкое фото удостоверения личности. Убедитесь, что дата рождения полностью читаема.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Выбрать фото</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Заменить фото</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Готовы отправить?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">После отправки фотография отправляется на рассмотрение. Когда решение будет записано, вы получите системное сообщение.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">Тип идентификатора:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Фото:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">прикрепил</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Отправить на рассмотрение</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Спасибо</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Ваша заявка находится в очереди. Мы сообщим вам здесь, когда решение будет записано.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Сделанный</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Назад</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Перед отправкой выберите тип идентификатора.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Пожалуйста, добавьте фотографию перед отправкой.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Не удалось отправить. Проверьте подключение и повторите попытку.</string>
 </resources>
