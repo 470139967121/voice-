@@ -463,6 +463,9 @@ fun NavGraph(
                     onNavigateToWallet = {
                         navController.navigate(Screen.Wallet.route)
                     },
+                    onNavigateToAgeVerification = {
+                        navController.navigate(Screen.AgeVerificationSubmit.route)
+                    },
                 )
             }
 
