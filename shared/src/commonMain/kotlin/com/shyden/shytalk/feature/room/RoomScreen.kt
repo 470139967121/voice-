@@ -113,6 +113,7 @@ fun RoomScreen(
     onNavigateToUserProfile: (String) -> Unit = {},
     onNavigateToChat: (String) -> Unit = {},
     onNavigateToWallet: () -> Unit = {},
+    onNavigateToAgeVerification: () -> Unit = {},
     viewModel: RoomViewModel = koinViewModel { parametersOf(roomId) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -1236,4 +1237,17 @@ fun RoomScreen(
             }
         }
     }
+
+    // Age-verification gate dialog for Gacha (PR 9 follow-up). The
+    // dialog's interactive elements carry testTags inside
+    // AgeRestrictionDialog.kt (TAG_NEEDS_VERIFICATION_CONFIRM etc.).
+    // NeedsVerification routes to the submit screen; SubEighteen offers
+    // contact-support (no entry into the verification flow).
+    val gachaAgeRestrictionState by gachaViewModel.ageRestrictionDialogState.collectAsStateWithLifecycle()
+    com.shyden.shytalk.feature.ageverification.AgeRestrictionDialog(
+        state = gachaAgeRestrictionState,
+        onDismiss = { gachaViewModel.dismissAgeRestrictionDialog() },
+        onVerifyNow = onNavigateToAgeVerification,
+        onContactSupport = { gachaViewModel.dismissAgeRestrictionDialog() },
+    )
 }

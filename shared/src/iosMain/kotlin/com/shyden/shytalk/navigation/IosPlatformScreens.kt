@@ -66,6 +66,7 @@ fun createIosPlatformScreens(): PlatformScreens =
                 onNavigateToUserProfile = params.onNavigateToUserProfile,
                 onNavigateToChat = params.onNavigateToChat,
                 onNavigateToWallet = params.onNavigateToWallet,
+                onNavigateToAgeVerification = params.onNavigateToAgeVerification,
             )
         },
     )

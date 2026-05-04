@@ -54,6 +54,7 @@ data class RoomScreenParams(
     val onNavigateToUserProfile: (String) -> Unit = {},
     val onNavigateToChat: (String) -> Unit = {},
     val onNavigateToWallet: () -> Unit = {},
+    val onNavigateToAgeVerification: () -> Unit = {},
 )
 
 /**
