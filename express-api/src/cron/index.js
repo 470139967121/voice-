@@ -16,6 +16,7 @@ const accountDeletion = require('./accountDeletion');
 const expireDataExports = require('./expireDataExports');
 const alertManager = require('../utils/alertManagerInstance');
 const dispatchNotifications = require('./notification-dispatch');
+const ageVerificationAuditReconcile = require('./ageVerificationAuditReconcile');
 
 function startCronJobs() {
   const isProd = process.env.NODE_ENV === 'production';
@@ -110,6 +111,36 @@ function startCronJobs() {
     dispatchNotifications().catch((err) =>
       log.error('cron', 'notification-dispatch failed', { error: err.message }),
     );
+  });
+
+  // Age-verification audit-log reconciliation — daily 05:00 UTC.
+  // Back-fills missing audit entries for decisions whose post-commit
+  // audit write failed (compliance gap fix). 7-day scan window so a
+  // multi-day Firestore outage is fully covered. Idempotent on
+  // re-runs via `details.fromSubmissionId` markers.
+  //
+  // Per-doc failures are isolated inside the job (see `failed`
+  // counter); only a catastrophic crash (Firestore unreachable,
+  // permission revoked, code bug) reaches this `.catch`. That kind
+  // of failure leaves the OSA/GDPR remediation gap unresolved for
+  // 24+ h, so route it through alertManager instead of relying on
+  // log-grep.
+  cron.schedule('0 5 * * *', () => {
+    log.info('cron', 'Running ageVerificationAuditReconcile');
+    ageVerificationAuditReconcile().catch((err) => {
+      log.error('cron', 'ageVerificationAuditReconcile failed', { error: err.message });
+      alertManager
+        .createAlert(
+          'compliance_cron_failed',
+          'critical',
+          'Age-verification audit reconcile cron crashed',
+          'Daily back-fill of missing age-verification audit-log entries did not complete. OSA/GDPR remediation paused until the next successful run. Investigate immediately.',
+          { error: err.message, cron: 'ageVerificationAuditReconcile' },
+        )
+        .catch((alertErr) =>
+          log.error('cron', 'alertManager.createAlert failed', { error: alertErr.message }),
+        );
+    });
   });
 
   log.info('cron', 'Cron jobs scheduled');
