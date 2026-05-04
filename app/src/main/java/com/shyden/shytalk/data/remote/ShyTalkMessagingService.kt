@@ -54,6 +54,9 @@ class ShyTalkMessagingService : FirebaseMessagingService() {
 
         when (type) {
             "PM" -> handlePmNotification(data)
+            "AGE_VERIF_APPROVED" -> handleAgeVerifApproved()
+            "AGE_VERIF_REJECTED" -> handleAgeVerifRejected(data)
+            "AGE_VERIF_DOB_MODIFIED" -> handleAgeVerifDobModified(data)
         }
     }
 
@@ -124,5 +127,97 @@ class ShyTalkMessagingService : FirebaseMessagingService() {
             val manager = getSystemService(NotificationManager::class.java)
             manager?.createNotificationChannel(channel)
         }
+    }
+
+    // ─── Age verification notifications (PR 10) ────────────────────────
+    //
+    // Each outcome shows a single notification. Tapping it opens the
+    // app's main entry — the system PM (PR 5) carries the full body,
+    // so the local notification is just an at-a-glance summary.
+
+    private fun handleAgeVerifApproved() {
+        showAgeVerifNotification(
+            title = "Age verification approved",
+            text = "You now have full access to ShyTalk. Tap to learn more.",
+            id = NOTIFICATION_ID_AGE_VERIF_APPROVED,
+        )
+    }
+
+    private fun handleAgeVerifRejected(data: Map<String, String>) {
+        val preview = data["reasonPreview"]?.takeIf { it.isNotBlank() }
+        showAgeVerifNotification(
+            title = "Age verification update",
+            text =
+                preview
+                    ?.let { "Your submission wasn't approved: $it" }
+                    ?: "Your submission wasn't approved. Tap to read more.",
+            id = NOTIFICATION_ID_AGE_VERIF_REJECTED,
+        )
+    }
+
+    private fun handleAgeVerifDobModified(data: Map<String, String>) {
+        val becameVerified = data["becameVerified"]?.toBooleanStrictOrNull() ?: false
+        val (title, text) =
+            if (becameVerified) {
+                "Date of birth updated" to "Your DOB was corrected and you now have full access. Tap to read more."
+            } else {
+                "Date of birth updated" to "Your DOB was corrected. Some features remain age-restricted. Tap to read more."
+            }
+        showAgeVerifNotification(
+            title = title,
+            text = text,
+            id = NOTIFICATION_ID_AGE_VERIF_DOB_MODIFIED,
+        )
+    }
+
+    private fun showAgeVerifNotification(
+        title: String,
+        text: String,
+        id: Int,
+    ) {
+        ensureAgeVerifChannel()
+        val intent =
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+        val pendingIntent =
+            PendingIntent.getActivity(
+                this,
+                id,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val notification =
+            NotificationCompat
+                .Builder(this, Constants.AGE_VERIF_NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .build()
+        getSystemService(NotificationManager::class.java)?.notify(id, notification)
+    }
+
+    private fun ensureAgeVerifChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel =
+                NotificationChannel(
+                    Constants.AGE_VERIF_NOTIFICATION_CHANNEL_ID,
+                    "Age verification",
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply {
+                    description = "Notifications about your age-verification submission status"
+                }
+            getSystemService(NotificationManager::class.java)
+                ?.createNotificationChannel(channel)
+        }
+    }
+
+    private companion object {
+        const val NOTIFICATION_ID_AGE_VERIF_APPROVED = 70_001
+        const val NOTIFICATION_ID_AGE_VERIF_REJECTED = 70_002
+        const val NOTIFICATION_ID_AGE_VERIF_DOB_MODIFIED = 70_003
     }
 }

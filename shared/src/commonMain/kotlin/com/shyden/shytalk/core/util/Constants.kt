@@ -32,6 +32,9 @@ object Constants {
 
     // Private messaging
     const val PM_NOTIFICATION_CHANNEL_ID = "pm_notification_channel"
+
+    // Age verification (PR 10)
+    const val AGE_VERIF_NOTIFICATION_CHANNEL_ID = "age_verification_channel"
     const val MAX_PM_MESSAGE_LENGTH = 2000
     const val PM_IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024L // 5 MB
     const val PM_MAX_IMAGES_PER_MESSAGE = 10

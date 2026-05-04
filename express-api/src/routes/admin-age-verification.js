@@ -48,11 +48,16 @@
 
 const express = require('express');
 const router = express.Router();
+// FCM push helper (PR 10) — sends a data-only push to the user's
+// stored fcmTokens after each decision so the Android service renders
+// a local notification when the app is backgrounded. Best-effort —
+// failures surface via the partial-failure response shape, not a 500.
 
 const { db } = require('../utils/firebase');
 const r2 = require('../utils/r2');
 const audit = require('../utils/age-verification-audit');
 const systemPm = require('../utils/age-verification-system-pm');
+const fcmPush = require('../utils/age-verification-fcm');
 const { now } = require('../utils/helpers');
 const log = require('../utils/log');
 const { requireAdmin } = require('../middleware/auth');
@@ -236,8 +241,10 @@ router.post('/admin/age-verification/:id/approve', async (req, res) => {
       submission.userId,
       submission.idMethod,
     ]);
+    // FCM push (PR 10) — best-effort, separate failure flag.
+    const pushNotified = await fcmPush.sendAgeVerificationApprovedPush(submission.userId);
 
-    return res.json({ ok: true, imageDeleted, auditWritten, userNotified });
+    return res.json({ ok: true, imageDeleted, auditWritten, userNotified, pushNotified });
   } catch (err) {
     log.error('admin-age-verification', `${errorId} failed`, { id, error: err?.message });
     return res.status(500).json({ error: 'Failed to approve submission', errorId });
@@ -294,8 +301,9 @@ router.post('/admin/age-verification/:id/reject', async (req, res) => {
       submission.userId,
       reason,
     ]);
+    const pushNotified = await fcmPush.sendAgeVerificationRejectedPush(submission.userId, reason);
 
-    return res.json({ ok: true, imageDeleted, auditWritten, userNotified });
+    return res.json({ ok: true, imageDeleted, auditWritten, userNotified, pushNotified });
   } catch (err) {
     log.error('admin-age-verification', `${errorId} failed`, { id, error: err?.message });
     return res.status(500).json({ error: 'Failed to reject submission', errorId });
@@ -391,6 +399,10 @@ router.post('/admin/age-verification/:id/modify-dob', async (req, res) => {
         reason,
       },
     ]);
+    const pushNotified = await fcmPush.sendAgeVerificationDobModifiedPush(
+      submission.userId,
+      isAtLeast18FromDob(newDob),
+    );
 
     return res.json({
       ok: true,
@@ -398,6 +410,7 @@ router.post('/admin/age-verification/:id/modify-dob', async (req, res) => {
       imageDeleted,
       auditWritten,
       userNotified,
+      pushNotified,
     });
   } catch (err) {
     log.error('admin-age-verification', `${errorId} failed`, { id, error: err?.message });

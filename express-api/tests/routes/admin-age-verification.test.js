@@ -92,6 +92,15 @@ jest.mock('../../src/utils/age-verification-system-pm', () => ({
   sendAgeVerificationDobModifiedPm: (...args) => mockSendDobModifiedPm(...args),
 }));
 
+const mockSendApprovedPush = jest.fn().mockResolvedValue(true);
+const mockSendRejectedPush = jest.fn().mockResolvedValue(true);
+const mockSendDobModifiedPush = jest.fn().mockResolvedValue(true);
+jest.mock('../../src/utils/age-verification-fcm', () => ({
+  sendAgeVerificationApprovedPush: (...args) => mockSendApprovedPush(...args),
+  sendAgeVerificationRejectedPush: (...args) => mockSendRejectedPush(...args),
+  sendAgeVerificationDobModifiedPush: (...args) => mockSendDobModifiedPush(...args),
+}));
+
 jest.mock('../../src/utils/helpers', () => ({
   now: () => 1709913600000,
 }));
@@ -254,6 +263,8 @@ describe('POST /api/admin/age-verification/:id/approve', () => {
     );
     // User notified via system PM
     expect(mockSendApprovedPm).toHaveBeenCalledWith('10000050', 'passport');
+    // FCM push (PR 10) — separate from the system PM path
+    expect(mockSendApprovedPush).toHaveBeenCalledWith('10000050');
   });
 
   test('rejects when submission is not pending (already decided)', async () => {
