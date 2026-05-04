@@ -128,6 +128,18 @@ fun SignInScreen(
         return
     }
 
+    // Inconsistent-state guard (PR 5b 2026-05-04): user has
+    // ageVerified=true but no dateOfBirth on file. Block them; surface
+    // the static error code so support can identify the data
+    // inconsistency from a screenshot.
+    if (uiState.isBlockedByVerifiedNoDob) {
+        AccountErrorScreen(
+            errorCode = uiState.blockedErrorCode ?: "AGE_VERIF_NO_DOB_E001",
+            onSignOut = { viewModel.signOut() },
+        )
+        return
+    }
+
     if (uiState.isBackendUnreachable) {
         Scaffold { padding ->
             Column(

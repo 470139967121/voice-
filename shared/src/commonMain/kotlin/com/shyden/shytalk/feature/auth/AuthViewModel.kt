@@ -33,6 +33,18 @@ data class AuthUiState(
     val isAuthenticated: Boolean = false,
     val hasProfile: Boolean = false,
     val hasDOB: Boolean = false,
+    /**
+     * Set true when the user has `ageVerified = true` BUT
+     * `dateOfBirth = null`. This is an inconsistent server-side state
+     * — verification flow always records DOB. Block the user from
+     * proceeding into the app and surface the static error code
+     * `AGE_VERIF_NO_DOB_E001` so support can identify the exact
+     * cause from the user's screenshot. Resolution requires admin
+     * intervention (set DOB via the admin panel + re-trigger
+     * verification flow if needed).
+     */
+    val isBlockedByVerifiedNoDob: Boolean = false,
+    val blockedErrorCode: String? = null,
     val needsLegalAcceptance: Boolean = false,
     val isDeviceLocked: Boolean = false,
     val isBackendUnreachable: Boolean = false,
@@ -521,6 +533,26 @@ class AuthViewModel(
                             }
                             // Check if user needs PIN setup (migration or new device)
                             val needsPin = appLockRepository?.hasCredential == false
+                            // Inconsistent state guard (PR 5b 2026-05-04): a user
+                            // with `ageVerified = true` AND `dateOfBirth = null`
+                            // is in a state the verification flow cannot have
+                            // produced — verification always records the DOB.
+                            // This typically means manual Firestore tampering or
+                            // a partial migration. Block sign-in and surface a
+                            // static error code so support can fix the data.
+                            val verifiedButNoDob = user.ageVerified && user.dateOfBirth == null
+                            if (verifiedButNoDob) {
+                                _uiState.update {
+                                    it.copy(
+                                        isLoading = false,
+                                        isBackendUnreachable = false,
+                                        isAuthenticated = false,
+                                        isBlockedByVerifiedNoDob = true,
+                                        blockedErrorCode = "AGE_VERIF_NO_DOB_E001",
+                                    )
+                                }
+                                return
+                            }
                             _uiState.update {
                                 it.copy(
                                     isLoading = false,
