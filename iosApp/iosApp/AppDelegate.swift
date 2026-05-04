@@ -172,21 +172,30 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             NSLog("[ShyTalkPush] payload missing 'type' field — dropped")
             return
         }
-        guard type == "PM" else {
-            // V1 only handles `type=PM`. Other types (room invites, follow
-            // notifications) will be added later. Logging makes future on-call
-            // diagnose mismatched server payloads. Sanitise `type` before
-            // interpolating into NSLog so a compromised FCM sender can't
-            // inject newlines / control chars into the device console.
-            NSLog("[ShyTalkPush] unrecognised type='\(sanitiseForLog(type))' — dropped (v1 only handles PM)")
-            return
-        }
         guard UIApplication.shared.applicationState != .active else {
             // App in foreground — suppress. In-app UI handles delivery (mirrors
             // Android's RoomLifecycleManager.isAppInForeground check).
             return
         }
+        switch type {
+        case "PM":
+            handlePmPayload(userInfo)
+        case "AGE_VERIF_APPROVED":
+            handleAgeVerifApprovedPayload(userInfo)
+        case "AGE_VERIF_REJECTED":
+            handleAgeVerifRejectedPayload(userInfo)
+        case "AGE_VERIF_DOB_MODIFIED":
+            handleAgeVerifDobModifiedPayload(userInfo)
+        default:
+            // Logging makes future on-call diagnose mismatched server
+            // payloads. Sanitise `type` before interpolating into NSLog
+            // so a compromised FCM sender can't inject newlines /
+            // control chars into the device console.
+            NSLog("[ShyTalkPush] unrecognised type='\(sanitiseForLog(type))' — dropped")
+        }
+    }
 
+    private func handlePmPayload(_ userInfo: [AnyHashable: Any]) {
         guard let conversationId = userInfo["conversationId"] as? String else {
             NSLog("[ShyTalkPush] PM payload missing conversationId — dropped")
             return
@@ -215,6 +224,77 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 NSLog("[ShyTalkPush] add notification failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Age verification (PR 10 / iOS parity)
+
+    private func handleAgeVerifApprovedPayload(_ userInfo: [AnyHashable: Any]) {
+        scheduleAgeVerifNotification(
+            identifier: "age-verif-approved",
+            title: "Age verification approved",
+            body: "You now have full access to ShyTalk. Tap to learn more.",
+            userInfo: userInfo
+        )
+    }
+
+    private func handleAgeVerifRejectedPayload(_ userInfo: [AnyHashable: Any]) {
+        let preview = (userInfo["reasonPreview"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let body: String
+        if let preview = preview, !preview.isEmpty {
+            body = "Your submission wasn't approved: \(preview)"
+        } else {
+            body = "Your submission wasn't approved. Tap to read more."
+        }
+        scheduleAgeVerifNotification(
+            identifier: "age-verif-rejected",
+            title: "Age verification update",
+            body: body,
+            userInfo: userInfo
+        )
+    }
+
+    private func handleAgeVerifDobModifiedPayload(_ userInfo: [AnyHashable: Any]) {
+        let becameVerified = parseBool(userInfo["becameVerified"]) ?? false
+        let body: String
+        if becameVerified {
+            body = "Your DOB was corrected and you now have full access. Tap to read more."
+        } else {
+            body = "Your DOB was corrected. Some features remain age-restricted. Tap to read more."
+        }
+        scheduleAgeVerifNotification(
+            identifier: "age-verif-dob-modified",
+            title: "Date of birth updated",
+            body: body,
+            userInfo: userInfo
+        )
+    }
+
+    private func scheduleAgeVerifNotification(
+        identifier: String,
+        title: String,
+        body: String,
+        userInfo: [AnyHashable: Any]
+    ) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        // Preserve the payload so the tap-handler emits the right
+        // deep link if/when we wire one. For now the system PM in the
+        // inbox carries the full body, so a tap into the app entry
+        // is enough.
+        content.userInfo = userInfo
+        let request = UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                NSLog("[ShyTalkPush] add age-verif notification failed: \(error.localizedDescription)")
             }
         }
     }
