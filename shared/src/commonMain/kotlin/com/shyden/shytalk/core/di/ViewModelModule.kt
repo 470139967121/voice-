@@ -69,6 +69,7 @@ val viewModelModule =
                 conversationWs = get(),
                 roomRepository = get(),
                 translationRepository = get(),
+                ageRestrictionService = get(),
             )
         }
         viewModel { ReportReviewViewModel(get(), get()) }

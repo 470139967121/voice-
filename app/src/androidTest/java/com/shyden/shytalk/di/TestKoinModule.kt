@@ -164,6 +164,7 @@ val testModule =
                 storageRepository = get(),
                 initialConversationId = values.getOrNull(1) as? String,
                 translationRepository = get(),
+                ageRestrictionService = get(),
             )
         }
         viewModel { ReportReviewViewModel(get(), get()) }

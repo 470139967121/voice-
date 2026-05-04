@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-05-03",
+  "lastUpdated": "2026-05-04",
   "currentlyWorkingOn": [
     {
       "name": "`resolveReport` partial-failure flag surfacing",
@@ -1827,7 +1827,7 @@
       "status": "planned",
       "progress": {
         "done": 0,
-        "total": 10
+        "total": 11
       },
       "features": [
         {
@@ -2580,6 +2580,12 @@
         {
           "name": "App startup redesign",
           "description": "prevent login screen flash on auto-login (race condition), improve perceived startup time, better loading states",
+          "status": "planned",
+          "i18n": {}
+        },
+        {
+          "name": "Error notification UX redesign",
+          "description": "replace the current red, opaque, blocking error toast with a lighter, transparent, tap-through notification: dark text on a low-alpha (≤0.6) blurred/translucent background, no card chrome, no input interception. Buttons rendered underneath must remain clickable while the notification is visible. Add Compose UI test asserting hit-testing passes through, plus a snapshot test to lock the styling. Deferred from 2026-05-04 bug-triage session",
           "status": "planned",
           "i18n": {}
         }

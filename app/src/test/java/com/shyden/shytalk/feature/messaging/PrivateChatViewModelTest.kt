@@ -2057,4 +2057,142 @@ class PrivateChatViewModelTest {
             assertNull("error should be null for empty messages (not an error)", state.error)
             assertFalse("isBlocked should be false", state.isBlocked)
         }
+
+    // ===== Age-restriction gate (PR 8c) =====
+
+    private fun createViewModelWithAgeGate(currentUser: com.shyden.shytalk.core.model.User): PrivateChatViewModel =
+        PrivateChatViewModel(
+            otherUserId = otherUserId,
+            pmRepository = pmRepository,
+            userRepository = userRepository,
+            authRepository = authRepository,
+            typingRepository = typingRepository,
+            reportRepository = reportRepository,
+            storageRepository = storageRepository,
+            ageRestrictionService =
+                com.shyden.shytalk.feature.ageverification
+                    .AgeRestrictionService(),
+        ).also { vm ->
+            // Override the userRepository to return our test user when
+            // looked up by current uid.
+            io.mockk.coEvery { userRepository.getUser(currentUserId) } returns
+                com.shyden.shytalk.core.util.Resource
+                    .Success(currentUser)
+            activeViewModels.add(vm)
+        }
+
+    private fun userOfAge(
+        years: Int,
+        ageVerified: Boolean,
+    ): com.shyden.shytalk.core.model.User {
+        val cal = java.util.Calendar.getInstance()
+        cal.add(java.util.Calendar.YEAR, -years)
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -7) // safely past calendar boundary
+        return com.shyden.shytalk.core.model.User(
+            uid = currentUserId,
+            dateOfBirth = cal.timeInMillis,
+            ageVerified = ageVerified,
+        )
+    }
+
+    @Test
+    fun `sendMessage blocked with NeedsVerification dialog for unverified 18+ user`() =
+        runTest {
+            val vm = createViewModelWithAgeGate(userOfAge(25, ageVerified = false))
+            advanceUntilIdle()
+            vm.sendMessage("hi")
+            advanceUntilIdle()
+
+            assertEquals(
+                com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState.NeedsVerification,
+                vm.ageRestrictionDialogState.value,
+            )
+            // Repository send NOT called
+            io.mockk.coVerify(exactly = 0) {
+                pmRepository.sendTextMessage(
+                    conversationId = any(),
+                    senderId = any(),
+                    senderName = any(),
+                    text = any(),
+                    replyToMessageId = any(),
+                    replyToText = any(),
+                    replyToSenderName = any(),
+                )
+            }
+        }
+
+    @Test
+    fun `sendMessage blocked with SubEighteen dialog for sub-18 user`() =
+        runTest {
+            val vm = createViewModelWithAgeGate(userOfAge(16, ageVerified = false))
+            advanceUntilIdle()
+            vm.sendMessage("hi")
+            advanceUntilIdle()
+
+            assertEquals(
+                com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState.SubEighteen,
+                vm.ageRestrictionDialogState.value,
+            )
+        }
+
+    @Test
+    fun `sendMessage proceeds for verified user — dialog stays Hidden`() =
+        runTest {
+            val vm = createViewModelWithAgeGate(userOfAge(25, ageVerified = true))
+            advanceUntilIdle()
+            vm.sendMessage("hi")
+            advanceUntilIdle()
+
+            assertEquals(
+                com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState.Hidden,
+                vm.ageRestrictionDialogState.value,
+            )
+            // Repository send WAS called
+            io.mockk.coVerify(atLeast = 1) {
+                pmRepository.sendTextMessage(
+                    conversationId = any(),
+                    senderId = any(),
+                    senderName = any(),
+                    text = "hi",
+                    replyToMessageId = any(),
+                    replyToText = any(),
+                    replyToSenderName = any(),
+                )
+            }
+        }
+
+    @Test
+    fun `gate is no-op when ageRestrictionService is null (legacy contexts)`() =
+        runTest {
+            // The default test setup uses createViewModel() which does
+            // NOT pass an ageRestrictionService. Legacy / opt-out
+            // behaviour: send proceeds unconditionally.
+            val vm = createViewModel()
+            advanceUntilIdle()
+            vm.sendMessage("hello")
+            advanceUntilIdle()
+
+            assertEquals(
+                com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState.Hidden,
+                vm.ageRestrictionDialogState.value,
+            )
+        }
+
+    @Test
+    fun `dismissAgeRestrictionDialog resets to Hidden`() =
+        runTest {
+            val vm = createViewModelWithAgeGate(userOfAge(25, ageVerified = false))
+            advanceUntilIdle()
+            vm.sendMessage("hi")
+            advanceUntilIdle()
+            assertEquals(
+                com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState.NeedsVerification,
+                vm.ageRestrictionDialogState.value,
+            )
+            vm.dismissAgeRestrictionDialog()
+            assertEquals(
+                com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState.Hidden,
+                vm.ageRestrictionDialogState.value,
+            )
+        }
 }

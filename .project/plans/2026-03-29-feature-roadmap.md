@@ -76,6 +76,7 @@ roadmap — user-facing web features previously listed here have moved to Phase 
 | T-S  | **Retroactive exhaustive testing** — apply the full testing depth standard (see `feedback-testing-depth.md`) to ALL existing areas. Audit every feature, screen, API endpoint, cron job, utility, middleware, admin panel section, and CI workflow against all testing dimensions (functional, security, accessibility, i18n, performance, chaos, state machine, absence, contracts, regression). Decompose into sub-tasks per feature area | 4 | Large |  |
 | T-T  | **Suggestions board test data fix** — `suggestions-board.spec.ts` + `admin-suggestions.spec.ts` selector mismatches (10.5s timeouts). See `project-playwright-test-data.md`. Not in original testing-roadmap memory | 1 | Small | DONE (verified 2026-05-03) — `suggestions-board.spec.ts` passes 137/137 chromium locally (1.7m); admin-suggestions only flake remaining is the badge-count timing case fixed in PR #427 (commit 1e726f60c4). Selectors and route mocking aligned in prior PRs |
 | T-U  | **Test mock-isolation cleanup** — outstanding cases of cross-test mock bleed (`feedback-test-mock-isolation.md` was reactive; sweep for prevention). Not in original testing-roadmap memory | 2 | Small |  |
+| T-V  | **Full cross-platform manual QA regression cycle** — run the complete `/manual-qa` skill end-to-end (37 cross-platform journeys + 312 manual TCs across Chrome/Firefox/Safari/Android device/iOS Simulator/admin panel/portal), achieve two consecutive zero-failure cycles per the skill's gate. Deferred from 2026-05-04 dev bug-triage session — surfaced 7 user-reported bugs (DMs, voice connect, follow, photo upload, voice-error auto-close, banner gaps, toast UX) that escaped because the last clean full regression was Cycle 4 on 2026-04-16; cycles 5–6 never re-converged. Multi-day work. Treat the pass as a coverage-discovery exercise — every undocumented finding adds a TC + an automated test before its fix lands | 1 | Large |  |
 
 ---
 
@@ -177,6 +178,7 @@ Retention and UX improvements.
 | 10  | **Granular suspensions** — suspend specific features per user                                                                               | Medium |        |
 | 11  | **Report reliability score** — track report accuracy per user                                                                               | Medium |        |
 | B22 | **App startup redesign** — prevent login screen flash on auto-login (race condition), improve perceived startup time, better loading states | Medium |        |
+| B23 | **Error notification UX redesign** — replace the current red, opaque, blocking error toast with a lighter, transparent, tap-through notification: dark text on a low-alpha (≤0.6) blurred/translucent background, no card chrome, no input interception. Buttons rendered underneath must remain clickable while the notification is visible. Add Compose UI test asserting hit-testing passes through, plus a snapshot test to lock the styling. Deferred from 2026-05-04 bug-triage session | Small  |        |
 
 ---
 
