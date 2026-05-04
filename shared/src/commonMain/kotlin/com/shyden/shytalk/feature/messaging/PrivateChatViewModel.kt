@@ -34,6 +34,8 @@ import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.TranslationRepository
 import com.shyden.shytalk.data.repository.TypingRepository
 import com.shyden.shytalk.data.repository.UserRepository
+import com.shyden.shytalk.feature.ageverification.AgeRestrictionDialogState
+import com.shyden.shytalk.feature.ageverification.AgeRestrictionService
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsBytes
@@ -119,6 +121,14 @@ class PrivateChatViewModel(
     private val conversationWs: ConversationWebSocketService? = null,
     private val roomRepository: RoomRepository? = null,
     private val translationRepository: TranslationRepository? = null,
+    /**
+     * Age-verification gate. Unset = optional in tests / fakes / older
+     * call sites. When provided, every send entry point checks the
+     * gate before invoking the repository — restricted users see the
+     * verification dialog instead of sending. Apple guideline 1.1.4
+     * compliance (PR 8c of the age-verification multi-PR plan).
+     */
+    private val ageRestrictionService: AgeRestrictionService? = null,
 ) : ViewModel() {
     companion object {
         private const val TAG = "PrivateChatViewModel"
@@ -126,6 +136,17 @@ class PrivateChatViewModel(
 
     private val _uiState = MutableStateFlow(PrivateChatUiState())
     val uiState: StateFlow<PrivateChatUiState> = _uiState.asStateFlow()
+
+    /**
+     * Age-restriction dialog state. The screen observes this and
+     * renders [com.shyden.shytalk.feature.ageverification.AgeRestrictionDialog]
+     * when non-Hidden. Set by [shouldBlockSend] when a user attempts a
+     * send action and fails the 18+ gate.
+     */
+    private val _ageRestrictionDialogState =
+        MutableStateFlow<AgeRestrictionDialogState>(AgeRestrictionDialogState.Hidden)
+    val ageRestrictionDialogState: StateFlow<AgeRestrictionDialogState> =
+        _ageRestrictionDialogState.asStateFlow()
 
     private val currentUserId: String = authRepository.currentUserId ?: ""
     private var messagesJob: Job? = null
@@ -377,6 +398,7 @@ class PrivateChatViewModel(
         clearTyping()
 
         viewModelScope.launch {
+            if (shouldBlockSend()) return@launch
             logI(TAG, "Sending message in conversation=$conversationId")
             when (
                 pmRepository.sendTextMessage(
@@ -408,6 +430,7 @@ class PrivateChatViewModel(
         cancelReply()
 
         viewModelScope.launch {
+            if (shouldBlockSend()) return@launch
             when (
                 pmRepository.sendImageMessage(
                     conversationId = conversationId,
@@ -956,6 +979,7 @@ class PrivateChatViewModel(
         val conversationId = _uiState.value.conversationId
         if (conversationId.isEmpty()) return
         viewModelScope.launch {
+            if (shouldBlockSend()) return@launch
             when (
                 pmRepository.sendStickerMessage(
                     conversationId = conversationId,
@@ -1064,6 +1088,7 @@ class PrivateChatViewModel(
         val conversationId = _uiState.value.conversationId
         if (conversationId.isEmpty()) return
         viewModelScope.launch {
+            if (shouldBlockSend()) return@launch
             when (
                 pmRepository.sendRoomInviteMessage(
                     conversationId = conversationId,
@@ -1377,5 +1402,48 @@ class PrivateChatViewModel(
                 else -> { /* Loading or Error — silently fail */ }
             }
         }
+    }
+
+    // ── Age-restriction gate (PR 8c) ──────────────────────────────
+
+    /**
+     * If the gate is wired (Koin-injected `ageRestrictionService` is
+     * non-null) AND the current user is restricted, sets the dialog
+     * state and returns true to short-circuit the calling send method.
+     * Returns false (proceed) when:
+     *   - The gate is not wired (legacy / test contexts that opt out)
+     *   - The current user is allowed
+     *
+     * Fail-closed when the user load errors or the uid is missing —
+     * surface SubEighteen rather than letting the send through.
+     */
+    private suspend fun shouldBlockSend(): Boolean {
+        val service = ageRestrictionService ?: return false
+        val uid = authRepository.currentUserId
+        if (uid.isNullOrEmpty()) {
+            _ageRestrictionDialogState.value = AgeRestrictionDialogState.SubEighteen
+            return true
+        }
+        val user =
+            when (val result = userRepository.getUser(uid)) {
+                is Resource.Success -> result.data
+
+                else -> {
+                    _ageRestrictionDialogState.value = AgeRestrictionDialogState.SubEighteen
+                    return true
+                }
+            }
+        val state = service.checkPmAccess(user)
+        val dialogState = AgeRestrictionDialogState.showOnBlocked(state)
+        if (dialogState != AgeRestrictionDialogState.Hidden) {
+            _ageRestrictionDialogState.value = dialogState
+            logI(TAG, "PM send blocked by age restriction: $dialogState")
+            return true
+        }
+        return false
+    }
+
+    fun dismissAgeRestrictionDialog() {
+        _ageRestrictionDialogState.value = AgeRestrictionDialogState.Hidden
     }
 }
