@@ -936,6 +936,12 @@
     <string name="seasonal_khmer_new_year_cta">Learn about Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Dismiss</string>
 
+    <!-- Account error screen (PR 5b — null-DOB-but-verified inconsistency guard). -->
+    <string name="account_error_title">Account needs attention</string>
+    <string name="account_error_body">There is a problem with your account that we cannot fix automatically. Please contact our support team and quote the error code below — they will resolve it for you.</string>
+    <string name="account_error_code_label">Error code: %1$s</string>
+    <string name="account_error_sign_out">Sign out</string>
+
     <!-- Age verification dialog (PR 8 of age-verification feature). PR 13 ships translations for the remaining 19 locales. -->
     <string name="age_restriction_needs_verification_title">Verify your age</string>
     <string name="age_restriction_needs_verification_body">Private messages and gacha are 18+ features. To use them, please verify your age by submitting a government-issued ID. The image is reviewed by a human and deleted as soon as a decision is made.</string>
