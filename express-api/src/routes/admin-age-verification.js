@@ -140,6 +140,46 @@ router.get('/admin/age-verification/pending', async (req, res) => {
   }
 });
 
+// ─── GET /:id/image-url ─────────────────────────────────────────────
+//
+// Returns a short-lived signed URL the admin browser can use to view
+// the submitted ID image directly from R2. Stored privately; no
+// long-lived URLs leave the API surface. 5-minute expiry mirrors the
+// upload PUT URL.
+//
+// Returns 404 if the submission's r2Key is null — that happens after
+// a decision commits (key is wiped post-decision; the image is also
+// deleted from R2 best-effort).
+
+router.get('/admin/age-verification/:id/image-url', async (req, res) => {
+  if (requireAdmin(req, res)) return;
+  const { id } = req.params;
+  try {
+    const subRef = db.doc(`ageVerificationSubmissions/${id}`);
+    const snap = await subRef.get();
+    if (!snap.exists) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+    const data = snap.data();
+    if (!data.r2Key) {
+      // Post-decision: image has been deleted (best-effort) and key
+      // wiped from the doc. Admin can still read the audit log for
+      // compliance traceability.
+      return res.status(404).json({ error: 'Image already removed' });
+    }
+    const url = await r2.getSignedGetUrl(data.r2Key, 300);
+    return res.json({ url, expiresInSec: 300 });
+  } catch (err) {
+    log.error('admin-age-verification', 'image-url failed', {
+      submissionId: id,
+      error: err?.message,
+    });
+    return res
+      .status(500)
+      .json({ error: 'Failed to issue image URL', errorId: 'AGE_VERIF_IMAGE_URL' });
+  }
+});
+
 // ─── POST /:id/approve ──────────────────────────────────────────────
 
 router.post('/admin/age-verification/:id/approve', async (req, res) => {

@@ -143,6 +143,28 @@ async function listObjectsWithMetadata(prefix) {
  * intercepted. Hard-caps overrides at 1 hour — anything longer is a
  * code smell and the helper refuses.
  */
+/**
+ * Pre-sign a GET to a private R2 object (admin-only viewing).
+ *
+ * Used for age-verification ID image preview in the admin panel: the
+ * browser fetches the image directly from R2 with a short-lived URL
+ * rather than streaming through Express. Cuts server load and lets
+ * the browser cache normally.
+ *
+ * Default 5-minute expiry mirrors getSignedPutUrl. Hard-caps at 1h —
+ * anything longer is a code smell for ID-image preview.
+ */
+async function getSignedGetUrl(key, expiresInSec = 300) {
+  if (typeof key !== 'string' || key.length === 0) {
+    throw new Error('r2.getSignedGetUrl: key must be a non-empty string');
+  }
+  if (typeof expiresInSec !== 'number' || expiresInSec <= 0 || expiresInSec > 3600) {
+    throw new Error('r2.getSignedGetUrl: expiresInSec must be in (0, 3600]');
+  }
+  const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSec });
+}
+
 async function getSignedPutUrl(key, contentType, expiresInSec = 300) {
   if (typeof key !== 'string' || key.length === 0) {
     throw new Error('r2.getSignedPutUrl: key must be a non-empty string');
@@ -171,5 +193,6 @@ module.exports = {
   listObjects,
   listObjectsWithMetadata,
   getSignedPutUrl,
+  getSignedGetUrl,
   CDN_URL,
 };

@@ -2390,6 +2390,7 @@
         .user-subtab { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; background: var(--surface2); color: var(--text2); border: none; transition: background 0.2s; min-height: 36px; min-width: 36px; }
         .user-subtab:hover { background: var(--surface3, #444); }
         .user-subtab.active { background: var(--accent); color: #fff; }
+        .age-verif-badge { display: inline-block; min-width: 18px; padding: 1px 6px; margin-left: 6px; font-size: 11px; font-weight: 600; border-radius: 9px; background: var(--danger, #dc2626); color: #fff; vertical-align: middle; }
         /* Sub-tab change indicators removed — replaced by auto-save */
         .user-subpanel { display: none; }
         .user-subpanel.visible { display: block; }
@@ -3145,6 +3146,7 @@
                 <button class="user-subtab" data-subtab="security" data-i18n="subtab_security">Security</button>
                 <button class="user-subtab" data-subtab="economy" data-i18n="subtab_economy">Economy</button>
                 <button class="user-subtab" data-subtab="identity" data-i18n="subtab_identity">Identity</button>
+                <button class="user-subtab" data-subtab="age-verif" data-i18n="subtab_age_verification">Age Verification <span id="age-verif-pending-badge" class="age-verif-badge" hidden></span></button>
             </div>
 
             <div class="user-subpanel visible" data-subtab="profile">
@@ -3702,6 +3704,90 @@
                     </div>
                 </div>
             </div><!-- end identity subpanel -->
+
+            <!-- Age Verification subpanel (PR 6/14) — per-user review of pending ID submission -->
+            <div class="user-subpanel" data-subtab="age-verif">
+                <div class="form-section">
+                    <h3 data-i18n="age_verif_panel_title">Age Verification</h3>
+                    <p style="color:var(--text2);font-size:13px;margin-bottom:12px;" data-i18n="age_verif_panel_subtitle">
+                        Review the user's submitted government ID and decide. Approve confirms the user is 18+. Reject keeps them sub-18 and notifies them. If the ID shows a different DOB, use Modify-DOB to correct the record.
+                    </p>
+
+                    <!-- Empty state — user has no pending submission -->
+                    <div id="age-verif-empty" data-testid="ageVerif_empty" style="padding:16px;border:1px dashed var(--border);border-radius:8px;color:var(--text2);font-size:13px;display:none;">
+                        <p style="margin:0 0 8px 0;" data-i18n="age_verif_no_pending_for_user">No pending verification submission for this user.</p>
+                        <p style="margin:0;font-size:12px;color:var(--text3);">
+                            <span data-i18n="age_verif_other_pending_label">Other pending submissions across the system:</span>
+                            <span id="age-verif-other-count">0</span>.
+                            <button type="button" id="age-verif-jump-next" class="btn-sm" style="font-size:12px;margin-left:8px;display:none;" data-i18n="age_verif_jump_next">Jump to next pending</button>
+                        </p>
+                    </div>
+
+                    <!-- Review form — shown when this user has a pending submission -->
+                    <div id="age-verif-form" data-testid="ageVerif_form" style="display:none;">
+                        <div style="display:grid;grid-template-columns:minmax(180px,320px) 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+                            <div>
+                                <a id="age-verif-id-image-link" href="#" target="_blank" rel="noopener" style="display:block;">
+                                    <img id="age-verif-id-image" data-testid="ageVerif_idImage" src="" alt="Submitted ID" style="width:100%;border-radius:8px;border:1px solid var(--border);background:var(--surface2);"/>
+                                </a>
+                                <p style="font-size:11px;color:var(--text3);margin:4px 0 0 0;" data-i18n="age_verif_image_disclaimer">Image is destroyed when the decision is recorded.</p>
+                            </div>
+                            <div style="font-size:13px;line-height:1.6;">
+                                <div><strong data-i18n="age_verif_field_method">ID method:</strong> <span id="age-verif-method"></span></div>
+                                <div><strong data-i18n="age_verif_field_recorded_dob">Recorded DOB:</strong> <span id="age-verif-current-dob"></span></div>
+                                <div><strong data-i18n="age_verif_field_submitted_at">Submitted at:</strong> <span id="age-verif-submitted-at"></span></div>
+                                <div><strong data-i18n="age_verif_field_submission_id">Submission ID:</strong> <span id="age-verif-submission-id" style="font-family:monospace;font-size:11px;color:var(--text2);"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- Gate question: does the ID confirm the recorded DOB? -->
+                        <div class="field-group" style="margin-bottom:12px;">
+                            <label style="font-weight:600;display:block;margin-bottom:8px;" data-i18n="age_verif_match_question">Does the ID confirm the user's recorded date of birth?</label>
+                            <label style="margin-right:16px;cursor:pointer;">
+                                <input type="radio" name="age-verif-match" value="yes" data-testid="ageVerif_matchYes"/>
+                                <span data-i18n="age_verif_match_yes">Yes — DOB on the ID matches the recorded value</span>
+                            </label>
+                            <label style="cursor:pointer;display:block;margin-top:6px;">
+                                <input type="radio" name="age-verif-match" value="no" data-testid="ageVerif_matchNo"/>
+                                <span data-i18n="age_verif_match_no">No — the ID shows a different DOB</span>
+                            </label>
+                        </div>
+
+                        <!-- YES branch — Approve / Reject -->
+                        <div id="age-verif-yes-actions" data-testid="ageVerif_yesActions" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;">
+                            <p style="font-size:12px;color:var(--text2);margin:0 0 8px 0;" data-i18n="age_verif_approve_help">Approve: confirms the user as 18+ verified. Reject: keeps them sub-18 and sends a system PM with the reason.</p>
+                            <button type="button" id="age-verif-approve-btn" data-testid="ageVerif_approveBtn" class="btn-primary" style="margin-right:8px;" data-i18n="age_verif_approve_button">Approve (mark verified)</button>
+                            <details style="display:inline-block;vertical-align:top;">
+                                <summary style="cursor:pointer;font-size:13px;color:var(--text2);" data-i18n="age_verif_reject_summary">Reject instead…</summary>
+                                <div style="margin-top:8px;max-width:480px;">
+                                    <textarea id="age-verif-reject-reason-yes" data-testid="ageVerif_rejectReasonYes" placeholder="Reason for rejection (required, shown to user)" style="width:100%;min-height:60px;font-family:inherit;font-size:13px;"></textarea>
+                                    <button type="button" id="age-verif-reject-btn-yes" data-testid="ageVerif_rejectBtnYes" class="btn-danger" style="margin-top:6px;" data-i18n="age_verif_reject_button">Reject submission</button>
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- NO branch — Modify-DOB / Reject -->
+                        <div id="age-verif-no-actions" data-testid="ageVerif_noActions" style="display:none;border-top:1px solid var(--border);padding-top:12px;">
+                            <p style="font-size:12px;color:var(--text2);margin:0 0 8px 0;" data-i18n="age_verif_modify_help">Update the user's DOB to match the value shown on the ID. The user is unlocked or kept locked automatically based on the new age.</p>
+                            <div class="field-group" style="margin-bottom:8px;">
+                                <label for="age-verif-new-dob" data-i18n="age_verif_new_dob_label">Date of birth on the ID:</label>
+                                <input type="date" id="age-verif-new-dob" data-testid="ageVerif_newDob" style="width:200px;"/>
+                            </div>
+                            <textarea id="age-verif-modify-reason" data-testid="ageVerif_modifyReason" placeholder="Reason / notes (required, audit log entry)" style="width:100%;max-width:480px;min-height:60px;font-family:inherit;font-size:13px;margin-bottom:6px;"></textarea>
+                            <div>
+                                <button type="button" id="age-verif-modify-btn" data-testid="ageVerif_modifyBtn" class="btn-primary" style="margin-right:8px;" data-i18n="age_verif_modify_button">Update DOB & decide</button>
+                                <details style="display:inline-block;vertical-align:top;">
+                                    <summary style="cursor:pointer;font-size:13px;color:var(--text2);" data-i18n="age_verif_reject_summary">Reject instead…</summary>
+                                    <div style="margin-top:8px;max-width:480px;">
+                                        <textarea id="age-verif-reject-reason-no" data-testid="ageVerif_rejectReasonNo" placeholder="Reason for rejection (required, shown to user)" style="width:100%;min-height:60px;font-family:inherit;font-size:13px;"></textarea>
+                                        <button type="button" id="age-verif-reject-btn-no" data-testid="ageVerif_rejectBtnNo" class="btn-danger" style="margin-top:6px;" data-i18n="age_verif_reject_button">Reject submission</button>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- end age-verif subpanel -->
 
             <!-- Identity suspend dialog -->
             <div id="identity-suspend-dialog" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">

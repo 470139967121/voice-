@@ -60,8 +60,10 @@ jest.mock('../../src/utils/firebase', () => ({
 }));
 
 const mockDeleteObject = jest.fn().mockResolvedValue();
+const mockGetSignedGetUrl = jest.fn();
 jest.mock('../../src/utils/r2', () => ({
   deleteObject: (...args) => mockDeleteObject(...args),
+  getSignedGetUrl: (...args) => mockGetSignedGetUrl(...args),
 }));
 
 const mockLogApproved = jest.fn().mockResolvedValue();
@@ -149,6 +151,53 @@ describe('GET /api/admin/age-verification/pending', () => {
     const app = createApp({ admin: false });
     await request(app).get('/api/admin/age-verification/pending').expect(403);
     expect(mockCollectionGet).not.toHaveBeenCalled();
+  });
+});
+
+// ─── GET /:id/image-url ─────────────────────────────────────────────
+
+describe('GET /api/admin/age-verification/:id/image-url', () => {
+  test('returns short-lived signed URL for admin', async () => {
+    mockDocGet.mockResolvedValue({
+      exists: true,
+      data: () => pendingSubmissionDoc(),
+    });
+    mockGetSignedGetUrl.mockResolvedValue('https://r2.example/age-verification/abc.jpg?sig=xyz');
+
+    const app = createApp();
+    const res = await request(app).get('/api/admin/age-verification/sub-1/image-url').expect(200);
+
+    expect(res.body).toEqual({
+      url: 'https://r2.example/age-verification/abc.jpg?sig=xyz',
+      expiresInSec: 300,
+    });
+    expect(mockGetSignedGetUrl).toHaveBeenCalledWith('age-verification/10000050/abc.jpg', 300);
+  });
+
+  test('rejects non-admin with 403', async () => {
+    const app = createApp({ admin: false });
+    await request(app).get('/api/admin/age-verification/sub-1/image-url').expect(403);
+    expect(mockGetSignedGetUrl).not.toHaveBeenCalled();
+  });
+
+  test('returns 404 when submission does not exist', async () => {
+    mockDocGet.mockResolvedValue({ exists: false });
+    const app = createApp();
+    await request(app).get('/api/admin/age-verification/missing/image-url').expect(404);
+    expect(mockGetSignedGetUrl).not.toHaveBeenCalled();
+  });
+
+  test('returns 404 when r2Key has been wiped (post-decision state)', async () => {
+    // After a decision commits, r2Key is set to null in the same
+    // transaction. Admin requesting the image after that point gets
+    // a clean 404 rather than a confusing signed URL to a deleted obj.
+    mockDocGet.mockResolvedValue({
+      exists: true,
+      data: () => pendingSubmissionDoc({ status: 'approved', r2Key: null }),
+    });
+    const app = createApp();
+    await request(app).get('/api/admin/age-verification/sub-1/image-url').expect(404);
+    expect(mockGetSignedGetUrl).not.toHaveBeenCalled();
   });
 });
 

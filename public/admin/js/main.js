@@ -21,6 +21,10 @@ import { showScreen, registerScreen } from '/js/core/ui.js';
 
 // Static import — ensures users module is loaded before auth handler fires
 import * as usersModule from '/admin/js/tabs/users.js';
+// Age Verification subtab — also static so the pending-count badge
+// renders the moment login completes (without waiting on a dynamic
+// import). Registered as a sub-feature of the Users tab.
+import * as ageVerificationModule from '/admin/js/tabs/age-verification.js';
 // Maintenance sub-features (not tabs — initialised once after login)
 import * as syncProd from '/admin/js/sync-prod.js';
 import * as nuclearReset from '/admin/js/nuclear-reset.js';
@@ -304,6 +308,28 @@ onAuthStateChanged(auth, async (user) => {
     };
     syncProd.init(maintenanceDeps);
     nuclearReset.init(maintenanceDeps);
+
+    // Age-verification subtab (PR 6/14) — wires its event listeners
+    // and registers the onSubtabOpen callback into the Users tab.
+    // Initialised as a sub-feature alongside maintenance because it's
+    // owned by the Users tab and needs to fire its initial badge
+    // refresh as soon as login completes.
+    ageVerificationModule.init({
+      searchUserByUniqueId: (uid) => usersModule.searchUserByUniqueId?.(uid),
+      refreshAfterDecision: async (uid) => {
+        // Re-search the user so the read-only DOB / verified-badge
+        // section in the Users tab updates after Modify-DOB or
+        // Approve-flips-verified.
+        try {
+          await usersModule.searchUserByUniqueId?.(uid);
+        } catch (_err) {
+          // Non-fatal — toast shown at the call site.
+        }
+      },
+    });
+    usersModule._register?.('onAgeVerifSubtabOpen', (uid) =>
+      ageVerificationModule.onSubtabOpen(uid),
+    );
 
     // Eagerly load economy config so pity limit is available for spin monitor
     await activateTabModule('economy');

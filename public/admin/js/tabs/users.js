@@ -41,6 +41,7 @@ let _populateFormFull = async (/* data */) => {};
 let _flushNotifications = async () => {};
 let _loadSecurityPanel = async () => {};
 let _loadIdentitySubtabGraph = async () => {};
+let _onAgeVerifSubtabOpen = async (/* uid */) => {};
 
 /**
  * Register a function from a later migration chunk.
@@ -52,6 +53,7 @@ export function _register(name, fn) {
     flushNotifications: (f) => { _flushNotifications = f; },
     loadSecurityPanel: (f) => { _loadSecurityPanel = f; },
     loadIdentitySubtabGraph: (f) => { _loadIdentitySubtabGraph = f; },
+    onAgeVerifSubtabOpen: (f) => { _onAgeVerifSubtabOpen = f; },
   };
   if (map[name]) map[name](fn);
 }
@@ -148,6 +150,7 @@ export function switchUserSubtab(subtab) {
     p.classList.toggle("visible", p.dataset.subtab === subtab));
   if (subtab === "security") _loadSecurityPanel();
   if (subtab === "identity") _loadIdentitySubtabGraph();
+  if (subtab === "age-verif") _onAgeVerifSubtabOpen(currentUid);
 }
 
 // ── Search ─────────────────────────────────────────────────────────

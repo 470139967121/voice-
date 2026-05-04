@@ -319,6 +319,7 @@ router.get('/test/verify/:collection/:id', async (req, res) => {
       'reports',
       'suspensionAppeals',
       'alerts',
+      'ageVerificationSubmissions',
     ];
     if (!ALLOWED_COLLECTIONS.includes(collection)) {
       return res.status(400).json({ error: 'Collection not allowed' });
@@ -399,6 +400,7 @@ router.post('/test/write/:collection', async (req, res) => {
       'suspensionAppeals',
       'alerts',
       'suggestions',
+      'ageVerificationSubmissions',
     ];
     if (!ALLOWED_COLLECTIONS.includes(collection)) {
       return res.status(400).json({ error: 'Collection not allowed' });
