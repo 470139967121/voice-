@@ -11,9 +11,12 @@ jest.mock('../../src/utils/log', () => ({
   error: jest.fn(),
 }));
 
-// Mock alertManagerInstance
+// Mock alertManagerInstance — createAlert returns a Promise so the
+// catastrophic-failure path on the age-verif reconcile cron can
+// chain `.catch(...)` without blowing up.
 jest.mock('../../src/utils/alertManagerInstance', () => ({
   send: jest.fn(),
+  createAlert: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock all cron job modules
@@ -31,6 +34,7 @@ jest.mock('../../src/cron/serverHealth', () => jest.fn());
 jest.mock('../../src/cron/accountDeletion', () => jest.fn());
 jest.mock('../../src/cron/expireDataExports', () => jest.fn());
 jest.mock('../../src/cron/notification-dispatch', () => jest.fn());
+jest.mock('../../src/cron/ageVerificationAuditReconcile', () => jest.fn());
 const { startCronJobs } = require('../../src/cron/index');
 const log = require('../../src/utils/log');
 
@@ -114,8 +118,11 @@ describe('startCronJobs', () => {
       // Should NOT have dev-only jobs
       expect(schedules).not.toContain('*/30 * * * *'); // testDataCleanup
 
-      // Total: 11 schedules in production (staleRooms + serverHealth share */5, + accountDeletion, + expireDataExports, + notification-dispatch)
-      expect(mockSchedule).toHaveBeenCalledTimes(11);
+      // ageVerificationAuditReconcile — daily 05:00 UTC
+      expect(schedules).toContain('0 5 * * *');
+
+      // Total: 12 schedules in production (staleRooms + serverHealth share */5, + accountDeletion, + expireDataExports, + notification-dispatch, + ageVerificationAuditReconcile)
+      expect(mockSchedule).toHaveBeenCalledTimes(12);
     });
 
     test('does not register testDataCleanup in production', () => {
@@ -276,6 +283,68 @@ describe('startCronJobs', () => {
 
       expect(log.error).toHaveBeenCalledWith('cron', 'staleRooms failed', {
         error: 'stale error',
+      });
+    });
+
+    test('ageVerificationAuditReconcile callback invokes the job', async () => {
+      const ageVerificationAuditReconcile = require('../../src/cron/ageVerificationAuditReconcile');
+      ageVerificationAuditReconcile.mockResolvedValue({ scanned: 0, reconciled: 0 });
+      startCronJobs();
+
+      const reconcileCall = mockSchedule.mock.calls.find((c) => c[0] === '0 5 * * *');
+      expect(reconcileCall).toBeDefined();
+
+      reconcileCall[1]();
+
+      expect(ageVerificationAuditReconcile).toHaveBeenCalled();
+    });
+
+    test('ageVerificationAuditReconcile catastrophic crash logs AND fires a critical alert', async () => {
+      const ageVerificationAuditReconcile = require('../../src/cron/ageVerificationAuditReconcile');
+      const alertManager = require('../../src/utils/alertManagerInstance');
+      const error = new Error('Firestore unavailable');
+      ageVerificationAuditReconcile.mockRejectedValue(error);
+      startCronJobs();
+
+      const reconcileCall = mockSchedule.mock.calls.find((c) => c[0] === '0 5 * * *');
+      expect(reconcileCall).toBeDefined();
+
+      reconcileCall[1]();
+
+      // Wait for the .catch chain to settle (log.error then createAlert).
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(log.error).toHaveBeenCalledWith('cron', 'ageVerificationAuditReconcile failed', {
+        error: 'Firestore unavailable',
+      });
+      // Critical alert MUST fire — compliance back-fill is OSA/GDPR
+      // remediation; a multi-day gap can't rely on log-grep.
+      expect(alertManager.createAlert).toHaveBeenCalledWith(
+        'compliance_cron_failed',
+        'critical',
+        expect.stringMatching(/age-verification audit reconcile/i),
+        expect.any(String),
+        expect.objectContaining({
+          error: 'Firestore unavailable',
+          cron: 'ageVerificationAuditReconcile',
+        }),
+      );
+    });
+
+    test('ageVerificationAuditReconcile alert failure is logged but does not crash the cron', async () => {
+      const ageVerificationAuditReconcile = require('../../src/cron/ageVerificationAuditReconcile');
+      const alertManager = require('../../src/utils/alertManagerInstance');
+      ageVerificationAuditReconcile.mockRejectedValue(new Error('Firestore unavailable'));
+      alertManager.createAlert.mockRejectedValueOnce(new Error('alert pipe down'));
+      startCronJobs();
+
+      const reconcileCall = mockSchedule.mock.calls.find((c) => c[0] === '0 5 * * *');
+      reconcileCall[1]();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(log.error).toHaveBeenCalledWith('cron', 'alertManager.createAlert failed', {
+        error: 'alert pipe down',
       });
     });
   });
