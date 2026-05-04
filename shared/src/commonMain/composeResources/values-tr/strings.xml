@@ -1,858 +1,1640 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Common actions -->
-    <string name="all_caps">TÜMÜ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="all_caps">TÜM</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="back">Geri</string>
-    <string name="cancel">İptal</string>
-    <string name="change">Değiştir</string>
-    <string name="close">Kapat</string>
-    <string name="confirm">Onayla</string>
-    <string name="continue_button">Devam</string>
-    <string name="create">Oluştur</string>
-    <string name="delete">Sil</string>
-    <string name="done">Tamam</string>
-    <string name="edit">Düzenle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cancel">İptal etmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="change">Değiştirmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close">Kapalı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm">Onaylamak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="continue_button">Devam etmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create">Yaratmak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete">Silmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="done">Tamamlamak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit">Düzenlemek</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="error_generic">Bir şeyler ters gitti</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="got_it">Anladım</string>
-    <string name="learn_more">Daha Fazla Bilgi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="learn_more">Daha fazla bilgi edin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="loading">Yükleniyor…</string>
-    <string name="maybe_later">Belki Sonra</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="maybe_later">Belki Daha Sonra</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_action">Mesaj</string>
-    <string name="next">İleri</string>
-    <string name="ok">OK</string>
-    <string name="retry">Tekrar Dene</string>
-    <string name="save">Kaydet</string>
-    <string name="send">Gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="next">Sonraki</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ok">TAMAM</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="retry">Yeniden dene</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="save">Kaydetmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send">Göndermek</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sending">Gönderiliyor...</string>
-    <string name="transfer">Aktar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer">Aktarım</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unknown">Bilinmiyor</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="using">Kullanılıyor...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="you">Sen</string>
 
     <!-- Message bubbles -->
+    <!-- google-translated 2026-05-04 -->
     <string name="edited">düzenlendi</string>
-    <string name="tap_to_join">Katılmak için dokun</string>
-    <string name="message_recalled_by_you">Bu mesajı geri çektiniz</string>
-    <string name="message_recalled">Bu mesaj geri çekildi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_join">Katılmak için dokunun</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled_by_you">Bu mesajı hatırladınız</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled">Bu mesaj geri çağrıldı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_hidden_by_mod">Bu mesaj bir moderatör tarafından gizlendi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="invite_to_mic">Mikrofona davet et</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="closed">Kapalı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edited_count">Düzenlendi (%1$d)</string>
-    <string name="read">Okundu</string>
-    <string name="sent">Gönderildi</string>
-    <string name="sticker">Çıkartma</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="read">Okumak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sent">Gönderilmiş</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sticker">Etiket</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="image">Resim</string>
 
     <!-- Context menu -->
-    <string name="react">Tepki Ver</string>
-    <string name="reply">Yanıtla</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="react">Tepki ver</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reply">Cevap vermek</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="copy">Kopyala</string>
-    <string name="recall">Geri Çek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="recall">Hatırlamak</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="add_to_stickers">Çıkartmalara Ekle</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="hide_message">Mesajı Gizle</string>
-    <string name="report_message">Mesajı Bildir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message">Rapor Mesajı</string>
 
     <!-- Translation -->
+    <!-- google-translated 2026-05-04 -->
     <string name="translate">Çevir</string>
-    <string name="translated_from">%1$s dilinden çevrildi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translated_from">%1$s kaynağından çevrildi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="show_original">Orijinali göster</string>
-    <string name="translation_limit_reached">Günlük sınıra ulaşıldı. Sınırsız çeviri için Super Shy\'a yükseltin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translation_limit_reached">Günlük sınıra ulaşıldı. Sınırsız çeviri için SuperShy\'ye yükseltin.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="auto_translate">Otomatik çeviri</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="auto_translate_description">Gelen mesajları otomatik olarak dilinize çevirin</string>
-    <string name="translations_remaining">Bugün %1$d çeviri hakkınız kaldı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translations_remaining">Bugün %1$d çeviri kaldı</string>
 
     <!-- Settings -->
+    <!-- google-translated 2026-05-04 -->
     <string name="settings">Ayarlar</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="language">Dil</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="blocked_users">Engellenen Kullanıcılar</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="account">Hesap</string>
-    <string name="privacy">Gizlilik</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="privacy">Mahremiyet</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="notifications">Bildirimler</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="permissions">İzinler</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="about">Hakkında</string>
-    <string name="sign_out">Çıkış Yap</string>
-    <string name="sign_out_confirm">Çıkış yapmak istediğinize emin misiniz?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_out">Oturumu Kapat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_out_confirm">Oturumu kapatmak istediğinizden emin misiniz?</string>
 
     <!-- Home -->
+    <!-- google-translated 2026-05-04 -->
     <string name="create_room">Oda Oluştur</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="create_room_prompt">Odanıza bir isim verin</string>
-    <string name="home">Ana Sayfa</string>
-    <string name="in_room_count">Odada %1$d kişi</string>
-    <string name="join">Katıl</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="home">Ev</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="in_room_count">%1$d odada</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="join">Katılmak</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_active_rooms">Aktif oda yok</string>
-    <string name="no_rooms">Oda bulunamadı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_rooms">Oda yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_name">Oda adı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_name_label">Oda Adı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seats_count">%1$d/%2$d koltuk</string>
-    <string name="speakers_count">%1$d/%2$d konuşmacı</string>
-    <string name="tap_plus_to_create">Oluşturmak için + düğmesine dokunun</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="speakers_count">%1$d/%2$d hoparlör</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_plus_to_create">Bir tane oluşturmak için +\'ya dokunun</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="visitors_count">%1$d ziyaretçi</string>
 
     <!-- Profile -->
+    <!-- google-translated 2026-05-04 -->
     <string name="connections">Bağlantılar</string>
-    <string name="display_name">Görünen Ad</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_name">Ekran adı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="dob_privacy_note">Doğum tarihiniz gereklidir ancak yaşınızı gizlilik ayarlarından gizleyebilirsiniz.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="dob_required_subtitle">Devam etmek için doğum tarihinize ihtiyacımız var.</string>
-    <string name="follow">Takip Et</string>
-    <string name="follow_back">Geri Takip Et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow">Takip etmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow_back">Geri takip</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="followers">Takipçiler</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="followers_count">Takipçiler (%1$d)</string>
-    <string name="following">Takip Edilenler</string>
-    <string name="following_count">Takip Edilenler (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following">Takip etme</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following_count">Takip ediliyor (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="following_list_private">Bu kullanıcının takip listesi gizlidir</string>
-    <string name="get_super_shy">Super Shy Edinin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy">Süper Utangaç Olun</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift_wall">Hediye Duvarı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift_value_coins">Değer: %1$d jeton</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_followers_yet">Henüz takipçi yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_profile_visitors">Henüz profil ziyaretçisi yok</string>
-    <string name="not_following_anyone">Henüz kimseyi takip etmiyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_following_anyone">Henüz kimseyi takip etmiyorum</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="one_more_step">Bir Adım Daha</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile">Profil</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile_setup_subtitle">Bir görünen ad seçin ve doğum tarihinizi girin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="received_times">%1$d kez alındı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="remove_follower">Takipçiyi kaldır</string>
-    <string name="report">Bildir</string>
-    <string name="select_date_of_birth">Doğum Tarihi Seçin</string>
-    <string name="select_nationality">Uyruk Seçin</string>
-    <string name="search_countries">Ülke ara</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report">Rapor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_date_of_birth">Doğum Tarihini Seçin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_nationality">Uyruğu Seçin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_countries">Ülkeleri ara</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="selected">Seçildi</string>
-    <string name="set_up_your_profile">Profilinizi Oluşturun</string>
-    <string name="stalker_visit_info">Profilinizi %1$s tarihinde stalkladı, son 3 ayda %2$d kez</string>
-    <string name="stalkers_count">Stalker\'lar (%1$d)</string>
-    <string name="stalkers_super_shy_description">Profilinizi kimlerin ziyaret ettiğini görün! Profil stalker\'ları yalnızca Super Shy üyelere özel bir özelliktir.</string>
-    <string name="super_shy_benefit">Super Shy Avantajı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_up_your_profile">Profilinizi Ayarlayın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalker_visit_info">Son 3 ay içinde %1$s, %2$d kez sizi takip etti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_count">Takipçiler (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_super_shy_description">Profilinizi kimlerin ziyaret ettiğini görün! Profil takipçileri özel bir Süper Utangaç özelliğidir.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_benefit">Süper Utangaç Avantaj</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="top_senders">En Çok Gönderenler</string>
-    <string name="block">Engelle</string>
-    <string name="unblock">Engeli Kaldır</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block">Engellemek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock">Engellemeyi kaldır</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="undo_remove">Kaldırmayı geri al</string>
-    <string name="unfollow">Takibi Bırak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unfollow">Takibi bırak</string>
 
     <!-- Room -->
-    <string name="alias">Takma Ad</string>
-    <string name="approve">Onayla</string>
-    <string name="audience">Dinleyiciler</string>
-    <string name="back_to_home">Ana Sayfaya Dön</string>
-    <string name="backpack">Sırt Çantası</string>
-    <string name="backpack_empty">Sırt çantanız boş.\nHediye kazanmak için çarkı çevirin!</string>
-    <string name="ban">Yasakla</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="alias">Takma ad</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="approve">Onaylamak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="audience">Kitle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="back_to_home">Ana Sayfaya Geri Dön</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="backpack">Sırt çantası</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="backpack_empty">Sırt çantanız boş.\nHediye almak için çarkı çevirin!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban">Yasak</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="block_user">Kullanıcıyı Engelle</string>
-    <string name="block_user_confirm">%1$s adlı kullanıcıyı engellemek istediğinize emin misiniz?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_user_confirm">%1$s\'ı engellemek istediğinizden emin misiniz?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="close_room">Odayı Kapat</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="daily">Günlük</string>
-    <string name="deny">Reddet</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="deny">Reddetmek</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="empty_seat">Boş koltuk</string>
-    <string name="filter_gift_animations_description">Ucuz hediyelerin animasyonlarını filtreleyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gift_animations_description">Daha ucuz hediyeler için animasyonları filtreleyin.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift">Hediye</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift_animations">Hediye Animasyonları</string>
-    <string name="host">Ev Sahibi</string>
-    <string name="hosts">Ev Sahipleri</string>
-    <string name="invite_to_seat">Koltuğa davet et</string>
-    <string name="kick">At</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="host">Ev sahibi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hosts">Toplantı sahipleri</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_seat">Oturmaya davet et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick">Tekme atmak</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="kick_user">Kullanıcıyı At</string>
-    <string name="kick_user_confirm">%1$s adlı kullanıcıyı odadan atmak istediğinize emin misiniz? Tekrar katılamayacak.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_user_confirm">%1$s\'ı odadan atmak istediğinizden emin misiniz? Tekrar katılamayacaklar.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="leave_room">Odadan Ayrıl</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="leave_seat">Koltuktan ayrıl</string>
-    <string name="lock_seating">Oturmayı Kilitle</string>
-    <string name="lock_seating_description">Yalnızca oda sahibi kullanıcıları oturmaya davet edebilir</string>
-    <string name="buy_coins">Jeton satın al</string>
-    <string name="collect_all">TÜMÜNÜ TOPLA (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating">Kilitli Oturma</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating_description">Yalnızca sahibi kullanıcıları oturmaya davet edebilir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="buy_coins">Madeni para satın al</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="collect_all">HEPSİNİ TOPLA (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="increased_drop_rate">ARTIRILMIŞ DÜŞME ORANI</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="loading_prices">Fiyatlar yükleniyor…</string>
-    <string name="lucky_spin">Lucky Spin</string>
-    <string name="lucky_spin_title">LUCKY SPIN</string>
-    <string name="need_more_coins">Daha fazla jeton gerekiyor!</string>
-    <string name="no_packages_available">Paket bulunamadı</string>
-    <string name="no_spins_yet">Henüz çevirme yok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin">Şanslı Döndürme</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin_title">ŞANSLI DÖNÜŞ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="need_more_coins">Daha fazla paraya ihtiyacınız var!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_packages_available">Mevcut paket yok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_spins_yet">Henüz dönüş yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="prizes">Ödüller</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="skip_animation">ANİMASYONU ATLA</string>
-    <string name="spin">ÇEVİR</string>
-    <string name="spin_count">%1$d ÇEVİRME</string>
-    <string name="spin_history">Çevirme Geçmişi</string>
-    <string name="spin_results">Çevirme Sonuçları</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin">DÖNDÜRMEK</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_count">%1$d DÖNÜŞ(S)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_history">Döndürme Geçmişi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_results">Döndürme Sonuçları</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message">Mesaj</string>
-    <string name="move_to_audience">Dinleyicilere Taşı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_audience">Kitleye Taşı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="move_to_seat">Koltuğa Taşı</string>
-    <string name="move_to_which_seat">Hangi koltuğa taşınsın?</string>
-    <string name="mute">Sessize Al</string>
-    <string name="no_audience_members">Dinleyici yok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_which_seat">Hangi koltuğa geçelim?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mute">Sesini kapatmak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_audience_members">Seyirci yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_pending_requests">Bekleyen istek yok</string>
-    <string name="no_reason_given">Sebep belirtilmedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_reason_given">Hiçbir sebep belirtilmedi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_one_on_mic">Mikrofonda kimse yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="occupied">Dolu</string>
-    <string name="open_for_duration">%1$s süredir açık</string>
-    <string name="owner">Sahip</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="open_for_duration">%1$s için açık</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner">Mal sahibi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reason_optional">Sebep (isteğe bağlı)</string>
-    <string name="reject">Reddet</string>
-    <string name="remove">Kaldır</string>
-    <string name="remove_as_host">Ev Sahipliğini Kaldır</string>
-    <string name="remove_from_room">Odadan Çıkar</string>
-    <string name="request">İstek</string>
-    <string name="request_a_seat">Koltuk İste</string>
-    <string name="request_seat">Koltuk İste</string>
-    <string name="requesting">İsteniyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reject">Reddetmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove">Kaldırmak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_as_host">Toplantı Sahibi Olarak Kaldır</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_from_room">Odadan Kaldır</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request">Rica etmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_a_seat">Koltuk Talep Et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_seat">Koltuk Talep Et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="requesting">Talep ediyorum</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room">Oda</string>
-    <string name="room_closed">Oda Kapatıldı</string>
-    <string name="room_closing_no_super_shy">Oda sahibinin Super Shy\'ı yok, bu yüzden oda yakında kapanacak.</string>
-    <string name="room_closing_in">Oda %1$d:%2$s içinde kapanıyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closed">Oda Kapalı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_no_super_shy">Oda sahibinin Super Shy\'si yok, dolayısıyla bu oda yakında kapanacak.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_in">%1$d:%2$s içinde oda kapanıyor</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_closing_soon">Oda Yakında Kapanıyor</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_settings">Oda ayarları</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="rooms">Odalar</string>
-    <string name="seat_requests">Koltuk İstekleri</string>
-    <string name="seat_swap_with">Koltuk %1$d (%2$s ile değiştir)</string>
-    <string name="set_alias">Takma Ad Belirle</string>
-    <string name="set_alias_description">%1$s için kişisel bir takma ad belirleyin. Bunu yalnızca siz göreceksiniz.</string>
-    <string name="set_as_host">Ev Sahibi Yap</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seat_requests">Koltuk Talepleri</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seat_swap_with">Koltuk %1$d (%2$s ile değiştirin)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias">Takma Ad Ayarla</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias_description">%1$s için kişisel bir takma ad ayarlayın. Bunu yalnızca siz göreceksiniz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_as_host">Ana Bilgisayar olarak ayarla</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="showing_all_gift_animations">Tüm hediye animasyonları gösteriliyor</string>
-    <string name="showing_animations_worth">Yalnızca %1$d+ jeton değerinde animasyonlar gösteriliyor</string>
-    <string name="speakers">Konuşmacılar</string>
-    <string name="take_a_seat">Bir Koltuğa Oturun</string>
-    <string name="unmute">Sesi Aç</string>
-    <string name="unmuted">Ses Açıldı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="showing_animations_worth">Yalnızca %1$d+ jeton değerindeki animasyonlar gösteriliyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="speakers">Hoparlörler</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="take_a_seat">Oturun</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmute">Sesini açmak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmuted">Sesi açıldı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user">Kullanıcı</string>
-    <string name="user_id">ID: %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="user_id">Kimlik: %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="visitor_count">%1$d ziyaretçi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="voice">Ses</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="voice_unavailable">Ses kullanılamıyor</string>
-    <string name="you_have_super_shy_room">Super Shy\'ınız var! %1$d saate kadar uzatılmış süreyle kendi odanızı açın.</string>
-    <string name="get_super_shy_rooms">%1$d saate kadar süren odaların keyfini çıkarmak için Super Shy edinin!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_have_super_shy_room">Süper Utangaçsın! %1$d saate kadar uzatılmış süre için kendi odanızı açın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy_rooms">%1$d saate kadar süren odaların keyfini çıkarmak için Süper Utangaç olun!</string>
 
     <!-- Room - Notifications -->
-    <string name="accept">Kabul Et</string>
-    <string name="decline">Reddet</string>
-    <string name="go_back">Geri dön</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="accept">Kabul etmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="decline">Reddetmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="go_back">Geri gitmek</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="go_to_seat">Koltuğa Git</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="invited_to_sit">Oturmaya davet edildiniz!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="request_accepted">İsteğiniz kabul edildi!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_number">Koltuk %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user_wants_to_sit">%1$s oturmak istiyor</string>
 
     <!-- Room - Chat -->
+    <!-- google-translated 2026-05-04 -->
     <string name="cancel_edit">Düzenlemeyi iptal et</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edit_message_placeholder">Mesajı düzenle...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_placeholder">Mesaj...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_messages">Yeni mesajlar</string>
 
     <!-- Room - Backpack -->
-    <string name="action_cannot_be_undone">BU İŞLEM GERİ ALINAMAZ.</string>
-    <string name="confirm_send">Gönderimi Onayla</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="action_cannot_be_undone">BU İŞLEM GERİ ALINMAZ.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm_send">Göndermeyi Onayla</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="from_backpack_items">Sırt çantasından: %1$d öğe</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gifts">Hediyeler</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all">Tümünü Gönder</string>
-    <string name="send_all_includes">Bu, %2$d farklı hediyeden TOPLAM %1$d öğeyi içerir.</string>
-    <string name="send_all_warning">%1$s adlı kullanıcıya TÜM sırt çantanızı göndermek üzeresiniz.</string>
-    <string name="send_everything_confirm">Anlıyorum, her şeyi gönder</string>
-    <string name="to_label">Kime</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_includes">Buna %2$d farklı hediyedeki TÜM %1$d öğe dahildir.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_warning">TAMAMEN sırt çantanızı %1$s adresine göndermek üzeresiniz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_everything_confirm">Anladım, her şeyi gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="to_label">İle</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="total_cost_coins">Toplam maliyet: %1$d jeton</string>
-    <string name="use_button">Kullan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="use_button">Kullanmak</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="you_have_count">Sahip olduğunuz: %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="your_balance_coins">Bakiyeniz: %1$d jeton</string>
 
     <!-- Messaging -->
+    <!-- google-translated 2026-05-04 -->
     <string name="additional_details_optional">Ek ayrıntılar (isteğe bağlı)</string>
-    <string name="all_admins_and_mods">Tüm yöneticiler &amp; moderatörler</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="all_admins_and_mods">Tüm yöneticiler ve modlar</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="attach_evidence">Kanıt Ekle</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cant_message_user">Bu kullanıcıya mesaj gönderemezsiniz</string>
     <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">Bu kişiye mesaj gönderemezsiniz çünkü onun 18 yaşının altında olduğunu düşünüyoruz.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="chat">Sohbet</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="close_group">Grubu Kapat</string>
-    <string name="close_group_warning">Bu, grubu herkes için kapatacaktır. Mesajlar moderasyon için korunur.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_group_warning">Bu, grubu herkes için kapatacaktır. Mesajlar denetlenmek üzere saklanıyor.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="compressing">Sıkıştırılıyor...</string>
-    <string name="conversation_start_hint">Bir odadaki profil veya kullanıcı\nkartından sohbet başlatın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="conversation_start_hint">Bir kişinin\nprofilinden veya odadaki kullanıcı kartından görüşme başlatın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="create_group">Grup Oluştur</string>
-    <string name="current_version">Mevcut</string>
-    <string name="delete_conversation">Sohbeti Sil</string>
-    <string name="delete_conversation_warning">Bu, sohbeti listenizden kaldıracaktır. Mesajlar korunur ve karşı taraf size tekrar mesaj gönderdiğinde yeniden görünür.</string>
-    <string name="description_label">Açıklama</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="current_version">Akım</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_conversation">Görüşmeyi Sil</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_conversation_warning">Bu, konuşmayı listenizden kaldıracaktır. Mesajlar korunur ve diğer kişi size tekrar mesaj gönderdiğinde yeniden görünür.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description_label">Tanım</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="description_optional">Açıklama (isteğe bağlı)</string>
-    <string name="edit_history">Düzenleme Geçmişi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_history">Geçmişi Düzenle</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="editing_message">Mesaj düzenleniyor</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="evidence">Kanıt</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="evidence_required">En az bir ekran görüntüsü veya kayıt gereklidir.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="general">Genel</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group">Grup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_chat">Grup Sohbeti</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_name_label">Grup Adı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_name_required">Grup Adı *</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_settings">Grup Ayarları</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="invite_to_room">Odaya Davet Et</string>
-    <string name="last_seen">Son görülme %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="last_seen">Son görülen %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="leave_group">Gruptan Ayrıl</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="members">Üyeler</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="members_count">%1$d üye</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_ellipsis">Mesaj...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_permissions">Mesaj İzinleri</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_image">[Resim]</string>
-    <string name="message_preview_recalled">[Mesaj geri çekildi]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_recalled">[Mesaj geri çağrıldı]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_room_invite">[Oda Daveti]</string>
-    <string name="message_preview_sticker">[Çıkartma]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_sticker">[Etiket]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="messages">Mesajlar</string>
-    <string name="mod_notifications">Moderatör Bildirimleri</string>
-    <string name="move_to_front">Öne taşı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mod_notifications">Mod Bildirimleri</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_front">Öne git</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mute_notifications">Bildirimleri Sessize Al</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mute_reason">. Sebep: %1$s</string>
-    <string name="muted">Sessiz</string>
-    <string name="muted_for_hours_minutes">%1$d saat %2$d dakika susturuldunuz</string>
-    <string name="muted_for_minutes">%1$d dakika susturuldunuz</string>
-    <string name="muted_indefinitely">Susturuldunuz</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted">Sessize alındı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_hours_minutes">%1$dh %2$dm süreyle sessize alındınız</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_minutes">%1$dm süreyle sessize alındınız</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_indefinitely">Sessize alındın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_group">Yeni Grup</string>
-    <string name="new_group_selected">Yeni Grup (%1$d seçili)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_group_selected">Yeni Grup (%1$d seçildi)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_message">Yeni Mesaj</string>
-    <string name="no_action_needed">İşlem Gerekmez</string>
-    <string name="no_followers_following_found">Takipçi veya takip edilen bulunamadı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_action_needed">Hiçbir İşlem Gerekmiyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_followers_following_found">Takipçi veya takip bulunamadı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_matches_found">Eşleşme bulunamadı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_messages">Henüz mesaj yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_pending_reports">Bekleyen rapor yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_stickers_yet">Henüz çıkartma yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_users_found">Kullanıcı bulunamadı</string>
-    <string name="notify_owner_only">Yalnızca sahibi bilgilendir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notify_owner_only">Yalnızca sahibine bildir</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="online">Çevrimiçi</string>
-    <string name="only_admins_can_send">Bu grupta yalnızca yöneticiler ve moderatörler mesaj gönderebilir</string>
-    <string name="only_owner_can_change_permissions">Yalnızca grup sahibi izinleri değiştirebilir.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_admins_can_send">Bu grupta yalnızca yöneticiler ve modlar mesaj gönderebilir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_owner_can_change_permissions">İzinleri yalnızca grup sahibi değiştirebilir.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="owner_only">Yalnızca sahip</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="participants">Katılımcılar</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="participants_count">Katılımcılar (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin">Sabitle</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="recent">Son</string>
-    <string name="replying_to">%1$s adlı kişiye yanıt veriliyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replying_to">%1$s yanıtlanıyor</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_message_prompt">Bu mesajı neden bildiriyorsunuz?</string>
-    <string name="report_review">Rapor İnceleme</string>
-    <string name="report_user">%1$s Bildir</string>
-    <string name="report_user_prompt">Bu kullanıcıyı neden bildiriyorsunuz?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_review">Rapor İncelemesi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user">%1$s\'ı bildirin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user_prompt">Bu kullanıcıyı neden rapor ediyorsunuz?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reset_to_default">Varsayılana Sıfırla</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="result_count">%1$d sonuç</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="review_report">Raporu İncele</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_admin">Yönetici</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_member">Üye</string>
-    <string name="role_mod">Moderatör</string>
-    <string name="role_owner">Sahip</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_mod">Mod</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_owner">Mal sahibi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="save_description">Açıklamayı Kaydet</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_all_users">Tüm kullanıcıları ara</string>
-    <string name="search_conversations">Sohbetlerde ara...</string>
-    <string name="search_messages">Mesajlarda ara...</string>
-    <string name="search_people">Kişi ara...</string>
-    <string name="select_action">İşlem seçin:</string>
-    <string name="selected_count">%1$d seçili</string>
-    <string name="start_conversation">Bir sohbet başlatın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_conversations">Konuşmaları ara...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_messages">Mesajları ara...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_people">Kişileri arayın...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_action">Eylem seçin:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="selected_count">%1$d seçildi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="start_conversation">Konuşma başlat</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="submit_report">Raporu Gönder</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="submitting">Gönderiliyor...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="system_messages">Sistem Mesajları</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transfer_ownership">Sahipliği Aktar</string>
-    <string name="transfer_ownership_warning">Sahipliğin aktarılacağı bir üye seçin. Sahip ayrıcalıklarınızı kaybedeceksiniz. Bu geri alınamaz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer_ownership_warning">Sahipliğin aktarılacağı üyeyi seçin. Sahip ayrıcalıklarını kaybedeceksiniz. Bu geri alınamaz.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="type_message">Bir mesaj yazın…</string>
-    <string name="typing">yazıyor...</string>
-    <string name="unmute_action">Sesi Aç</string>
-    <string name="unmute_notifications">Bildirimleri Aç</string>
-    <string name="unpin">Sabitlemeyi Kaldır</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="typing">yazarak...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmute_action">Sesini açmak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmute_notifications">Bildirimlerin Sesini Aç</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unpin">Sabitlemeyi kaldır</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="view_profile">Profili Görüntüle</string>
 
     <!-- Messaging - report reasons -->
-    <string name="report_reason_spam">Spam</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reason_spam">İstenmeyen e-posta</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_harassment">Taciz</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_inappropriate">Uygunsuz İçerik</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_other">Diğer</string>
 
     <!-- Messaging - report actions -->
-    <string name="report_action_warning">Uyarı Ver</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_warning">Sorun Uyarısı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_action_temp_suspension">Geçici Askıya Alma</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_action_perm_suspension">Kalıcı Askıya Alma</string>
-    <string name="report_action_pm_ban">Özel Mesaj Yasağı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_pm_ban">Başbakan\'dan yasaklama</string>
 
     <!-- Messaging - report details -->
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_prefix">Sebep: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_type_prefix">Tür: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_details_prefix">Ayrıntılar: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_message_prefix">Mesaj: \"%1$s\"</string>
-    <string name="report_reporter_reported">Bildiren: %1$s | Bildirilen: %2$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reporter_reported">Muhabir: %1$s | Bildirildi: %2$s</string>
 
     <!-- Messaging - system message labels -->
-    <string name="sys_member_joins">Üye katılır</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_member_joins">Üye katılıyor</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_member_leaves">Üye ayrılır</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_role_changes">Rol değişiklikleri</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_permission_changes">İzin değişiklikleri</string>
 
     <!-- Messaging - permission labels -->
-    <string name="perm_who_can_send">Kimler mesaj gönderebilir</string>
-    <string name="perm_who_can_add_members">Kimler üye ekleyebilir</string>
-    <string name="perm_who_can_edit_info">Kimler grup bilgilerini düzenleyebilir</string>
-    <string name="perm_who_can_delete_messages">Kimler mesaj silebilir</string>
-    <string name="perm_who_can_mute_members">Kimler üyeleri susturabilir</string>
-    <string name="perm_who_can_remove_members">Kimler üyeleri çıkarabilir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_send">Kimler mesaj gönderebilir?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_add_members">Kimler üye ekleyebilir?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_edit_info">Grup bilgilerini kimler düzenleyebilir?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_delete_messages">Mesajları kimler silebilir?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_mute_members">Kimler üyeleri sessize alabilir?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_remove_members">Üyeleri kimler kaldırabilir?</string>
 
     <!-- Messaging - date separators -->
+    <!-- google-translated 2026-05-04 -->
     <string name="today">Bugün</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="yesterday">Dün</string>
 
     <!-- Daily Reward -->
-    <string name="awesome">Harika!</string>
-    <string name="claim_todays_reward">Bugünün Ödülünü Al</string>
-    <string name="coins">jeton</string>
-    <string name="day_fri">Cum</string>
-    <string name="day_mon">Pzt</string>
-    <string name="day_sat">Cmt</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="awesome">Mükemmel!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_todays_reward">Bugünün Ödülünü Talep Edin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="coins">paralar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_fri">Cuma</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_mon">Pazartesi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sat">Doygunluk</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_streak">%1$d günlük seri</string>
-    <string name="day_sun">Paz</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sun">Güneş</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_thu">Per</string>
-    <string name="day_tue">Sal</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_tue">Salı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_wed">Çar</string>
-    <string name="later">Sonra</string>
-    <string name="milestone">Kilometre Taşı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="later">Daha sonra</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="milestone">Dönüm noktası</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="milestone_bonus">Kilometre taşı bonusu!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="plus_coins">+%1$d jeton!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reward_claimed">Ödül Alındı!</string>
 
     <!-- Economy -->
-    <string name="bean_redeem_description">1 fasulye = 1 jeton. 2.000+ kullanım için %10 bonus!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bean_redeem_description">1 fasulye = 1 jeton. %10 bonus için 2.000\'den fazla para kullanın!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="bonus_coins">+%1$d bonus</string>
-    <string name="buy_shy_coins">ShyCoins Satın Al</string>
-    <string name="confirm_redemption">Kullanımı Onayla</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="buy_shy_coins">Utangaç Paralar Satın Al</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm_redemption">Kullanımı Onaylayın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="daily_reward">Günlük Ödül</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="redeem">Kullan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="redeem_all">Tümünü Kullan</string>
-    <string name="redeem_beans_for_coins">%1$s fasulye %2$s jetona çevrilsin mi?</string>
-    <string name="redeem_shy_beans">ShyBeans Kullan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_beans_for_coins">%2$s jeton karşılığında %1$s fasulye kullanılsın mı?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_shy_beans">Utangaç Fasulyeyi Kullan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift">Hediye Gönder</string>
-    <string name="shy_beans">ShyBeans</string>
-    <string name="shy_coins">ShyCoins</string>
-    <string name="filter_all">Tümü</string>
-    <string name="filter_gacha">Gacha</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_beans">Utangaç Fasulye</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_coins">Utangaç Paralar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_all">Tüm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gacha">Gaça</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_gifts">Hediyeler</string>
-    <string name="filter_purchases">Satın Almalar</string>
-    <string name="filter_redemptions">Kullanımlar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_purchases">Satın almalar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_redemptions">Ödemeler</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_rewards">Ödüller</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_filtered_transactions">%1$s işlemi yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_transactions_yet">Henüz işlem yok</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transaction_history">İşlem Geçmişi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transactions">İşlemler</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="wallet">Cüzdan</string>
 
     <!-- Super Shy -->
-    <string name="benefit_daily_bonus">+%10 günlük giriş jetonu (yukarı yuvarlanır)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_daily_bonus">+%10 günlük giriş parası (yuvarlanmıştır)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_extended_room">Uzatılmış oda süresi (12 saat)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_full_room">8 koltuklu tam oda</string>
-    <string name="benefit_gold_name">Her yerde altın görünen ad</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_gold_name">Her yerde altın rengi görünen ad</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_profile_frame">Özel profil çerçevesi</string>
-    <string name="benefit_star_badge">İsmin yanında yıldız rozeti</string>
-    <string name="benefits">Avantajlar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_star_badge">Adın yanındaki yıldız rozeti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefits">Faydalar</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="choose_a_plan">Bir plan seçin</string>
-    <string name="claim_30_days_free">30 Gün Ücretsiz Al</string>
-    <string name="claimed">Alındı!</string>
-    <string name="claimed_activate_backpack">Etkinleştirmek için bir sohbet odasındayken sırt çantanızda bulun.</string>
-    <string name="claiming">Alınıyor…</string>
-    <string name="currently_active">Şu An Aktif</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_30_days_free">30 Gün Ücretsiz Talep Edin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed">İddia edildi!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed_activate_backpack">Etkinleştirmek için sohbet odasındayken sırt çantanızda bulun.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claiming">Hak talebinde bulunuluyor…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="currently_active">Şu anda Aktif</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="days_remaining">%1$d gün kaldı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="one_time_payment">Tek seferlik ödeme</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_month">aylık</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_year">yıllık</string>
-    <string name="super_shy">Super Shy</string>
-    <string name="super_shy_for_life">Ömür boyu Super Shy\'sınız!</string>
-    <string name="tap_to_claim_backpack">Almak için dokunun — sırt çantanıza eklenir</string>
-    <string name="testing_mode_super_shy">Test modu — gerçek ücret alınmaz. Super Shy\'ı anında etkinleştirmek için bir plana dokunun.</string>
-    <string name="tier_label">Kademe: %1$s</string>
-    <string name="tier_lifetime">Ömür Boyu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy">Süper Utangaç</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_for_life">Yaşam boyu Süper Utangaçsın!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_claim_backpack">Almak için dokunun; sırt çantanıza eklendi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="testing_mode_super_shy">Test modu — gerçek para alınmaz. Süper Utangaç\'ı anında etkinleştirmek için bir plana dokunun.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_label">Seviye: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_lifetime">Ömür boyu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tier_monthly">Aylık</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tier_yearly">Yıllık</string>
-    <string name="upgrade_to_lifetime">Ömür Boyu\'na Yükselt</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="upgrade_to_lifetime">Ömür Boyu Yükseltme</string>
 
     <!-- Legal -->
-    <string name="accept_all_and_continue">Tümünü Kabul Et &amp; Devam</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="accept_all_and_continue">Tümünü Kabul Et ve Devam Et</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="community_standards">Topluluk Standartları</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cyber_bullying_policy">Siber Zorbalık Politikası</string>
-    <string name="i_have_read_and_agree">Okudum ve kabul ediyorum </string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_have_read_and_agree">okudum ve kabul ediyorum</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="privacy_policy">Gizlilik Politikası</string>
-    <string name="review_and_accept_policies">Devam etmek için lütfen politikalarımızı inceleyin ve kabul edin.</string>
-    <string name="terms_and_conditions">Şartlar &amp; Koşullar</string>
-    <string name="welcome_to_shytalk">ShyTalk\'a Hoş Geldiniz</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="review_and_accept_policies">Devam etmek için lütfen politikalarımızı inceleyip kabul edin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="terms_and_conditions">Şartlar ve Koşullar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="welcome_to_shytalk">ShyTalk\'a hoş geldiniz</string>
 
     <!-- Auth -->
-    <string name="sign_in">Giriş Yap</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in">Oturum aç</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="verification_code">Doğrulama Kodu</string>
-    <string name="continue_with_google">Google ile Devam Et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="continue_with_google">Google ile devam et</string>
 
     <!-- Missing translations (English fallback) -->
-    <string name="account_restricted">Account Restricted</string>
-    <string name="account_suspended_description">This user\'s account has been suspended.</string>
-    <string name="account_suspended_label">Account Suspended</string>
-    <string name="active_days_ago">Active %1$dd ago</string>
-    <string name="active_hours_ago">Active %1$dh ago</string>
-    <string name="active_just_now">Active just now</string>
-    <string name="active_long_ago">Active 30+ days ago</string>
-    <string name="active_minutes_ago">Active %1$dm ago</string>
-    <string name="allow">Allow</string>
-    <string name="allowed">Allowed</string>
-    <string name="appeal">Appeal</string>
-    <string name="appeal_not_eligible">You are not eligible to appeal this suspension.</string>
-    <string name="appeal_placeholder">Explain why your suspension should be lifted…</string>
-    <string name="appeal_submitted">Your appeal has been submitted and will be reviewed. If successful, your suspension will be lifted. You will not receive any further feedback on your appeal and you cannot submit another appeal.</string>
-    <string name="appeal_unsuccessful">Your appeal has been reviewed and was not successful. You cannot submit another appeal.</string>
-    <string name="ban_expires">Expires: %1$s</string>
-    <string name="ban_permanent">This ban is permanent.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_restricted">Hesap Kısıtlı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_description">Bu kullanıcının hesabı askıya alındı.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_label">Hesap Askıya Alındı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_days_ago">%1$dd önce aktifti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_hours_ago">%1$dh önce aktifti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_just_now">Şu anda aktif</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_long_ago">30+ gün önce etkindi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_minutes_ago">%1$dm önce aktifti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allow">İzin vermek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allowed">İzin verilmiş</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal">Çekici</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_not_eligible">Bu askıya alma işlemine itiraz etme hakkınız yoktur.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_placeholder">Uzaklaştırma cezanızın neden kaldırılması gerektiğini açıklayın…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_submitted">İtirazınız gönderildi ve incelenecek. Başarılı olmanız durumunda askıya alma işleminiz kaldırılacaktır. İtirazınızla ilgili başka geri bildirim almayacaksınız ve başka bir itirazda bulunamazsınız.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_unsuccessful">İtirazınız incelendi ve başarılı olmadı. Başka bir itirazda bulunamazsınız.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_expires">Sona erme tarihi: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_permanent">Bu yasak kalıcıdır.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="suspension_also_device_banned">Cihazınız da yasaklandı.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="suspension_also_network_banned">Ağınız da yasaklandı.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="suspension_also_device_and_network_banned">Cihazınız ve ağınız da yasaklandı.</string>
-    <string name="ban_reason">Reason: %1$s</string>
-    <string name="banned_by">Banned by: %1$s</string>
-    <string name="banned_from_room">Banned from Room</string>
-    <string name="block_confirm">Block %1$s?</string>
-    <string name="block_description">They won\'t be able to view your profile.</string>
-    <string name="blocked_by_user">You have been blocked by this user</string>
-    <string name="blocked_by_user_in_room_description">A user in this room has blocked you. You may have a limited experience. Enter anyway?</string>
-    <string name="blocked_user_in_room">Blocked User in Room</string>
-    <string name="blocked_user_in_room_description">A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_reason">Sebep: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_by">Yasaklayan: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_from_room">Odaya Girmesi Yasaklandı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_confirm">%1$s engellensin mi?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_description">Profilinizi görüntüleyemeyecekler.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user">Bu kullanıcı tarafından engellendiniz</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user_in_room_description">Bu odadaki bir kullanıcı sizi engelledi. Sınırlı bir deneyiminiz olabilir. Yine de girilsin mi?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room">Odada Engellenen Kullanıcı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room_description">Engellediğiniz bir kullanıcı bu odada. Sizinle iletişim kurabilecekler. Yine de girilsin mi?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="bluetooth">Bluetooth</string>
-    <string name="bluetooth_description">Connect to Bluetooth audio devices during voice chat.</string>
-    <string name="cache_cleared">Cache Cleared</string>
-    <string name="cache_cleared_description">App cache has been cleared.</string>
-    <string name="cannot_enter_room">Cannot Enter Room</string>
-    <string name="chat_display">Chat Display</string>
-    <string name="check_for_updates">Check for Updates</string>
-    <string name="checking_for_updates">Checking for updates…</string>
-    <string name="choose_another_room">Choose Another Room</string>
-    <string name="clear">Clear</string>
-    <string name="clear_cache">Clear Cache</string>
-    <string name="clear_cache_confirm">Clear %1$s of cached data?</string>
-    <string name="clear_cache_with_size">Clear Cache (%1$s)</string>
-    <string name="close_room_description">This will close the room for everyone.</string>
-    <string name="close_room_question">Close Room?</string>
-    <string name="closing">Closing...</string>
-    <string name="connecting">Connecting...</string>
-    <string name="connection_trouble">ShyTalk is having trouble reaching our servers. Please check your internet connection and try again.</string>
-    <string name="contact_support_help">If you need help, contact shytalk.help@gmail.com</string>
-    <string name="contact_support_hint">If the problem persists, contact shytalk.help@gmail.com</string>
-    <string name="contact_us">Contact Us</string>
-    <string name="shyden_ltd_brand">ShyTalk, Shyden Ltd (Şirket No. 17110487) markasıdır, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, Birleşik Krallık.</string>
-    <string name="delete_account">Delete Account</string>
-    <string name="delete_account_description">Your account and all data will be permanently deleted after the grace period. You can cancel by signing in before then.</string>
-    <string name="delete_account_scheduled">Your account is scheduled for deletion on %1$s. Would you like to cancel?</string>
-    <string name="delete_account_cancel">Cancel Deletion</string>
-    <string name="delete_account_continue">Continue with Deletion</string>
-    <string name="delete_account_success">Your account has been scheduled for deletion.</string>
-    <string name="delete_account_pin_required">Verify your identity to delete your account</string>
-    <string name="delete_account_confirm_title">Are you sure?</string>
-    <string name="delete_account_confirm_body">This will permanently delete your account and all associated data after the grace period. This action cannot be undone.</string>
-    <string name="denied">Denied</string>
-    <string name="description">Description</string>
-    <string name="device_locked_description">This device is already linked to another account.\nOnly one account is allowed per device.\n\nFor support, contact shytalk.help@gmail.com</string>
-    <string name="device_not_supported">Device Not Supported</string>
-    <string name="device_not_supported_description">ShyTalk cannot run on rooted or emulated devices. Please use an unmodified device.</string>
-    <string name="display_over_other_apps">Display over other apps</string>
-    <string name="display_over_other_apps_description">Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="dnd_end_time">DND End Time</string>
-    <string name="dnd_start_time">DND Start Time</string>
-    <string name="do_not_disturb">Do Not Disturb</string>
-    <string name="download_now">Download Now</string>
-    <string name="edit_room_name">Edit Room Name</string>
-    <string name="email">Email</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bluetooth_description">Sesli sohbet sırasında Bluetooth ses cihazlarına bağlanın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared">Önbellek Temizlendi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared_description">Uygulama önbelleği temizlendi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_enter_room">Odaya Girilemiyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="chat_display">Sohbet Ekranı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_for_updates">Güncellemeleri Kontrol Et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="checking_for_updates">Güncellemeler kontrol ediliyor…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_another_room">Başka Bir Oda Seçin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear">Temizlemek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache">Önbelleği Temizle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_confirm">%1$s önbelleğe alınmış veri temizlensin mi?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_with_size">Önbelleği Temizle (%1$s)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_description">Bu, odayı herkese kapatacaktır.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_question">Oda Kapatılsın mı?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="closing">Kapanıyor...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connecting">Bağlanıyor...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connection_trouble">ShyTalk sunucularımıza ulaşmada sorun yaşıyor. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_help">Yardıma ihtiyacınız olursa, utangaçtalk.help@gmail.com ile iletişime geçin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_hint">Sorun devam ederse, utangaçtalk.help@gmail.com ile iletişime geçin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_us">Bize Ulaşın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shyden_ltd_brand">ShyTalk, 71-75 Shelton Street, Covent Garden, Londra, WC2H 9JQ, Birleşik Krallık adresinde bulunan Shyden Ltd\'nin (Şirket No. 17110487) bir markasıdır.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account">Hesabı Sil</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_description">Yetkisiz kullanım süresinin ardından hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Bu tarihten önce oturum açarak iptal edebilirsiniz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_scheduled">Hesabınızın %1$s tarihinde silinmesi planlandı. İptal etmek ister misiniz?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_cancel">Silme İşlemini İptal Et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_continue">Silme işlemine devam et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_success">Hesabınızın silinmesi planlandı.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_pin_required">Hesabınızı silmek için kimliğinizi doğrulayın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_title">Emin misin?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_body">Bu, ek sürenin ardından hesabınızı ve ilişkili tüm verileri kalıcı olarak silecektir. Bu eylem geri alınamaz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="denied">Reddedildi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description">Tanım</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_locked_description">Bu cihaz zaten başka bir hesaba bağlı.\nCihaz başına yalnızca bir hesaba izin verilir.\n\nDestek için utangaçtalk.help@gmail.com ile iletişime geçin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported">Cihaz Desteklenmiyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported_description">ShyTalk, root erişimli veya taklit edilmiş cihazlarda çalışamaz. Lütfen değiştirilmemiş bir cihaz kullanın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps">Diğer uygulamaların üzerinde görüntüle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps_description">Ses odasından çıktığınızda ShyTalk\'un yüzen bir baloncuk göstermesine izin verin, böylece hızlı bir şekilde geri dönebilirsiniz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_end_time">DND Bitiş Zamanı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_start_time">DND Başlangıç ​​Zamanı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="do_not_disturb">Rahatsız etmeyin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="download_now">Şimdi İndir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_room_name">Oda Adını Düzenle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email">E-posta</string>
 
     <!-- Settings - Linked Accounts page -->
+    <!-- google-translated 2026-05-04 -->
     <string name="linked_accounts">Bağlı Hesaplar</string>
-    <string name="linked">Bağlı</string>
-    <string name="unlinked">Bağlı değil</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="linked">Bağlantılı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlinked">Bağlantı kaldırıldı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlink">Bağlantıyı kaldır</string>
-    <string name="unlink_provider_confirm">%1$s bağlantısı kaldırılsın mı?</string>
-    <string name="unlink_provider_description">Bu hesabı daha sonra tekrar bağlayabilirsiniz, ancak yeniden doğrulamanız gerekecektir.</string>
-    <string name="cannot_unlink_last_provider">Birinin bağlantısını kaldırabilmek için en az iki bağlı hesabınız olmalıdır.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink_provider_confirm">%1$s\'ın bağlantısı kaldırılsın mı?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink_provider_description">Bu hesabı daha sonra yeniden bağlayabilirsiniz ancak tekrar doğrulamanız gerekecektir.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_unlink_last_provider">Birinin bağlantısını kaldırabilmeniz için en az iki bağlı hesabınızın olması gerekir.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="provider_google">Google</string>
-    <string name="provider_apple">Apple</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_apple">Elma</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="provider_email">E-posta</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_linked_accounts">Bağlı hesap bulunamadı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlinking_provider">Bağlantı kaldırılıyor…</string>
-    <string name="connect_account">Hesap bağla</string>
-    <string name="connect">Bağla</string>
-    <string name="signed_in_with">Signed in with</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect_account">Hesabı Bağla</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect">Bağlamak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signed_in_with">Şununla oturum açıldı:</string>
 
-    <string name="enable_dnd">Enable Do Not Disturb</string>
-    <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
-    <string name="end">End</string>
-    <string name="enter">Enter</string>
-    <string name="error_block_user">Failed to block user</string>
-    <string name="error_check_updates">Failed to check for updates</string>
-    <string name="error_could_not_submit_report">Could not submit report</string>
-    <string name="error_follow_user">Failed to follow user</string>
-    <string name="error_load_user_data">Failed to load user data</string>
-    <string name="error_load_users">Failed to load users</string>
-    <string name="error_max_groups">You can own a maximum of %1$d groups</string>
-    <string name="error_max_participants">Maximum %1$d participants allowed</string>
-    <string name="error_no_users_selected">No users selected</string>
-    <string name="error_not_enough_beans">Not enough beans</string>
-    <string name="error_not_enough_coins">Not enough coins</string>
-    <string name="error_prices_changed">Prices have changed! Please check the new costs and try again.</string>
-    <string name="error_resolve_report">Failed to resolve report</string>
-    <string name="error_save_dob">Failed to save date of birth</string>
-    <string name="error_submit_appeal">Failed to submit appeal</string>
-    <string name="error_submit_report">Failed to submit report</string>
-    <string name="error_title">Error</string>
-    <string name="error_unblock_user">Failed to unblock user</string>
-    <string name="error_unfollow_user">Failed to unfollow user</string>
-    <string name="error_update_privacy">Failed to update privacy setting</string>
-    <string name="error_upload_evidence">Failed to upload evidence</string>
-    <string name="error_upload_group_photo">Failed to upload group photo</string>
-    <string name="everyone">Everyone</string>
-    <string name="hide_age">Hide Age</string>
-    <string name="hide_age_description">Others won&apos;t see your age on your profile.</string>
-    <string name="hide_following_description">Others won&apos;t see who you follow. Followers are always visible.</string>
-    <string name="hide_following_list">Hide Following List</string>
-    <string name="hide_online_status">Hide Online Status</string>
-    <string name="hide_online_status_description">Others won&apos;t see when you&apos;re online.</string>
-    <string name="i_understand">I Understand</string>
-    <string name="i_understand_and_accept">I Understand and Accept</string>
-    <string name="kick_reason">Reason: %1$s</string>
-    <string name="kicked_by_name">You were kicked by %1$s.</string>
-    <string name="kicked_from_room">You have been kicked from this room.</string>
-    <string name="leave">Leave</string>
-    <string name="leave_room_description">You will leave the voice room.</string>
-    <string name="leave_room_question">Leave Room?</string>
-    <string name="message_preview">Message Preview</string>
-    <string name="message_preview_description">Show message text in notifications.</string>
-    <string name="mic_permission_denied">Microphone permission denied. You won\'t be able to use voice chat.</string>
-    <string name="microphone">Microphone</string>
-    <string name="microphone_description">Required for voice chat in rooms.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd">Rahatsız Etmeyin özelliğini etkinleştirin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd_description">Planlanan süre boyunca tüm PM bildirimlerini sessize alın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="end">Son</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enter">Girmek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_block_user">Kullanıcı engellenemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_check_updates">Güncellemeler kontrol edilemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_could_not_submit_report">Rapor gönderilemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_follow_user">Kullanıcı takip edilemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_user_data">Kullanıcı verileri yüklenemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_users">Kullanıcılar yüklenemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_groups">En fazla %1$d gruba sahip olabilirsiniz</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_participants">Maksimum %1$d katılımcıya izin verildi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_no_users_selected">Hiçbir kullanıcı seçilmedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_beans">Yeterli fasulye yok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_coins">Yeterli para yok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_prices_changed">Fiyatlar değişti! Lütfen yeni maliyetleri kontrol edip tekrar deneyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_resolve_report">Rapor çözülemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_save_dob">Doğum tarihi kaydedilemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_appeal">İtiraz gönderilemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_report">Rapor gönderilemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_title">Hata</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unblock_user">Kullanıcının engellemesi kaldırılamadı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unfollow_user">Kullanıcının takibi bırakılamadı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_update_privacy">Gizlilik ayarı güncellenemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_evidence">Kanıt yüklenemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_group_photo">Grup fotoğrafı yüklenemedi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="everyone">Herkes</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age">Yaşı Gizle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age_description">Diğerleri profilinizde yaşınızı görmeyecek.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_description">Diğerleri kimi takip ettiğinizi görmez. Takipçiler her zaman görünür.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_list">Takip Edilen Listeyi Gizle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status">Çevrimiçi Durumu Gizle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status_description">Diğerleri çevrimiçi olduğunuzu görmez.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand">Anladım</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand_and_accept">Anlıyorum ve Kabul Ediyorum</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_reason">Sebep: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_by_name">%1$s tarafından atıldınız.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_from_room">Bu odadan atıldın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave">Ayrılmak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_description">Ses odasından ayrılacaksınız.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_question">Odadan ayrılmak mı istiyorsunuz?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview">Mesaj Önizlemesi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_description">Bildirimlerde mesaj metnini göster.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mic_permission_denied">Mikrofon izni reddedildi. Sesli sohbeti kullanamayacaksınız.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone">Mikrofon</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone_description">Odalarda sesli sohbet için gereklidir.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="must_be_16">En az 16 yaşında olmalısınız</string>
-    <string name="no_blocked_users">No blocked users</string>
-    <string name="no_one">No one</string>
-    <string name="not_allowed_to_enter">You are not allowed to enter this room.</string>
-    <string name="not_now">Not now</string>
-    <string name="notice">Notice</string>
-    <string name="notification_sound">Notification Sound</string>
-    <string name="notification_sound_description">Play a sound when a new message arrives.</string>
-    <string name="notifications_permission_description">Receive alerts when you&apos;re in a live room in the background.</string>
-    <string name="official_warning">Official Warning</string>
-    <string name="overlay_permission_description">Show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="people_i_follow">People I follow</string>
-    <string name="pm_notifications">PM Notifications</string>
-    <string name="pm_notifications_description">Receive notifications for new private messages.</string>
-    <string name="private_messages">Private Messages</string>
-    <string name="profile_not_available">This profile is not available</string>
-    <string name="profile_not_found">Profile not found</string>
-    <string name="removed_from_room">Removed from Room</string>
-    <string name="report_thank_you">Thank you for your report. We will review it shortly.</string>
-    <string name="report_user_generic">Report User</string>
-    <string name="retrying">Retrying…</string>
-    <string name="room_alerts">Room Alerts</string>
-    <string name="self_destruct_countdown">Self-Destruct Countdown</string>
-    <string name="self_destruct_description">Play a voice announcement when a room&apos;s 5-minute self-destruct timer starts or stops.</string>
-    <string name="show_date_separators">Show Date Separators</string>
-    <string name="show_date_separators_description">Show date labels between messages on different days.</string>
-    <string name="show_timestamps">Show Timestamps</string>
-    <string name="show_timestamps_description">Display message timestamps in chat.</string>
-    <string name="shytalk_id">ShyTalk ID</string>
-    <string name="sign_in_with_google">Sign in with Google</string>
-    <string name="sign_in_with_email">E-posta ile giriş yap</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_blocked_users">Engellenen kullanıcı yok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_one">Hiç kimse</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_allowed_to_enter">Bu odaya girmenize izin verilmiyor.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_now">Şimdi değil</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notice">Fark etme</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound">Bildirim Sesi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound_description">Yeni bir mesaj geldiğinde bir ses çalın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notifications_permission_description">Arka planda canlı bir odada olduğunuzda uyarı alın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="official_warning">Resmi Uyarı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="overlay_permission_description">Ses odasından çıktığınızda yüzen bir baloncuk gösterin, böylece hızlı bir şekilde geri dönebilirsiniz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="people_i_follow">Takip ettiğim kişiler</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications">PM Bildirimleri</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications_description">Yeni özel mesajlar için bildirim alın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="private_messages">Özel Mesajlar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_available">Bu profil kullanılamıyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_found">Profil bulunamadı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="removed_from_room">Odadan kaldırıldı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_thank_you">Raporunuz için teşekkür ederiz. Kısa süre içinde gözden geçireceğiz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user_generic">Kullanıcıyı Bildir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="retrying">Yeniden deneniyor…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_alerts">Oda Uyarıları</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_countdown">Kendini İmha Etme Geri Sayımı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_description">Bir odanın 5 dakikalık kendi kendini imha etme zamanlayıcısı başladığında veya durduğunda sesli anons yapın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators">Tarih Ayırıcılarını Göster</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators_description">Farklı günlerdeki mesajlar arasında tarih etiketlerini gösterin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps">Zaman Damgalarını Göster</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps_description">Sohbette mesaj zaman damgalarını görüntüleyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shytalk_id">UtangaçTalk Kimliği</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_google">Google ile oturum açın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_email">E-posta ile oturum açın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_hint">E-posta adresi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_link_sent">E-postanızı kontrol edin</string>
-    <string name="check_your_email_description">E-postanıza bir giriş bağlantısı gönderdik. Devam etmek için bağlantıya dokunun.</string>
-    <string name="signing_in">Signing in…</string>
-    <string name="error_disposable_email">Disposable email addresses are not allowed. Please use a permanent email address.</string>
-    <string name="stalkers">Stalkers</string>
-    <string name="start">Start</string>
-    <string name="submit_appeal">Submit Appeal</string>
-    <string name="success_coins_added">+%1$s coins added!</string>
-    <string name="success_purchase">Purchase successful!</string>
-    <string name="success_redeemed_beans">Redeemed %1$s beans</string>
-    <string name="success_redeemed_beans_bonus">Redeemed %1$s beans (10%% bonus!)</string>
-    <string name="success_report_resolved">Report resolved</string>
-    <string name="success_sent_backpack">entire backpack (%1$d items)</string>
-    <string name="success_super_shy_activated">Super Shy activated! +30 days</string>
-    <string name="super_shy_days">Super Shy ✦ %1$dd</string>
-    <string name="super_shy_lifetime">Super Shy ✦ Lifetime</string>
-    <string name="support_contact">For support, contact shytalk.help@gmail.com</string>
-    <string name="suspension_ends_at">Ends: %1$s</string>
-    <string name="suspension_ends_in">Your suspension will end in:</string>
-    <string name="suspension_login_again">You can log in again now.\nBe good this time!</string>
-    <string name="suspension_permanent">This suspension is permanent.</string>
-    <string name="suspension_reason">Reason: %1$s</string>
-    <string name="tap_to_return">Tap to return</string>
-    <string name="technical_difficulties">Technical Difficulties</string>
-    <string name="technical_difficulties_description">ShyTalk is currently experiencing technical difficulties. Some features may not work correctly. Services will be restored automatically.</string>
-    <string name="unable_to_connect">Unable to Connect</string>
-    <string name="unblock_confirm">Unblock %1$s?</string>
-    <string name="unblock_description">They will be able to view your profile again.</string>
-    <string name="up_to_date">Up to Date</string>
-    <string name="up_to_date_description">You&apos;re on the latest version.</string>
-    <string name="update_available">Update Available</string>
-    <string name="update_available_description">Version %1$s is available.</string>
-    <string name="update_available_soft">A new version (%1$s) of ShyTalk is available.</string>
-    <string name="update_now">Update Now</string>
-    <string name="update_required">Update Required</string>
-    <string name="update_required_description">A new version of ShyTalk is available. Please update to continue using the app.</string>
-    <string name="update_open_store_failed">Cannot open the app store automatically. Please update ShyTalk manually from your device app store.</string>
-    <string name="view_community_standards">View Community Standards</string>
-    <string name="voice_chat_reimagined">Voice chat rooms, reimagined.</string>
-    <string name="voice_chat_unavailable">Voice chat is temporarily unavailable</string>
-    <string name="wallet_with_balance">Wallet · %1$s</string>
-    <string name="warning_consequence">Continued violations may result in suspension of your account.</string>
-    <string name="warning_reviewed">Your account has been reviewed and a warning has been issued.</string>
-    <string name="warning_reviewed_for_reason">Your account has been reviewed for %1$s and a warning has been issued.</string>
-    <string name="who_can_message_description">Control who can send you private messages.</string>
-    <string name="who_can_message_me">Who can message me</string>
-    <string name="you_were_banned">You were banned from this room.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_your_email_description">E-postanıza bir oturum açma bağlantısı gönderdik. Devam etmek için bağlantıya dokunun.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in">Oturum açılıyor…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_disposable_email">Tek kullanımlık e-posta adreslerine izin verilmez. Lütfen kalıcı bir e-posta adresi kullanın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers">Takipçiler</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="start">Başlangıç</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submit_appeal">İtirazı Gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_coins_added">+%1$s jeton eklendi!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_purchase">Başarılı satın alma!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans">%1$s fasulye kullanıldı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans_bonus">%1$s fasulye kullanıldı (%%10 bonus!)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_report_resolved">Rapor çözüldü</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_sent_backpack">sırt çantasının tamamı (%1$d öğe)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_super_shy_activated">Süper Utangaç etkinleştirildi! +30 gün</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_days">Aşırı Utangaç ✦ %1$dd</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_lifetime">Süper Utangaç ✦ Ömür Boyu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="support_contact">Destek için utangaçtalk.help@gmail.com ile iletişime geçin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_at">Bitiş: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_in">Askıya alınma süreniz şu şekilde sona erecek:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_login_again">Şimdi tekrar giriş yapabilirsiniz.\nBu sefer dikkatli olun!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_permanent">Bu uzaklaştırma kalıcıdır.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_reason">Sebep: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_return">Geri dönmek için dokunun</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties">Teknik Zorluklar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties_description">ShyTalk şu anda teknik sorunlar yaşıyor. Bazı özellikler düzgün çalışmayabilir. Hizmetler otomatik olarak geri yüklenecektir.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unable_to_connect">Bağlantı Kurulamıyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_confirm">%1$s\'ın engellemesi kaldırılsın mı?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_description">Profilinizi tekrar görüntüleyebilecekler.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date">Güncel</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date_description">En son sürümdesiniz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available">Güncelleme Mevcut</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_description">%1$s sürümü mevcut.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_soft">ShyTalk\'un yeni bir sürümü (%1$s) mevcut.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_now">Şimdi Güncelle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required">Güncelleme Gerekli</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required_description">ShyTalk\'un yeni bir sürümü mevcut. Uygulamayı kullanmaya devam etmek için lütfen güncelleyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_open_store_failed">Uygulama mağazası otomatik olarak açılamıyor. Lütfen ShyTalk\'u cihazınızın uygulama mağazasından manuel olarak güncelleyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="view_community_standards">Topluluk Standartlarını Görüntüle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_reimagined">Sesli sohbet odaları yeniden tasarlandı.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_unavailable">Sesli sohbet geçici olarak kullanılamıyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="wallet_with_balance">Cüzdan · %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_consequence">Devam eden ihlaller hesabınızın askıya alınmasına neden olabilir.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed">Hesabınız incelendi ve bir uyarı verildi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed_for_reason">Hesabınız %1$s için incelendi ve bir uyarı verildi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_description">Size kimlerin özel mesaj gönderebileceğini kontrol edin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_me">Kim bana mesaj gönderebilir?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_were_banned">Bu odaya girmeniz yasaklandı.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="getting_ready">Hazırlanıyor…</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all_warning_title">⚠️ UYARI ⚠️</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all_total_value">Toplam değer: 🪙 %1$d jeton</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift_header">%1$dx %2$s gönder</string>
-    <string name="send_gift_header_multiple">%3$d kullanıcıya %1$dx %2$s gönder</string>
-    <string name="owner_away_banner">Sahip uzakta – Oda %1$s içinde kapanacak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_gift_header_multiple">%1$dx %2$s\'yi %3$d kullanıcıya gönderin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner_away_banner">Sahibi uzakta - Oda %1$s içinde kapanıyor</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="messages_title">Mesajlar</string>
-    <string name="no_conversations_yet">Henüz sohbet yok</string>
-    <string name="spin_again_with_cost">%1$s TEKRAR ÇEVİR · 🪙%2$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_conversations_yet">Henüz görüşme yok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_again_with_cost">%1$s YENİDEN DÖNDÜR · 🪙%2$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="age_years_old">%1$d yaşında</string>
-    <string name="show_less">daha az</string>
-    <string name="show_more">daha fazla</string>
-    <string name="video_too_large">Video çok büyük. Lütfen daha kısa bir klip kullanın.</string>
-    <string name="file_too_large">Dosya çok büyük. Maksimum boyut 10 MB.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_less">az</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_more">Daha</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="video_too_large">Video yüklenemeyecek kadar büyük. Lütfen daha kısa bir klip kullanın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="file_too_large">Dosya çok büyük. Maksimum boyut 10 MB\'tır.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="this_user">bu kullanıcı</string>
 
     <!-- Degraded Mode Banner -->
-    <string name="reduced_functionality">Sınırlı işlevsellik — bazı özellikler kullanılamayabilir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reduced_functionality">Azaltılmış işlevsellik — bazı özellikler kullanılamayabilir</string>
 
     <!-- Fullscreen Image Viewer -->
-    <string name="image_number">Görsel %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="image_number">Resim %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="page_indicator">%1$d / %2$d</string>
 
     <!-- Broadcast Banner -->
-    <string name="broadcast_gacha_win">%1$s Şans Çarkı’ndan %2$s%3$s%4$s kazandı!</string>
-    <string name="broadcast_gift_sent">%1$s, %5$s kişisine %2$s%3$s%4$s gönderdi!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="broadcast_gacha_win">%1$s, Lucky Spin\'den %2$s%3$s%4$s kazandı!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="broadcast_gift_sent">%1$s, %2$s%3$s%4$s\'yi %5$s\'ye gönderdi!</string>
 
-    <string name="play_effect">Efekti oynat</string>
-    <string name="account_unlocked">Hesap kilidi açıldı</string>
-    <string name="account_suspended">Hesap askıya alındı</string>
-    <string name="police_duck_description">Polis ördek</string>
-    <string name="device_banned_title">Cihaz yasaklandı</string>
-    <string name="network_banned_title">Ağ yasaklandı</string>
-    <string name="device_banned_description">Bu cihaz ShyTalk kullanımından yasaklanmıştır.</string>
-    <string name="network_banned_description">Ağınız ShyTalk kullanımından yasaklanmıştır. Farklı bir ağdan bağlanmayı deneyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="play_effect">Çalma Efekti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_unlocked">Hesabın Kilidi Açıldı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended">Hesap Askıya Alındı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="police_duck_description">Polis ördeği</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_banned_title">Cihaz Yasaklandı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="network_banned_title">Ağ Yasaklandı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_banned_description">Bu cihazın ShyTalk\'u kullanması yasaklandı.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="network_banned_description">Ağınızın ShyTalk\'u kullanması yasaklandı. Farklı bir ağdan bağlanmayı deneyin.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="full_screen_photo">Tam ekran fotoğraf</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cover_photo">Kapak fotoğrafı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="change_cover_photo">Kapak fotoğrafını değiştir</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile_photo">Profil fotoğrafı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="change_profile_photo">Profil fotoğrafını değiştir</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edit_profile">Profili düzenle</string>
-    <string name="app_name_label">ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="app_name_label">UtangaçTalk</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_day">GÜN</string>
-    <string name="time_unit_hour">SA</string>
-    <string name="time_unit_minute">DK</string>
-    <string name="time_unit_second">SN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_hour">İK</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_minute">dk.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_second">SEC</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_millisecond">MS</string>
 
-    <string name="splash_tagline">Sesli sohbet odaları, yeniden tasarlandı.</string>
-    <string name="quantity_all">TÜMÜ (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="splash_tagline">Sesli sohbet odaları yeniden tasarlandı.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="quantity_all">HEPSİ (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="english_language">İngilizce</string>
-    <string name="google_sign_in_failed">Google ile giriş başarısız</string>
-    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
-    <string name="sign_in_with_apple">Apple ile giriş yap</string>
-    <string name="send_link">Bağlantı gönder</string>
-    <string name="paste_link">Bağlantıyı yapıştır</string>
-    <string name="resend_link">Tekrar gönder</string>
-    <string name="use_different_email">Farklı e-posta kullan</string>
-    <string name="email_link_paste_hint">Bağlantı otomatik olarak açılmadıysa, e-postanızdan kopyalayın ve Bağlantıyı yapıştır\'a dokunun</string>
-    <string name="error_invalid_email_link">Bu geçerli bir giriş bağlantısı gibi görünmüyor. Lütfen e-postanızdan tam bağlantıyı kopyalayın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="google_sign_in_failed">Google\'da oturum açma başarısız oldu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="apple_sign_in_failed">Apple\'da Oturum Açma başarısız oldu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_apple">Apple\'la oturum açın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_link">Bağlantıyı Gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="paste_link">Bağlantıyı Yapıştır</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="resend_link">Yeniden gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="use_different_email">Farklı bir e-posta kullanın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_link_paste_hint">E-postanızdaki bağlantıyı açın, ardından geri gelip Bağlantıyı Yapıştır\'a dokunun.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_invalid_email_link">Bu geçerli bir oturum açma bağlantısına benzemiyor. Lütfen e-postanızdaki bağlantının tamamını yapıştırın.</string>
 
     <!-- PIN & Security -->
+    <!-- google-translated 2026-05-04 -->
     <string name="enter_pin">PIN\'inizi girin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_mismatch">PIN\'ler eşleşmiyor. Tekrar deneyin.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_locked">Çok fazla deneme. %1$d dakika sonra tekrar deneyin.</string>
-    <string name="pin_locked_reauth">Hesap kilitlendi. PIN\'inizi sıfırlamak için tekrar giriş yapın.</string>
-    <string name="reset_pin">PIN\'i Sıfırla</string>
-    <string name="account_locked">Hesap Kilitli</string>
-    <string name="unlock">Kilidi Aç</string>
-    <string name="enable">Etkinleştir</string>
-    <string name="too_many_requests">Çok fazla istek. Daha sonra tekrar deneyin.</string>
-    <string name="verify">Doğrula</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked_reauth">Hesap kilitlendi. PIN\'inizi sıfırlamak için lütfen tekrar oturum açın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reset_pin">PIN\'i sıfırla</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_locked">Hesap Kilitlendi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlock">Kilidi aç</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable">Olanak vermek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="too_many_requests">Çok fazla istek var. Daha sonra tekrar deneyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="verify">Doğrulamak</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security">Güvenlik</string>
     <!-- Starting Screens -->
-    <string name="starting_screen_pre_launch_title">ShyTalk henüz kullanılamıyor</string>
-    <string name="starting_screen_pre_launch_message">ShyTalk henüz yayınlanmadı. Uygulamayı test etmek için başvurmak istiyorsanız Shyden ile iletişime geçin. Test, iOS ve Android kullanıcıları için mevcuttur.</string>
-    <string name="starting_screen_dismiss">Devam et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_pre_launch_title">ShyTalk henüz mevcut değil</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_pre_launch_message">ShyTalk henüz yayınlanmadı. Uygulamayı test etmek için başvuruda bulunmak için Shyden ile iletişime geçin. Test iOS ve Android kullanıcıları için mevcuttur.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_dismiss">Devam etmek</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="starting_screen_police_duck_description">Uyarı illüstrasyonu</string>
-    <string name="starting_screen_loading">Yükleniyor…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_loading">Yükleniyor\u2026</string>
     <!-- Security -->
+    <!-- google-translated 2026-05-04 -->
     <string name="security_title">Güvenlik</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_app_lock">Uygulama Kilidi</string>
-    <string name="security_app_lock_desc">Kilit açmak için PIN veya biyometri gerekir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_app_lock_desc">Kilidi açmak için PIN veya biyometrik gerektir</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_lock_timeout">Kilit Zaman Aşımı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_1min">1 dakika</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_5min">5 dakika</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_15min">15 dakika</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_30min">30 dakika</string>
-    <string name="security_timeout_never">Hiçbir zaman</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_timeout_never">Asla</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_login">Biyometrik Giriş</string>
-    <string name="security_biometric_desc">Kilit açmak için parmak izi veya yüz kullanın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_biometric_desc">Kilidi açmak için parmak izi veya yüz kullanın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_unavailable">Bu cihazda kullanılamıyor</string>
-    <string name="security_reset_pin">PIN\'i Sıfırla</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin">PIN\'i sıfırla</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_reset_pin_desc">Yeni bir PIN belirlemek için kimliğinizi doğrulayın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_linked_accounts">Bağlı Hesaplar</string>
-    <string name="security_linked_accounts_desc">Giriş yöntemlerini yönet</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_linked_accounts_desc">Oturum açma yöntemlerini yönetin</string>
     <!-- Email sign-in -->
-    <string name="email_sign_in_title">E-posta ile giriş yap</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_sign_in_title">E-postayla oturum açın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_enter_address">E-posta adresinizi girin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_label">E-posta</string>
-    <string name="email_send_code">Kod gönder</string>
-    <string name="email_code_sent_to">Kod gönderildi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_send_code">Kodu gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_sent_to">Kod şu adrese gönderildi:</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_code_label">6 haneli kod</string>
-    <string name="email_verify">Doğrula</string>
-    <string name="email_resend_in">%1$ds sonra tekrar gönder</string>
-    <string name="email_resend_code">Kodu tekrar gönder</string>
-    <string name="email_code_expires">Kod 10 dakika içinde sona erer</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_verify">Doğrulamak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_resend_in">%1$ds içinde yeniden gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_resend_code">Kodu yeniden gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_expires">Kodun süresi 10 dakika içinde doluyor</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_invalid_address">Geçerli bir e-posta adresi girin</string>
-    <string name="email_disposable_blocked">Tek kullanımlık e-posta adreslerine izin verilmiyor</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_disposable_blocked">Tek kullanımlık e-posta adreslerine izin verilmez</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_send_failed">Kod gönderilemedi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_enter_code">6 haneli kodu girin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_invalid_code">Geçersiz kod</string>
-    <string name="email_resend_failed">Tekrar gönderme başarısız</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_resend_failed">Yeniden gönderilemedi</string>
     <!-- PIN -->
-    <string name="pin_create_title">PIN Oluştur</string>
-    <string name="pin_confirm_title">PIN\'inizi Onaylayın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_create_title">PIN oluştur</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_confirm_title">PIN\'inizi onaylayın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_enable_biometric_title">Biyometrik giriş etkinleştirilsin mi?</string>
-    <string name="pin_enable_biometric_desc">ShyTalk\'ı hızlıca açmak için parmak izinizi veya yüzünüzü kullanın.</string>
-    <string name="pin_enable">Etkinleştir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable_biometric_desc">ShyTalk\'un kilidini hızlı bir şekilde açmak için parmak izinizi veya yüzünüzü kullanın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable">Olanak vermek</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_not_now">Şimdi değil</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_change_hint">Bunu Güvenlik ayarlarından değiştirebilir veya devre dışı bırakabilirsiniz</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_choose_length">PIN uzunluğunu seçin</string>
-    <string name="pin_digits">haneli</string>
-    <string name="pin_confirm">Onayla</string>
-    <string name="pin_next">İleri</string>
-    <string name="pin_enter_digits">%1$d hane girin</string>
-    <string name="pin_device_not_registered">Cihaz kayıtlı değil. Lütfen tekrar giriş yapın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_digits">rakamlar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_confirm">Onaylamak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_next">Sonraki</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enter_digits">%1$d rakamı girin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_device_not_registered">Cihaz kayıtlı değil. Lütfen tekrar oturum açın.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_setup_failed">PIN ayarlanamadı</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_too_short">PIN çok kısa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_verify_title">Kimliğinizi doğrulayın</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_verify_subtitle">Devam etmek için PIN\'inizi girin</string>
-    <string name="pin_verifying">Doğrulanıyor…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verifying">Doğrulanıyor\u2026</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_wrong_attempts">Yanlış PIN. %1$d deneme kaldı.</string>
-    <string name="pin_account_locked">Hesap kilitli</string>
-    <string name="pin_verify_failed">Doğrulama başarısız</string>
-    <string name="pin_session_expired">Oturum süresi doldu. Lütfen tekrar giriş yapın.</string>
-    <string name="pin_use_biometric">Biyometri kullan</string>
-    <string name="pin_delete">Sil</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_account_locked">Hesap kilitlendi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_failed">Doğrulama başarısız oldu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_session_expired">Oturumun süresi doldu. Lütfen tekrar oturum açın.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_use_biometric">Biyometrik kullan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_delete">Silmek</string>
     <!-- Biometric -->
-    <string name="biometric_unlock_title">ShyTalk\'ın Kilidini Aç</string>
-    <string name="biometric_unlock_desc">Kilit açmak için parmak izinizi veya yüzünüzü kullanın</string>
-    <string name="biometric_sign_failed">İmzalama başarısız</string>
-    <string name="biometric_verify_failed">Biyometrik doğrulama başarısız</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_unlock_title">ShyTalk\'un kilidini aç</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_unlock_desc">Kilidi açmak için parmak izinizi veya yüzünüzü kullanın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_sign_failed">İmzalama başarısız oldu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_verify_failed">Biyometrik doğrulama başarısız oldu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_start_failed">Biyometrik doğrulama başlatılamadı</string>
     <!-- Auth loading -->
-    <string name="signing_in_loading">Giriş yapılıyor…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in_loading">Oturum açılıyor\u2026</string>
     <!-- Time -->
-    <string name="time_just_now">az önce</string>
-    <string name="time_minutes_ago">%1$d dk önce</string>
-    <string name="time_hours_ago">%1$d sa önce</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_just_now">Şu anda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_minutes_ago">%1$d dakika önce</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_hours_ago">%1$d saat önce</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days_ago">%1$d gün önce</string>
-    <string name="time_expired">Süresi doldu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_expired">Günü geçmiş</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days">%1$d gün</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_hours">%1$d saat</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_minutes">%1$d dakika</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_less_than_minute">1 dakikadan az</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_dots_state">%2$d basamaktan %1$d tanesi girildi</string>
-    <string name="export_data">Export My Data</string>
-    <string name="export_data_pending">Export requested. Check your email for the download link.</string>
-    <string name="replace_room_title">Close existing room?</string>
-    <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
-    <string name="replace_room_confirm">Close and create new</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data">Verilerimi Dışa Aktar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data_pending">İhracat talep edildi. İndirme bağlantısı için e-postanızı kontrol edin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_title">Mevcut oda kapatılsın mı?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_message">Zaten aktif bir odanız var. Yeni bir oda açmak mevcut odanızı kapatacaktır. Devam etmek istiyor musun?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_confirm">Kapat ve yeni oluştur</string>
 
     <!-- Seasonal Events -->
+    <!-- google-translated 2026-05-04 -->
     <string name="seasonal_khmer_new_year_greeting">Mutlu Khmer Yeni Yılı!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seasonal_khmer_new_year_cta">Choul Chnam Thmey hakkında bilgi edinin</string>
-    <string name="seasonal_event_dismiss">Kapat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seasonal_event_dismiss">Azletmek</string>
 
     <!-- google-translated 2026-05-04 -->
     <string name="age_verif_submit_title">Yaşınızı doğrulayın</string>

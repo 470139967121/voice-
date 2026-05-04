@@ -1,858 +1,1640 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Common actions -->
+    <!-- google-translated 2026-05-04 -->
     <string name="all_caps">सभी</string>
-    <string name="back">वापस</string>
-    <string name="cancel">रद्द करें</string>
-    <string name="change">बदलें</string>
-    <string name="close">बंद करें</string>
-    <string name="confirm">पुष्टि करें</string>
-    <string name="continue_button">जारी रखें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="back">पीछे</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cancel">रद्द करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="change">परिवर्तन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close">बंद करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm">पुष्टि करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="continue_button">जारी रखना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="create">बनाएं</string>
-    <string name="delete">हटाएं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete">मिटाना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="done">हो गया</string>
-    <string name="edit">संपादित करें</string>
-    <string name="error_generic">कुछ गड़बड़ हो गई</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit">संपादन करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_generic">कुछ गलत हो गया</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="got_it">समझ गया</string>
-    <string name="learn_more">और जानें</string>
-    <string name="loading">लोड हो रहा है…</string>
-    <string name="maybe_later">बाद में</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="learn_more">और अधिक जानें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="loading">लोड हो रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="maybe_later">शायद बाद में</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_action">संदेश</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="next">अगला</string>
-    <string name="ok">OK</string>
-    <string name="retry">पुनः प्रयास करें</string>
-    <string name="save">सेव करें</string>
-    <string name="send">भेजें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ok">ठीक है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="retry">पुन: प्रयास करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="save">बचाना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send">भेजना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sending">भेजा जा रहा है...</string>
-    <string name="transfer">ट्रांसफर</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer">स्थानांतरण</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unknown">अज्ञात</string>
-    <string name="using">उपयोग हो रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="using">का उपयोग करना...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="you">आप</string>
 
     <!-- Message bubbles -->
+    <!-- google-translated 2026-05-04 -->
     <string name="edited">संपादित</string>
-    <string name="tap_to_join">जुड़ने के लिए टैप करें</string>
-    <string name="message_recalled_by_you">आपने यह संदेश वापस लिया</string>
-    <string name="message_recalled">यह संदेश वापस ले लिया गया</string>
-    <string name="message_hidden_by_mod">इस संदेश को मॉडरेटर ने छिपा दिया</string>
-    <string name="invite_to_mic">माइक पर बुलाएं</string>
-    <string name="closed">बंद</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_join">शामिल होने के लिए टैप करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled_by_you">आपको यह संदेश याद आया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled">इस संदेश को याद किया गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_hidden_by_mod">यह संदेश एक मॉडरेटर द्वारा छुपाया गया था</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_mic">माइक के लिए आमंत्रित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="closed">बंद किया हुआ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edited_count">संपादित (%1$d)</string>
-    <string name="read">पढ़ा गया</string>
-    <string name="sent">भेजा गया</string>
-    <string name="sticker">स्टिकर</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="read">पढ़ना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sent">भेजा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sticker">कँटिया</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="image">छवि</string>
 
     <!-- Context menu -->
-    <string name="react">रिएक्ट</string>
-    <string name="reply">जवाब दें</string>
-    <string name="copy">कॉपी</string>
-    <string name="recall">वापस लें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="react">प्रतिक्रिया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reply">जवाब</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="copy">प्रतिलिपि</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="recall">याद करना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="add_to_stickers">स्टिकर में जोड़ें</string>
-    <string name="hide_message">संदेश छिपाएं</string>
-    <string name="report_message">संदेश की रिपोर्ट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_message">संदेश छिपाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message">रिपोर्ट संदेश</string>
 
     <!-- Translation -->
-    <string name="translate">अनुवाद करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translate">अनुवाद</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="translated_from">%1$s से अनुवादित</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="show_original">मूल दिखाएं</string>
-    <string name="translation_limit_reached">दैनिक सीमा पूरी हो गई। असीमित अनुवाद के लिए Super Shy अपग्रेड करें।</string>
-    <string name="auto_translate">स्वतः अनुवाद</string>
-    <string name="auto_translate_description">आने वाले संदेशों को अपनी भाषा में स्वचालित रूप से अनुवाद करें</string>
-    <string name="translations_remaining">आज %1$d अनुवाद शेष</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translation_limit_reached">दैनिक सीमा पूरी हो गई. असीमित अनुवादों के लिए SuperShy में अपग्रेड करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="auto_translate">ऑटो का अनुवाद</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="auto_translate_description">आने वाले संदेशों का स्वचालित रूप से आपकी भाषा में अनुवाद करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translations_remaining">%1$d अनुवाद आज शेष हैं</string>
 
     <!-- Settings -->
+    <!-- google-translated 2026-05-04 -->
     <string name="settings">सेटिंग्स</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="language">भाषा</string>
-    <string name="blocked_users">ब्लॉक किए गए उपयोगकर्ता</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_users">अवरुद्ध उपयोगकर्ता</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="account">खाता</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="privacy">गोपनीयता</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="notifications">सूचनाएं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="permissions">अनुमतियां</string>
-    <string name="about">जानकारी</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="about">के बारे में</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_out">साइन आउट</string>
-    <string name="sign_out_confirm">क्या आप वाकई साइन आउट करना चाहते हैं?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_out_confirm">क्या आप द्वारा साइन आउट किया जाना सुनिश्चित है?</string>
 
     <!-- Home -->
-    <string name="create_room">रूम बनाएं</string>
-    <string name="create_room_prompt">अपने रूम का नाम दें</string>
-    <string name="home">होम</string>
-    <string name="in_room_count">रूम में %1$d</string>
-    <string name="join">जुड़ें</string>
-    <string name="no_active_rooms">कोई सक्रिय रूम नहीं</string>
-    <string name="no_rooms">कोई रूम उपलब्ध नहीं</string>
-    <string name="room_name">रूम का नाम</string>
-    <string name="room_name_label">रूम का नाम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create_room">जगह बनाना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create_room_prompt">अपने कमरे को एक नाम दें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="home">घर</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="in_room_count">%1$d कमरे में</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="join">जोड़ना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_active_rooms">कोई सक्रिय कमरा नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_rooms">कोई कमरा उपलब्ध नहीं है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_name">कमरे का नाम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_name_label">कमरे का नाम</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seats_count">%1$d/%2$d सीटें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="speakers_count">%1$d/%2$d स्पीकर</string>
-    <string name="tap_plus_to_create">बनाने के लिए + टैप करें</string>
-    <string name="visitors_count">%1$d आगंतुक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_plus_to_create">एक बनाने के लिए + टैप करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="visitors_count">%1$d विज़िटर</string>
 
     <!-- Profile -->
+    <!-- google-translated 2026-05-04 -->
     <string name="connections">कनेक्शन</string>
-    <string name="display_name">प्रदर्शित नाम</string>
-    <string name="dob_privacy_note">आपकी जन्म तिथि आवश्यक है लेकिन आप गोपनीयता सेटिंग्स में अपनी उम्र छिपा सकते हैं।</string>
-    <string name="dob_required_subtitle">जारी रखने के लिए हमें आपकी जन्म तिथि चाहिए।</string>
-    <string name="follow">फॉलो करें</string>
-    <string name="follow_back">फॉलो बैक</string>
-    <string name="followers">फॉलोअर्स</string>
-    <string name="followers_count">फॉलोअर्स (%1$d)</string>
-    <string name="following">फॉलो कर रहे हैं</string>
-    <string name="following_count">फॉलो कर रहे हैं (%1$d)</string>
-    <string name="following_list_private">इस उपयोगकर्ता की फॉलोइंग सूची निजी है</string>
-    <string name="get_super_shy">Super Shy पाएं</string>
-    <string name="gift_wall">गिफ्ट वॉल</string>
-    <string name="gift_value_coins">मूल्य: %1$d कॉइन</string>
-    <string name="no_followers_yet">अभी कोई फॉलोअर नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_name">प्रदर्शित होने वाला नाम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dob_privacy_note">आपकी जन्मतिथि आवश्यक है लेकिन आप गोपनीयता सेटिंग्स में अपनी उम्र छिपा सकते हैं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dob_required_subtitle">जारी रखने के लिए हमें आपकी जन्मतिथि की आवश्यकता है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow">अनुसरण करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow_back">वापस पीछा करो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="followers">समर्थक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="followers_count">अनुयायी (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following">अगले</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following_count">निम्नलिखित (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following_list_private">इस उपयोगकर्ता की निम्नलिखित सूची निजी है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy">बहुत शर्मीले हो जाओ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift_wall">उपहार दीवार</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift_value_coins">मूल्य: %1$d सिक्के</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_followers_yet">अभी तक कोई अनुयायी नहीं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_profile_visitors">अभी तक कोई प्रोफ़ाइल विज़िटर नहीं</string>
-    <string name="not_following_anyone">अभी किसी को फॉलो नहीं कर रहे</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_following_anyone">अभी तक किसी को फ़ॉलो नहीं कर रहा हूँ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="one_more_step">एक और कदम</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile">प्रोफ़ाइल</string>
-    <string name="profile_setup_subtitle">एक प्रदर्शित नाम चुनें और अपनी जन्म तिथि दर्ज करें</string>
-    <string name="received_times">%1$d बार प्राप्त</string>
-    <string name="remove_follower">फॉलोअर हटाएं</string>
-    <string name="report">रिपोर्ट</string>
-    <string name="select_date_of_birth">जन्म तिथि चुनें</string>
-    <string name="select_nationality">राष्ट्रीयता चुनें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_setup_subtitle">एक प्रदर्शन नाम चुनें और अपनी जन्मतिथि दर्ज करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="received_times">%1$d बार प्राप्त हुआ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_follower">अनुयायी हटाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report">प्रतिवेदन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_date_of_birth">जन्मतिथि चुनें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_nationality">राष्ट्रीयता का चयन करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_countries">देश खोजें</string>
-    <string name="selected">चुना गया</string>
-    <string name="set_up_your_profile">अपनी प्रोफ़ाइल सेट करें</string>
-    <string name="stalker_visit_info">%1$s को आपकी प्रोफ़ाइल देखी, पिछले 3 महीनों में %2$d बार</string>
-    <string name="stalkers_count">स्टॉकर्स (%1$d)</string>
-    <string name="stalkers_super_shy_description">देखें कि कौन आपकी प्रोफ़ाइल देख रहा है! प्रोफ़ाइल स्टॉकर्स एक विशेष Super Shy फ़ीचर है।</string>
-    <string name="super_shy_benefit">Super Shy लाभ</string>
-    <string name="top_senders">टॉप सेंडर्स</string>
-    <string name="block">ब्लॉक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="selected">चयनित</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_up_your_profile">अपना प्रोफ़ाइल सेट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalker_visit_info">पिछले 3 महीनों में %1$s, %2$d बार आपका पीछा किया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_count">पीछा करने वाले (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_super_shy_description">देखें कि आपकी प्रोफ़ाइल पर कौन जा रहा है! प्रोफाइल स्टॉकर्स एक विशेष सुपर शाइ फीचर है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_benefit">अति शर्मीला लाभ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="top_senders">शीर्ष प्रेषक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block">अवरोध पैदा करना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unblock">अनब्लॉक</string>
-    <string name="undo_remove">हटाना रद्द करें</string>
-    <string name="unfollow">अनफॉलो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="undo_remove">पूर्ववत हटाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unfollow">करें</string>
 
     <!-- Room -->
+    <!-- google-translated 2026-05-04 -->
     <string name="alias">उपनाम</string>
-    <string name="approve">स्वीकार करें</string>
-    <string name="audience">दर्शक</string>
-    <string name="back_to_home">होम पर वापस</string>
-    <string name="backpack">बैकपैक</string>
-    <string name="backpack_empty">आपका बैकपैक खाली है।\nगिफ्ट पाने के लिए व्हील घुमाएं!</string>
-    <string name="ban">प्रतिबंधित करें</string>
-    <string name="block_user">उपयोगकर्ता ब्लॉक करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="approve">मंज़ूरी देना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="audience">श्रोता</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="back_to_home">घर वापिस जा रहा हूँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="backpack">बैग</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="backpack_empty">आपका बैकपैक खाली है.\nउपहार पाने के लिए पहिया घुमाएँ!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban">प्रतिबंध</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_user">खंड उपयोगकर्ता</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="block_user_confirm">क्या आप वाकई %1$s को ब्लॉक करना चाहते हैं?</string>
-    <string name="close_room">रूम बंद करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room">बंद कमरा</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="daily">दैनिक</string>
-    <string name="deny">अस्वीकार करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="deny">अस्वीकार करना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="empty_seat">खाली सीट</string>
-    <string name="filter_gift_animations_description">सस्ते गिफ्ट के एनिमेशन छिपाएं।</string>
-    <string name="gift">गिफ्ट</string>
-    <string name="gift_animations">गिफ्ट एनिमेशन</string>
-    <string name="host">होस्ट</string>
-    <string name="hosts">होस्ट्स</string>
-    <string name="invite_to_seat">सीट पर बुलाएं</string>
-    <string name="kick">निकालें</string>
-    <string name="kick_user">उपयोगकर्ता निकालें</string>
-    <string name="kick_user_confirm">क्या आप वाकई %1$s को रूम से निकालना चाहते हैं? वे दोबारा शामिल नहीं हो पाएंगे।</string>
-    <string name="leave_room">रूम छोड़ें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gift_animations_description">सस्ते उपहारों के लिए एनिमेशन फ़िल्टर करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift">उपहार</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift_animations">उपहार एनिमेशन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="host">मेज़बान</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hosts">मेजबान</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_seat">बैठने के लिए आमंत्रित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick">लात मारना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_user">उपयोगकर्ता को लात मारो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_user_confirm">क्या आप वाकई %1$s को कमरे से बाहर निकालना चाहते हैं? वे दोबारा शामिल नहीं हो सकेंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room">कमरा छोड़ो</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="leave_seat">सीट छोड़ें</string>
-    <string name="lock_seating">सीटिंग लॉक करें</string>
-    <string name="lock_seating_description">केवल ओनर ही उपयोगकर्ताओं को बैठने के लिए आमंत्रित कर सकता है</string>
-    <string name="buy_coins">कॉइन खरीदें</string>
-    <string name="collect_all">सभी लें (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating">लॉक सीटिंग</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating_description">केवल स्वामी ही उपयोगकर्ताओं को बैठने के लिए आमंत्रित कर सकता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="buy_coins">सिक्के खरीदें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="collect_all">सभी एकत्रित करें (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="increased_drop_rate">बढ़ी हुई ड्रॉप दर</string>
-    <string name="loading_prices">कीमतें लोड हो रही हैं…</string>
-    <string name="lucky_spin">Lucky Spin</string>
-    <string name="lucky_spin_title">LUCKY SPIN</string>
-    <string name="need_more_coins">और कॉइन चाहिए!</string>
-    <string name="no_packages_available">कोई पैकेज उपलब्ध नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="loading_prices">कीमतें लोड हो रही हैं...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin">लकी स्पिन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin_title">भाग्यशाली स्पिन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="need_more_coins">और सिक्के चाहिए!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_packages_available">कोई पैकेज उपलब्ध नहीं है</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_spins_yet">अभी तक कोई स्पिन नहीं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="prizes">पुरस्कार</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="skip_animation">एनिमेशन छोड़ें</string>
-    <string name="spin">स्पिन</string>
-    <string name="spin_count">%1$d स्पिन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin">घुमाना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_count">%1$d स्पिन(एस)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="spin_history">स्पिन इतिहास</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="spin_results">स्पिन परिणाम</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message">संदेश</string>
-    <string name="move_to_audience">दर्शकों में जाएं</string>
-    <string name="move_to_seat">सीट पर जाएं</string>
-    <string name="move_to_which_seat">कौन सी सीट पर जाएं?</string>
-    <string name="mute">म्यूट</string>
-    <string name="no_audience_members">कोई दर्शक नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_audience">दर्शकों के पास जाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_seat">सीट पर जाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_which_seat">किस सीट पर जाएं?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mute">आवाज़ बंद करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_audience_members">कोई दर्शक सदस्य नहीं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_pending_requests">कोई लंबित अनुरोध नहीं</string>
-    <string name="no_reason_given">कोई कारण नहीं दिया गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_reason_given">कोई कारण नहीं बताया गया</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_one_on_mic">माइक पर कोई नहीं</string>
-    <string name="occupied">भरी हुई</string>
-    <string name="open_for_duration">%1$s से खुला है</string>
-    <string name="owner">ओनर</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="occupied">कब्ज़ा होना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="open_for_duration">%1$s के लिए खोलें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner">मालिक</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reason_optional">कारण (वैकल्पिक)</string>
-    <string name="reject">अस्वीकार</string>
-    <string name="remove">हटाएं</string>
-    <string name="remove_as_host">होस्ट से हटाएं</string>
-    <string name="remove_from_room">रूम से हटाएं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reject">अस्वीकार करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove">निकालना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_as_host">होस्ट के रूप में हटाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_from_room">कक्ष से निकालें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="request">अनुरोध</string>
-    <string name="request_a_seat">सीट का अनुरोध करें</string>
-    <string name="request_seat">सीट अनुरोध</string>
-    <string name="requesting">अनुरोध कर रहे हैं</string>
-    <string name="room">रूम</string>
-    <string name="room_closed">रूम बंद हो गया</string>
-    <string name="room_closing_no_super_shy">रूम के ओनर के पास Super Shy नहीं है, इसलिए यह रूम जल्द बंद हो जाएगा।</string>
-    <string name="room_closing_in">रूम %1$d:%2$s में बंद होगा</string>
-    <string name="room_closing_soon">रूम जल्द बंद होगा</string>
-    <string name="room_settings">रूम सेटिंग्स</string>
-    <string name="rooms">रूम्स</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_a_seat">एक सीट का अनुरोध करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_seat">सीट का अनुरोध करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="requesting">अनुरोध कर रहा हूँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room">कमरा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closed">कमरा बंद</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_no_super_shy">कमरे के मालिक के पास सुपर शर्मी नहीं है, इसलिए यह कमरा जल्द ही बंद हो जाएगा।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_in">%1$d:%2$s में कमरा बंद हो रहा है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_soon">कमरा जल्द ही बंद हो रहा है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_settings">कमरे की सेटिंग</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="rooms">कमरा</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_requests">सीट अनुरोध</string>
-    <string name="seat_swap_with">सीट %1$d (%2$s के साथ बदलें)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seat_swap_with">सीट %1$d (%2$s से बदलें)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="set_alias">उपनाम सेट करें</string>
-    <string name="set_alias_description">%1$s के लिए एक व्यक्तिगत उपनाम सेट करें। यह केवल आपको दिखेगा।</string>
-    <string name="set_as_host">होस्ट बनाएं</string>
-    <string name="showing_all_gift_animations">सभी गिफ्ट एनिमेशन दिख रहे हैं</string>
-    <string name="showing_animations_worth">केवल %1$d+ कॉइन वाले एनिमेशन दिखाए जा रहे हैं</string>
-    <string name="speakers">स्पीकर</string>
-    <string name="take_a_seat">सीट लें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias_description">%1$s के लिए एक व्यक्तिगत उपनाम सेट करें। ये सिर्फ आप ही देखेंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_as_host">होस्ट के रूप में सेट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="showing_all_gift_animations">सभी उपहार एनिमेशन दिखाए जा रहे हैं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="showing_animations_worth">केवल %1$d+ सिक्कों के एनिमेशन दिखा रहा है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="speakers">वक्ताओं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="take_a_seat">बैठ जाएं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmute">अनम्यूट</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmuted">अनम्यूट किया गया</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user">उपयोगकर्ता</string>
-    <string name="user_id">ID: %1$d</string>
-    <string name="visitor_count">%1$d विज़िटर</string>
-    <string name="voice">वॉइस</string>
-    <string name="voice_unavailable">वॉइस उपलब्ध नहीं</string>
-    <string name="you_have_super_shy_room">आपके पास Super Shy है! %1$d घंटे तक के विस्तारित समय के लिए अपना रूम खोलें।</string>
-    <string name="get_super_shy_rooms">%1$d घंटे तक चलने वाले रूम का आनंद लेने के लिए Super Shy पाएं!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="user_id">आईडी: %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="visitor_count">%1$d आगंतुक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice">आवाज़</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_unavailable">आवाज़ अनुपलब्ध</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_have_super_shy_room">आप बहुत शर्मीले हैं! अपना कमरा %1$d घंटे तक विस्तारित समय के लिए खोलें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy_rooms">%1$d घंटे तक चलने वाले कमरों का आनंद लेने के लिए बेहद शर्मीले बनें!</string>
 
     <!-- Room - Notifications -->
-    <string name="accept">स्वीकार करें</string>
-    <string name="decline">अस्वीकार करें</string>
-    <string name="go_back">वापस जाएं</string>
-    <string name="go_to_seat">सीट पर जाएं</string>
-    <string name="invited_to_sit">आपको बैठने का निमंत्रण मिला है!</string>
-    <string name="request_accepted">आपका अनुरोध स्वीकार हो गया!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="accept">स्वीकार करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="decline">गिरावट</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="go_back">वापस जाओ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="go_to_seat">सीट पर जाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invited_to_sit">आपको बैठने के लिए आमंत्रित किया गया है!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_accepted">आपका अनुरोध स्वीकार कर लिया गया था!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_number">सीट %1$d</string>
-    <string name="user_wants_to_sit">%1$s बैठना चाहता/चाहती है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="user_wants_to_sit">%1$s बैठना चाहता है</string>
 
     <!-- Room - Chat -->
+    <!-- google-translated 2026-05-04 -->
     <string name="cancel_edit">संपादन रद्द करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edit_message_placeholder">संदेश संपादित करें...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_placeholder">संदेश...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_messages">नए संदेश</string>
 
     <!-- Room - Backpack -->
-    <string name="action_cannot_be_undone">यह क्रिया पूर्ववत नहीं की जा सकती।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="action_cannot_be_undone">इस एक्शन को वापस नहीं किया जा सकता।</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="confirm_send">भेजने की पुष्टि करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="from_backpack_items">बैकपैक से: %1$d आइटम</string>
-    <string name="gifts">गिफ्ट्स</string>
-    <string name="send_all">सभी भेजें</string>
-    <string name="send_all_includes">इसमें %2$d अलग-अलग गिफ्ट्स के सभी %1$d आइटम शामिल हैं।</string>
-    <string name="send_all_warning">आप %1$s को अपना पूरा बैकपैक भेजने वाले हैं।</string>
-    <string name="send_everything_confirm">समझ गया, सब कुछ भेजें</string>
-    <string name="to_label">किसको</string>
-    <string name="total_cost_coins">कुल लागत: %1$d कॉइन</string>
-    <string name="use_button">उपयोग करें</string>
-    <string name="you_have_count">आपके पास: %1$d</string>
-    <string name="your_balance_coins">आपका बैलेंस: %1$d कॉइन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gifts">उपहार</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all">सब भेजें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_includes">इसमें %2$d के विभिन्न उपहारों में सभी %1$d आइटम शामिल हैं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_warning">आप अपना पूरा बैकपैक %1$s पर भेजने वाले हैं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_everything_confirm">मैं समझता हूँ, सब कुछ भेजो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="to_label">को</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="total_cost_coins">कुल लागत: %1$d सिक्के</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="use_button">उपयोग</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_have_count">आपके पास है: %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="your_balance_coins">आपका शेष: %1$d सिक्के</string>
 
     <!-- Messaging -->
+    <!-- google-translated 2026-05-04 -->
     <string name="additional_details_optional">अतिरिक्त विवरण (वैकल्पिक)</string>
-    <string name="all_admins_and_mods">सभी एडमिन &amp; मॉड</string>
-    <string name="attach_evidence">सबूत संलग्न करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="all_admins_and_mods">सभी व्यवस्थापक और मॉड</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="attach_evidence">साक्ष्य संलग्न करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cant_message_user">आप इस उपयोगकर्ता को संदेश नहीं भेज सकते</string>
     <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">आप इस व्यक्ति को संदेश नहीं भेज सकते क्योंकि हमारा मानना ​​है कि उनकी आयु 18 वर्ष से कम है।</string>
-    <string name="chat">चैट</string>
-    <string name="close_group">ग्रुप बंद करें</string>
-    <string name="close_group_warning">यह सभी के लिए ग्रुप बंद कर देगा। संदेश मॉडरेशन के लिए सुरक्षित रहेंगे।</string>
-    <string name="compressing">कम्प्रेस हो रहा है...</string>
-    <string name="conversation_start_hint">किसी की प्रोफ़ाइल या रूम में\nयूज़र कार्ड से बातचीत शुरू करें</string>
-    <string name="create_group">ग्रुप बनाएं</string>
-    <string name="current_version">वर्तमान</string>
-    <string name="delete_conversation">बातचीत हटाएं</string>
-    <string name="delete_conversation_warning">यह बातचीत आपकी सूची से हट जाएगी। संदेश सुरक्षित रहेंगे और अगर दूसरा व्यक्ति फिर से संदेश भेजता है तो दिखाई देंगे।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="chat">बात करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_group">समूह बंद करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_group_warning">इससे ग्रुप सभी के लिए बंद हो जाएगा. संदेशों को मॉडरेशन के लिए संरक्षित किया जाता है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="compressing">संपीड़न...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="conversation_start_hint">किसी कमरे में किसी की\nप्रोफ़ाइल या उपयोगकर्ता कार्ड से बातचीत प्रारंभ करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create_group">समूह बनाना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="current_version">मौजूदा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_conversation">बातचीत मिटाएं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_conversation_warning">इससे बातचीत आपकी सूची से हट जाएगी. संदेश संरक्षित रहते हैं और यदि दूसरा व्यक्ति आपको दोबारा संदेश भेजता है तो वे फिर से दिखाई देंगे।</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="description_label">विवरण</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="description_optional">विवरण (वैकल्पिक)</string>
-    <string name="edit_history">संपादन इतिहास</string>
-    <string name="editing_message">संदेश संपादित कर रहे हैं</string>
-    <string name="evidence">सबूत</string>
-    <string name="evidence_required">कम से कम एक स्क्रीनशॉट या रिकॉर्डिंग आवश्यक है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_history">इतिहास संपादित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="editing_message">संदेश संपादित करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="evidence">प्रमाण</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="evidence_required">कम से कम एक स्क्रीनशॉट या रिकॉर्डिंग आवश्यक है.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="general">सामान्य</string>
-    <string name="group">ग्रुप</string>
-    <string name="group_chat">ग्रुप चैट</string>
-    <string name="group_name_label">ग्रुप का नाम</string>
-    <string name="group_name_required">ग्रुप का नाम *</string>
-    <string name="group_settings">ग्रुप सेटिंग्स</string>
-    <string name="invite_to_room">रूम में आमंत्रित करें</string>
-    <string name="last_seen">अंतिम बार देखा %1$s</string>
-    <string name="leave_group">ग्रुप छोड़ें</string>
-    <string name="members">सदस्य</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group">समूह</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_chat">समूह बातचीत</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_name_label">समूह नाम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_name_required">समूह नाम *</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_settings">समूह सेटिंग्स</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_room">कक्ष में आमंत्रित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="last_seen">अंतिम बार %1$s देखा गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_group">समूह छोड़ दें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="members">सदस्यों</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="members_count">%1$d सदस्य</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_ellipsis">संदेश...</string>
-    <string name="message_permissions">संदेश अनुमतियां</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_permissions">संदेश अनुमतियाँ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_image">[छवि]</string>
-    <string name="message_preview_recalled">[संदेश वापस लिया गया]</string>
-    <string name="message_preview_room_invite">[रूम निमंत्रण]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_recalled">[संदेश याद किया गया]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_room_invite">[कमरे का निमंत्रण]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_sticker">[स्टिकर]</string>
-    <string name="messages">संदेश</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="messages">संदेशों</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mod_notifications">मॉड सूचनाएं</string>
-    <string name="move_to_front">आगे लाएं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_front">सामने की ओर बढ़ें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mute_notifications">सूचनाएं म्यूट करें</string>
-    <string name="mute_reason">। कारण: %1$s</string>
-    <string name="muted">म्यूट किया गया</string>
-    <string name="muted_for_hours_minutes">आप %1$d घंटे %2$d मिनट के लिए म्यूट हैं</string>
-    <string name="muted_for_minutes">आप %1$d मिनट के लिए म्यूट हैं</string>
-    <string name="muted_indefinitely">आप म्यूट हैं</string>
-    <string name="new_group">नया ग्रुप</string>
-    <string name="new_group_selected">नया ग्रुप (%1$d चुने गए)</string>
-    <string name="new_message">नया संदेश</string>
-    <string name="no_action_needed">कोई कार्रवाई आवश्यक नहीं</string>
-    <string name="no_followers_following_found">कोई फॉलोअर या फॉलोइंग नहीं मिले</string>
-    <string name="no_matches_found">कोई मिलान नहीं मिला</string>
-    <string name="no_messages">अभी कोई संदेश नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mute_reason">. कारण: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted">म्यूट किए गए</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_hours_minutes">आपको %1$dh %2$dm के लिए म्यूट कर दिया गया है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_minutes">आपको %1$dm के लिए म्यूट कर दिया गया है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_indefinitely">आप मौन हैं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_group">नया समूह</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_group_selected">नया समूह (%1$d चयनित)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_message">नया सन्देश</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_action_needed">किसी कार्रवाई की आवश्यकता नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_followers_following_found">कोई फ़ॉलोअर्स या अनुसरणकर्ता नहीं मिला</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_matches_found">कोई मेल नहीं मिले</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_messages">अभी तक कोई संदेश नहीं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_pending_reports">कोई लंबित रिपोर्ट नहीं</string>
-    <string name="no_stickers_yet">अभी कोई स्टिकर नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_stickers_yet">अभी तक कोई स्टिकर नहीं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_users_found">कोई उपयोगकर्ता नहीं मिला</string>
-    <string name="notify_owner_only">केवल ओनर को सूचित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notify_owner_only">केवल मालिक को सूचित करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="online">ऑनलाइन</string>
-    <string name="only_admins_can_send">इस ग्रुप में केवल एडमिन और मॉड संदेश भेज सकते हैं</string>
-    <string name="only_owner_can_change_permissions">केवल ग्रुप ओनर ही अनुमतियां बदल सकता है।</string>
-    <string name="owner_only">केवल ओनर</string>
-    <string name="participants">प्रतिभागी</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_admins_can_send">इस ग्रुप में केवल एडमिन और मॉड ही संदेश भेज सकते हैं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_owner_can_change_permissions">केवल समूह स्वामी ही अनुमतियाँ बदल सकता है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner_only">केवल स्वामी</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="participants">प्रतिभागियों</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="participants_count">प्रतिभागी (%1$d)</string>
-    <string name="pin">पिन करें</string>
-    <string name="recent">हाल का</string>
-    <string name="replying_to">%1$s को जवाब दे रहे हैं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin">नत्थी करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="recent">हाल ही का</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replying_to">%1$s को उत्तर दिया जा रहा है</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_message_prompt">आप इस संदेश की रिपोर्ट क्यों कर रहे हैं?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_review">रिपोर्ट समीक्षा</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_user">%1$s की रिपोर्ट करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_user_prompt">आप इस उपयोगकर्ता की रिपोर्ट क्यों कर रहे हैं?</string>
-    <string name="reset_to_default">डिफ़ॉल्ट पर रीसेट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reset_to_default">वितथ पर ले जाएं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="result_count">%1$d परिणाम</string>
-    <string name="review_report">रिपोर्ट समीक्षा करें</string>
-    <string name="role_admin">एडमिन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="review_report">रिपोर्ट की समीक्षा करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_admin">व्यवस्थापक</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_member">सदस्य</string>
-    <string name="role_mod">मॉड</string>
-    <string name="role_owner">ओनर</string>
-    <string name="save_description">विवरण सेव करें</string>
-    <string name="search_all_users">सभी उपयोगकर्ता खोजें</string>
-    <string name="search_conversations">बातचीत खोजें...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_mod">आधुनिक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_owner">मालिक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="save_description">विवरण सहेजें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_all_users">सभी उपयोगकर्ताओं को खोजें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_conversations">वार्तालाप खोजें...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_messages">संदेश खोजें...</string>
-    <string name="search_people">लोग खोजें...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_people">लोगों को खोजें...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="select_action">कार्रवाई चुनें:</string>
-    <string name="selected_count">%1$d चुने गए</string>
-    <string name="start_conversation">बातचीत शुरू करें</string>
-    <string name="submit_report">रिपोर्ट जमा करें</string>
-    <string name="submitting">जमा हो रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="selected_count">%1$d चयनित</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="start_conversation">एक बातचीत शुरू</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submit_report">रिपोर्ट सबमिट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submitting">सबमिट किया जा रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="system_messages">सिस्टम संदेश</string>
-    <string name="transfer_ownership">स्वामित्व ट्रांसफर करें</string>
-    <string name="transfer_ownership_warning">स्वामित्व ट्रांसफर करने के लिए एक सदस्य चुनें। आप ओनर विशेषाधिकार खो देंगे। यह पूर्ववत नहीं किया जा सकता।</string>
-    <string name="type_message">संदेश टाइप करें…</string>
-    <string name="typing">टाइप कर रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer_ownership">स्थानांतरण स्वामित्व</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer_ownership_warning">स्वामित्व हस्तांतरित करने के लिए एक सदस्य का चयन करें। आप स्वामी विशेषाधिकार खो देंगे. इसे असंपादित नहीं किया जा सकता है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="type_message">एक संदेश टाइप करें...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="typing">टाइपिंग...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmute_action">अनम्यूट</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmute_notifications">सूचनाएं अनम्यूट करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unpin">अनपिन</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="view_profile">प्रोफ़ाइल देखें</string>
 
     <!-- Messaging - report reasons -->
-    <string name="report_reason_spam">स्पैम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reason_spam">अवांछित ईमेल</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_harassment">उत्पीड़न</string>
-    <string name="report_reason_inappropriate">अनुचित सामग्री</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reason_inappropriate">अनुपयुक्त सामग्री</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_other">अन्य</string>
 
     <!-- Messaging - report actions -->
+    <!-- google-translated 2026-05-04 -->
     <string name="report_action_warning">चेतावनी जारी करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_action_temp_suspension">अस्थायी निलंबन</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_action_perm_suspension">स्थायी निलंबन</string>
-    <string name="report_action_pm_ban">PM से प्रतिबंधित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_pm_ban">पीएम से बैन</string>
 
     <!-- Messaging - report details -->
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_prefix">कारण: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_type_prefix">प्रकार: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_details_prefix">विवरण: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_message_prefix">संदेश: \"%1$s\"</string>
-    <string name="report_reporter_reported">रिपोर्ट करने वाला: %1$s | रिपोर्ट किया गया: %2$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reporter_reported">रिपोर्टर: %1$s | रिपोर्ट: %2$s</string>
 
     <!-- Messaging - system message labels -->
-    <string name="sys_member_joins">सदस्य शामिल हुआ</string>
-    <string name="sys_member_leaves">सदस्य ने छोड़ा</string>
-    <string name="sys_role_changes">भूमिका बदली</string>
-    <string name="sys_permission_changes">अनुमति बदली</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_member_joins">सदस्य जुड़ता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_member_leaves">सदस्य चला जाता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_role_changes">भूमिका बदल जाती है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_permission_changes">अनुमति बदल जाती है</string>
 
     <!-- Messaging - permission labels -->
-    <string name="perm_who_can_send">कौन संदेश भेज सकता है</string>
-    <string name="perm_who_can_add_members">कौन सदस्य जोड़ सकता है</string>
-    <string name="perm_who_can_edit_info">कौन ग्रुप जानकारी संपादित कर सकता है</string>
-    <string name="perm_who_can_delete_messages">कौन संदेश हटा सकता है</string>
-    <string name="perm_who_can_mute_members">कौन सदस्यों को म्यूट कर सकता है</string>
-    <string name="perm_who_can_remove_members">कौन सदस्यों को हटा सकता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_send">संदेश कौन भेज सकता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_add_members">सदस्यों को कौन जोड़ सकता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_edit_info">समूह की जानकारी कौन संपादित कर सकता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_delete_messages">संदेशों को कौन हटा सकता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_mute_members">सदस्यों को म्यूट कौन कर सकता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_remove_members">सदस्यों को कौन हटा सकता है</string>
 
     <!-- Messaging - date separators -->
+    <!-- google-translated 2026-05-04 -->
     <string name="today">आज</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="yesterday">कल</string>
 
     <!-- Daily Reward -->
+    <!-- google-translated 2026-05-04 -->
     <string name="awesome">बहुत बढ़िया!</string>
-    <string name="claim_todays_reward">आज का इनाम लें</string>
-    <string name="coins">कॉइन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_todays_reward">आज के इनाम का दावा करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="coins">सिक्के</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_fri">शुक्र</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_mon">सोम</string>
-    <string name="day_sat">शनि</string>
-    <string name="day_streak">%1$d-दिन की स्ट्रीक</string>
-    <string name="day_sun">रवि</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sat">बैठा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_streak">%1$d-दिन की लकीर</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sun">सूरज</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_thu">गुरु</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_tue">मंगल</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_wed">बुध</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="later">बाद में</string>
-    <string name="milestone">माइलस्टोन</string>
-    <string name="milestone_bonus">माइलस्टोन बोनस!</string>
-    <string name="plus_coins">+%1$d कॉइन!</string>
-    <string name="reward_claimed">इनाम मिल गया!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="milestone">मील का पत्थर</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="milestone_bonus">मील का पत्थर बोनस!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="plus_coins">+%1$d सिक्के!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reward_claimed">इनाम का दावा किया गया!</string>
 
     <!-- Economy -->
-    <string name="bean_redeem_description">1 बीन = 1 कॉइन। 2,000+ रिडीम करने पर 10% बोनस!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bean_redeem_description">1 बीन = 1 सिक्का. 10% बोनस के लिए 2,000+ भुनाएँ!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="bonus_coins">+%1$d बोनस</string>
-    <string name="buy_shy_coins">ShyCoins खरीदें</string>
-    <string name="confirm_redemption">रिडेम्पशन की पुष्टि करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="buy_shy_coins">शर्मीले सिक्के खरीदें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm_redemption">मोचन की पुष्टि करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="daily_reward">दैनिक इनाम</string>
-    <string name="redeem">रिडीम</string>
-    <string name="redeem_all">सभी रिडीम करें</string>
-    <string name="redeem_beans_for_coins">%1$s बीन्स को %2$s कॉइन में बदलें?</string>
-    <string name="redeem_shy_beans">ShyBeans रिडीम करें</string>
-    <string name="send_gift">गिफ्ट भेजें</string>
-    <string name="shy_beans">ShyBeans</string>
-    <string name="shy_coins">ShyCoins</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem">भुनाना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_all">सभी को छुड़ाओ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_beans_for_coins">%1$s बीन्स को %2$s सिक्कों के लिए भुनाएं?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_shy_beans">शर्मीले बीन्स को छुड़ाओ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_gift">उपहार भेजें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_beans">शाइबीन्स</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_coins">शर्मीले सिक्के</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_all">सभी</string>
-    <string name="filter_gacha">गाचा</string>
-    <string name="filter_gifts">गिफ्ट्स</string>
-    <string name="filter_purchases">खरीदारी</string>
-    <string name="filter_redemptions">रिडेम्पशन</string>
-    <string name="filter_rewards">इनाम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gacha">गैचा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gifts">उपहार</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_purchases">खरीद</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_redemptions">मोचन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_rewards">पुरस्कार</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_filtered_transactions">कोई %1$s लेनदेन नहीं</string>
-    <string name="no_transactions_yet">अभी तक कोई लेनदेन नहीं</string>
-    <string name="transaction_history">लेनदेन इतिहास</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_transactions_yet">अभी तक कोई लेन-देन नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transaction_history">ट्रांजेक्शन इतिहास</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transactions">लेनदेन</string>
-    <string name="wallet">वॉलेट</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="wallet">बटुआ</string>
 
     <!-- Super Shy -->
-    <string name="benefit_daily_bonus">+10% दैनिक लॉगिन कॉइन (ऊपर राउंड)</string>
-    <string name="benefit_extended_room">विस्तारित रूम अवधि (12 घंटे)</string>
-    <string name="benefit_full_room">8 सीटों का पूरा रूम</string>
-    <string name="benefit_gold_name">हर जगह सुनहरा प्रदर्शित नाम</string>
-    <string name="benefit_profile_frame">विशेष प्रोफ़ाइल फ्रेम</string>
-    <string name="benefit_star_badge">नाम के बगल में स्टार बैज</string>
-    <string name="benefits">लाभ</string>
-    <string name="choose_a_plan">प्लान चुनें</string>
-    <string name="claim_30_days_free">30 दिन मुफ़्त पाएं</string>
-    <string name="claimed">मिल गया!</string>
-    <string name="claimed_activate_backpack">इसे सक्रिय करने के लिए, चैट रूम में अपने बैकपैक में खोजें।</string>
-    <string name="claiming">ले रहे हैं…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_daily_bonus">+10% दैनिक लॉगिन सिक्के (राउंड अप)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_extended_room">विस्तारित कमरे की अवधि (12 घंटे)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_full_room">8 सीटों का पूरा कमरा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_gold_name">सर्वत्र स्वर्ण प्रदर्शन नाम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_profile_frame">विशिष्ट प्रोफ़ाइल फ़्रेम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_star_badge">नाम के आगे स्टार बैज</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefits">फ़ायदे</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_a_plan">एक योजना चुनें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_30_days_free">30 दिन मुफ़्त का दावा करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed">दावा किया!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed_activate_backpack">इसे सक्रिय करने के लिए, चैट रूम में इसे अपने बैकपैक में ढूंढें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claiming">दावा किया जा रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="currently_active">वर्तमान में सक्रिय</string>
-    <string name="days_remaining">%1$d दिन शेष</string>
-    <string name="one_time_payment">एकमुश्त भुगतान</string>
-    <string name="per_month">प्रति माह</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="days_remaining">%1$d दिन शेष हैं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="one_time_payment">एक - बारगी भुगतान</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="per_month">प्रति महीने</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_year">प्रति वर्ष</string>
-    <string name="super_shy">Super Shy</string>
-    <string name="super_shy_for_life">आप हमेशा के लिए Super Shy हैं!</string>
-    <string name="tap_to_claim_backpack">लेने के लिए टैप करें — आपके बैकपैक में जोड़ा जाएगा</string>
-    <string name="testing_mode_super_shy">टेस्टिंग मोड — कोई असली पैसा नहीं लगेगा। तुरंत Super Shy सक्रिय करने के लिए किसी प्लान पर टैप करें।</string>
-    <string name="tier_label">टियर: %1$s</string>
-    <string name="tier_lifetime">लाइफटाइम</string>
-    <string name="tier_monthly">मासिक</string>
-    <string name="tier_yearly">वार्षिक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy">अति शर्मीला</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_for_life">आप जीवन भर के लिए अत्यंत शर्मीले हैं!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_claim_backpack">दावा करने के लिए टैप करें - आपके बैकपैक में जोड़ा गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="testing_mode_super_shy">परीक्षण मोड - कोई वास्तविक पैसा नहीं लिया जाता है। सुपर शाइ को तुरंत सक्रिय करने के लिए किसी योजना पर टैप करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_label">स्तर: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_lifetime">जीवनभर</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_monthly">महीने के</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_yearly">सालाना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="upgrade_to_lifetime">लाइफटाइम में अपग्रेड करें</string>
 
     <!-- Legal -->
-    <string name="accept_all_and_continue">सभी स्वीकार करें &amp; जारी रखें</string>
-    <string name="community_standards">सामुदायिक मानक</string>
-    <string name="cyber_bullying_policy">साइबर बुलिंग नीति</string>
-    <string name="i_have_read_and_agree">मैंने पढ़ लिया है और सहमत हूं </string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="accept_all_and_continue">सभी को स्वीकार करें और जारी रखें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="community_standards">समुदाय मानकों</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cyber_bullying_policy">साइबर बदमाशी नीति</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_have_read_and_agree">मैने नियमों को पढ़ लिया और उनसे सहमत हूँ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="privacy_policy">गोपनीयता नीति</string>
-    <string name="review_and_accept_policies">जारी रखने के लिए कृपया हमारी नीतियों की समीक्षा करें और स्वीकार करें।</string>
-    <string name="terms_and_conditions">नियम &amp; शर्तें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="review_and_accept_policies">कृपया जारी रखने के लिए हमारी नीतियों की समीक्षा करें और स्वीकार करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="terms_and_conditions">नियम एवं शर्तें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="welcome_to_shytalk">ShyTalk में आपका स्वागत है</string>
 
     <!-- Auth -->
-    <string name="sign_in">साइन इन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in">दाखिल करना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="verification_code">सत्यापन कोड</string>
-    <string name="continue_with_google">Google से जारी रखें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="continue_with_google">Google के साथ जारी रखें</string>
 
     <!-- Missing translations (English fallback) -->
-    <string name="account_restricted">Account Restricted</string>
-    <string name="account_suspended_description">This user\'s account has been suspended.</string>
-    <string name="account_suspended_label">Account Suspended</string>
-    <string name="active_days_ago">Active %1$dd ago</string>
-    <string name="active_hours_ago">Active %1$dh ago</string>
-    <string name="active_just_now">Active just now</string>
-    <string name="active_long_ago">Active 30+ days ago</string>
-    <string name="active_minutes_ago">Active %1$dm ago</string>
-    <string name="allow">Allow</string>
-    <string name="allowed">Allowed</string>
-    <string name="appeal">Appeal</string>
-    <string name="appeal_not_eligible">You are not eligible to appeal this suspension.</string>
-    <string name="appeal_placeholder">Explain why your suspension should be lifted…</string>
-    <string name="appeal_submitted">Your appeal has been submitted and will be reviewed. If successful, your suspension will be lifted. You will not receive any further feedback on your appeal and you cannot submit another appeal.</string>
-    <string name="appeal_unsuccessful">Your appeal has been reviewed and was not successful. You cannot submit another appeal.</string>
-    <string name="ban_expires">Expires: %1$s</string>
-    <string name="ban_permanent">This ban is permanent.</string>
-    <string name="suspension_also_device_banned">आपका डिवाइस भी प्रतिबंधित कर दिया गया है।</string>
-    <string name="suspension_also_network_banned">आपका नेटवर्क भी प्रतिबंधित कर दिया गया है।</string>
-    <string name="suspension_also_device_and_network_banned">आपका डिवाइस और नेटवर्क दोनों प्रतिबंधित कर दिए गए हैं।</string>
-    <string name="ban_reason">Reason: %1$s</string>
-    <string name="banned_by">Banned by: %1$s</string>
-    <string name="banned_from_room">Banned from Room</string>
-    <string name="block_confirm">Block %1$s?</string>
-    <string name="block_description">They won\'t be able to view your profile.</string>
-    <string name="blocked_by_user">You have been blocked by this user</string>
-    <string name="blocked_by_user_in_room_description">A user in this room has blocked you. You may have a limited experience. Enter anyway?</string>
-    <string name="blocked_user_in_room">Blocked User in Room</string>
-    <string name="blocked_user_in_room_description">A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?</string>
-    <string name="bluetooth">Bluetooth</string>
-    <string name="bluetooth_description">Connect to Bluetooth audio devices during voice chat.</string>
-    <string name="cache_cleared">Cache Cleared</string>
-    <string name="cache_cleared_description">App cache has been cleared.</string>
-    <string name="cannot_enter_room">Cannot Enter Room</string>
-    <string name="chat_display">Chat Display</string>
-    <string name="check_for_updates">Check for Updates</string>
-    <string name="checking_for_updates">Checking for updates…</string>
-    <string name="choose_another_room">Choose Another Room</string>
-    <string name="clear">Clear</string>
-    <string name="clear_cache">Clear Cache</string>
-    <string name="clear_cache_confirm">Clear %1$s of cached data?</string>
-    <string name="clear_cache_with_size">Clear Cache (%1$s)</string>
-    <string name="close_room_description">This will close the room for everyone.</string>
-    <string name="close_room_question">Close Room?</string>
-    <string name="closing">Closing...</string>
-    <string name="connecting">Connecting...</string>
-    <string name="connection_trouble">ShyTalk is having trouble reaching our servers. Please check your internet connection and try again.</string>
-    <string name="contact_support_help">If you need help, contact shytalk.help@gmail.com</string>
-    <string name="contact_support_hint">If the problem persists, contact shytalk.help@gmail.com</string>
-    <string name="contact_us">Contact Us</string>
-    <string name="shyden_ltd_brand">ShyTalk, Shyden Ltd (कंपनी नं. 17110487) का एक ब्रांड है, 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom।</string>
-    <string name="delete_account">Delete Account</string>
-    <string name="delete_account_description">Your account and all data will be permanently deleted after the grace period. You can cancel by signing in before then.</string>
-    <string name="delete_account_scheduled">Your account is scheduled for deletion on %1$s. Would you like to cancel?</string>
-    <string name="delete_account_cancel">Cancel Deletion</string>
-    <string name="delete_account_continue">Continue with Deletion</string>
-    <string name="delete_account_success">Your account has been scheduled for deletion.</string>
-    <string name="delete_account_pin_required">Verify your identity to delete your account</string>
-    <string name="delete_account_confirm_title">Are you sure?</string>
-    <string name="delete_account_confirm_body">This will permanently delete your account and all associated data after the grace period. This action cannot be undone.</string>
-    <string name="denied">Denied</string>
-    <string name="description">Description</string>
-    <string name="device_locked_description">This device is already linked to another account.\nOnly one account is allowed per device.\n\nFor support, contact shytalk.help@gmail.com</string>
-    <string name="device_not_supported">Device Not Supported</string>
-    <string name="device_not_supported_description">ShyTalk cannot run on rooted or emulated devices. Please use an unmodified device.</string>
-    <string name="display_over_other_apps">Display over other apps</string>
-    <string name="display_over_other_apps_description">Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="dnd_end_time">DND End Time</string>
-    <string name="dnd_start_time">DND Start Time</string>
-    <string name="do_not_disturb">Do Not Disturb</string>
-    <string name="download_now">Download Now</string>
-    <string name="edit_room_name">Edit Room Name</string>
-    <string name="email">Email</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_restricted">खाता प्रतिबंधित</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_description">इस उपयोगकर्ता का खाता निलंबित कर दिया गया है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_label">खाता निलंबित कर दिया गया है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_days_ago">%1$dd पहले सक्रिय</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_hours_ago">%1$dh पहले सक्रिय</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_just_now">अभी सक्रिय</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_long_ago">30+ दिन पहले सक्रिय</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_minutes_ago">%1$dm पहले सक्रिय</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allow">अनुमति दें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allowed">अनुमत</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal">निवेदन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_not_eligible">आप इस निलंबन के विरुद्ध अपील करने के पात्र नहीं हैं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_placeholder">बताएं कि आपका निलंबन क्यों हटाया जाना चाहिए...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_submitted">आपकी अपील प्रस्तुत कर दी गई है और उसकी समीक्षा की जाएगी। सफल होने पर आपका निलंबन हटा दिया जाएगा. आपको अपनी अपील पर कोई और प्रतिक्रिया नहीं मिलेगी और आप दूसरी अपील प्रस्तुत नहीं कर सकते।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_unsuccessful">आपकी अपील की समीक्षा की गई और सफल नहीं रही। आप दूसरी अपील प्रस्तुत नहीं कर सकते.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_expires">समाप्ति: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_permanent">यह प्रतिबंध स्थायी है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_also_device_banned">आपके डिवाइस पर भी प्रतिबंध लगा दिया गया है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_also_network_banned">आपके नेटवर्क पर भी प्रतिबंध लगा दिया गया है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_also_device_and_network_banned">आपके डिवाइस और नेटवर्क पर भी प्रतिबंध लगा दिया गया है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_reason">कारण: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_by">द्वारा प्रतिबंधित: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_from_room">कक्ष से प्रतिबंधित</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_confirm">%1$s को ब्लॉक करें?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_description">वे आपकी प्रोफ़ाइल नहीं देख पाएंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user">आपको इस उपयोगकर्ता द्वारा ब्लॉक कर दिया गया है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user_in_room_description">इस कमरे में एक उपयोगकर्ता ने आपको ब्लॉक कर दिया है. आपके पास सीमित अनुभव हो सकता है. फिर भी दर्ज करें?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room">कक्ष में उपयोगकर्ता को अवरोधित किया गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room_description">आपके द्वारा अवरोधित किया गया उपयोगकर्ता इस कक्ष में है. वे आपसे संवाद करने में सक्षम होंगे. फिर भी दर्ज करें?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bluetooth">ब्लूटूथ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bluetooth_description">वॉयस चैट के दौरान ब्लूटूथ ऑडियो डिवाइस से कनेक्ट करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared">कैश साफ़ किया गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared_description">ऐप कैश साफ़ कर दिया गया है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_enter_room">कमरे में प्रवेश नहीं कर सकते</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="chat_display">चैट प्रदर्शन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_for_updates">अद्यतन के लिए जाँच</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="checking_for_updates">अपडेट के लिए जांच कर रहा है…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_another_room">दूसरा कमरा चुनें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear">स्पष्ट</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache">कैश को साफ़ करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_confirm">कैश्ड डेटा का %1$s साफ़ करें?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_with_size">कैश साफ़ करें (%1$s)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_description">इससे कमरा सभी के लिए बंद हो जाएगा.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_question">कमरा बंद करें?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="closing">समापन...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connecting">कनेक्ट हो रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connection_trouble">ShyTalk को हमारे सर्वर तक पहुंचने में परेशानी हो रही है। अपने इंटरनेट कनेक्शन की जाँच करें और पुन: प्रयास करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_help">यदि आपको सहायता चाहिए, तो shytalk.help@gmail.com पर संपर्क करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_hint">यदि समस्या बनी रहती है, तो shytalk.help@gmail.com पर संपर्क करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_us">हमसे संपर्क करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shyden_ltd_brand">ShyTalk शायडेन लिमिटेड (कंपनी नंबर 17110487), 71-75 शेल्टन स्ट्रीट, कोवेंट गार्डन, लंदन, WC2H 9JQ, यूनाइटेड किंगडम का एक ब्रांड है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account">खाता हटा दो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_description">छूट अवधि के बाद आपका खाता और सारा डेटा स्थायी रूप से हटा दिया जाएगा। आप उससे पहले साइन इन करके रद्द कर सकते हैं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_scheduled">आपका खाता %1$s पर हटाने के लिए निर्धारित है। क्या आप रद्द करना चाहेंगे?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_cancel">हटाना रद्द करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_continue">हटाना जारी रखें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_success">आपका खाता हटाने के लिए निर्धारित किया गया है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_pin_required">अपना खाता हटाने के लिए अपनी पहचान सत्यापित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_title">क्या आपको यकीन है?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_body">यह छूट अवधि के बाद आपके खाते और सभी संबद्ध डेटा को स्थायी रूप से हटा देगा। इस एक्शन को वापस नहीं किया जा सकता।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="denied">अस्वीकृत</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description">विवरण</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_locked_description">यह डिवाइस पहले से ही किसी अन्य खाते से लिंक है।\nप्रति डिवाइस केवल एक खाते की अनुमति है।\n\nसहायता के लिए, Shytalk.help@gmail.com से संपर्क करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported">उपकरण समर्थित नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported_description">ShyTalk रूट किए गए या एम्युलेटेड डिवाइस पर नहीं चल सकता। कृपया एक असंशोधित डिवाइस का उपयोग करें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps">अन्य ऐप्स पर प्रदर्शित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps_description">जब आप वॉयस रूम से बाहर निकलें तो ShyTalk को एक तैरता हुआ बुलबुला दिखाने की अनुमति दें, ताकि आप तुरंत वापस लौट सकें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_end_time">डीएनडी समाप्ति समय</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_start_time">डीएनडी प्रारंभ समय</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="do_not_disturb">परेशान मत करो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="download_now">अब डाउनलोड करो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_room_name">कक्ष का नाम संपादित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email">ईमेल</string>
 
     <!-- Settings - Linked Accounts page -->
+    <!-- google-translated 2026-05-04 -->
     <string name="linked_accounts">लिंक किए गए खाते</string>
-    <string name="linked">लिंक किया गया</string>
-    <string name="unlinked">अनलिंक किया गया</string>
-    <string name="unlink">अनलिंक करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="linked">जुड़ा हुआ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlinked">अनलिंक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink">अनलिंक</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlink_provider_confirm">%1$s को अनलिंक करें?</string>
-    <string name="unlink_provider_description">आप बाद में इस खाते को फिर से लिंक कर सकते हैं, लेकिन आपको इसे दोबारा सत्यापित करना होगा।</string>
-    <string name="cannot_unlink_last_provider">अनलिंक करने से पहले आपके पास कम से कम दो लिंक किए गए खाते होने चाहिए।</string>
-    <string name="provider_google">Google</string>
-    <string name="provider_apple">Apple</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink_provider_description">आप इस खाते को बाद में दोबारा लिंक कर सकते हैं, लेकिन आपको इसे दोबारा सत्यापित करना होगा।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_unlink_last_provider">किसी एक को अनलिंक करने से पहले आपके पास कम से कम दो लिंक किए गए खाते होने चाहिए।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_google">गूगल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_apple">सेब</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="provider_email">ईमेल</string>
-    <string name="no_linked_accounts">कोई लिंक किया गया खाता नहीं मिला</string>
-    <string name="unlinking_provider">अनलिंक हो रहा है…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_linked_accounts">कोई लिंक किया हुआ खाता नहीं मिला</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlinking_provider">अनलिंक किया जा रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="connect_account">खाता कनेक्ट करें</string>
-    <string name="connect">कनेक्ट करें</string>
-    <string name="signed_in_with">Signed in with</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect">जोड़ना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signed_in_with">के साथ साइन इन किया गया</string>
 
-    <string name="enable_dnd">Enable Do Not Disturb</string>
-    <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
-    <string name="end">End</string>
-    <string name="enter">Enter</string>
-    <string name="error_block_user">Failed to block user</string>
-    <string name="error_check_updates">Failed to check for updates</string>
-    <string name="error_could_not_submit_report">Could not submit report</string>
-    <string name="error_follow_user">Failed to follow user</string>
-    <string name="error_load_user_data">Failed to load user data</string>
-    <string name="error_load_users">Failed to load users</string>
-    <string name="error_max_groups">You can own a maximum of %1$d groups</string>
-    <string name="error_max_participants">Maximum %1$d participants allowed</string>
-    <string name="error_no_users_selected">No users selected</string>
-    <string name="error_not_enough_beans">Not enough beans</string>
-    <string name="error_not_enough_coins">Not enough coins</string>
-    <string name="error_prices_changed">Prices have changed! Please check the new costs and try again.</string>
-    <string name="error_resolve_report">Failed to resolve report</string>
-    <string name="error_save_dob">Failed to save date of birth</string>
-    <string name="error_submit_appeal">Failed to submit appeal</string>
-    <string name="error_submit_report">Failed to submit report</string>
-    <string name="error_title">Error</string>
-    <string name="error_unblock_user">Failed to unblock user</string>
-    <string name="error_unfollow_user">Failed to unfollow user</string>
-    <string name="error_update_privacy">Failed to update privacy setting</string>
-    <string name="error_upload_evidence">Failed to upload evidence</string>
-    <string name="error_upload_group_photo">Failed to upload group photo</string>
-    <string name="everyone">Everyone</string>
-    <string name="hide_age">Hide Age</string>
-    <string name="hide_age_description">Others won&apos;t see your age on your profile.</string>
-    <string name="hide_following_description">Others won&apos;t see who you follow. Followers are always visible.</string>
-    <string name="hide_following_list">Hide Following List</string>
-    <string name="hide_online_status">Hide Online Status</string>
-    <string name="hide_online_status_description">Others won&apos;t see when you&apos;re online.</string>
-    <string name="i_understand">I Understand</string>
-    <string name="i_understand_and_accept">I Understand and Accept</string>
-    <string name="kick_reason">Reason: %1$s</string>
-    <string name="kicked_by_name">You were kicked by %1$s.</string>
-    <string name="kicked_from_room">You have been kicked from this room.</string>
-    <string name="leave">Leave</string>
-    <string name="leave_room_description">You will leave the voice room.</string>
-    <string name="leave_room_question">Leave Room?</string>
-    <string name="message_preview">Message Preview</string>
-    <string name="message_preview_description">Show message text in notifications.</string>
-    <string name="mic_permission_denied">Microphone permission denied. You won\'t be able to use voice chat.</string>
-    <string name="microphone">Microphone</string>
-    <string name="microphone_description">Required for voice chat in rooms.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd">परेशान न करें सक्षम करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd_description">निर्धारित समय के दौरान सभी पीएम सूचनाओं को शांत करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="end">अंत</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enter">प्रवेश करना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_block_user">उपयोगकर्ता को ब्लॉक करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_check_updates">अद्यतनों की जाँच करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_could_not_submit_report">रिपोर्ट प्रस्तुत नहीं हो सकी</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_follow_user">उपयोगकर्ता का अनुसरण करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_user_data">उपयोगकर्ता डेटा लोड करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_users">उपयोगकर्ताओं को लोड करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_groups">आप अधिकतम %1$d समूहों के स्वामी हो सकते हैं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_participants">अधिकतम %1$d प्रतिभागियों को अनुमति</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_no_users_selected">कोई उपयोगकर्ता चयनित नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_beans">पर्याप्त फलियाँ नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_coins">पर्याप्त सिक्के नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_prices_changed">कीमतें बदल गई हैं! कृपया नई लागतों की जाँच करें और पुनः प्रयास करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_resolve_report">रिपोर्ट का समाधान करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_save_dob">जन्मतिथि सहेजने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_appeal">अपील प्रस्तुत करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_report">रिपोर्ट प्रस्तुत करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_title">गलती</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unblock_user">उपयोगकर्ता को अनब्लॉक करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unfollow_user">उपयोगकर्ता को अनफ़ॉलो करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_update_privacy">गोपनीयता सेटिंग अपडेट करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_evidence">साक्ष्य अपलोड करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_group_photo">समूह फ़ोटो अपलोड करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="everyone">सब लोग</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age">उम्र छुपाएं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age_description">अन्य लोग आपकी प्रोफ़ाइल पर आपकी उम्र नहीं देखेंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_description">दूसरे यह नहीं देखेंगे कि आप किसे फ़ॉलो करते हैं. अनुयायी हमेशा दिखाई देते हैं.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_list">निम्नलिखित सूची छिपाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status">ऑनलाइन स्थिति छिपाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status_description">जब आप ऑनलाइन होंगे तो अन्य लोग नहीं देख पाएंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand">मैं समझता हूँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand_and_accept">मैं समझता हूं और स्वीकार करता हूं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_reason">कारण: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_by_name">आपको %1$s ने लात मार दी थी।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_from_room">तुम्हें इस कमरे से निकाल दिया गया है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave">छुट्टी</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_description">आप ध्वनि कक्ष छोड़ देंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_question">कमरा छोड़ें?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview">संदेश पूर्वावलोकन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_description">सूचनाओं में संदेश पाठ दिखाएँ.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mic_permission_denied">माइक्रोफ़ोन की अनुमति अस्वीकृत. आप वॉइस चैट का उपयोग नहीं कर पाएंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone">माइक्रोफ़ोन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone_description">कमरों में ध्वनि चैट के लिए आवश्यक.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="must_be_16">आपकी आयु कम से कम 16 वर्ष होनी चाहिए</string>
-    <string name="no_blocked_users">No blocked users</string>
-    <string name="no_one">No one</string>
-    <string name="not_allowed_to_enter">You are not allowed to enter this room.</string>
-    <string name="not_now">Not now</string>
-    <string name="notice">Notice</string>
-    <string name="notification_sound">Notification Sound</string>
-    <string name="notification_sound_description">Play a sound when a new message arrives.</string>
-    <string name="notifications_permission_description">Receive alerts when you&apos;re in a live room in the background.</string>
-    <string name="official_warning">Official Warning</string>
-    <string name="overlay_permission_description">Show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="people_i_follow">People I follow</string>
-    <string name="pm_notifications">PM Notifications</string>
-    <string name="pm_notifications_description">Receive notifications for new private messages.</string>
-    <string name="private_messages">Private Messages</string>
-    <string name="profile_not_available">This profile is not available</string>
-    <string name="profile_not_found">Profile not found</string>
-    <string name="removed_from_room">Removed from Room</string>
-    <string name="report_thank_you">Thank you for your report. We will review it shortly.</string>
-    <string name="report_user_generic">Report User</string>
-    <string name="retrying">Retrying…</string>
-    <string name="room_alerts">Room Alerts</string>
-    <string name="self_destruct_countdown">Self-Destruct Countdown</string>
-    <string name="self_destruct_description">Play a voice announcement when a room&apos;s 5-minute self-destruct timer starts or stops.</string>
-    <string name="show_date_separators">Show Date Separators</string>
-    <string name="show_date_separators_description">Show date labels between messages on different days.</string>
-    <string name="show_timestamps">Show Timestamps</string>
-    <string name="show_timestamps_description">Display message timestamps in chat.</string>
-    <string name="shytalk_id">ShyTalk ID</string>
-    <string name="sign_in_with_google">Sign in with Google</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_blocked_users">कोई अवरुद्ध उपयोगकर्ता नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_one">किसी को भी नहीं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_allowed_to_enter">आपको इस कमरे में प्रवेश करने की अनुमति नहीं है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_now">अभी नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notice">सूचना</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound">अधिसूचना ध्वनि</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound_description">नया संदेश आने पर ध्वनि बजाएं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notifications_permission_description">जब आप लाइव रूम में हों तो पृष्ठभूमि में अलर्ट प्राप्त करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="official_warning">आधिकारिक चेतावनी</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="overlay_permission_description">जब आप वॉयस रूम से बाहर निकलें तो एक तैरता हुआ बुलबुला दिखाएं, ताकि आप तुरंत वापस लौट सकें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="people_i_follow">जिन लोगों को मैं फ़ॉलो करता हूं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications">पीएम सूचनाएं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications_description">नए निजी संदेशों के लिए सूचनाएं प्राप्त करें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="private_messages">निजी संदेश</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_available">यह प्रोफ़ाइल उपलब्ध नहीं है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_found">प्रोफ़ाइल नहीं मिला</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="removed_from_room">कक्ष से निकाला गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_thank_you">अपनी रिपोर्ट के लिए धन्यवाद। हम शीघ्र ही इसकी समीक्षा करेंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user_generic">उपयोगकर्ता को रिपोर्ट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="retrying">पुनः प्रयास किया जा रहा है...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_alerts">कक्ष अलर्ट</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_countdown">आत्म-विनाश उलटी गिनती</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_description">जब किसी कमरे का 5 मिनट का सेल्फ-डिस्ट्रक्ट टाइमर शुरू या बंद हो जाए तो ध्वनि घोषणा चलाएं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators">दिनांक विभाजक दिखाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators_description">विभिन्न दिनों में संदेशों के बीच दिनांक लेबल दिखाएँ।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps">टाइमस्टैम्प दिखाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps_description">चैट में संदेश टाइमस्टैम्प प्रदर्शित करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shytalk_id">शाइटॉक आईडी</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_google">Google से साइन इन करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_in_with_email">ईमेल से साइन इन करें</string>
-    <string name="email_hint">ईमेल पता</string>
-    <string name="email_link_sent">अपना ईमेल जाँचें</string>
-    <string name="check_your_email_description">हमने आपके ईमेल पर एक साइन-इन लिंक भेजा है। जारी रखने के लिए लिंक पर टैप करें।</string>
-    <string name="signing_in">Signing in…</string>
-    <string name="error_disposable_email">Disposable email addresses are not allowed. Please use a permanent email address.</string>
-    <string name="stalkers">Stalkers</string>
-    <string name="start">Start</string>
-    <string name="submit_appeal">Submit Appeal</string>
-    <string name="success_coins_added">+%1$s coins added!</string>
-    <string name="success_purchase">Purchase successful!</string>
-    <string name="success_redeemed_beans">Redeemed %1$s beans</string>
-    <string name="success_redeemed_beans_bonus">Redeemed %1$s beans (10%% bonus!)</string>
-    <string name="success_report_resolved">Report resolved</string>
-    <string name="success_sent_backpack">entire backpack (%1$d items)</string>
-    <string name="success_super_shy_activated">Super Shy activated! +30 days</string>
-    <string name="super_shy_days">Super Shy ✦ %1$dd</string>
-    <string name="super_shy_lifetime">Super Shy ✦ Lifetime</string>
-    <string name="support_contact">For support, contact shytalk.help@gmail.com</string>
-    <string name="suspension_ends_at">Ends: %1$s</string>
-    <string name="suspension_ends_in">Your suspension will end in:</string>
-    <string name="suspension_login_again">You can log in again now.\nBe good this time!</string>
-    <string name="suspension_permanent">This suspension is permanent.</string>
-    <string name="suspension_reason">Reason: %1$s</string>
-    <string name="tap_to_return">Tap to return</string>
-    <string name="technical_difficulties">Technical Difficulties</string>
-    <string name="technical_difficulties_description">ShyTalk is currently experiencing technical difficulties. Some features may not work correctly. Services will be restored automatically.</string>
-    <string name="unable_to_connect">Unable to Connect</string>
-    <string name="unblock_confirm">Unblock %1$s?</string>
-    <string name="unblock_description">They will be able to view your profile again.</string>
-    <string name="up_to_date">Up to Date</string>
-    <string name="up_to_date_description">You&apos;re on the latest version.</string>
-    <string name="update_available">Update Available</string>
-    <string name="update_available_description">Version %1$s is available.</string>
-    <string name="update_available_soft">A new version (%1$s) of ShyTalk is available.</string>
-    <string name="update_now">Update Now</string>
-    <string name="update_required">Update Required</string>
-    <string name="update_required_description">A new version of ShyTalk is available. Please update to continue using the app.</string>
-    <string name="update_open_store_failed">Cannot open the app store automatically. Please update ShyTalk manually from your device app store.</string>
-    <string name="view_community_standards">View Community Standards</string>
-    <string name="voice_chat_reimagined">Voice chat rooms, reimagined.</string>
-    <string name="voice_chat_unavailable">Voice chat is temporarily unavailable</string>
-    <string name="wallet_with_balance">Wallet · %1$s</string>
-    <string name="warning_consequence">Continued violations may result in suspension of your account.</string>
-    <string name="warning_reviewed">Your account has been reviewed and a warning has been issued.</string>
-    <string name="warning_reviewed_for_reason">Your account has been reviewed for %1$s and a warning has been issued.</string>
-    <string name="who_can_message_description">Control who can send you private messages.</string>
-    <string name="who_can_message_me">Who can message me</string>
-    <string name="you_were_banned">You were banned from this room.</string>
-    <string name="getting_ready">तैयार हो रहा है…</string>
-    <string name="send_all_warning_title">⚠️ चेतावनी ⚠️</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_hint">मेल पता</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_link_sent">अपने ईमेल की जाँच करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_your_email_description">हमने आपके ईमेल पर एक साइन-इन लिंक भेजा है। जारी रखने के लिए लिंक पर टैप करें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in">इन कर रहे हैं…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_disposable_email">डिस्पोजेबल ईमेल पते की अनुमति नहीं है। कृपया एक स्थायी ईमेल पते का उपयोग करें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers">पीछा करने वालों</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="start">शुरू</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submit_appeal">अपील सबमिट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_coins_added">+%1$s सिक्के जोड़े गए!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_purchase">खरीदारी सफल!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans">%1$s बीन्स भुनाया गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans_bonus">छुड़ाए गए %1$s बीन्स (10%% बोनस!)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_report_resolved">रिपोर्ट हल हो गई</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_sent_backpack">संपूर्ण बैकपैक (%1$d आइटम)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_super_shy_activated">सुपर शाइ सक्रिय! +30 दिन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_days">बहुत शर्मीला ✦ %1$dd</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_lifetime">सुपर शर्मीले ✦ लाइफटाइम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="support_contact">सहायता के लिए, shytalk.help@gmail.com पर संपर्क करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_at">समाप्त: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_in">आपका निलंबन समाप्त हो जाएगा:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_login_again">अब आप फिर से लॉग इन कर सकते हैं।\nइस बार अच्छे रहें!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_permanent">यह निलंबन स्थायी है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_reason">कारण: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_return">वापस लौटने के लिए टैप करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties">तकनीकी कठिनाई</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties_description">ShyTalk वर्तमान में तकनीकी कठिनाइयों का सामना कर रहा है। कुछ सुविधाएं संभवतः ठीक से न कार्य करें। सेवाएं स्वचालित रूप से बहाल हो जाएंगी.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unable_to_connect">कनेक्ट करने में असमर्थ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_confirm">%1$s को अनब्लॉक करें?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_description">वे आपकी प्रोफ़ाइल दोबारा देख सकेंगे.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date">अप टू डेट</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date_description">आप नवीनतम संस्करण पर हैं.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available">उपलब्ध अद्यतन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_description">संस्करण %1$s उपलब्ध है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_soft">ShyTalk का एक नया संस्करण (%1$s) उपलब्ध है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_now">अभी अद्यतन करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required">अद्यतन आवश्यक है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required_description">ShyTalk का एक नया संस्करण उपलब्ध है। कृपया ऐप का उपयोग जारी रखने के लिए अपडेट करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_open_store_failed">ऐप स्टोर स्वचालित रूप से नहीं खुल सकता. कृपया अपने डिवाइस ऐप स्टोर से ShyTalk को मैन्युअल रूप से अपडेट करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="view_community_standards">सामुदायिक मानक देखें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_reimagined">वॉइस चैट रूम की फिर से कल्पना की गई।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_unavailable">वॉइस चैट अस्थायी रूप से अनुपलब्ध है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="wallet_with_balance">बटुआ · %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_consequence">लगातार उल्लंघनों के परिणामस्वरूप आपका खाता निलंबित किया जा सकता है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed">आपके खाते की समीक्षा की गई है और एक चेतावनी जारी की गई है.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed_for_reason">%1$s के लिए आपके खाते की समीक्षा की गई है और एक चेतावनी जारी की गई है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_description">नियंत्रित करें कि आपको निजी संदेश कौन भेज सकता है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_me">मुझे कौन मैसेज कर सकता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_were_banned">आपको इस कमरे से प्रतिबंधित कर दिया गया था।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="getting_ready">तैयार हो रहे…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_warning_title">⚠️चेतावनी⚠️</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all_total_value">कुल मूल्य: 🪙 %1$d सिक्के</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift_header">%1$dx %2$s भेजें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift_header_multiple">%3$d उपयोगकर्ताओं को %1$dx %2$s भेजें</string>
-    <string name="owner_away_banner">मालिक दूर है - कमरा %1$s में बंद होगा</string>
-    <string name="messages_title">संदेश</string>
-    <string name="no_conversations_yet">अभी कोई बातचीत नहीं</string>
-    <string name="spin_again_with_cost">%1$s फिर से घुमाएं · 🪙%2$d</string>
-    <string name="age_years_old">%1$d साल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner_away_banner">मालिक दूर - कमरा %1$s में बंद हो जाएगा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="messages_title">संदेशों</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_conversations_yet">अभी तक कोई बातचीत नहीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_again_with_cost">%1$s फिर से घूमें · 🪙%2$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_years_old">%1$d वर्ष पुराना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="show_less">कम</string>
-    <string name="show_more">और</string>
-    <string name="video_too_large">वीडियो बहुत बड़ा है। कृपया छोटी क्लिप का उपयोग करें।</string>
-    <string name="file_too_large">फ़ाइल बहुत बड़ी है। अधिकतम 10 MB।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_more">अधिक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="video_too_large">अपलोड करने के लिए वीडियो बहुत बड़ा है. कृपया छोटी क्लिप का उपयोग करें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="file_too_large">फ़ाइल बहुत बड़ी है। अधिकतम आकार 10 एमबी है.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="this_user">यह उपयोगकर्ता</string>
 
     <!-- Degraded Mode Banner -->
-    <string name="reduced_functionality">सीमित कार्यक्षमता — कुछ सुविधाएं उपलब्ध नहीं हो सकतीं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reduced_functionality">कम कार्यक्षमता - कुछ सुविधाएँ अनुपलब्ध हो सकती हैं</string>
 
     <!-- Fullscreen Image Viewer -->
+    <!-- google-translated 2026-05-04 -->
     <string name="image_number">छवि %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="page_indicator">%1$d / %2$d</string>
 
     <!-- Broadcast Banner -->
+    <!-- google-translated 2026-05-04 -->
     <string name="broadcast_gacha_win">%1$s ने लकी स्पिन से %2$s%3$s%4$s जीता!</string>
-    <string name="broadcast_gift_sent">%1$s ने %5$s को %2$s%3$s%4$s भेजा!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="broadcast_gift_sent">%1$s ने %2$s%3$s%4$s को %5$s पर भेजा!</string>
 
-    <string name="play_effect">इफ़ेक्ट चलाएं</string>
-    <string name="account_unlocked">खाता अनलॉक हुआ</string>
-    <string name="account_suspended">खाता निलंबित</string>
-    <string name="police_duck_description">पुलिस बत्तख</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="play_effect">प्रभाव चलाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_unlocked">खाता अनलॉक किया गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended">खाता निलंबित कर दिया गया है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="police_duck_description">पुलिस चुप हो गई</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="device_banned_title">डिवाइस प्रतिबंधित</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="network_banned_title">नेटवर्क प्रतिबंधित</string>
-    <string name="device_banned_description">इस डिवाइस को ShyTalk के उपयोग से प्रतिबंधित किया गया है।</string>
-    <string name="network_banned_description">आपके नेटवर्क को ShyTalk के उपयोग से प्रतिबंधित किया गया है। किसी अन्य नेटवर्क से कनेक्ट करने का प्रयास करें।</string>
-    <string name="full_screen_photo">पूर्ण स्क्रीन फ़ोटो</string>
-    <string name="cover_photo">कवर फ़ोटो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_banned_description">इस डिवाइस को ShyTalk के उपयोग से प्रतिबंधित कर दिया गया है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="network_banned_description">आपके नेटवर्क को ShyTalk का उपयोग करने से प्रतिबंधित कर दिया गया है। किसी भिन्न नेटवर्क से कनेक्ट करने का प्रयास करें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="full_screen_photo">पूर्ण स्क्रीन फोटो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cover_photo">कवर फोटो</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="change_cover_photo">कवर फ़ोटो बदलें</string>
-    <string name="profile_photo">प्रोफ़ाइल फ़ोटो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_photo">खाते की फोटो</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="change_profile_photo">प्रोफ़ाइल फ़ोटो बदलें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edit_profile">प्रोफ़ाइल संपादित करें</string>
-    <string name="app_name_label">ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="app_name_label">शर्मीली बात</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_day">दिन</string>
-    <string name="time_unit_hour">घं</string>
-    <string name="time_unit_minute">मि</string>
-    <string name="time_unit_second">से</string>
-    <string name="time_unit_millisecond">मिसे</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_hour">मानव संसाधन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_minute">मिन</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_second">सेकंड</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_millisecond">एमएस</string>
 
-    <string name="splash_tagline">वॉइस चैट रूम, नए अंदाज़ में।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="splash_tagline">वॉइस चैट रूम की फिर से कल्पना की गई।</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="quantity_all">सभी (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="english_language">अंग्रेज़ी</string>
-    <string name="google_sign_in_failed">Google साइन-इन विफल</string>
-    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
-    <string name="sign_in_with_apple">Apple से साइन इन करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="google_sign_in_failed">Google साइन-इन विफल रहा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="apple_sign_in_failed">Apple साइन-इन विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_apple">Apple के साथ साइन इन करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_link">लिंक भेजें</string>
-    <string name="paste_link">लिंक पेस्ट करें</string>
-    <string name="resend_link">पुनः भेजें</string>
-    <string name="use_different_email">दूसरा ईमेल उपयोग करें</string>
-    <string name="email_link_paste_hint">अगर लिंक अपने आप नहीं खुला, तो इसे अपने ईमेल से कॉपी करें और लिंक पेस्ट करें पर टैप करें</string>
-    <string name="error_invalid_email_link">यह एक मान्य साइन-इन लिंक नहीं लगता। कृपया अपने ईमेल से पूरा लिंक कॉपी करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="paste_link">लिंक पेस्ट करो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="resend_link">पुन: भेजें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="use_different_email">किसी भिन्न ईमेल का उपयोग करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_link_paste_hint">अपने ईमेल में लिंक खोलें, फिर वापस आएं और पेस्ट लिंक पर टैप करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_invalid_email_link">यह वैध साइन-इन लिंक नहीं लगता है। कृपया अपने ईमेल से पूरा लिंक पेस्ट करें।</string>
 
     <!-- PIN & Security -->
-    <string name="enter_pin">अपना PIN दर्ज करें</string>
-    <string name="pin_mismatch">PIN मेल नहीं खाते। फिर से प्रयास करें।</string>
-    <string name="pin_locked">बहुत अधिक प्रयास। %1$d मिनट बाद फिर से प्रयास करें।</string>
-    <string name="pin_locked_reauth">खाता लॉक हो गया। अपना PIN रीसेट करने के लिए कृपया फिर से साइन इन करें।</string>
-    <string name="reset_pin">PIN रीसेट करें</string>
-    <string name="account_locked">खाता लॉक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enter_pin">अपना पिन दर्ज करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_mismatch">पिन मेल नहीं खाते. पुनः प्रयास करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked">बहुत अधिक प्रयास. %1$d मिनट में पुनः प्रयास करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked_reauth">खाता लॉक कर दिया गया. कृपया अपना पिन रीसेट करने के लिए फिर से साइन इन करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reset_pin">पिन रीसेट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_locked">खाता लॉक कर दिया गया</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlock">अनलॉक</string>
-    <string name="enable">सक्षम करें</string>
-    <string name="too_many_requests">बहुत अधिक अनुरोध। बाद में फिर प्रयास करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable">सक्षम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="too_many_requests">बहुत सारे अनुरोध. बाद में पुन: प्रयास।</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="verify">सत्यापित करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security">सुरक्षा</string>
     <!-- Starting Screens -->
+    <!-- google-translated 2026-05-04 -->
     <string name="starting_screen_pre_launch_title">ShyTalk अभी उपलब्ध नहीं है</string>
-    <string name="starting_screen_pre_launch_message">ShyTalk अभी रिलीज़ नहीं हुआ है। एप्लिकेशन का परीक्षण करने के लिए, Shyden से संपर्क करें। परीक्षण iOS और Android उपयोगकर्ताओं के लिए उपलब्ध है।</string>
-    <string name="starting_screen_dismiss">जारी रखें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_pre_launch_message">ShyTalk अभी तक रिलीज़ नहीं हुआ है। एप्लिकेशन का परीक्षण करने के लिए आवेदन करने के लिए, शायडेन से संपर्क करें। परीक्षण iOS और Android उपयोगकर्ताओं के लिए उपलब्ध है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_dismiss">जारी रखना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="starting_screen_police_duck_description">चेतावनी चित्रण</string>
-    <string name="starting_screen_loading">लोड हो रहा है…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_loading">लोड हो रहा है\u2026</string>
     <!-- Security -->
+    <!-- google-translated 2026-05-04 -->
     <string name="security_title">सुरक्षा</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_app_lock">ऐप लॉक</string>
-    <string name="security_app_lock_desc">अनलॉक करने के लिए PIN या बायोमेट्रिक आवश्यक</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_app_lock_desc">अनलॉक करने के लिए पिन या बायोमेट्रिक की आवश्यकता है</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_lock_timeout">लॉक टाइमआउट</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_1min">1 मिनट</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_5min">5 मिनट</string>
-    <string name="security_timeout_15min">15 मिनट</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_timeout_15min">15 मिनटों</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_30min">30 मिनट</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_never">कभी नहीं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_login">बायोमेट्रिक लॉगिन</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_desc">अनलॉक करने के लिए फिंगरप्रिंट या चेहरे का उपयोग करें</string>
-    <string name="security_biometric_unavailable">इस डिवाइस पर उपलब्ध नहीं</string>
-    <string name="security_reset_pin">PIN रीसेट करें</string>
-    <string name="security_reset_pin_desc">नया PIN सेट करने के लिए अपनी पहचान सत्यापित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_biometric_unavailable">इस डिवाइस पर उपलब्ध नहीं है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin">पिन रीसेट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin_desc">नया पिन सेट करने के लिए अपनी पहचान सत्यापित करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_linked_accounts">लिंक किए गए खाते</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_linked_accounts_desc">साइन-इन विधियाँ प्रबंधित करें</string>
     <!-- Email sign-in -->
+    <!-- google-translated 2026-05-04 -->
     <string name="email_sign_in_title">ईमेल से साइन इन करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_enter_address">अपना ईमेल पता दर्ज करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_label">ईमेल</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_send_code">कोड भेजें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_code_sent_to">कोड भेजा गया</string>
-    <string name="email_code_label">6-अंकीय कोड</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_label">6 अंकीय कोड</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_verify">सत्यापित करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_resend_in">%1$ds में पुनः भेजें</string>
-    <string name="email_resend_code">कोड पुनः भेजें</string>
-    <string name="email_code_expires">कोड 10 मिनट में समाप्त हो जाएगा</string>
-    <string name="email_invalid_address">एक वैध ईमेल पता दर्ज करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_resend_code">पुन: कोड भेजे</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_expires">कोड 10 मिनट में समाप्त हो जाता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_invalid_address">एक मान्य ईमेल पता दर्ज करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_disposable_blocked">डिस्पोजेबल ईमेल पते की अनुमति नहीं है</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_send_failed">कोड भेजने में विफल</string>
-    <string name="email_enter_code">6-अंकीय कोड दर्ज करें</string>
-    <string name="email_invalid_code">अमान्य कोड</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_enter_code">6 अंकीय कोड दर्ज करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_invalid_code">अवैध कोड</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_resend_failed">पुनः भेजने में विफल</string>
     <!-- PIN -->
-    <string name="pin_create_title">PIN बनाएँ</string>
-    <string name="pin_confirm_title">अपना PIN पुष्टि करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_create_title">एक पिन बनाएं</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_confirm_title">अपने पिन की पुष्टि करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_enable_biometric_title">बायोमेट्रिक लॉगिन सक्षम करें?</string>
-    <string name="pin_enable_biometric_desc">ShyTalk को तेज़ी से अनलॉक करने के लिए अपने फिंगरप्रिंट या चेहरे का उपयोग करें।</string>
-    <string name="pin_enable">सक्षम करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable_biometric_desc">ShyTalk को तुरंत अनलॉक करने के लिए अपने फ़िंगरप्रिंट या चेहरे का उपयोग करें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable">सक्षम</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_not_now">अभी नहीं</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_change_hint">आप इसे सुरक्षा सेटिंग्स में बदल या अक्षम कर सकते हैं</string>
-    <string name="pin_choose_length">PIN की लंबाई चुनें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_choose_length">पिन की लंबाई चुनें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_digits">अंक</string>
-    <string name="pin_confirm">पुष्टि करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_confirm">पुष्टि करना</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_next">अगला</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_enter_digits">%1$d अंक दर्ज करें</string>
-    <string name="pin_device_not_registered">डिवाइस पंजीकृत नहीं है। कृपया फिर से साइन इन करें।</string>
-    <string name="pin_setup_failed">PIN सेट करने में विफल</string>
-    <string name="pin_too_short">PIN बहुत छोटा है</string>
-    <string name="pin_verify_title">अपनी पहचान सत्यापित करें</string>
-    <string name="pin_verify_subtitle">जारी रखने के लिए अपना PIN दर्ज करें</string>
-    <string name="pin_verifying">सत्यापित हो रहा है…</string>
-    <string name="pin_wrong_attempts">गलत PIN। %1$d प्रयास शेष।</string>
-    <string name="pin_account_locked">खाता लॉक है</string>
-    <string name="pin_verify_failed">सत्यापन विफल</string>
-    <string name="pin_session_expired">सत्र समाप्त हो गया। कृपया फिर से साइन इन करें।</string>
-    <string name="pin_use_biometric">बायोमेट्रिक का उपयोग करें</string>
-    <string name="pin_delete">हटाएँ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_device_not_registered">डिवाइस पंजीकृत नहीं है. कृपया पुनः साइन इन करें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_setup_failed">पिन सेट करने में विफल</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_too_short">पिन बहुत छोटा है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_title">अपनी पहचान सत्यापित करो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_subtitle">जारी रखने के लिए अपना पिन दर्ज करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verifying">सत्यापन किया जा रहा है\u2026</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_wrong_attempts">ग़लत पिन. %1$d प्रयास शेष हैं.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_account_locked">खाता लॉक कर दिया गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_failed">सत्यापन में विफल रहा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_session_expired">सत्र समाप्त हुआ। कृपया पुनः साइन इन करें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_use_biometric">बायोमेट्रिक का प्रयोग करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_delete">मिटाना</string>
     <!-- Biometric -->
-    <string name="biometric_unlock_title">ShyTalk अनलॉक करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_unlock_title">शाइटटॉक को अनलॉक करें</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_unlock_desc">अनलॉक करने के लिए अपने फिंगरप्रिंट या चेहरे का उपयोग करें</string>
-    <string name="biometric_sign_failed">साइनिंग विफल</string>
-    <string name="biometric_verify_failed">बायोमेट्रिक सत्यापन विफल</string>
-    <string name="biometric_start_failed">बायोमेट्रिक सत्यापन शुरू नहीं हो सका</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_sign_failed">हस्ताक्षर करना विफल रहा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_verify_failed">बायोमेट्रिक सत्यापन विफल रहा</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_start_failed">बायोमेट्रिक सत्यापन प्रारंभ नहीं हो सका</string>
     <!-- Auth loading -->
-    <string name="signing_in_loading">साइन इन हो रहा है…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in_loading">साइन इन हो रहा है\u2026</string>
     <!-- Time -->
-    <string name="time_just_now">अभी</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_just_now">बस अब</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_minutes_ago">%1$d मिनट पहले</string>
-    <string name="time_hours_ago">%1$d घंटे पहले</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_hours_ago">%1$d घंटा पहले</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days_ago">%1$d दिन पहले</string>
-    <string name="time_expired">समाप्त</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_expired">खत्म हो चुका</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days">%1$d दिन</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_hours">%1$d घंटे</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_minutes">%1$d मिनट</string>
-    <string name="time_less_than_minute">1 मिनट से कम</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_less_than_minute">1 मिनट से भी कम</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_dots_state">%2$d में से %1$d अंक दर्ज किए गए</string>
-    <string name="export_data">Export My Data</string>
-    <string name="export_data_pending">Export requested. Check your email for the download link.</string>
-    <string name="replace_room_title">Close existing room?</string>
-    <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
-    <string name="replace_room_confirm">Close and create new</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data">मेरा डेटा निर्यात करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data_pending">निर्यात का अनुरोध किया गया. डाउनलोड लिंक के लिए अपना ईमेल जांचें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_title">मौजूदा कमरा बंद करें?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_message">आपके पास पहले से ही एक सक्रिय कमरा है. नया कमरा खोलने से आपका मौजूदा कमरा बंद हो जाएगा। क्या आप जारी रखना चाहते हैं?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_confirm">बंद करें और नया बनाएं</string>
 
     <!-- Seasonal Events -->
+    <!-- google-translated 2026-05-04 -->
     <string name="seasonal_khmer_new_year_greeting">खमेर नव वर्ष की शुभकामनाएँ!</string>
-    <string name="seasonal_khmer_new_year_cta">चौल छ्नाम थ्मेय के बारे में जानें</string>
-    <string name="seasonal_event_dismiss">बंद करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seasonal_khmer_new_year_cta">चौल चन्नम थमी के बारे में जानें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seasonal_event_dismiss">नकार देना</string>
 
     <!-- google-translated 2026-05-04 -->
     <string name="age_verif_submit_title">अपनी आयु सत्यापित करें</string>

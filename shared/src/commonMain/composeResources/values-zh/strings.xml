@@ -1,858 +1,1640 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Common actions -->
+    <!-- google-translated 2026-05-04 -->
     <string name="all_caps">全部</string>
-    <string name="back">返回</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="back">后退</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cancel">取消</string>
-    <string name="change">更改</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="change">改变</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="close">关闭</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="confirm">确认</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="continue_button">继续</string>
-    <string name="create">创建</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create">创造</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="delete">删除</string>
-    <string name="done">完成</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="done">完毕</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edit">编辑</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="error_generic">出了点问题</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="got_it">知道了</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="learn_more">了解更多</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="loading">加载中…</string>
-    <string name="maybe_later">以后再说</string>
-    <string name="message_action">发消息</string>
-    <string name="next">下一步</string>
-    <string name="ok">OK</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="maybe_later">也许稍后</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_action">信息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="next">下一个</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ok">好的</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="retry">重试</string>
-    <string name="save">保存</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="save">节省</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send">发送</string>
-    <string name="sending">发送中...</string>
-    <string name="transfer">转让</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sending">正在发送...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer">转移</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unknown">未知</string>
-    <string name="using">使用中...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="using">使用...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="you">你</string>
 
     <!-- Message bubbles -->
+    <!-- google-translated 2026-05-04 -->
     <string name="edited">已编辑</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tap_to_join">点击加入</string>
-    <string name="message_recalled_by_you">你撤回了这条消息</string>
-    <string name="message_recalled">这条消息已被撤回</string>
-    <string name="message_hidden_by_mod">这条消息已被管理员隐藏</string>
-    <string name="invite_to_mic">邀请上麦</string>
-    <string name="closed">已关闭</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled_by_you">您还记得此消息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled">此消息已被撤回</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_hidden_by_mod">此消息已被版主隐藏</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_mic">邀请麦克风</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="closed">关闭</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edited_count">已编辑 (%1$d)</string>
-    <string name="read">已读</string>
-    <string name="sent">已发送</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="read">读</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sent">发送</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sticker">贴纸</string>
-    <string name="image">图片</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="image">图像</string>
 
     <!-- Context menu -->
-    <string name="react">表情回应</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="react">反应</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reply">回复</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="copy">复制</string>
-    <string name="recall">撤回</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="recall">记起</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="add_to_stickers">添加到贴纸</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="hide_message">隐藏消息</string>
-    <string name="report_message">举报消息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message">举报留言</string>
 
     <!-- Translation -->
+    <!-- google-translated 2026-05-04 -->
     <string name="translate">翻译</string>
-    <string name="translated_from">已从%1$s翻译</string>
-    <string name="show_original">显示原文</string>
-    <string name="translation_limit_reached">已达每日上限。升级 Super Shy 享受无限翻译。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translated_from">翻译自 %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_original">显示原件</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translation_limit_reached">每日限额已达。升级到 SuperShy 即可享受无限翻译。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="auto_translate">自动翻译</string>
-    <string name="auto_translate_description">自动将收到的消息翻译为您的语言</string>
-    <string name="translations_remaining">今日剩余 %1$d 次翻译</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="auto_translate_description">自动将收到的消息翻译成您的语言</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translations_remaining">今天剩余 %1$d 翻译</string>
 
     <!-- Settings -->
+    <!-- google-translated 2026-05-04 -->
     <string name="settings">设置</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="language">语言</string>
-    <string name="blocked_users">已屏蔽用户</string>
-    <string name="account">账号</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_users">被阻止的用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account">帐户</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="privacy">隐私</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="notifications">通知</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="permissions">权限</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="about">关于</string>
-    <string name="sign_out">退出登录</string>
-    <string name="sign_out_confirm">确定要退出登录吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_out">登出</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_out_confirm">您确定要退出吗？</string>
 
     <!-- Home -->
+    <!-- google-translated 2026-05-04 -->
     <string name="create_room">创建房间</string>
-    <string name="create_room_prompt">为你的房间起个名字</string>
-    <string name="home">首页</string>
-    <string name="in_room_count">房间内 %1$d 人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create_room_prompt">给你的房间起个名字</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="home">家</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="in_room_count">%1$d 在房间里</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="join">加入</string>
-    <string name="no_active_rooms">没有活跃的房间</string>
-    <string name="no_rooms">暂无房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_active_rooms">没有活动房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_rooms">没有可用房间</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_name">房间名称</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_name_label">房间名称</string>
-    <string name="seats_count">%1$d/%2$d 座位</string>
-    <string name="speakers_count">%1$d/%2$d 发言人</string>
-    <string name="tap_plus_to_create">点击 + 创建房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seats_count">%1$d/%2$d 个座位</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="speakers_count">%1$d/%2$d 位发言者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_plus_to_create">点击 + 创建一个</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="visitors_count">%1$d 位访客</string>
 
     <!-- Profile -->
-    <string name="connections">关系</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connections">连接</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="display_name">显示名称</string>
-    <string name="dob_privacy_note">出生日期为必填项，但你可以在隐私设置中隐藏年龄。</string>
-    <string name="dob_required_subtitle">我们需要你的出生日期才能继续。</string>
-    <string name="follow">关注</string>
-    <string name="follow_back">回关</string>
-    <string name="followers">粉丝</string>
-    <string name="followers_count">粉丝 (%1$d)</string>
-    <string name="following">关注中</string>
-    <string name="following_count">关注中 (%1$d)</string>
-    <string name="following_list_private">该用户的关注列表为私密</string>
-    <string name="get_super_shy">获取 Super Shy</string>
-    <string name="gift_wall">礼物墙</string>
-    <string name="gift_value_coins">价值：%1$d 币</string>
-    <string name="no_followers_yet">暂无粉丝</string>
-    <string name="no_profile_visitors">暂无主页访客</string>
-    <string name="not_following_anyone">暂未关注任何人</string>
-    <string name="one_more_step">还差一步</string>
-    <string name="profile">个人主页</string>
-    <string name="profile_setup_subtitle">选择显示名称并输入出生日期</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dob_privacy_note">您的出生日期是必需的，但您可以在隐私设置中隐藏您的年龄。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dob_required_subtitle">我们需要您的出生日期才能继续。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow">跟随</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow_back">跟着回来</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="followers">追随者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="followers_count">关注者 (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following">下列的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following_count">正在关注 (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following_list_private">该用户的关注列表是私人的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy">变得超级害羞</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift_wall">礼品墙</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift_value_coins">价值：%1$d枚硬币</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_followers_yet">还没有关注者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_profile_visitors">还没有个人资料访客</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_following_anyone">尚未关注任何人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="one_more_step">又一步</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile">轮廓</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_setup_subtitle">选择显示名称并输入您的出生日期</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="received_times">已收到 %1$d 次</string>
-    <string name="remove_follower">移除粉丝</string>
-    <string name="report">举报</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_follower">删除关注者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report">报告</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="select_date_of_birth">选择出生日期</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="select_nationality">选择国籍</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_countries">搜索国家</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="selected">已选择</string>
-    <string name="set_up_your_profile">设置你的个人主页</string>
-    <string name="stalker_visit_info">%1$s 访问了你的主页，最近3个月共 %2$d 次</string>
-    <string name="stalkers_count">访客 (%1$d)</string>
-    <string name="stalkers_super_shy_description">查看谁浏览了你的主页！主页访客是 Super Shy 的专属功能。</string>
-    <string name="super_shy_benefit">Super Shy 特权</string>
-    <string name="top_senders">送礼排行</string>
-    <string name="block">屏蔽</string>
-    <string name="unblock">取消屏蔽</string>
-    <string name="undo_remove">撤销移除</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_up_your_profile">设置您的个人资料</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalker_visit_info">过去 3 个月内跟踪您 %1$s、%2$d 次</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_count">跟踪者 (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_super_shy_description">查看谁访问了您的个人资料！个人资料跟踪者是 Super Shy 的一项独有功能。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_benefit">超级害羞的好处</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="top_senders">热门发件人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block">堵塞</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock">解锁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="undo_remove">撤消删除</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unfollow">取消关注</string>
 
     <!-- Room -->
-    <string name="alias">备注名</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="alias">别名</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="approve">批准</string>
-    <string name="audience">听众</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="audience">观众</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="back_to_home">返回首页</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="backpack">背包</string>
-    <string name="backpack_empty">你的背包是空的。\n转动转盘获取礼物吧！</string>
-    <string name="ban">封禁</string>
-    <string name="block_user">屏蔽用户</string>
-    <string name="block_user_confirm">确定要屏蔽 %1$s 吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="backpack_empty">你的背包是空的。\n转动转盘即可获得礼物！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban">禁止</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_user">阻止用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_user_confirm">您确定要阻止 %1$s 吗？</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="close_room">关闭房间</string>
-    <string name="daily">每日</string>
-    <string name="deny">拒绝</string>
-    <string name="empty_seat">空座位</string>
-    <string name="filter_gift_animations_description">过滤低价礼物的动画效果。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="daily">日常的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="deny">否定</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="empty_seat">空座</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gift_animations_description">过滤掉动画以获得更便宜的礼物。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift">礼物</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift_animations">礼物动画</string>
-    <string name="host">副房主</string>
-    <string name="hosts">副房主</string>
-    <string name="invite_to_seat">邀请上座</string>
-    <string name="kick">踢出</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="host">主持人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hosts">主办方</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_seat">邀请入座</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick">踢</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="kick_user">踢出用户</string>
-    <string name="kick_user_confirm">确定要将 %1$s 踢出房间吗？对方将无法重新加入。</string>
-    <string name="leave_room">离开房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_user_confirm">您确定要将 %1$s 踢出房间吗？他们将无法重新加入。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room">留出空间</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="leave_seat">离开座位</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="lock_seating">锁定座位</string>
-    <string name="lock_seating_description">仅房主可以邀请用户入座</string>
-    <string name="buy_coins">购买币</string>
-    <string name="collect_all">全部领取 (%1$d)</string>
-    <string name="increased_drop_rate">提高掉落率</string>
-    <string name="loading_prices">加载价格中…</string>
-    <string name="lucky_spin">Lucky Spin</string>
-    <string name="lucky_spin_title">LUCKY SPIN</string>
-    <string name="need_more_coins">币不足！</string>
-    <string name="no_packages_available">暂无可用套餐</string>
-    <string name="no_spins_yet">暂无抽奖记录</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating_description">只有所有者才能邀请用户入座</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="buy_coins">购买金币</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="collect_all">收集全部 (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="increased_drop_rate">增加掉落率</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="loading_prices">正在加载价格...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin">幸运旋转</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin_title">幸运转盘</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="need_more_coins">需要更多金币！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_packages_available">没有可用的套餐</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_spins_yet">还没有旋转</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="prizes">奖品</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="skip_animation">跳过动画</string>
-    <string name="spin">抽奖</string>
-    <string name="spin_count">%1$d 次抽奖</string>
-    <string name="spin_history">抽奖历史</string>
-    <string name="spin_results">抽奖结果</string>
-    <string name="message">消息</string>
-    <string name="move_to_audience">移至听众</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin">旋转</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_count">%1$d 旋转</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_history">旋转历史</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_results">旋转结果</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message">信息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_audience">移至观众</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="move_to_seat">移至座位</string>
-    <string name="move_to_which_seat">移至哪个座位？</string>
-    <string name="mute">静音</string>
-    <string name="no_audience_members">暂无听众</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_which_seat">移动到哪个座位？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mute">沉默的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_audience_members">没有观众</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_pending_requests">没有待处理的请求</string>
-    <string name="no_reason_given">未给出原因</string>
-    <string name="no_one_on_mic">无人上麦</string>
-    <string name="occupied">已占用</string>
-    <string name="open_for_duration">已开放 %1$s</string>
-    <string name="owner">房主</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_reason_given">没有给出理由</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_one_on_mic">麦克风无人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="occupied">占领</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="open_for_duration">%1$s 开放</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner">所有者</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reason_optional">原因（可选）</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reject">拒绝</string>
-    <string name="remove">移除</string>
-    <string name="remove_as_host">取消副房主</string>
-    <string name="remove_from_room">移出房间</string>
-    <string name="request">请求</string>
-    <string name="request_a_seat">申请座位</string>
-    <string name="request_seat">申请座位</string>
-    <string name="requesting">请求中</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove">消除</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_as_host">删除作为主机</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_from_room">从房间中移除</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request">要求</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_a_seat">请求座位</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_seat">请求座位</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="requesting">要求</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room">房间</string>
-    <string name="room_closed">房间已关闭</string>
-    <string name="room_closing_no_super_shy">房主没有 Super Shy，房间即将关闭。</string>
-    <string name="room_closing_in">房间将在 %1$d:%2$s 后关闭</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closed">房间关闭</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_no_super_shy">房主没有Super Shy，所以这个房间很快就会关闭。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_in">房间将于 %1$d:%2$s 关闭</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_closing_soon">房间即将关闭</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_settings">房间设置</string>
-    <string name="rooms">房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="rooms">客房</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_requests">座位请求</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_swap_with">座位 %1$d（与 %2$s 交换）</string>
-    <string name="set_alias">设置备注名</string>
-    <string name="set_alias_description">为 %1$s 设置一个备注名。只有你能看到。</string>
-    <string name="set_as_host">设为副房主</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias">设置别名</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias_description">为 %1$s 设置个人别名。只有你会看到这个。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_as_host">设置为主机</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="showing_all_gift_animations">显示所有礼物动画</string>
-    <string name="showing_animations_worth">仅显示 %1$d+ 币以上的动画</string>
-    <string name="speakers">发言人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="showing_animations_worth">仅显示价值 %1$d+ 金币的动画</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="speakers">扬声器</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="take_a_seat">入座</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmute">取消静音</string>
-    <string name="unmuted">已取消静音</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmuted">取消静音</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user">用户</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user_id">ID：%1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="visitor_count">%1$d 位访客</string>
-    <string name="voice">语音</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice">嗓音</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="voice_unavailable">语音不可用</string>
-    <string name="you_have_super_shy_room">你拥有 Super Shy！开设自己的房间，享受最长 %1$d 小时的延长时间。</string>
-    <string name="get_super_shy_rooms">获取 Super Shy，享受最长 %1$d 小时的房间！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_have_super_shy_room">你超级害羞！打开您自己的房间最多 %1$d 小时的延长时间。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy_rooms">变得超级害羞，享受长达 %1$d 小时的房间！</string>
 
     <!-- Room - Notifications -->
+    <!-- google-translated 2026-05-04 -->
     <string name="accept">接受</string>
-    <string name="decline">拒绝</string>
-    <string name="go_back">返回</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="decline">衰退</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="go_back">回去</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="go_to_seat">前往座位</string>
-    <string name="invited_to_sit">你被邀请入座！</string>
-    <string name="request_accepted">你的请求已被接受！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invited_to_sit">已邀请您入座！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_accepted">您的请求已被接受！</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_number">座位 %1$d</string>
-    <string name="user_wants_to_sit">%1$s 想要入座</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="user_wants_to_sit">%1$s 想坐下</string>
 
     <!-- Room - Chat -->
+    <!-- google-translated 2026-05-04 -->
     <string name="cancel_edit">取消编辑</string>
-    <string name="edit_message_placeholder">编辑消息...</string>
-    <string name="message_placeholder">消息...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_message_placeholder">编辑留言...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_placeholder">信息...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_messages">新消息</string>
 
     <!-- Room - Backpack -->
-    <string name="action_cannot_be_undone">此操作无法撤销。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="action_cannot_be_undone">此操作无法撤消。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="confirm_send">确认发送</string>
-    <string name="from_backpack_items">来自背包：%1$d 件物品</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="from_backpack_items">从背包中：%1$d 件物品</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gifts">礼物</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all">全部发送</string>
-    <string name="send_all_includes">包含 %2$d 种不同礼物中的全部 %1$d 件物品。</string>
-    <string name="send_all_warning">你即将把整个背包发送给 %1$s。</string>
-    <string name="send_everything_confirm">我已了解，全部发送</string>
-    <string name="to_label">发送给</string>
-    <string name="total_cost_coins">总费用：%1$d 币</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_includes">这包括 %2$d 份不同礼物中的所有 %1$d 件商品。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_warning">您即将将整个背包发送至 %1$s。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_everything_confirm">我明白了，全部发送</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="to_label">到</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="total_cost_coins">总成本：%1$d 个硬币</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="use_button">使用</string>
-    <string name="you_have_count">你拥有：%1$d</string>
-    <string name="your_balance_coins">你的余额：%1$d 币</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_have_count">您有：%1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="your_balance_coins">您的余额：%1$d 个硬币</string>
 
     <!-- Messaging -->
-    <string name="additional_details_optional">补充说明（可选）</string>
-    <string name="all_admins_and_mods">所有管理员 &amp; 版主</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="additional_details_optional">其他详细信息（可选）</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="all_admins_and_mods">所有管理员和模组</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="attach_evidence">附上证据</string>
-    <string name="cant_message_user">无法向此用户发送消息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cant_message_user">您无法向该用户发送消息</string>
     <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">您不能向此人发送消息，因为我们认为他们未满 18 岁。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="chat">聊天</string>
-    <string name="close_group">关闭群组</string>
-    <string name="close_group_warning">这将为所有人关闭群组。消息将保留以供审核。</string>
-    <string name="compressing">压缩中...</string>
-    <string name="conversation_start_hint">从房间中的个人主页或\n用户卡片开始对话</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_group">关闭组</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_group_warning">这将为每个人关闭该群组。消息将被保留以供审核。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="compressing">正在压缩...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="conversation_start_hint">从房间中某人的\n个人资料或用户卡开始对话</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="create_group">创建群组</string>
-    <string name="current_version">当前</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="current_version">当前的</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="delete_conversation">删除对话</string>
-    <string name="delete_conversation_warning">这将从你的列表中移除对话。消息会保留，如果对方再次发消息将重新出现。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_conversation_warning">这将从您的列表中删除该对话。消息会被保留，并且如果其他人再次向您发送消息，消息将会重新出现。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="description_label">描述</string>
-    <string name="description_optional">描述（可选）</string>
-    <string name="edit_history">编辑历史</string>
-    <string name="editing_message">正在编辑消息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description_optional">说明（可选）</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_history">编辑历史记录</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="editing_message">编辑消息</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="evidence">证据</string>
-    <string name="evidence_required">至少需要一张截图或录屏。</string>
-    <string name="general">通用</string>
-    <string name="group">群组</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="evidence_required">至少需要一张屏幕截图或录音。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="general">一般的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group">团体</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_chat">群聊</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_name_label">群组名称</string>
-    <string name="group_name_required">群组名称 *</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_name_required">团体名称 *</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_settings">群组设置</string>
-    <string name="invite_to_room">邀请加入房间</string>
-    <string name="last_seen">上次在线 %1$s</string>
-    <string name="leave_group">退出群组</string>
-    <string name="members">成员</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_room">邀请进入房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="last_seen">上次出现是%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_group">离开群组</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="members">会员</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="members_count">%1$d 位成员</string>
-    <string name="message_ellipsis">消息...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_ellipsis">信息...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_permissions">消息权限</string>
-    <string name="message_preview_image">[图片]</string>
-    <string name="message_preview_recalled">[消息已撤回]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_image">[图像]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_recalled">[消息被召回]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_room_invite">[房间邀请]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_sticker">[贴纸]</string>
-    <string name="messages">消息</string>
-    <string name="mod_notifications">版主通知</string>
-    <string name="move_to_front">置顶</string>
-    <string name="mute_notifications">关闭通知</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="messages">留言</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mod_notifications">模组通知</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_front">移到前面</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mute_notifications">静音通知</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mute_reason">。原因：%1$s</string>
-    <string name="muted">已静音</string>
-    <string name="muted_for_hours_minutes">你已被禁言 %1$d 小时 %2$d 分钟</string>
-    <string name="muted_for_minutes">你已被禁言 %1$d 分钟</string>
-    <string name="muted_indefinitely">你已被禁言</string>
-    <string name="new_group">新建群组</string>
-    <string name="new_group_selected">新建群组（已选 %1$d 人）</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted">静音</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_hours_minutes">您已被静音 %1$dh %2$dm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_minutes">您已被静音 %1$dm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_indefinitely">你被静音了</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_group">新集团</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_group_selected">新组（已选择%1$d）</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_message">新消息</string>
-    <string name="no_action_needed">无需操作</string>
-    <string name="no_followers_following_found">未找到粉丝或关注</string>
-    <string name="no_matches_found">未找到匹配结果</string>
-    <string name="no_messages">暂无消息</string>
-    <string name="no_pending_reports">没有待处理的举报</string>
-    <string name="no_stickers_yet">暂无贴纸</string>
-    <string name="no_users_found">未找到用户</string>
-    <string name="notify_owner_only">仅通知房主</string>
-    <string name="online">在线</string>
-    <string name="only_admins_can_send">仅管理员和版主可在此群组中发送消息</string>
-    <string name="only_owner_can_change_permissions">仅群主可更改权限。</string>
-    <string name="owner_only">仅群主</string>
-    <string name="participants">参与者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_action_needed">无需采取任何行动</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_followers_following_found">未找到关注者或关注者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_matches_found">未找到匹配项</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_messages">还没有消息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_pending_reports">没有待处理的报告</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_stickers_yet">还没有贴纸</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_users_found">没有找到用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notify_owner_only">仅通知所有者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="online">在线的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_admins_can_send">只有管​​理员和管理员可以在该组中发送消息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_owner_can_change_permissions">只有群组所有者才能更改权限。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner_only">仅限业主</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="participants">参加者</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="participants_count">参与者 (%1$d)</string>
-    <string name="pin">置顶</string>
-    <string name="recent">最近</string>
-    <string name="replying_to">正在回复 %1$s</string>
-    <string name="report_message_prompt">你为什么要举报这条消息？</string>
-    <string name="report_review">举报审核</string>
-    <string name="report_user">举报 %1$s</string>
-    <string name="report_user_prompt">你为什么要举报这位用户？</string>
-    <string name="reset_to_default">恢复默认</string>
-    <string name="result_count">%1$d 条结果</string>
-    <string name="review_report">审核举报</string>
-    <string name="role_admin">管理员</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin">别针</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="recent">最近的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replying_to">正在回复%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message_prompt">您为何举报此消息？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_review">报告审查</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user">报告%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user_prompt">您为何举报该用户？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reset_to_default">重置为默认值</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="result_count">%1$d 个结果</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="review_report">审查报告</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_admin">行政</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_member">成员</string>
-    <string name="role_mod">版主</string>
-    <string name="role_owner">群主</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_mod">模组</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_owner">所有者</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="save_description">保存描述</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_all_users">搜索所有用户</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_conversations">搜索对话...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_messages">搜索消息...</string>
-    <string name="search_people">搜索用户...</string>
-    <string name="select_action">选择操作：</string>
-    <string name="selected_count">已选 %1$d 项</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_people">搜人...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_action">选择动作：</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="selected_count">%1$d 已选择</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="start_conversation">开始对话</string>
-    <string name="submit_report">提交举报</string>
-    <string name="submitting">提交中...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submit_report">提交报告</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submitting">正在提交...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="system_messages">系统消息</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transfer_ownership">转让所有权</string>
-    <string name="transfer_ownership_warning">选择一位成员来转让所有权。你将失去群主权限。此操作无法撤销。</string>
-    <string name="type_message">输入消息…</string>
-    <string name="typing">正在输入...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer_ownership_warning">选择要将所有权转让给的成员。您将失去所有者权限。此操作无法撤消。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="type_message">输入消息...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="typing">打字...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmute_action">取消静音</string>
-    <string name="unmute_notifications">开启通知</string>
-    <string name="unpin">取消置顶</string>
-    <string name="view_profile">查看主页</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmute_notifications">取消静音通知</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unpin">取消固定</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="view_profile">查看资料</string>
 
     <!-- Messaging - report reasons -->
-    <string name="report_reason_spam">垃圾信息</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reason_spam">垃圾邮件</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_harassment">骚扰</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_inappropriate">不当内容</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_other">其他</string>
 
     <!-- Messaging - report actions -->
+    <!-- google-translated 2026-05-04 -->
     <string name="report_action_warning">发出警告</string>
-    <string name="report_action_temp_suspension">临时封禁</string>
-    <string name="report_action_perm_suspension">永久封禁</string>
-    <string name="report_action_pm_ban">禁止私信</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_temp_suspension">暂停</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_perm_suspension">永久暂停</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_pm_ban">禁止PM</string>
 
     <!-- Messaging - report details -->
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_prefix">原因：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_type_prefix">类型：%1$s</string>
-    <string name="report_details_prefix">详情：%1$s</string>
-    <string name="report_message_prefix">消息：\"%1$s\"</string>
-    <string name="report_reporter_reported">举报人：%1$s | 被举报人：%2$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_details_prefix">详细信息：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message_prefix">消息：\“%1$s\”</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reporter_reported">记者：%1$s |报告：%2$s</string>
 
     <!-- Messaging - system message labels -->
-    <string name="sys_member_joins">成员加入</string>
-    <string name="sys_member_leaves">成员退出</string>
-    <string name="sys_role_changes">角色变更</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_member_joins">会员加入</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_member_leaves">会员离开</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_role_changes">角色变化</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_permission_changes">权限变更</string>
 
     <!-- Messaging - permission labels -->
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_send">谁可以发送消息</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_add_members">谁可以添加成员</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_edit_info">谁可以编辑群组信息</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_delete_messages">谁可以删除消息</string>
-    <string name="perm_who_can_mute_members">谁可以禁言成员</string>
-    <string name="perm_who_can_remove_members">谁可以移除成员</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_mute_members">谁可以将成员静音</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_remove_members">谁可以删除成员</string>
 
     <!-- Messaging - date separators -->
+    <!-- google-translated 2026-05-04 -->
     <string name="today">今天</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="yesterday">昨天</string>
 
     <!-- Daily Reward -->
-    <string name="awesome">太棒了！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="awesome">惊人的！</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="claim_todays_reward">领取今日奖励</string>
-    <string name="coins">币</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="coins">硬币</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_fri">周五</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_mon">周一</string>
-    <string name="day_sat">周六</string>
-    <string name="day_streak">连续 %1$d 天</string>
-    <string name="day_sun">周日</string>
-    <string name="day_thu">周四</string>
-    <string name="day_tue">周二</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sat">星期六</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_streak">%1$d 天连续</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sun">太阳</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_thu">星期四</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_tue">星期二</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_wed">周三</string>
-    <string name="later">稍后</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="later">之后</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="milestone">里程碑</string>
-    <string name="milestone_bonus">里程碑奖励！</string>
-    <string name="plus_coins">+%1$d 币！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="milestone_bonus">里程碑奖金！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="plus_coins">+%1$d 金币！</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reward_claimed">奖励已领取！</string>
 
     <!-- Economy -->
-    <string name="bean_redeem_description">1 豆 = 1 币。兑换 2,000+ 可获 10% 额外奖励！</string>
-    <string name="bonus_coins">+%1$d 额外</string>
-    <string name="buy_shy_coins">购买 ShyCoins</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bean_redeem_description">1 颗豆子 = 1 枚硬币。兑换 2,000+ 即可获得 10% 奖金！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bonus_coins">+%1$d 奖金</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="buy_shy_coins">购买害羞币</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="confirm_redemption">确认兑换</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="daily_reward">每日奖励</string>
-    <string name="redeem">兑换</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem">赎回</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="redeem_all">全部兑换</string>
-    <string name="redeem_beans_for_coins">将 %1$s 豆兑换为 %2$s 币？</string>
-    <string name="redeem_shy_beans">兑换 ShyBeans</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_beans_for_coins">将 %1$s 豆兑换成 %2$s 硬币？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_shy_beans">兑换害羞豆</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift">送礼物</string>
-    <string name="shy_beans">ShyBeans</string>
-    <string name="shy_coins">ShyCoins</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_beans">害羞豆</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_coins">害羞币</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_all">全部</string>
-    <string name="filter_gacha">扭蛋</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gacha">嘎查</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_gifts">礼物</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_purchases">购买</string>
-    <string name="filter_redemptions">兑换</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_redemptions">赎回</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_rewards">奖励</string>
-    <string name="no_filtered_transactions">没有%1$s记录</string>
-    <string name="no_transactions_yet">暂无交易记录</string>
-    <string name="transaction_history">交易历史</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_filtered_transactions">没有 %1$s 笔交易</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_transactions_yet">还没有交易</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transaction_history">交易纪录</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transactions">交易</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="wallet">钱包</string>
 
     <!-- Super Shy -->
-    <string name="benefit_daily_bonus">每日登录币 +10%（向上取整）</string>
-    <string name="benefit_extended_room">延长房间时长（12 小时）</string>
-    <string name="benefit_full_room">8 座位完整房间</string>
-    <string name="benefit_gold_name">全局金色显示名</string>
-    <string name="benefit_profile_frame">专属主页边框</string>
-    <string name="benefit_star_badge">名字旁的星标</string>
-    <string name="benefits">特权</string>
-    <string name="choose_a_plan">选择方案</string>
-    <string name="claim_30_days_free">领取 30 天免费</string>
-    <string name="claimed">已领取！</string>
-    <string name="claimed_activate_backpack">前往聊天房间的背包中激活它。</string>
-    <string name="claiming">领取中…</string>
-    <string name="currently_active">当前激活</string>
-    <string name="days_remaining">剩余 %1$d 天</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_daily_bonus">+10% 每日登录币（四舍五入）</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_extended_room">延长房间时间（12小时）</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_full_room">房间满8个座位</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_gold_name">随处可见的金色显示名称</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_profile_frame">独家型材框架</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_star_badge">名字旁边有星星徽章</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefits">好处</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_a_plan">选择一个计划</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_30_days_free">索取 30 天免费</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed">声称！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed_activate_backpack">要激活它，请在聊天室时在背包中找到它。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claiming">声称…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="currently_active">目前活跃</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="days_remaining">还剩 %1$d 天</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="one_time_payment">一次性付款</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_month">每月</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_year">每年</string>
-    <string name="super_shy">Super Shy</string>
-    <string name="super_shy_for_life">你已永久拥有 Super Shy！</string>
-    <string name="tap_to_claim_backpack">点击领取——将添加到你的背包</string>
-    <string name="testing_mode_super_shy">测试模式——不会产生真实费用。点击方案即可激活 Super Shy。</string>
-    <string name="tier_label">方案：%1$s</string>
-    <string name="tier_lifetime">终身</string>
-    <string name="tier_monthly">月度</string>
-    <string name="tier_yearly">年度</string>
-    <string name="upgrade_to_lifetime">升级为终身</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy">超级害羞</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_for_life">你一生都超级害羞！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_claim_backpack">点击领取 — 添加到您的背包中</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="testing_mode_super_shy">测试模式——不收取真金白银。点击一个计划即可立即激活 Super Shy。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_label">等级：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_lifetime">寿命</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_monthly">每月</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_yearly">每年</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="upgrade_to_lifetime">升级至终身</string>
 
     <!-- Legal -->
-    <string name="accept_all_and_continue">全部接受 &amp; 继续</string>
-    <string name="community_standards">社区规范</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="accept_all_and_continue">全部接受并继续</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="community_standards">社区标准</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cyber_bullying_policy">网络欺凌政策</string>
-    <string name="i_have_read_and_agree">我已阅读并同意 </string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_have_read_and_agree">我已阅读并同意</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="privacy_policy">隐私政策</string>
-    <string name="review_and_accept_policies">请查阅并接受我们的政策以继续。</string>
-    <string name="terms_and_conditions">条款 &amp; 条件</string>
-    <string name="welcome_to_shytalk">欢迎来到 ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="review_and_accept_policies">请查看并接受我们的政策才能继续。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="terms_and_conditions">条款及条件</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="welcome_to_shytalk">欢迎来到害羞谈话</string>
 
     <!-- Auth -->
-    <string name="sign_in">登录</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in">登入</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="verification_code">验证码</string>
-    <string name="continue_with_google">使用 Google 继续</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="continue_with_google">继续使用谷歌</string>
 
     <!-- Missing translations (English fallback) -->
-    <string name="account_restricted">Account Restricted</string>
-    <string name="account_suspended_description">This user\'s account has been suspended.</string>
-    <string name="account_suspended_label">Account Suspended</string>
-    <string name="active_days_ago">Active %1$dd ago</string>
-    <string name="active_hours_ago">Active %1$dh ago</string>
-    <string name="active_just_now">Active just now</string>
-    <string name="active_long_ago">Active 30+ days ago</string>
-    <string name="active_minutes_ago">Active %1$dm ago</string>
-    <string name="allow">Allow</string>
-    <string name="allowed">Allowed</string>
-    <string name="appeal">Appeal</string>
-    <string name="appeal_not_eligible">You are not eligible to appeal this suspension.</string>
-    <string name="appeal_placeholder">Explain why your suspension should be lifted…</string>
-    <string name="appeal_submitted">Your appeal has been submitted and will be reviewed. If successful, your suspension will be lifted. You will not receive any further feedback on your appeal and you cannot submit another appeal.</string>
-    <string name="appeal_unsuccessful">Your appeal has been reviewed and was not successful. You cannot submit another appeal.</string>
-    <string name="ban_expires">Expires: %1$s</string>
-    <string name="ban_permanent">This ban is permanent.</string>
-    <string name="suspension_also_device_banned">您的设备也已被封禁。</string>
-    <string name="suspension_also_network_banned">您的网络也已被封禁。</string>
-    <string name="suspension_also_device_and_network_banned">您的设备和网络也已被封禁。</string>
-    <string name="ban_reason">Reason: %1$s</string>
-    <string name="banned_by">Banned by: %1$s</string>
-    <string name="banned_from_room">Banned from Room</string>
-    <string name="block_confirm">Block %1$s?</string>
-    <string name="block_description">They won\'t be able to view your profile.</string>
-    <string name="blocked_by_user">You have been blocked by this user</string>
-    <string name="blocked_by_user_in_room_description">A user in this room has blocked you. You may have a limited experience. Enter anyway?</string>
-    <string name="blocked_user_in_room">Blocked User in Room</string>
-    <string name="blocked_user_in_room_description">A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?</string>
-    <string name="bluetooth">Bluetooth</string>
-    <string name="bluetooth_description">Connect to Bluetooth audio devices during voice chat.</string>
-    <string name="cache_cleared">Cache Cleared</string>
-    <string name="cache_cleared_description">App cache has been cleared.</string>
-    <string name="cannot_enter_room">Cannot Enter Room</string>
-    <string name="chat_display">Chat Display</string>
-    <string name="check_for_updates">Check for Updates</string>
-    <string name="checking_for_updates">Checking for updates…</string>
-    <string name="choose_another_room">Choose Another Room</string>
-    <string name="clear">Clear</string>
-    <string name="clear_cache">Clear Cache</string>
-    <string name="clear_cache_confirm">Clear %1$s of cached data?</string>
-    <string name="clear_cache_with_size">Clear Cache (%1$s)</string>
-    <string name="close_room_description">This will close the room for everyone.</string>
-    <string name="close_room_question">Close Room?</string>
-    <string name="closing">Closing...</string>
-    <string name="connecting">Connecting...</string>
-    <string name="connection_trouble">ShyTalk is having trouble reaching our servers. Please check your internet connection and try again.</string>
-    <string name="contact_support_help">If you need help, contact shytalk.help@gmail.com</string>
-    <string name="contact_support_hint">If the problem persists, contact shytalk.help@gmail.com</string>
-    <string name="contact_us">Contact Us</string>
-    <string name="shyden_ltd_brand">ShyTalk 是 Shyden Ltd（公司编号 17110487）的品牌，地址：71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom。</string>
-    <string name="delete_account">Delete Account</string>
-    <string name="delete_account_description">Your account and all data will be permanently deleted after the grace period. You can cancel by signing in before then.</string>
-    <string name="delete_account_scheduled">Your account is scheduled for deletion on %1$s. Would you like to cancel?</string>
-    <string name="delete_account_cancel">Cancel Deletion</string>
-    <string name="delete_account_continue">Continue with Deletion</string>
-    <string name="delete_account_success">Your account has been scheduled for deletion.</string>
-    <string name="delete_account_pin_required">Verify your identity to delete your account</string>
-    <string name="delete_account_confirm_title">Are you sure?</string>
-    <string name="delete_account_confirm_body">This will permanently delete your account and all associated data after the grace period. This action cannot be undone.</string>
-    <string name="denied">Denied</string>
-    <string name="description">Description</string>
-    <string name="device_locked_description">This device is already linked to another account.\nOnly one account is allowed per device.\n\nFor support, contact shytalk.help@gmail.com</string>
-    <string name="device_not_supported">Device Not Supported</string>
-    <string name="device_not_supported_description">ShyTalk cannot run on rooted or emulated devices. Please use an unmodified device.</string>
-    <string name="display_over_other_apps">Display over other apps</string>
-    <string name="display_over_other_apps_description">Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="dnd_end_time">DND End Time</string>
-    <string name="dnd_start_time">DND Start Time</string>
-    <string name="do_not_disturb">Do Not Disturb</string>
-    <string name="download_now">Download Now</string>
-    <string name="edit_room_name">Edit Room Name</string>
-    <string name="email">Email</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_restricted">账户受限</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_description">该用户的帐户已被暂停。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_label">账户被暂停</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_days_ago">%1$dd 前活跃</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_hours_ago">%1$dh 前活跃</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_just_now">刚刚活跃</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_long_ago">30+ 天前活跃</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_minutes_ago">%1$dm 前活跃</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allow">允许</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allowed">允许</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal">上诉</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_not_eligible">您没有资格对此暂停提出上诉。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_placeholder">解释为什么你的停职应该被解除......</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_submitted">您的申诉已提交并将接受审核。如果成功，您的暂停资格将被解除。您将不会收到有关您的申诉的任何进一步反馈，并且您无法再次提交申诉。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_unsuccessful">您的申诉已经过审核，但没有成功。您不能再次提出上诉。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_expires">过期：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_permanent">该禁令是永久性的。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_also_device_banned">您的设备也已被禁止。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_also_network_banned">您的网络也已被禁止。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_also_device_and_network_banned">您的设备和网络也已被禁止。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_reason">原因：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_by">禁止者：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_from_room">禁止进入房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_confirm">阻止%1$s？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_description">他们将无法查看您的个人资料。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user">您已被该用户屏蔽</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user_in_room_description">该房间中的一个用户已阻止您。您的经验可能有限。还是要输入吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room">房间内被阻止的用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room_description">您已阻止的用户在此房间中。他们将能够与您沟通。还是要输入吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bluetooth">蓝牙</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bluetooth_description">在语音聊天期间连接到蓝牙音频设备。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared">缓存已清除</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared_description">应用程序缓存已被清除。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_enter_room">无法进入房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="chat_display">聊天显示</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_for_updates">检查更新</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="checking_for_updates">正在检查更新...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_another_room">选择另一个房间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear">清除</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache">清除缓存</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_confirm">清除 %1$s 缓存数据吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_with_size">清除缓存（%1$s）</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_description">这将为每个人关闭房间。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_question">关闭房间？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="closing">关闭...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connecting">正在连接...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connection_trouble">ShyTalk 无法访问我们的服务器。请检查您的互联网连接，然后重试。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_help">如果您需要帮助，请联系 shytalk.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_hint">如果问题仍然存在，请联系 shytalk.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_us">联系我们</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shyden_ltd_brand">ShyTalk 是 Shyden Ltd（公司编号 17110487）（71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom）的品牌。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account">删除帐户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_description">宽限期过后，您的帐户和所有数据将被永久删除。您可以在此之前登录取消。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_scheduled">您的帐户计划于 %1$s 删除。您想取消吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_cancel">取消删除</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_continue">继续删除</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_success">您的帐户已安排删除。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_pin_required">验证您的身份以删除您的帐户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_title">你确定吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_body">这将在宽限期后永久删除您的帐户和所有相关数据。此操作无法撤消。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="denied">被拒绝</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description">描述</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_locked_description">此设备已链接到另一帐户。\n每台设备只允许使用一个帐户。\n\n如需支持，请联系 shytalk.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported">不支持的设备</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported_description">ShyTalk 无法在 root 或模拟设备上运行。请使用未经修改的设备。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps">显示在其他应用之上</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps_description">当您离开语音室时，允许 ShyTalk 显示浮动气泡，以便您可以快速返回。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_end_time">免打扰结束时间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_start_time">免打扰开始时间</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="do_not_disturb">请勿打扰</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="download_now">立即下载</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_room_name">编辑房间名称</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email">电子邮件</string>
 
     <!-- Settings - Linked Accounts page -->
-    <string name="linked_accounts">已关联的账户</string>
-    <string name="linked">已关联</string>
-    <string name="unlinked">未关联</string>
-    <string name="unlink">取消关联</string>
-    <string name="unlink_provider_confirm">取消关联 %1$s？</string>
-    <string name="unlink_provider_description">您可以稍后重新关联此账户，但需要重新验证。</string>
-    <string name="cannot_unlink_last_provider">您必须至少有两个已关联的账户才能取消关联其中一个。</string>
-    <string name="provider_google">Google</string>
-    <string name="provider_apple">Apple</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="linked_accounts">关联账户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="linked">链接</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlinked">未链接</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink">取消链接</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink_provider_confirm">取消链接%1$s？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink_provider_description">您可以稍后重新关联此帐户，但需要再次验证。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_unlink_last_provider">您必须至少拥有两个关联帐户才能取消关联。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_google">谷歌</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_apple">苹果</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="provider_email">电子邮件</string>
-    <string name="no_linked_accounts">未找到已关联的账户</string>
-    <string name="unlinking_provider">正在取消关联…</string>
-    <string name="connect_account">关联账号</string>
-    <string name="connect">关联</string>
-    <string name="signed_in_with">Signed in with</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_linked_accounts">未找到关联帐户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlinking_provider">取消链接...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect_account">连接账户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect">连接</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signed_in_with">登录方式</string>
 
-    <string name="enable_dnd">Enable Do Not Disturb</string>
-    <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
-    <string name="end">End</string>
-    <string name="enter">Enter</string>
-    <string name="error_block_user">Failed to block user</string>
-    <string name="error_check_updates">Failed to check for updates</string>
-    <string name="error_could_not_submit_report">Could not submit report</string>
-    <string name="error_follow_user">Failed to follow user</string>
-    <string name="error_load_user_data">Failed to load user data</string>
-    <string name="error_load_users">Failed to load users</string>
-    <string name="error_max_groups">You can own a maximum of %1$d groups</string>
-    <string name="error_max_participants">Maximum %1$d participants allowed</string>
-    <string name="error_no_users_selected">No users selected</string>
-    <string name="error_not_enough_beans">Not enough beans</string>
-    <string name="error_not_enough_coins">Not enough coins</string>
-    <string name="error_prices_changed">Prices have changed! Please check the new costs and try again.</string>
-    <string name="error_resolve_report">Failed to resolve report</string>
-    <string name="error_save_dob">Failed to save date of birth</string>
-    <string name="error_submit_appeal">Failed to submit appeal</string>
-    <string name="error_submit_report">Failed to submit report</string>
-    <string name="error_title">Error</string>
-    <string name="error_unblock_user">Failed to unblock user</string>
-    <string name="error_unfollow_user">Failed to unfollow user</string>
-    <string name="error_update_privacy">Failed to update privacy setting</string>
-    <string name="error_upload_evidence">Failed to upload evidence</string>
-    <string name="error_upload_group_photo">Failed to upload group photo</string>
-    <string name="everyone">Everyone</string>
-    <string name="hide_age">Hide Age</string>
-    <string name="hide_age_description">Others won&apos;t see your age on your profile.</string>
-    <string name="hide_following_description">Others won&apos;t see who you follow. Followers are always visible.</string>
-    <string name="hide_following_list">Hide Following List</string>
-    <string name="hide_online_status">Hide Online Status</string>
-    <string name="hide_online_status_description">Others won&apos;t see when you&apos;re online.</string>
-    <string name="i_understand">I Understand</string>
-    <string name="i_understand_and_accept">I Understand and Accept</string>
-    <string name="kick_reason">Reason: %1$s</string>
-    <string name="kicked_by_name">You were kicked by %1$s.</string>
-    <string name="kicked_from_room">You have been kicked from this room.</string>
-    <string name="leave">Leave</string>
-    <string name="leave_room_description">You will leave the voice room.</string>
-    <string name="leave_room_question">Leave Room?</string>
-    <string name="message_preview">Message Preview</string>
-    <string name="message_preview_description">Show message text in notifications.</string>
-    <string name="mic_permission_denied">Microphone permission denied. You won\'t be able to use voice chat.</string>
-    <string name="microphone">Microphone</string>
-    <string name="microphone_description">Required for voice chat in rooms.</string>
-    <string name="must_be_16">您必须年满16岁</string>
-    <string name="no_blocked_users">No blocked users</string>
-    <string name="no_one">No one</string>
-    <string name="not_allowed_to_enter">You are not allowed to enter this room.</string>
-    <string name="not_now">Not now</string>
-    <string name="notice">Notice</string>
-    <string name="notification_sound">Notification Sound</string>
-    <string name="notification_sound_description">Play a sound when a new message arrives.</string>
-    <string name="notifications_permission_description">Receive alerts when you&apos;re in a live room in the background.</string>
-    <string name="official_warning">Official Warning</string>
-    <string name="overlay_permission_description">Show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="people_i_follow">People I follow</string>
-    <string name="pm_notifications">PM Notifications</string>
-    <string name="pm_notifications_description">Receive notifications for new private messages.</string>
-    <string name="private_messages">Private Messages</string>
-    <string name="profile_not_available">This profile is not available</string>
-    <string name="profile_not_found">Profile not found</string>
-    <string name="removed_from_room">Removed from Room</string>
-    <string name="report_thank_you">Thank you for your report. We will review it shortly.</string>
-    <string name="report_user_generic">Report User</string>
-    <string name="retrying">Retrying…</string>
-    <string name="room_alerts">Room Alerts</string>
-    <string name="self_destruct_countdown">Self-Destruct Countdown</string>
-    <string name="self_destruct_description">Play a voice announcement when a room&apos;s 5-minute self-destruct timer starts or stops.</string>
-    <string name="show_date_separators">Show Date Separators</string>
-    <string name="show_date_separators_description">Show date labels between messages on different days.</string>
-    <string name="show_timestamps">Show Timestamps</string>
-    <string name="show_timestamps_description">Display message timestamps in chat.</string>
-    <string name="shytalk_id">ShyTalk ID</string>
-    <string name="sign_in_with_google">Sign in with Google</string>
-    <string name="sign_in_with_email">使用邮箱登录</string>
-    <string name="email_hint">电子邮箱地址</string>
-    <string name="email_link_sent">请查看您的邮箱</string>
-    <string name="check_your_email_description">我们已向您的邮箱发送了登录链接。点击链接继续。</string>
-    <string name="signing_in">Signing in…</string>
-    <string name="error_disposable_email">Disposable email addresses are not allowed. Please use a permanent email address.</string>
-    <string name="stalkers">Stalkers</string>
-    <string name="start">Start</string>
-    <string name="submit_appeal">Submit Appeal</string>
-    <string name="success_coins_added">+%1$s coins added!</string>
-    <string name="success_purchase">Purchase successful!</string>
-    <string name="success_redeemed_beans">Redeemed %1$s beans</string>
-    <string name="success_redeemed_beans_bonus">Redeemed %1$s beans (10%% bonus!)</string>
-    <string name="success_report_resolved">Report resolved</string>
-    <string name="success_sent_backpack">entire backpack (%1$d items)</string>
-    <string name="success_super_shy_activated">Super Shy activated! +30 days</string>
-    <string name="super_shy_days">Super Shy ✦ %1$dd</string>
-    <string name="super_shy_lifetime">Super Shy ✦ Lifetime</string>
-    <string name="support_contact">For support, contact shytalk.help@gmail.com</string>
-    <string name="suspension_ends_at">Ends: %1$s</string>
-    <string name="suspension_ends_in">Your suspension will end in:</string>
-    <string name="suspension_login_again">You can log in again now.\nBe good this time!</string>
-    <string name="suspension_permanent">This suspension is permanent.</string>
-    <string name="suspension_reason">Reason: %1$s</string>
-    <string name="tap_to_return">Tap to return</string>
-    <string name="technical_difficulties">Technical Difficulties</string>
-    <string name="technical_difficulties_description">ShyTalk is currently experiencing technical difficulties. Some features may not work correctly. Services will be restored automatically.</string>
-    <string name="unable_to_connect">Unable to Connect</string>
-    <string name="unblock_confirm">Unblock %1$s?</string>
-    <string name="unblock_description">They will be able to view your profile again.</string>
-    <string name="up_to_date">Up to Date</string>
-    <string name="up_to_date_description">You&apos;re on the latest version.</string>
-    <string name="update_available">Update Available</string>
-    <string name="update_available_description">Version %1$s is available.</string>
-    <string name="update_available_soft">A new version (%1$s) of ShyTalk is available.</string>
-    <string name="update_now">Update Now</string>
-    <string name="update_required">Update Required</string>
-    <string name="update_required_description">A new version of ShyTalk is available. Please update to continue using the app.</string>
-    <string name="update_open_store_failed">Cannot open the app store automatically. Please update ShyTalk manually from your device app store.</string>
-    <string name="view_community_standards">View Community Standards</string>
-    <string name="voice_chat_reimagined">Voice chat rooms, reimagined.</string>
-    <string name="voice_chat_unavailable">Voice chat is temporarily unavailable</string>
-    <string name="wallet_with_balance">Wallet · %1$s</string>
-    <string name="warning_consequence">Continued violations may result in suspension of your account.</string>
-    <string name="warning_reviewed">Your account has been reviewed and a warning has been issued.</string>
-    <string name="warning_reviewed_for_reason">Your account has been reviewed for %1$s and a warning has been issued.</string>
-    <string name="who_can_message_description">Control who can send you private messages.</string>
-    <string name="who_can_message_me">Who can message me</string>
-    <string name="you_were_banned">You were banned from this room.</string>
-    <string name="getting_ready">准备中…</string>
-    <string name="send_all_warning_title">⚠️ 警告 ⚠️</string>
-    <string name="send_all_total_value">总价值：🪙 %1$d金币</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd">启用请勿打扰</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd_description">在预定时间内静音所有 PM 通知。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="end">结尾</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enter">进入</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_block_user">阻止用户失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_check_updates">无法检查更新</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_could_not_submit_report">无法提交报告</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_follow_user">关注用户失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_user_data">加载用户数据失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_users">加载用户失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_groups">您最多可以拥有 %1$d 个群组</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_participants">最多允许 %1$d 名参与者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_no_users_selected">没有选择用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_beans">豆子不够了</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_coins">金币不够</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_prices_changed">价格变了！请检查新的费用并重试。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_resolve_report">无法解决报告</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_save_dob">无法保存出生日期</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_appeal">未能提交上诉</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_report">提交报告失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_title">错误</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unblock_user">无法解锁用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unfollow_user">无法取消关注用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_update_privacy">无法更新隐私设置</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_evidence">上传证据失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_group_photo">上传集体照失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="everyone">每个人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age">隐藏年龄</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age_description">其他人不会在您的个人资料中看到您的年龄。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_description">其他人不会看到您关注的人。追随者始终可见。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_list">隐藏关注列表</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status">隐藏在线状态</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status_description">当您在线时，其他人不会看到。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand">我明白</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand_and_accept">我理解并接受</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_reason">原因：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_by_name">你被%1$s踢了。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_from_room">你已被踢出这个房间。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave">离开</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_description">您将离开语音室。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_question">离开房间吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview">消息预览</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_description">在通知中显示消息文本。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mic_permission_denied">麦克风权限被拒绝。您将无法使用语音聊天。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone">麦克风</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone_description">在房间内进行语音聊天时需要。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="must_be_16">您必须年满 16 岁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_blocked_users">没有被阻止的用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_one">没有人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_allowed_to_enter">你不能进入这个房间。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_now">现在不要</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notice">注意</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound">通知声音</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound_description">当新消息到达时播放声音。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notifications_permission_description">当您在后台直播室时接收提醒。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="official_warning">官方警告</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="overlay_permission_description">当您离开语音室时会显示浮动气泡，以便您可以快速返回。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="people_i_follow">我关注的人</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications">下午通知</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications_description">接收新私人消息的通知。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="private_messages">私信</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_available">该个人资料不可用</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_found">找不到个人资料</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="removed_from_room">从房间中移除</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_thank_you">感谢您的报告。我们将很快对其进行审查。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user_generic">举报用户</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="retrying">正在重试...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_alerts">房间提醒</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_countdown">自毁倒计时</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_description">当房间的 5 分钟自毁计时器启动或停止时播放语音​​通知。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators">显示日期分隔符</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators_description">显示不同日期的消息之间的日期标签。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps">显示时间戳</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps_description">在聊天中显示消息时间戳。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shytalk_id">害羞的ID</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_google">使用 Google 登录</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_email">使用电子邮件登录</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_hint">电子邮件</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_link_sent">检查您的电子邮件</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_your_email_description">我们已将登录链接发送到您的电子邮件。点击链接继续。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in">正在登录...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_disposable_email">不允许使用一次性电子邮件地址。请使用永久电子邮件地址。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers">潜行者</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="start">开始</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submit_appeal">提交申诉</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_coins_added">+%1$s 硬币已添加！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_purchase">购买成功！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans">已兑换 %1$s 豆</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans_bonus">已兑换 %1$s 豆（10%% 奖金！）</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_report_resolved">报告已解决</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_sent_backpack">整个背包（%1$d 件物品）</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_super_shy_activated">超级害羞激活！ +30 天</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_days">超级害羞 ✦ %1$dd</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_lifetime">超级害羞 ✦ 一生</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="support_contact">如需支持，请联系 shytalk.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_at">结束：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_in">您的暂停将在以下时间结束：</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_login_again">您现在可以再次登录。\n这次要乖！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_permanent">此次暂停是永久性的。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_reason">原因：%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_return">点击返回</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties">技术难点</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties_description">ShyTalk 目前遇到技术困难。某些功能可能无法正常工作。服务将自动恢复。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unable_to_connect">无法连接</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_confirm">解除阻止%1$s？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_description">他们将能够再次查看您的个人资料。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date">最新</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date_description">您使用的是最新版本。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available">可用更新</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_description">版本 %1$s 可用。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_soft">ShyTalk 的新版本 (%1$s) 已推出。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_now">立即更新</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required">需要更新</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required_description">新版本的 ShyTalk 现已推出。请更新以继续使用该应用程序。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_open_store_failed">无法自动打开应用商店。请从您的设备应用程序商店手动更新 ShyTalk。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="view_community_standards">查看社区标准</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_reimagined">重新设计的语音聊天室。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_unavailable">语音聊天暂时无法使用</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="wallet_with_balance">钱包·%1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_consequence">持续违规可能会导致您的帐户被暂停。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed">您的帐户已被审核并已发出警告。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed_for_reason">您的帐户已接受 %1$s 的审核，并已发出警告。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_description">控制谁可以向您发送私人消息。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_me">谁可以给我留言</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_were_banned">你被禁止进入这个房间。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="getting_ready">准备中……</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_warning_title">⚠️警告⚠️</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_total_value">总价值：🪙%1$d 硬币</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift_header">发送 %1$dx %2$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift_header_multiple">向 %3$d 位用户发送 %1$dx %2$s</string>
-    <string name="owner_away_banner">房主不在 - 房间将在 %1$s 后关闭</string>
-    <string name="messages_title">消息</string>
-    <string name="no_conversations_yet">暂无会话</string>
-    <string name="spin_again_with_cost">%1$s 再次转动 · 🪙%2$d</string>
-    <string name="age_years_old">%1$d岁</string>
-    <string name="show_less">收起</string>
-    <string name="show_more">展开</string>
-    <string name="video_too_large">视频太大。请使用更短的片段。</string>
-    <string name="file_too_large">文件太大。最大大小为10 MB。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner_away_banner">业主离开 - 房间将在 %1$s 后关闭</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="messages_title">留言</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_conversations_yet">还没有对话</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_again_with_cost">%1$s 再次旋转 · 🪙%2$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_years_old">%1$d 岁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_less">较少的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_more">更多的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="video_too_large">视频太大，无法上传。请使用较短的夹子。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="file_too_large">文件太大。最大大小为 10 MB。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="this_user">该用户</string>
 
     <!-- Degraded Mode Banner -->
-    <string name="reduced_functionality">功能受限 — 部分功能可能不可用</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reduced_functionality">功能减少——某些功能可能不可用</string>
 
     <!-- Fullscreen Image Viewer -->
-    <string name="image_number">图片 %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="image_number">图片%1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="page_indicator">%1$d / %2$d</string>
 
     <!-- Broadcast Banner -->
-    <string name="broadcast_gacha_win">%1$s 从幸运转盘赢得了 %2$s%3$s%4$s！</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="broadcast_gacha_win">%1$s 从幸运旋转中赢得了 %2$s%3$s%4$s！</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="broadcast_gift_sent">%1$s 向 %5$s 发送了 %2$s%3$s%4$s！</string>
 
+    <!-- google-translated 2026-05-04 -->
     <string name="play_effect">播放效果</string>
-    <string name="account_unlocked">账户已解锁</string>
-    <string name="account_suspended">账户已被暂停</string>
-    <string name="police_duck_description">警察鸭</string>
-    <string name="device_banned_title">设备已被禁止</string>
-    <string name="network_banned_title">网络已被禁止</string>
-    <string name="device_banned_description">此设备已被禁止使用 ShyTalk。</string>
-    <string name="network_banned_description">您的网络已被禁止使用 ShyTalk。请尝试从其他网络连接。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_unlocked">帐户已解锁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended">账户被暂停</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="police_duck_description">警鸭</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_banned_title">设备被禁止</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="network_banned_title">网络禁止</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_banned_description">该设备已被禁止使用 ShyTalk。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="network_banned_description">您的网络已被禁止使用 ShyTalk。尝试从不同的网络进行连接。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="full_screen_photo">全屏照片</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cover_photo">封面照片</string>
-    <string name="change_cover_photo">更改封面照片</string>
-    <string name="profile_photo">个人照片</string>
-    <string name="change_profile_photo">更改个人照片</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="change_cover_photo">更换封面照片</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_photo">个人资料照片</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="change_profile_photo">更改个人资料照片</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edit_profile">编辑个人资料</string>
-    <string name="app_name_label">ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="app_name_label">害羞的谈话</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_day">天</string>
-    <string name="time_unit_hour">时</string>
-    <string name="time_unit_minute">分</string>
-    <string name="time_unit_second">秒</string>
-    <string name="time_unit_millisecond">毫秒</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_hour">人力资源</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_minute">最小</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_second">美国证券交易委员会</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_millisecond">多发性硬化症</string>
 
-    <string name="splash_tagline">语音聊天室，重新定义。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="splash_tagline">重新设计的语音聊天室。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="quantity_all">全部 (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="english_language">英语</string>
-    <string name="google_sign_in_failed">Google 登录失败</string>
-    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="google_sign_in_failed">谷歌登录失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="apple_sign_in_failed">苹果登录失败</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_in_with_apple">使用 Apple 登录</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_link">发送链接</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="paste_link">粘贴链接</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="resend_link">重新发送</string>
-    <string name="use_different_email">使用其他邮箱</string>
-    <string name="email_link_paste_hint">如果链接没有自动打开，请从邮件中复制并点击粘贴链接</string>
-    <string name="error_invalid_email_link">这看起来不是有效的登录链接。请从邮件中复制完整链接。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="use_different_email">使用不同的电子邮件</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_link_paste_hint">打开电子邮件中的链接，然后返回并点击“粘贴链接”。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_invalid_email_link">这看起来不像有效的登录链接。请粘贴您电子邮件中的完整链接。</string>
 
     <!-- PIN & Security -->
-    <string name="enter_pin">输入 PIN</string>
-    <string name="pin_mismatch">PIN 不匹配。请重试。</string>
-    <string name="pin_locked">尝试次数过多。请在 %1$d 分钟后重试。</string>
-    <string name="pin_locked_reauth">账户已锁定。请重新登录以重置 PIN。</string>
-    <string name="reset_pin">重置 PIN</string>
-    <string name="account_locked">账户已锁定</string>
-    <string name="unlock">解锁</string>
-    <string name="enable">启用</string>
-    <string name="too_many_requests">请求过于频繁。请稍后再试。</string>
-    <string name="verify">验证</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enter_pin">输入您的 PIN 码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_mismatch">PIN 码不匹配。再试一次。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked">尝试次数太多。请在 %1$d 分钟后重试。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked_reauth">帐户被锁定。请重新登录以重置您的 PIN 码。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reset_pin">重置密码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_locked">帐户被锁定</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlock">开锁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable">使能够</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="too_many_requests">请求太多。稍后再试。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="verify">核实</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security">安全</string>
     <!-- Starting Screens -->
-    <string name="starting_screen_pre_launch_title">ShyTalk 尚未开放</string>
-    <string name="starting_screen_pre_launch_message">ShyTalk 尚未发布。如需申请测试应用程序，请联系 Shyden。测试面向 iOS 和 Android 用户开放。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_pre_launch_title">ShyTalk 尚不可用</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_pre_launch_message">ShyTalk 尚未发布。要申请测试该应用程序，请联系 Shyden。 iOS 和 Android 用户均可进行测试。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="starting_screen_dismiss">继续</string>
-    <string name="starting_screen_police_duck_description">警告插图</string>
-    <string name="starting_screen_loading">加载中…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_police_duck_description">警告图</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_loading">正在加载...</string>
     <!-- Security -->
+    <!-- google-translated 2026-05-04 -->
     <string name="security_title">安全</string>
-    <string name="security_app_lock">应用锁定</string>
-    <string name="security_app_lock_desc">需要 PIN 或生物识别解锁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_app_lock">应用锁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_app_lock_desc">需要 PIN 码或生物识别才能解锁</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_lock_timeout">锁定超时</string>
-    <string name="security_timeout_1min">1 分钟</string>
-    <string name="security_timeout_5min">5 分钟</string>
-    <string name="security_timeout_15min">15 分钟</string>
-    <string name="security_timeout_30min">30 分钟</string>
-    <string name="security_timeout_never">永不</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_timeout_1min">1分钟</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_timeout_5min">5分钟</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_timeout_15min">15分钟</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_timeout_30min">30分钟</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_timeout_never">绝不</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_login">生物识别登录</string>
-    <string name="security_biometric_desc">使用指纹或面容解锁</string>
-    <string name="security_biometric_unavailable">此设备不支持</string>
-    <string name="security_reset_pin">重置 PIN</string>
-    <string name="security_reset_pin_desc">验证身份以设置新 PIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_biometric_desc">使用指纹或人脸解锁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_biometric_unavailable">在此设备上不可用</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin">重置密码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin_desc">验证您的身份以设置新的 PIN</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_linked_accounts">关联账户</string>
-    <string name="security_linked_accounts_desc">管理登录方式</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_linked_accounts_desc">管理登录方法</string>
     <!-- Email sign-in -->
-    <string name="email_sign_in_title">使用邮箱登录</string>
-    <string name="email_enter_address">输入你的邮箱地址</string>
-    <string name="email_label">邮箱</string>
-    <string name="email_send_code">发送验证码</string>
-    <string name="email_code_sent_to">验证码已发送至</string>
-    <string name="email_code_label">6 位验证码</string>
-    <string name="email_verify">验证</string>
-    <string name="email_resend_in">%1$ds 后重新发送</string>
-    <string name="email_resend_code">重新发送验证码</string>
-    <string name="email_code_expires">验证码将在 10 分钟后过期</string>
-    <string name="email_invalid_address">请输入有效的邮箱地址</string>
-    <string name="email_disposable_blocked">不允许使用一次性邮箱地址</string>
-    <string name="email_send_failed">发送验证码失败</string>
-    <string name="email_enter_code">输入 6 位验证码</string>
-    <string name="email_invalid_code">验证码无效</string>
-    <string name="email_resend_failed">重新发送失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_sign_in_title">使用电子邮件登录</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_enter_address">输入您的电子邮件地址</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_label">电子邮件</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_send_code">发送代码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_sent_to">代码发送至</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_label">6位数字代码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_verify">核实</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_resend_in">%1$ds后重新发送</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_resend_code">重新发送代码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_expires">代码将在 10 分钟后过期</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_invalid_address">输入有效的电子邮件地址</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_disposable_blocked">不允许使用一次性电子邮件地址</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_send_failed">发送代码失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_enter_code">输入6位数字代码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_invalid_code">代码无效</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_resend_failed">重发失败</string>
     <!-- PIN -->
-    <string name="pin_create_title">创建 PIN</string>
-    <string name="pin_confirm_title">确认 PIN</string>
-    <string name="pin_enable_biometric_title">启用生物识别登录？</string>
-    <string name="pin_enable_biometric_desc">使用指纹或面容快速解锁 ShyTalk。</string>
-    <string name="pin_enable">启用</string>
-    <string name="pin_not_now">暂不</string>
-    <string name="pin_change_hint">你可以在安全设置中更改或关闭此功能</string>
-    <string name="pin_choose_length">选择 PIN 长度</string>
-    <string name="pin_digits">位</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_create_title">创建 PIN 码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_confirm_title">确认您的 PIN 码</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable_biometric_title">启用生物识别登录吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable_biometric_desc">使用指纹或面部快速解锁 ShyTalk。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable">使能够</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_not_now">现在不要</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_change_hint">您可以在安全设置中更改或禁用此功能</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_choose_length">选择 PIN 码长度</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_digits">数字</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_confirm">确认</string>
-    <string name="pin_next">下一步</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_next">下一个</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_enter_digits">输入 %1$d 位数字</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_device_not_registered">设备未注册。请重新登录。</string>
-    <string name="pin_setup_failed">PIN 设置失败</string>
-    <string name="pin_too_short">PIN 太短</string>
-    <string name="pin_verify_title">验证身份</string>
-    <string name="pin_verify_subtitle">输入 PIN 以继续</string>
-    <string name="pin_verifying">正在验证…</string>
-    <string name="pin_wrong_attempts">PIN 错误。剩余 %1$d 次尝试。</string>
-    <string name="pin_account_locked">账户已锁定</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_setup_failed">设置 PIN 码失败</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_too_short">PIN 码太短</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_title">验证您的身份</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_subtitle">输入您的 PIN 码以继续</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verifying">正在验证\u2026</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_wrong_attempts">PIN 码错误。还剩 %1$d 次尝试。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_account_locked">帐户被锁定</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_verify_failed">验证失败</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_session_expired">会话已过期。请重新登录。</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_use_biometric">使用生物识别</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_delete">删除</string>
     <!-- Biometric -->
-    <string name="biometric_unlock_title">解锁 ShyTalk</string>
-    <string name="biometric_unlock_desc">使用指纹或面容解锁</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_unlock_title">解锁害羞谈话</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_unlock_desc">使用指纹或面部解锁</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_sign_failed">签名失败</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_verify_failed">生物识别验证失败</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_start_failed">无法启动生物识别验证</string>
     <!-- Auth loading -->
-    <string name="signing_in_loading">正在登录…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in_loading">正在登录...</string>
     <!-- Time -->
-    <string name="time_just_now">刚刚</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_just_now">现在</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_minutes_ago">%1$d 分钟前</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_hours_ago">%1$d 小时前</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days_ago">%1$d 天前</string>
-    <string name="time_expired">已过期</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_expired">已到期</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days">%1$d 天</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_hours">%1$d 小时</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_minutes">%1$d 分钟</string>
-    <string name="time_less_than_minute">不到 1 分钟</string>
-    <string name="pin_dots_state">已输入 %1$d / %2$d 位数字</string>
-    <string name="export_data">Export My Data</string>
-    <string name="export_data_pending">Export requested. Check your email for the download link.</string>
-    <string name="replace_room_title">517395ED73B06709623F95F4FF1F</string>
-    <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
-    <string name="replace_room_confirm">Close and create new</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_less_than_minute">不到1分钟</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_dots_state">输入了 %1$d 个数字，共 %2$d 个数字</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data">导出我的数据</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data_pending">要求导出。检查您的电子邮件中的下载链接。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_title">关闭现有房间？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_message">您已经有一个活跃的房间。打开一个新房间将关闭您现有的房间。您想继续吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_confirm">关闭并创建新的</string>
 
     <!-- Seasonal Events -->
+    <!-- google-translated 2026-05-04 -->
     <string name="seasonal_khmer_new_year_greeting">高棉新年快乐！</string>
-    <string name="seasonal_khmer_new_year_cta">了解柬埔寨新年</string>
-    <string name="seasonal_event_dismiss">关闭</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seasonal_khmer_new_year_cta">了解 Choul Chnam Thmey</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seasonal_event_dismiss">解雇</string>
 
     <!-- google-translated 2026-05-04 -->
     <string name="age_verif_submit_title">验证您的年龄</string>

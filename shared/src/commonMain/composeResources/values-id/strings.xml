@@ -1,858 +1,1640 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Common actions -->
+    <!-- google-translated 2026-05-04 -->
     <string name="all_caps">SEMUA</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="back">Kembali</string>
-    <string name="cancel">Batal</string>
-    <string name="change">Ubah</string>
-    <string name="close">Tutup</string>
-    <string name="confirm">Konfirmasi</string>
-    <string name="continue_button">Lanjutkan</string>
-    <string name="create">Buat</string>
-    <string name="delete">Hapus</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cancel">Membatalkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="change">Mengubah</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close">Menutup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm">Mengonfirmasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="continue_button">Melanjutkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create">Membuat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete">Menghapus</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="done">Selesai</string>
-    <string name="edit">Edit</string>
-    <string name="error_generic">Terjadi kesalahan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit">Sunting</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_generic">Ada yang tidak beres</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="got_it">Mengerti</string>
-    <string name="learn_more">Pelajari Selengkapnya</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="learn_more">Pelajari Lebih Lanjut</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="loading">Memuat…</string>
-    <string name="maybe_later">Nanti Saja</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="maybe_later">Mungkin nanti</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_action">Pesan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="next">Berikutnya</string>
-    <string name="ok">OK</string>
-    <string name="retry">Coba Lagi</string>
-    <string name="save">Simpan</string>
-    <string name="send">Kirim</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ok">OKE</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="retry">Mencoba kembali</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="save">Menyimpan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send">Mengirim</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sending">Mengirim...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transfer">Transfer</string>
-    <string name="unknown">Tidak diketahui</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unknown">Tidak dikenal</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="using">Menggunakan...</string>
-    <string name="you">Kamu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you">Anda</string>
 
     <!-- Message bubbles -->
+    <!-- google-translated 2026-05-04 -->
     <string name="edited">diedit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tap_to_join">Ketuk untuk bergabung</string>
-    <string name="message_recalled_by_you">Kamu menarik pesan ini</string>
-    <string name="message_recalled">Pesan ini telah ditarik</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled_by_you">Anda mengingat pesan ini</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled">Pesan ini diingat kembali</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_hidden_by_mod">Pesan ini disembunyikan oleh moderator</string>
-    <string name="invite_to_mic">Undang ke mic</string>
-    <string name="closed">Ditutup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_mic">Undang ke mikrofon</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="closed">Tertutup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edited_count">Diedit (%1$d)</string>
-    <string name="read">Dibaca</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="read">Membaca</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sent">Terkirim</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sticker">Stiker</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="image">Gambar</string>
 
     <!-- Context menu -->
-    <string name="react">Reaksi</string>
-    <string name="reply">Balas</string>
-    <string name="copy">Salin</string>
-    <string name="recall">Tarik</string>
-    <string name="add_to_stickers">Tambah ke Stiker</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="react">Bereaksi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reply">Membalas</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="copy">Menyalin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="recall">Mengingat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="add_to_stickers">Tambahkan ke Stiker</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="hide_message">Sembunyikan Pesan</string>
-    <string name="report_message">Laporkan Pesan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message">Pesan Laporan</string>
 
     <!-- Translation -->
-    <string name="translate">Terjemahkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translate">Menerjemahkan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="translated_from">Diterjemahkan dari %1$s</string>
-    <string name="show_original">Tampilkan asli</string>
-    <string name="translation_limit_reached">Batas harian tercapai. Upgrade ke Super Shy untuk terjemahan tanpa batas.</string>
-    <string name="auto_translate">Terjemahan otomatis</string>
-    <string name="auto_translate_description">Terjemahkan pesan masuk secara otomatis ke bahasa Anda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_original">Tampilkan yang asli</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translation_limit_reached">Batas harian tercapai. Tingkatkan ke SuperShy untuk terjemahan tanpa batas.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="auto_translate">Terjemahkan otomatis</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="auto_translate_description">Terjemahkan pesan masuk ke bahasa Anda secara otomatis</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="translations_remaining">%1$d terjemahan tersisa hari ini</string>
 
     <!-- Settings -->
+    <!-- google-translated 2026-05-04 -->
     <string name="settings">Pengaturan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="language">Bahasa</string>
-    <string name="blocked_users">Pengguna Diblokir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_users">Pengguna yang Diblokir</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="account">Akun</string>
-    <string name="privacy">Privasi</string>
-    <string name="notifications">Notifikasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="privacy">Pribadi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notifications">Pemberitahuan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="permissions">Izin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="about">Tentang</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_out">Keluar</string>
-    <string name="sign_out_confirm">Yakin ingin keluar?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_out_confirm">Apakah Anda yakin ingin keluar?</string>
 
     <!-- Home -->
+    <!-- google-translated 2026-05-04 -->
     <string name="create_room">Buat Ruangan</string>
-    <string name="create_room_prompt">Beri nama ruanganmu</string>
-    <string name="home">Beranda</string>
-    <string name="in_room_count">%1$d di ruangan</string>
-    <string name="join">Gabung</string>
-    <string name="no_active_rooms">Tidak ada ruangan aktif</string>
-    <string name="no_rooms">Tidak ada ruangan tersedia</string>
-    <string name="room_name">Nama ruangan</string>
-    <string name="room_name_label">Nama Ruangan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create_room_prompt">Beri nama pada kamar Anda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="home">Rumah</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="in_room_count">%1$d di kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="join">Bergabung</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_active_rooms">Tidak ada ruang aktif</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_rooms">Tidak ada kamar yang tersedia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_name">Nama kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_name_label">Nama Kamar</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seats_count">%1$d/%2$d kursi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="speakers_count">%1$d/%2$d pembicara</string>
-    <string name="tap_plus_to_create">Ketuk + untuk membuat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_plus_to_create">Ketuk + untuk membuatnya</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="visitors_count">%1$d pengunjung</string>
 
     <!-- Profile -->
+    <!-- google-translated 2026-05-04 -->
     <string name="connections">Koneksi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="display_name">Nama Tampilan</string>
-    <string name="dob_privacy_note">Tanggal lahir diperlukan tetapi kamu bisa menyembunyikan umurmu di pengaturan privasi.</string>
-    <string name="dob_required_subtitle">Kami memerlukan tanggal lahirmu untuk melanjutkan.</string>
-    <string name="follow">Ikuti</string>
-    <string name="follow_back">Ikuti balik</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dob_privacy_note">Tanggal lahir Anda diperlukan tetapi Anda dapat menyembunyikan usia Anda di pengaturan privasi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dob_required_subtitle">Kami memerlukan tanggal lahir Anda untuk melanjutkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow">Mengikuti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow_back">Ikuti kembali</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="followers">Pengikut</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="followers_count">Pengikut (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="following">Mengikuti</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="following_count">Mengikuti (%1$d)</string>
-    <string name="following_list_private">Daftar mengikuti pengguna ini bersifat privat</string>
-    <string name="get_super_shy">Dapatkan Super Shy</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following_list_private">Daftar berikut pengguna ini bersifat pribadi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy">Menjadi Sangat Pemalu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift_wall">Dinding Hadiah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift_value_coins">Nilai: %1$d koin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_followers_yet">Belum ada pengikut</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_profile_visitors">Belum ada pengunjung profil</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="not_following_anyone">Belum mengikuti siapa pun</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="one_more_step">Satu Langkah Lagi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile">Profil</string>
-    <string name="profile_setup_subtitle">Pilih nama tampilan dan masukkan tanggal lahirmu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_setup_subtitle">Pilih nama tampilan dan masukkan tanggal lahir Anda</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="received_times">Diterima %1$d kali</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="remove_follower">Hapus pengikut</string>
-    <string name="report">Laporkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report">Laporan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="select_date_of_birth">Pilih Tanggal Lahir</string>
-    <string name="select_nationality">Pilih Kewarganegaraan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_nationality">Pilih Kebangsaan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_countries">Cari negara</string>
-    <string name="selected">Dipilih</string>
-    <string name="set_up_your_profile">Atur Profilmu</string>
-    <string name="stalker_visit_info">Mengintip profilmu %1$s, %2$d kali dalam 3 bulan terakhir</string>
-    <string name="stalkers_count">Pengintip (%1$d)</string>
-    <string name="stalkers_super_shy_description">Lihat siapa yang mengunjungi profilmu! Pengintip profil adalah fitur eksklusif Super Shy.</string>
-    <string name="super_shy_benefit">Keuntungan Super Shy</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="selected">Terpilih</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_up_your_profile">Siapkan Profil Anda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalker_visit_info">Menguntit Anda %1$s, %2$d kali dalam 3 bulan terakhir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_count">Penguntit (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_super_shy_description">Lihat siapa yang mengunjungi profil Anda! Penguntit profil adalah fitur Super Shy eksklusif.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_benefit">Manfaat Super Pemalu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="top_senders">Pengirim Teratas</string>
-    <string name="block">Blokir</string>
-    <string name="unblock">Buka Blokir</string>
-    <string name="undo_remove">Batalkan penghapusan</string>
-    <string name="unfollow">Berhenti Mengikuti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block">Memblokir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock">Buka blokir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="undo_remove">Urungkan penghapusan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unfollow">Berhenti mengikuti</string>
 
     <!-- Room -->
+    <!-- google-translated 2026-05-04 -->
     <string name="alias">Alias</string>
-    <string name="approve">Setujui</string>
-    <string name="audience">Penonton</string>
-    <string name="back_to_home">Kembali ke Beranda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="approve">Menyetujui</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="audience">Hadirin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="back_to_home">Kembali ke Rumah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="backpack">Ransel</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="backpack_empty">Ranselmu kosong.\nPutar roda untuk mendapatkan hadiah!</string>
-    <string name="ban">Cekal</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban">Melarang</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="block_user">Blokir Pengguna</string>
-    <string name="block_user_confirm">Yakin ingin memblokir %1$s?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_user_confirm">Apakah Anda yakin ingin memblokir %1$s?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="close_room">Tutup Ruangan</string>
-    <string name="daily">Harian</string>
-    <string name="deny">Tolak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="daily">Sehari-hari</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="deny">Membantah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="empty_seat">Kursi kosong</string>
-    <string name="filter_gift_animations_description">Sembunyikan animasi untuk hadiah yang lebih murah.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gift_animations_description">Filter animasi untuk hadiah yang lebih murah.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift">Hadiah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift_animations">Animasi Hadiah</string>
-    <string name="host">Host</string>
-    <string name="hosts">Host</string>
-    <string name="invite_to_seat">Undang ke kursi</string>
-    <string name="kick">Keluarkan</string>
-    <string name="kick_user">Keluarkan Pengguna</string>
-    <string name="kick_user_confirm">Yakin ingin mengeluarkan %1$s dari ruangan? Mereka tidak bisa bergabung kembali.</string>
-    <string name="leave_room">Keluar Ruangan</string>
-    <string name="leave_seat">Tinggalkan kursi</string>
-    <string name="lock_seating">Kunci Kursi</string>
-    <string name="lock_seating_description">Hanya pemilik yang bisa mengundang pengguna untuk duduk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="host">Tuan rumah</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hosts">Tuan rumah</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_seat">Undang untuk duduk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick">Menendang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_user">Tendangan Pengguna</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_user_confirm">Apakah Anda yakin ingin mengeluarkan %1$s dari ruangan? Mereka tidak akan dapat bergabung kembali.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room">Tinggalkan Kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_seat">Tinggalkan tempat duduk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating">Kunci Tempat Duduk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating_description">Hanya pemiliknya yang dapat mempersilakan penggunanya untuk duduk</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="buy_coins">Beli koin</string>
-    <string name="collect_all">AMBIL SEMUA (%1$d)</string>
-    <string name="increased_drop_rate">PELUANG HADIAH MENINGKAT</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="collect_all">KUMPULKAN SEMUA (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="increased_drop_rate">PENINGKATAN TINGKAT DROP</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="loading_prices">Memuat harga…</string>
-    <string name="lucky_spin">Lucky Spin</string>
-    <string name="lucky_spin_title">LUCKY SPIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin">Putaran Keberuntungan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin_title">PUTARAN KEBERUNTUNGAN</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="need_more_coins">Butuh lebih banyak koin!</string>
-    <string name="no_packages_available">Tidak ada paket tersedia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_packages_available">Tidak ada paket yang tersedia</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_spins_yet">Belum ada putaran</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="prizes">Hadiah</string>
-    <string name="skip_animation">LEWATI ANIMASI</string>
-    <string name="spin">PUTAR</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="skip_animation">LEWATKAN ANIMASI</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin">PUTARAN</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="spin_count">%1$d PUTARAN</string>
-    <string name="spin_history">Riwayat Putaran</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_history">Putar Sejarah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="spin_results">Hasil Putaran</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message">Pesan</string>
-    <string name="move_to_audience">Pindah ke Penonton</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_audience">Pindah ke Audiens</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="move_to_seat">Pindah ke Kursi</string>
-    <string name="move_to_which_seat">Pindah ke kursi mana?</string>
-    <string name="mute">Bisukan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_which_seat">Pindah ke kursi yang mana?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mute">Bisu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_audience_members">Tidak ada penonton</string>
-    <string name="no_pending_requests">Tidak ada permintaan tertunda</string>
-    <string name="no_reason_given">Tidak ada alasan diberikan</string>
-    <string name="no_one_on_mic">Tidak ada yang di mic</string>
-    <string name="occupied">Terisi</string>
-    <string name="open_for_duration">Dibuka selama %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_pending_requests">Tidak ada permintaan yang tertunda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_reason_given">Tidak ada alasan yang diberikan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_one_on_mic">Tidak ada seorang pun di mikrofon</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="occupied">Sibuk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="open_for_duration">Buka untuk %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="owner">Pemilik</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reason_optional">Alasan (opsional)</string>
-    <string name="reject">Tolak</string>
-    <string name="remove">Hapus</string>
-    <string name="remove_as_host">Hapus sebagai Host</string>
-    <string name="remove_from_room">Keluarkan dari Ruangan</string>
-    <string name="request">Permintaan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reject">Menolak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove">Menghapus</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_as_host">Hapus sebagai Tuan Rumah</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_from_room">Hapus dari Kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request">Meminta</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="request_a_seat">Minta Kursi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="request_seat">Minta Kursi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="requesting">Meminta</string>
-    <string name="room">Ruangan</string>
-    <string name="room_closed">Ruangan Ditutup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room">Ruang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closed">Ruangan Tertutup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_closing_no_super_shy">Pemilik ruangan tidak memiliki Super Shy, jadi ruangan ini akan segera ditutup.</string>
-    <string name="room_closing_in">Ruangan ditutup dalam %1$d:%2$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_in">Ruangan ditutup pada %1$d:%2$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_closing_soon">Ruangan Segera Ditutup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_settings">Pengaturan ruangan</string>
-    <string name="rooms">Ruangan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="rooms">Kamar</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_requests">Permintaan Kursi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_swap_with">Kursi %1$d (tukar dengan %2$s)</string>
-    <string name="set_alias">Atur Alias</string>
-    <string name="set_alias_description">Atur alias pribadi untuk %1$s. Hanya kamu yang bisa melihatnya.</string>
-    <string name="set_as_host">Jadikan Host</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias">Tetapkan Alias</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias_description">Tetapkan alias pribadi untuk %1$s. Hanya Anda yang akan melihat ini.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_as_host">Tetapkan sebagai Tuan Rumah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="showing_all_gift_animations">Menampilkan semua animasi hadiah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="showing_animations_worth">Hanya menampilkan animasi senilai %1$d+ koin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="speakers">Pembicara</string>
-    <string name="take_a_seat">Ambil Kursi</string>
-    <string name="unmute">Aktifkan Suara</string>
-    <string name="unmuted">Suara Diaktifkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="take_a_seat">Duduklah</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmute">Membunyikan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmuted">Dibunyikan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user">Pengguna</string>
-    <string name="user_id">ID: %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="user_id">Nomor ID: %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="visitor_count">%1$d pengunjung</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="voice">Suara</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="voice_unavailable">Suara tidak tersedia</string>
-    <string name="you_have_super_shy_room">Kamu punya Super Shy! Buka ruanganmu sendiri hingga %1$d jam waktu tambahan.</string>
-    <string name="get_super_shy_rooms">Dapatkan Super Shy untuk menikmati ruangan hingga %1$d jam!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_have_super_shy_room">Anda memiliki Super Pemalu! Buka kamar Anda sendiri untuk perpanjangan waktu hingga %1$d jam.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy_rooms">Dapatkan Super Shy untuk menikmati ruangan yang bertahan hingga %1$d jam!</string>
 
     <!-- Room - Notifications -->
-    <string name="accept">Terima</string>
-    <string name="decline">Tolak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="accept">Menerima</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="decline">Menolak</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="go_back">Kembali</string>
-    <string name="go_to_seat">Ke Kursi</string>
-    <string name="invited_to_sit">Kamu diundang untuk duduk!</string>
-    <string name="request_accepted">Permintaanmu diterima!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="go_to_seat">Pergi ke Kursi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invited_to_sit">Anda telah diundang untuk duduk!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_accepted">Permintaan Anda diterima!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seat_number">Kursi %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user_wants_to_sit">%1$s ingin duduk</string>
 
     <!-- Room - Chat -->
-    <string name="cancel_edit">Batalkan edit</string>
-    <string name="edit_message_placeholder">Edit pesan...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cancel_edit">Batalkan pengeditan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_message_placeholder">Sunting pesan...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_placeholder">Pesan...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_messages">Pesan baru</string>
 
     <!-- Room - Backpack -->
-    <string name="action_cannot_be_undone">TINDAKAN INI TIDAK BISA DIBATALKAN.</string>
-    <string name="confirm_send">Konfirmasi Kirim</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="action_cannot_be_undone">TINDAKAN INI TIDAK DAPAT DIBATALKAN.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm_send">Konfirmasi Pengiriman</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="from_backpack_items">Dari ransel: %1$d item</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gifts">Hadiah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all">Kirim Semua</string>
-    <string name="send_all_includes">Ini termasuk SEMUA %1$d item dari %2$d hadiah berbeda.</string>
-    <string name="send_all_warning">Kamu akan mengirim SELURUH ranselmu ke %1$s.</string>
-    <string name="send_everything_confirm">Saya mengerti, kirim semuanya</string>
-    <string name="to_label">Kepada</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_includes">Ini mencakup SEMUA %1$d item di %2$d hadiah yang berbeda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_warning">Anda akan mengirim SELURUH ransel Anda ke %1$s.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_everything_confirm">Saya mengerti, kirimkan semuanya</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="to_label">Ke</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="total_cost_coins">Total biaya: %1$d koin</string>
-    <string name="use_button">Gunakan</string>
-    <string name="you_have_count">Kamu punya: %1$d</string>
-    <string name="your_balance_coins">Saldomu: %1$d koin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="use_button">Menggunakan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_have_count">Anda memiliki: %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="your_balance_coins">Saldo Anda: %1$d koin</string>
 
     <!-- Messaging -->
+    <!-- google-translated 2026-05-04 -->
     <string name="additional_details_optional">Detail tambahan (opsional)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="all_admins_and_mods">Semua admin &amp; mod</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="attach_evidence">Lampirkan Bukti</string>
-    <string name="cant_message_user">Kamu tidak bisa mengirim pesan ke pengguna ini</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cant_message_user">Anda tidak dapat mengirim pesan kepada pengguna ini</string>
     <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">Anda tidak dapat mengirim pesan kepada orang ini karena kami yakin mereka berusia di bawah 18 tahun.</string>
-    <string name="chat">Chat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="chat">Mengobrol</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="close_group">Tutup Grup</string>
-    <string name="close_group_warning">Ini akan menutup grup untuk semua orang. Pesan akan disimpan untuk moderasi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_group_warning">Ini akan menutup grup untuk semua orang. Pesan disimpan untuk moderasi.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="compressing">Mengompresi...</string>
-    <string name="conversation_start_hint">Mulai percakapan dari profil seseorang\natau kartu pengguna di ruangan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="conversation_start_hint">Mulai percakapan dari\nprofil atau kartu pengguna seseorang di ruang</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="create_group">Buat Grup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="current_version">Saat ini</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="delete_conversation">Hapus Percakapan</string>
-    <string name="delete_conversation_warning">Ini akan menghapus percakapan dari daftarmu. Pesan tetap disimpan dan akan muncul kembali jika orang lain mengirim pesan lagi.</string>
-    <string name="description_label">Deskripsi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_conversation_warning">Ini akan menghapus percakapan tersebut dari daftar Anda. Pesan disimpan dan akan muncul kembali jika orang lain mengirimi Anda pesan lagi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description_label">Keterangan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="description_optional">Deskripsi (opsional)</string>
-    <string name="edit_history">Riwayat Edit</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_history">Sunting Riwayat</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="editing_message">Mengedit pesan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="evidence">Bukti</string>
-    <string name="evidence_required">Minimal satu tangkapan layar atau rekaman diperlukan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="evidence_required">Setidaknya diperlukan satu tangkapan layar atau rekaman.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="general">Umum</string>
-    <string name="group">Grup</string>
-    <string name="group_chat">Chat Grup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group">Kelompok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_chat">Obrolan Grup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_name_label">Nama Grup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_name_required">Nama Grup *</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group_settings">Pengaturan Grup</string>
-    <string name="invite_to_room">Undang ke Ruangan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_room">Undang ke Kamar</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="last_seen">Terakhir dilihat %1$s</string>
-    <string name="leave_group">Keluar Grup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_group">Keluar dari Grup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="members">Anggota</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="members_count">%1$d anggota</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_ellipsis">Pesan...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_permissions">Izin Pesan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_image">[Gambar]</string>
-    <string name="message_preview_recalled">[Pesan ditarik]</string>
-    <string name="message_preview_room_invite">[Undangan Ruangan]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_recalled">[Pesan ditarik kembali]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_room_invite">[Undangan Kamar]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_sticker">[Stiker]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="messages">Pesan</string>
-    <string name="mod_notifications">Notifikasi Mod</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mod_notifications">Pemberitahuan Mod</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="move_to_front">Pindah ke depan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mute_notifications">Bisukan Notifikasi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mute_reason">. Alasan: %1$s</string>
-    <string name="muted">Dibisukan</string>
-    <string name="muted_for_hours_minutes">Kamu dibisukan selama %1$d jam %2$d menit</string>
-    <string name="muted_for_minutes">Kamu dibisukan selama %1$d menit</string>
-    <string name="muted_indefinitely">Kamu dibisukan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted">Meredam</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_hours_minutes">Anda dinonaktifkan selama %1$dh %2$dm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_minutes">Anda dibisukan selama %1$dm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_indefinitely">Anda dibungkam</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_group">Grup Baru</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_group_selected">Grup Baru (%1$d dipilih)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_message">Pesan Baru</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_action_needed">Tidak Perlu Tindakan</string>
-    <string name="no_followers_following_found">Tidak ada pengikut atau yang diikuti</string>
-    <string name="no_matches_found">Tidak ada yang cocok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_followers_following_found">Tidak ada pengikut atau pengikut yang ditemukan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_matches_found">Tidak ada kecocokan yang ditemukan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_messages">Belum ada pesan</string>
-    <string name="no_pending_reports">Tidak ada laporan tertunda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_pending_reports">Tidak ada laporan yang tertunda</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_stickers_yet">Belum ada stiker</string>
-    <string name="no_users_found">Pengguna tidak ditemukan</string>
-    <string name="notify_owner_only">Hanya beritahu pemilik</string>
-    <string name="online">Online</string>
-    <string name="only_admins_can_send">Hanya admin dan mod yang bisa mengirim pesan di grup ini</string>
-    <string name="only_owner_can_change_permissions">Hanya pemilik grup yang bisa mengubah izin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_users_found">Tidak ada pengguna yang ditemukan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notify_owner_only">Beritahu pemiliknya saja</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="online">On line</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_admins_can_send">Hanya admin dan mod yang dapat mengirim pesan di grup ini</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_owner_can_change_permissions">Hanya pemilik grup yang dapat mengubah izin.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="owner_only">Hanya pemilik</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="participants">Peserta</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="participants_count">Peserta (%1$d)</string>
-    <string name="pin">Sematkan</string>
-    <string name="recent">Terbaru</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin">Pin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="recent">Terkini</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="replying_to">Membalas %1$s</string>
-    <string name="report_message_prompt">Mengapa kamu melaporkan pesan ini?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message_prompt">Mengapa Anda melaporkan pesan ini?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_review">Tinjauan Laporan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_user">Laporkan %1$s</string>
-    <string name="report_user_prompt">Mengapa kamu melaporkan pengguna ini?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user_prompt">Mengapa Anda melaporkan pengguna ini?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reset_to_default">Atur Ulang ke Default</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="result_count">%1$d hasil</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="review_report">Tinjau Laporan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_admin">Admin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_member">Anggota</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_mod">Mod</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_owner">Pemilik</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="save_description">Simpan Deskripsi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_all_users">Cari semua pengguna</string>
-    <string name="search_conversations">Cari percakapan...</string>
-    <string name="search_messages">Cari pesan...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_conversations">Telusuri percakapan...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_messages">Telusuri pesan...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="search_people">Cari orang...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="select_action">Pilih tindakan:</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="selected_count">%1$d dipilih</string>
-    <string name="start_conversation">Mulai percakapan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="start_conversation">Mulailah percakapan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="submit_report">Kirim Laporan</string>
-    <string name="submitting">Mengirim...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submitting">Mengirimkan...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="system_messages">Pesan Sistem</string>
-    <string name="transfer_ownership">Transfer Kepemilikan</string>
-    <string name="transfer_ownership_warning">Pilih anggota untuk mentransfer kepemilikan. Kamu akan kehilangan hak pemilik. Ini tidak bisa dibatalkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer_ownership">Peralihan Kepemilikan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer_ownership_warning">Pilih anggota yang akan ditransfer kepemilikannya. Anda akan kehilangan hak istimewa pemilik. Hal ini tidak dapat dibatalkan.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="type_message">Ketik pesan…</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="typing">mengetik...</string>
-    <string name="unmute_action">Aktifkan Suara</string>
-    <string name="unmute_notifications">Aktifkan Notifikasi</string>
-    <string name="unpin">Lepas Sematan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmute_action">Membunyikan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmute_notifications">Suarakan Notifikasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unpin">Membuka peniti</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="view_profile">Lihat Profil</string>
 
     <!-- Messaging - report reasons -->
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_spam">Spam</string>
-    <string name="report_reason_harassment">Pelecehan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reason_harassment">Gangguan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_inappropriate">Konten Tidak Pantas</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_other">Lainnya</string>
 
     <!-- Messaging - report actions -->
-    <string name="report_action_warning">Beri Peringatan</string>
-    <string name="report_action_temp_suspension">Penangguhan Sementara</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_warning">Peringatan Masalah</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_temp_suspension">Penghentian Sementara</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_action_perm_suspension">Penangguhan Permanen</string>
-    <string name="report_action_pm_ban">Larangan PM</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_pm_ban">Larangan dari PM</string>
 
     <!-- Messaging - report details -->
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_prefix">Alasan: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_type_prefix">Jenis: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_details_prefix">Detail: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_message_prefix">Pesan: \"%1$s\"</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reporter_reported">Pelapor: %1$s | Dilaporkan: %2$s</string>
 
     <!-- Messaging - system message labels -->
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_member_joins">Anggota bergabung</string>
-    <string name="sys_member_leaves">Anggota keluar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_member_leaves">Anggota pergi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_role_changes">Perubahan peran</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_permission_changes">Perubahan izin</string>
 
     <!-- Messaging - permission labels -->
-    <string name="perm_who_can_send">Siapa yang bisa mengirim pesan</string>
-    <string name="perm_who_can_add_members">Siapa yang bisa menambah anggota</string>
-    <string name="perm_who_can_edit_info">Siapa yang bisa mengedit info grup</string>
-    <string name="perm_who_can_delete_messages">Siapa yang bisa menghapus pesan</string>
-    <string name="perm_who_can_mute_members">Siapa yang bisa membisukan anggota</string>
-    <string name="perm_who_can_remove_members">Siapa yang bisa mengeluarkan anggota</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_send">Siapa yang dapat mengirim pesan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_add_members">Siapa yang dapat menambahkan anggota</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_edit_info">Siapa yang dapat mengedit info grup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_delete_messages">Siapa yang dapat menghapus pesan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_mute_members">Siapa yang dapat membisukan anggota</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_remove_members">Siapa yang dapat menghapus anggota</string>
 
     <!-- Messaging - date separators -->
-    <string name="today">Hari Ini</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="today">Hari ini</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="yesterday">Kemarin</string>
 
     <!-- Daily Reward -->
-    <string name="awesome">Luar Biasa!</string>
-    <string name="claim_todays_reward">Ambil Hadiah Hari Ini</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="awesome">Luar biasa!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_todays_reward">Klaim Hadiah Hari Ini</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="coins">koin</string>
-    <string name="day_fri">Jum</string>
-    <string name="day_mon">Sen</string>
-    <string name="day_sat">Sab</string>
-    <string name="day_streak">%1$d hari berturut-turut</string>
-    <string name="day_sun">Min</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_fri">Jumat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_mon">Senin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sat">Duduk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_streak">%1$hari berturut-turut</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sun">Matahari</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_thu">Kam</string>
-    <string name="day_tue">Sel</string>
-    <string name="day_wed">Rab</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_tue">Selasa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_wed">Menikahi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="later">Nanti</string>
-    <string name="milestone">Pencapaian</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="milestone">Tonggak pencapaian</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="milestone_bonus">Bonus pencapaian!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="plus_coins">+%1$d koin!</string>
-    <string name="reward_claimed">Hadiah Diambil!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reward_claimed">Hadiah Diklaim!</string>
 
     <!-- Economy -->
-    <string name="bean_redeem_description">1 bean = 1 koin. Tukarkan 2.000+ untuk bonus 10%!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bean_redeem_description">1 kacang = 1 koin. Tukarkan 2.000+ untuk bonus 10%!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="bonus_coins">+%1$d bonus</string>
-    <string name="buy_shy_coins">Beli ShyCoins</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="buy_shy_coins">Beli Koin Pemalu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="confirm_redemption">Konfirmasi Penukaran</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="daily_reward">Hadiah Harian</string>
-    <string name="redeem">Tukarkan</string>
-    <string name="redeem_all">Tukarkan Semua</string>
-    <string name="redeem_beans_for_coins">Tukarkan %1$s bean menjadi %2$s koin?</string>
-    <string name="redeem_shy_beans">Tukarkan ShyBeans</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem">Menukarkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_all">Tebus Semua</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_beans_for_coins">Tukarkan %1$s kacang dengan %2$s koin?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_shy_beans">Tukarkan Kacang Pemalu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift">Kirim Hadiah</string>
-    <string name="shy_beans">ShyBeans</string>
-    <string name="shy_coins">ShyCoins</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_beans">kacang pemalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_coins">Koin Pemalu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_all">Semua</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_gacha">Gacha</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_gifts">Hadiah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_purchases">Pembelian</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_redemptions">Penukaran</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_rewards">Hadiah</string>
-    <string name="no_filtered_transactions">Tidak ada transaksi %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_filtered_transactions">Tidak ada %1$s transaksi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_transactions_yet">Belum ada transaksi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transaction_history">Riwayat Transaksi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transactions">Transaksi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="wallet">Dompet</string>
 
     <!-- Super Shy -->
-    <string name="benefit_daily_bonus">+10% koin login harian (dibulatkan ke atas)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_daily_bonus">+10% koin login harian (dibulatkan)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_extended_room">Durasi ruangan diperpanjang (12 jam)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_full_room">Ruangan penuh 8 kursi</string>
-    <string name="benefit_gold_name">Nama tampilan emas di mana saja</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_gold_name">Nama tampilan emas di mana-mana</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_profile_frame">Bingkai profil eksklusif</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_star_badge">Lencana bintang di samping nama</string>
-    <string name="benefits">Keuntungan</string>
-    <string name="choose_a_plan">Pilih paket</string>
-    <string name="claim_30_days_free">Klaim 30 Hari Gratis</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefits">Manfaat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_a_plan">Pilih rencana</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_30_days_free">Klaim Gratis 30 Hari</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="claimed">Diklaim!</string>
-    <string name="claimed_activate_backpack">Untuk mengaktifkannya, temukan di ranselmu saat berada di ruang chat.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed_activate_backpack">Untuk mengaktifkannya, temukan di ransel Anda saat berada di ruang obrolan.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="claiming">Mengklaim…</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="currently_active">Sedang Aktif</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="days_remaining">%1$d hari tersisa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="one_time_payment">Pembayaran satu kali</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_month">per bulan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_year">per tahun</string>
-    <string name="super_shy">Super Shy</string>
-    <string name="super_shy_for_life">Kamu Super Shy seumur hidup!</string>
-    <string name="tap_to_claim_backpack">Ketuk untuk klaim — ditambahkan ke ranselmu</string>
-    <string name="testing_mode_super_shy">Mode uji coba — tidak ada uang sungguhan yang dikenakan. Ketuk paket untuk langsung mengaktifkan Super Shy.</string>
-    <string name="tier_label">Tier: %1$s</string>
-    <string name="tier_lifetime">Seumur Hidup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy">Sangat Pemalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_for_life">Kamu sangat pemalu seumur hidup!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_claim_backpack">Ketuk untuk mengklaim — ditambahkan ke ransel Anda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="testing_mode_super_shy">Mode pengujian — tidak ada uang riil yang dikenakan. Ketuk rencana untuk langsung mengaktifkan Super Shy.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_label">Tingkat: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_lifetime">Seumur hidup</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tier_monthly">Bulanan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tier_yearly">Tahunan</string>
-    <string name="upgrade_to_lifetime">Upgrade ke Seumur Hidup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="upgrade_to_lifetime">Tingkatkan ke Seumur Hidup</string>
 
     <!-- Legal -->
+    <!-- google-translated 2026-05-04 -->
     <string name="accept_all_and_continue">Terima Semua &amp; Lanjutkan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="community_standards">Standar Komunitas</string>
-    <string name="cyber_bullying_policy">Kebijakan Perundungan Siber</string>
-    <string name="i_have_read_and_agree">Saya telah membaca dan menyetujui </string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cyber_bullying_policy">Kebijakan Penindasan Dunia Maya</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_have_read_and_agree">Saya telah membaca dan menyetujuinya</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="privacy_policy">Kebijakan Privasi</string>
-    <string name="review_and_accept_policies">Silakan tinjau dan terima kebijakan kami untuk melanjutkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="review_and_accept_policies">Harap tinjau dan setujui kebijakan kami untuk melanjutkan.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="terms_and_conditions">Syarat &amp; Ketentuan</string>
-    <string name="welcome_to_shytalk">Selamat Datang di ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="welcome_to_shytalk">Selamat datang di ShyTalk</string>
 
     <!-- Auth -->
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_in">Masuk</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="verification_code">Kode Verifikasi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="continue_with_google">Lanjutkan dengan Google</string>
 
     <!-- Missing translations (English fallback) -->
-    <string name="account_restricted">Account Restricted</string>
-    <string name="account_suspended_description">This user\'s account has been suspended.</string>
-    <string name="account_suspended_label">Account Suspended</string>
-    <string name="active_days_ago">Active %1$dd ago</string>
-    <string name="active_hours_ago">Active %1$dh ago</string>
-    <string name="active_just_now">Active just now</string>
-    <string name="active_long_ago">Active 30+ days ago</string>
-    <string name="active_minutes_ago">Active %1$dm ago</string>
-    <string name="allow">Allow</string>
-    <string name="allowed">Allowed</string>
-    <string name="appeal">Appeal</string>
-    <string name="appeal_not_eligible">You are not eligible to appeal this suspension.</string>
-    <string name="appeal_placeholder">Explain why your suspension should be lifted…</string>
-    <string name="appeal_submitted">Your appeal has been submitted and will be reviewed. If successful, your suspension will be lifted. You will not receive any further feedback on your appeal and you cannot submit another appeal.</string>
-    <string name="appeal_unsuccessful">Your appeal has been reviewed and was not successful. You cannot submit another appeal.</string>
-    <string name="ban_expires">Expires: %1$s</string>
-    <string name="ban_permanent">This ban is permanent.</string>
-    <string name="suspension_also_device_banned">Perangkat Anda juga telah diblokir.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_restricted">Akun Dibatasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_description">Akun pengguna ini telah ditangguhkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_label">Akun Ditangguhkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_days_ago">Aktif %1$dd yang lalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_hours_ago">Aktif %1$dh yang lalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_just_now">Baru saja aktif</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_long_ago">Aktif 30+ hari yang lalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_minutes_ago">Aktif %1$dm yang lalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allow">Mengizinkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allowed">Diizinkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal">Menarik</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_not_eligible">Anda tidak berhak mengajukan banding atas penangguhan ini.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_placeholder">Jelaskan mengapa penangguhan Anda harus dicabut…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_submitted">Banding Anda telah diajukan dan akan ditinjau. Jika berhasil, skorsing Anda akan dicabut. Anda tidak akan menerima masukan lebih lanjut atas pengajuan banding Anda dan Anda tidak dapat mengajukan banding lainnya.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_unsuccessful">Pengajuan banding Anda telah ditinjau dan tidak berhasil. Anda tidak dapat mengajukan banding lagi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_expires">Kedaluwarsa: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_permanent">Larangan ini bersifat permanen.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_also_device_banned">Perangkat Anda juga telah dilarang.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="suspension_also_network_banned">Jaringan Anda juga telah diblokir.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="suspension_also_device_and_network_banned">Perangkat dan jaringan Anda juga telah diblokir.</string>
-    <string name="ban_reason">Reason: %1$s</string>
-    <string name="banned_by">Banned by: %1$s</string>
-    <string name="banned_from_room">Banned from Room</string>
-    <string name="block_confirm">Block %1$s?</string>
-    <string name="block_description">They won\'t be able to view your profile.</string>
-    <string name="blocked_by_user">You have been blocked by this user</string>
-    <string name="blocked_by_user_in_room_description">A user in this room has blocked you. You may have a limited experience. Enter anyway?</string>
-    <string name="blocked_user_in_room">Blocked User in Room</string>
-    <string name="blocked_user_in_room_description">A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_reason">Alasan: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_by">Dilarang oleh: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_from_room">Dilarang dari Kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_confirm">Blokir %1$s?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_description">Mereka tidak akan dapat melihat profil Anda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user">Anda telah diblokir oleh pengguna ini</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user_in_room_description">Seorang pengguna di ruangan ini telah memblokir Anda. Anda mungkin memiliki pengalaman terbatas. Tetap masuk?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room">Pengguna yang Diblokir di Kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room_description">Pengguna yang Anda blokir ada di ruangan ini. Mereka akan dapat berkomunikasi dengan Anda. Tetap masuk?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="bluetooth">Bluetooth</string>
-    <string name="bluetooth_description">Connect to Bluetooth audio devices during voice chat.</string>
-    <string name="cache_cleared">Cache Cleared</string>
-    <string name="cache_cleared_description">App cache has been cleared.</string>
-    <string name="cannot_enter_room">Cannot Enter Room</string>
-    <string name="chat_display">Chat Display</string>
-    <string name="check_for_updates">Check for Updates</string>
-    <string name="checking_for_updates">Checking for updates…</string>
-    <string name="choose_another_room">Choose Another Room</string>
-    <string name="clear">Clear</string>
-    <string name="clear_cache">Clear Cache</string>
-    <string name="clear_cache_confirm">Clear %1$s of cached data?</string>
-    <string name="clear_cache_with_size">Clear Cache (%1$s)</string>
-    <string name="close_room_description">This will close the room for everyone.</string>
-    <string name="close_room_question">Close Room?</string>
-    <string name="closing">Closing...</string>
-    <string name="connecting">Connecting...</string>
-    <string name="connection_trouble">ShyTalk is having trouble reaching our servers. Please check your internet connection and try again.</string>
-    <string name="contact_support_help">If you need help, contact shytalk.help@gmail.com</string>
-    <string name="contact_support_hint">If the problem persists, contact shytalk.help@gmail.com</string>
-    <string name="contact_us">Contact Us</string>
-    <string name="shyden_ltd_brand">ShyTalk adalah merek dari Shyden Ltd (No. Perusahaan 17110487), 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom.</string>
-    <string name="delete_account">Delete Account</string>
-    <string name="delete_account_description">Your account and all data will be permanently deleted after the grace period. You can cancel by signing in before then.</string>
-    <string name="delete_account_scheduled">Your account is scheduled for deletion on %1$s. Would you like to cancel?</string>
-    <string name="delete_account_cancel">Cancel Deletion</string>
-    <string name="delete_account_continue">Continue with Deletion</string>
-    <string name="delete_account_success">Your account has been scheduled for deletion.</string>
-    <string name="delete_account_pin_required">Verify your identity to delete your account</string>
-    <string name="delete_account_confirm_title">Are you sure?</string>
-    <string name="delete_account_confirm_body">This will permanently delete your account and all associated data after the grace period. This action cannot be undone.</string>
-    <string name="denied">Denied</string>
-    <string name="description">Description</string>
-    <string name="device_locked_description">This device is already linked to another account.\nOnly one account is allowed per device.\n\nFor support, contact shytalk.help@gmail.com</string>
-    <string name="device_not_supported">Device Not Supported</string>
-    <string name="device_not_supported_description">ShyTalk cannot run on rooted or emulated devices. Please use an unmodified device.</string>
-    <string name="display_over_other_apps">Display over other apps</string>
-    <string name="display_over_other_apps_description">Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="dnd_end_time">DND End Time</string>
-    <string name="dnd_start_time">DND Start Time</string>
-    <string name="do_not_disturb">Do Not Disturb</string>
-    <string name="download_now">Download Now</string>
-    <string name="edit_room_name">Edit Room Name</string>
-    <string name="email">Email</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bluetooth_description">Hubungkan ke perangkat audio Bluetooth selama obrolan suara.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared">Tembolok Dihapus</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared_description">Cache aplikasi telah dibersihkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_enter_room">Tidak Bisa Masuk Kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="chat_display">Tampilan Obrolan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_for_updates">Periksa Pembaruan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="checking_for_updates">Memeriksa pembaruan…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_another_room">Pilih Ruangan Lain</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear">Jernih</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache">Hapus Tembolok</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_confirm">Hapus %1$s data cache?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_with_size">Hapus Cache (%1$s)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_description">Ini akan menutup ruang bagi semua orang.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_question">Tutup Ruangan?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="closing">Penutupan...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connecting">Menghubungkan...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connection_trouble">ShyTalk mengalami kesulitan menjangkau server kami. Silakan periksa koneksi internet Anda dan coba lagi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_help">Jika Anda memerlukan bantuan, hubungi Shytalk.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_hint">Jika masalah terus berlanjut, hubungi Shytalk.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_us">Hubungi kami</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shyden_ltd_brand">ShyTalk adalah merek dari Shyden Ltd (Nomor Perusahaan 17110487), 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, Inggris Raya.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account">Hapus Akun</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_description">Akun Anda dan semua data akan dihapus secara permanen setelah masa tenggang. Anda dapat membatalkan dengan masuk sebelum tanggal tersebut.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_scheduled">Akun Anda dijadwalkan untuk dihapus pada %1$s. Apakah Anda ingin membatalkan?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_cancel">Batalkan Penghapusan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_continue">Lanjutkan dengan Penghapusan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_success">Akun Anda telah dijadwalkan untuk dihapus.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_pin_required">Verifikasi identitas Anda untuk menghapus akun Anda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_title">Apa kamu yakin?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_body">Tindakan ini akan menghapus akun Anda dan semua data terkait secara permanen setelah masa tenggang. Tindakan ini tidak dapat dibatalkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="denied">Ditolak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description">Keterangan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_locked_description">Perangkat ini sudah tertaut ke akun lain.\nHanya satu akun yang diperbolehkan per perangkat.\n\nUntuk dukungan, hubungi Shytalk.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported">Perangkat Tidak Didukung</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported_description">ShyTalk tidak dapat berjalan pada perangkat yang di-rooting atau ditiru. Silakan gunakan perangkat yang tidak dimodifikasi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps">Tampilkan di atas aplikasi lain</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps_description">Izinkan ShyTalk menampilkan gelembung mengambang saat Anda meninggalkan ruang suara, sehingga Anda dapat segera kembali.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_end_time">Waktu Berakhir DND</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_start_time">Waktu Mulai DND</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="do_not_disturb">Jangan Ganggu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="download_now">Unduh Sekarang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_room_name">Sunting Nama Ruangan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email">E-mail</string>
 
     <!-- Settings - Linked Accounts page -->
+    <!-- google-translated 2026-05-04 -->
     <string name="linked_accounts">Akun Tertaut</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="linked">Tertaut</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlinked">Tidak tertaut</string>
-    <string name="unlink">Lepas tautan</string>
-    <string name="unlink_provider_confirm">Lepas tautan %1$s?</string>
-    <string name="unlink_provider_description">Anda dapat menautkan ulang akun ini nanti, tetapi Anda harus memverifikasinya lagi.</string>
-    <string name="cannot_unlink_last_provider">Anda harus memiliki setidaknya dua akun tertaut sebelum dapat melepas tautan salah satunya.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink">Putuskan tautan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink_provider_confirm">Batalkan tautan %1$s?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink_provider_description">Anda dapat menautkan ulang akun ini nanti, namun Anda perlu memverifikasinya lagi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_unlink_last_provider">Anda harus memiliki setidaknya dua akun yang ditautkan sebelum Anda dapat membatalkan tautan salah satunya.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="provider_google">Google</string>
-    <string name="provider_apple">Apple</string>
-    <string name="provider_email">Email</string>
-    <string name="no_linked_accounts">Tidak ada akun tertaut yang ditemukan</string>
-    <string name="unlinking_provider">Melepas tautan…</string>
-    <string name="connect_account">Hubungkan akun</string>
-    <string name="connect">Hubungkan</string>
-    <string name="signed_in_with">Signed in with</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_apple">Apel</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_email">E-mail</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_linked_accounts">Tidak ditemukan akun tertaut</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlinking_provider">Membatalkan tautan…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect_account">Hubungkan Akun</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect">Menghubungkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signed_in_with">Masuk dengan</string>
 
-    <string name="enable_dnd">Enable Do Not Disturb</string>
-    <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
-    <string name="end">End</string>
-    <string name="enter">Enter</string>
-    <string name="error_block_user">Failed to block user</string>
-    <string name="error_check_updates">Failed to check for updates</string>
-    <string name="error_could_not_submit_report">Could not submit report</string>
-    <string name="error_follow_user">Failed to follow user</string>
-    <string name="error_load_user_data">Failed to load user data</string>
-    <string name="error_load_users">Failed to load users</string>
-    <string name="error_max_groups">You can own a maximum of %1$d groups</string>
-    <string name="error_max_participants">Maximum %1$d participants allowed</string>
-    <string name="error_no_users_selected">No users selected</string>
-    <string name="error_not_enough_beans">Not enough beans</string>
-    <string name="error_not_enough_coins">Not enough coins</string>
-    <string name="error_prices_changed">Prices have changed! Please check the new costs and try again.</string>
-    <string name="error_resolve_report">Failed to resolve report</string>
-    <string name="error_save_dob">Failed to save date of birth</string>
-    <string name="error_submit_appeal">Failed to submit appeal</string>
-    <string name="error_submit_report">Failed to submit report</string>
-    <string name="error_title">Error</string>
-    <string name="error_unblock_user">Failed to unblock user</string>
-    <string name="error_unfollow_user">Failed to unfollow user</string>
-    <string name="error_update_privacy">Failed to update privacy setting</string>
-    <string name="error_upload_evidence">Failed to upload evidence</string>
-    <string name="error_upload_group_photo">Failed to upload group photo</string>
-    <string name="everyone">Everyone</string>
-    <string name="hide_age">Hide Age</string>
-    <string name="hide_age_description">Others won&apos;t see your age on your profile.</string>
-    <string name="hide_following_description">Others won&apos;t see who you follow. Followers are always visible.</string>
-    <string name="hide_following_list">Hide Following List</string>
-    <string name="hide_online_status">Hide Online Status</string>
-    <string name="hide_online_status_description">Others won&apos;t see when you&apos;re online.</string>
-    <string name="i_understand">I Understand</string>
-    <string name="i_understand_and_accept">I Understand and Accept</string>
-    <string name="kick_reason">Reason: %1$s</string>
-    <string name="kicked_by_name">You were kicked by %1$s.</string>
-    <string name="kicked_from_room">You have been kicked from this room.</string>
-    <string name="leave">Leave</string>
-    <string name="leave_room_description">You will leave the voice room.</string>
-    <string name="leave_room_question">Leave Room?</string>
-    <string name="message_preview">Message Preview</string>
-    <string name="message_preview_description">Show message text in notifications.</string>
-    <string name="mic_permission_denied">Microphone permission denied. You won\'t be able to use voice chat.</string>
-    <string name="microphone">Microphone</string>
-    <string name="microphone_description">Required for voice chat in rooms.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd">Aktifkan Jangan Ganggu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd_description">Senyapkan semua notifikasi PM selama waktu yang dijadwalkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="end">Akhir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enter">Memasuki</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_block_user">Gagal memblokir pengguna</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_check_updates">Gagal memeriksa pembaruan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_could_not_submit_report">Tidak dapat mengirimkan laporan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_follow_user">Gagal mengikuti pengguna</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_user_data">Gagal memuat data pengguna</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_users">Gagal memuat pengguna</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_groups">Anda dapat memiliki maksimal %1$d grup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_participants">Maksimal %1$d peserta yang diizinkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_no_users_selected">Tidak ada pengguna yang dipilih</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_beans">Kacang tidak cukup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_coins">Koin tidak cukup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_prices_changed">Harga telah berubah! Silakan periksa biaya baru dan coba lagi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_resolve_report">Gagal menyelesaikan laporan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_save_dob">Gagal menyimpan tanggal lahir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_appeal">Gagal mengajukan banding</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_report">Gagal mengirimkan laporan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_title">Kesalahan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unblock_user">Gagal membuka blokir pengguna</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unfollow_user">Gagal berhenti mengikuti pengguna</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_update_privacy">Gagal memperbarui pengaturan privasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_evidence">Gagal mengunggah bukti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_group_photo">Gagal mengunggah foto grup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="everyone">Setiap orang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age">Sembunyikan Usia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age_description">Orang lain tidak akan melihat usia Anda di profil Anda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_description">Orang lain tidak akan melihat siapa yang Anda ikuti. Pengikut selalu terlihat.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_list">Sembunyikan Daftar Mengikuti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status">Sembunyikan Status Daring</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status_description">Orang lain tidak akan melihat saat Anda online.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand">Saya mengerti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand_and_accept">Saya Memahami dan Menerima</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_reason">Alasan: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_by_name">Anda ditendang oleh %1$s.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_from_room">Anda telah diusir dari ruangan ini.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave">Meninggalkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_description">Anda akan meninggalkan ruang suara.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_question">Keluar dari Kamar?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview">Pratinjau Pesan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_description">Tampilkan teks pesan di notifikasi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mic_permission_denied">Izin mikrofon ditolak. Anda tidak akan dapat menggunakan obrolan suara.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone">Mikropon</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone_description">Diperlukan untuk obrolan suara di kamar.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="must_be_16">Anda harus berusia minimal 16 tahun</string>
-    <string name="no_blocked_users">No blocked users</string>
-    <string name="no_one">No one</string>
-    <string name="not_allowed_to_enter">You are not allowed to enter this room.</string>
-    <string name="not_now">Not now</string>
-    <string name="notice">Notice</string>
-    <string name="notification_sound">Notification Sound</string>
-    <string name="notification_sound_description">Play a sound when a new message arrives.</string>
-    <string name="notifications_permission_description">Receive alerts when you&apos;re in a live room in the background.</string>
-    <string name="official_warning">Official Warning</string>
-    <string name="overlay_permission_description">Show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="people_i_follow">People I follow</string>
-    <string name="pm_notifications">PM Notifications</string>
-    <string name="pm_notifications_description">Receive notifications for new private messages.</string>
-    <string name="private_messages">Private Messages</string>
-    <string name="profile_not_available">This profile is not available</string>
-    <string name="profile_not_found">Profile not found</string>
-    <string name="removed_from_room">Removed from Room</string>
-    <string name="report_thank_you">Thank you for your report. We will review it shortly.</string>
-    <string name="report_user_generic">Report User</string>
-    <string name="retrying">Retrying…</string>
-    <string name="room_alerts">Room Alerts</string>
-    <string name="self_destruct_countdown">Self-Destruct Countdown</string>
-    <string name="self_destruct_description">Play a voice announcement when a room&apos;s 5-minute self-destruct timer starts or stops.</string>
-    <string name="show_date_separators">Show Date Separators</string>
-    <string name="show_date_separators_description">Show date labels between messages on different days.</string>
-    <string name="show_timestamps">Show Timestamps</string>
-    <string name="show_timestamps_description">Display message timestamps in chat.</string>
-    <string name="shytalk_id">ShyTalk ID</string>
-    <string name="sign_in_with_google">Sign in with Google</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_blocked_users">Tidak ada pengguna yang diblokir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_one">Tidak seorang pun</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_allowed_to_enter">Anda tidak diperbolehkan memasuki ruangan ini.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_now">Tidak sekarang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notice">Melihat</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound">Suara Notifikasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound_description">Memutar suara saat pesan baru masuk.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notifications_permission_description">Terima peringatan saat Anda berada di ruang siaran langsung di latar belakang.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="official_warning">Peringatan Resmi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="overlay_permission_description">Tampilkan gelembung mengambang saat Anda meninggalkan ruang suara, sehingga Anda dapat segera kembali.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="people_i_follow">Orang yang saya ikuti</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications">Pemberitahuan PM</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications_description">Terima pemberitahuan untuk pesan pribadi baru.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="private_messages">Pesan Pribadi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_available">Profil ini tidak tersedia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_found">Profil tidak ditemukan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="removed_from_room">Dihapus dari Kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_thank_you">Terima kasih atas laporan Anda. Kami akan segera meninjaunya.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user_generic">Laporkan Pengguna</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="retrying">Mencoba lagi…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_alerts">Peringatan Kamar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_countdown">Hitung Mundur Penghancuran Diri</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_description">Memutar pengumuman suara saat pengatur waktu penghancuran diri selama 5 menit di sebuah ruangan mulai atau berhenti.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators">Tampilkan Pemisah Tanggal</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators_description">Tampilkan label tanggal antar pesan pada hari yang berbeda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps">Tampilkan Stempel Waktu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps_description">Tampilkan stempel waktu pesan dalam obrolan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shytalk_id">ID ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_google">Masuk dengan Google</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_in_with_email">Masuk dengan Email</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_hint">Alamat email</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_link_sent">Periksa email Anda</string>
-    <string name="check_your_email_description">Kami mengirim tautan masuk ke email Anda. Ketuk tautan untuk melanjutkan.</string>
-    <string name="signing_in">Signing in…</string>
-    <string name="error_disposable_email">Disposable email addresses are not allowed. Please use a permanent email address.</string>
-    <string name="stalkers">Stalkers</string>
-    <string name="start">Start</string>
-    <string name="submit_appeal">Submit Appeal</string>
-    <string name="success_coins_added">+%1$s coins added!</string>
-    <string name="success_purchase">Purchase successful!</string>
-    <string name="success_redeemed_beans">Redeemed %1$s beans</string>
-    <string name="success_redeemed_beans_bonus">Redeemed %1$s beans (10%% bonus!)</string>
-    <string name="success_report_resolved">Report resolved</string>
-    <string name="success_sent_backpack">entire backpack (%1$d items)</string>
-    <string name="success_super_shy_activated">Super Shy activated! +30 days</string>
-    <string name="super_shy_days">Super Shy ✦ %1$dd</string>
-    <string name="super_shy_lifetime">Super Shy ✦ Lifetime</string>
-    <string name="support_contact">For support, contact shytalk.help@gmail.com</string>
-    <string name="suspension_ends_at">Ends: %1$s</string>
-    <string name="suspension_ends_in">Your suspension will end in:</string>
-    <string name="suspension_login_again">You can log in again now.\nBe good this time!</string>
-    <string name="suspension_permanent">This suspension is permanent.</string>
-    <string name="suspension_reason">Reason: %1$s</string>
-    <string name="tap_to_return">Tap to return</string>
-    <string name="technical_difficulties">Technical Difficulties</string>
-    <string name="technical_difficulties_description">ShyTalk is currently experiencing technical difficulties. Some features may not work correctly. Services will be restored automatically.</string>
-    <string name="unable_to_connect">Unable to Connect</string>
-    <string name="unblock_confirm">Unblock %1$s?</string>
-    <string name="unblock_description">They will be able to view your profile again.</string>
-    <string name="up_to_date">Up to Date</string>
-    <string name="up_to_date_description">You&apos;re on the latest version.</string>
-    <string name="update_available">Update Available</string>
-    <string name="update_available_description">Version %1$s is available.</string>
-    <string name="update_available_soft">A new version (%1$s) of ShyTalk is available.</string>
-    <string name="update_now">Update Now</string>
-    <string name="update_required">Update Required</string>
-    <string name="update_required_description">A new version of ShyTalk is available. Please update to continue using the app.</string>
-    <string name="update_open_store_failed">Cannot open the app store automatically. Please update ShyTalk manually from your device app store.</string>
-    <string name="view_community_standards">View Community Standards</string>
-    <string name="voice_chat_reimagined">Voice chat rooms, reimagined.</string>
-    <string name="voice_chat_unavailable">Voice chat is temporarily unavailable</string>
-    <string name="wallet_with_balance">Wallet · %1$s</string>
-    <string name="warning_consequence">Continued violations may result in suspension of your account.</string>
-    <string name="warning_reviewed">Your account has been reviewed and a warning has been issued.</string>
-    <string name="warning_reviewed_for_reason">Your account has been reviewed for %1$s and a warning has been issued.</string>
-    <string name="who_can_message_description">Control who can send you private messages.</string>
-    <string name="who_can_message_me">Who can message me</string>
-    <string name="you_were_banned">You were banned from this room.</string>
-    <string name="getting_ready">Mempersiapkan…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_your_email_description">Kami mengirimkan tautan masuk ke email Anda. Ketuk tautan untuk melanjutkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in">Masuk…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_disposable_email">Alamat email sekali pakai tidak diperbolehkan. Silakan gunakan alamat email permanen.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers">Penguntit</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="start">Awal</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submit_appeal">Ajukan Banding</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_coins_added">+%1$s koin ditambahkan!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_purchase">Pembelian berhasil!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans">Menukarkan %1$s kacang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans_bonus">Menukarkan %1$s kacang (bonus 10%%!)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_report_resolved">Laporan terselesaikan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_sent_backpack">seluruh ransel (%1$d item)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_super_shy_activated">Super Pemalu diaktifkan! +30 hari</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_days">Sangat Pemalu ✦ %1$dd</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_lifetime">Sangat Pemalu ✦ Seumur Hidup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="support_contact">Untuk dukungan, hubungi Shytalk.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_at">Berakhir: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_in">Penangguhan Anda akan berakhir pada:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_login_again">Anda dapat masuk lagi sekarang.\nBersikaplah baik kali ini!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_permanent">Penangguhan ini bersifat permanen.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_reason">Alasan: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_return">Ketuk untuk kembali</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties">Kesulitan Teknis</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties_description">ShyTalk saat ini mengalami kesulitan teknis. Beberapa fitur mungkin tidak berfungsi dengan benar. Layanan akan dipulihkan secara otomatis.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unable_to_connect">Tidak Dapat Terhubung</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_confirm">Buka blokir %1$s?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_description">Mereka akan dapat melihat profil Anda lagi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date">Terkini</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date_description">Anda menggunakan versi terbaru.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available">Pembaruan Tersedia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_description">Versi %1$s tersedia.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_soft">Versi baru (%1$s) ShyTalk telah tersedia.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_now">Perbarui Sekarang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required">Pembaruan Diperlukan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required_description">Versi baru ShyTalk telah tersedia. Harap perbarui untuk terus menggunakan aplikasi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_open_store_failed">Tidak dapat membuka toko aplikasi secara otomatis. Harap perbarui ShyTalk secara manual dari toko aplikasi perangkat Anda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="view_community_standards">Lihat Standar Komunitas</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_reimagined">Ruang obrolan suara, ditata ulang.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_unavailable">Obrolan suara untuk sementara tidak tersedia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="wallet_with_balance">Dompet · %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_consequence">Pelanggaran yang berkelanjutan dapat mengakibatkan penangguhan akun Anda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed">Akun Anda telah ditinjau dan peringatan telah dikeluarkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed_for_reason">Akun Anda telah ditinjau sebesar %1$s dan peringatan telah dikeluarkan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_description">Kontrol siapa yang dapat mengirimi Anda pesan pribadi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_me">Siapa yang dapat mengirim pesan kepada saya</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_were_banned">Anda dilarang masuk ruangan ini.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="getting_ready">Bersiap…</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all_warning_title">⚠️ PERINGATAN ⚠️</string>
-    <string name="send_all_total_value">Total nilai: 🪙 %1$d koin</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_total_value">Nilai total: 🪙 %1$d koin</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift_header">Kirim %1$dx %2$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift_header_multiple">Kirim %1$dx %2$s ke %3$d pengguna</string>
-    <string name="owner_away_banner">Pemilik tidak ada - Ruangan tutup dalam %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner_away_banner">Pemilik sedang pergi - Ruangan ditutup dalam %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="messages_title">Pesan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_conversations_yet">Belum ada percakapan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="spin_again_with_cost">%1$s PUTAR LAGI · 🪙%2$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="age_years_old">%1$d tahun</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="show_less">lebih sedikit</string>
-    <string name="show_more">selengkapnya</string>
-    <string name="video_too_large">Video terlalu besar. Gunakan klip yang lebih pendek.</string>
-    <string name="file_too_large">File terlalu besar. Ukuran maksimum 10 MB.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_more">lagi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="video_too_large">Video terlalu besar untuk diunggah. Silakan gunakan klip yang lebih pendek.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="file_too_large">File terlalu besar. Ukuran maksimumnya adalah 10 MB.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="this_user">pengguna ini</string>
 
     <!-- Degraded Mode Banner -->
-    <string name="reduced_functionality">Fungsionalitas terbatas — beberapa fitur mungkin tidak tersedia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reduced_functionality">Fungsionalitas berkurang — beberapa fitur mungkin tidak tersedia</string>
 
     <!-- Fullscreen Image Viewer -->
+    <!-- google-translated 2026-05-04 -->
     <string name="image_number">Gambar %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="page_indicator">%1$d / %2$d</string>
 
     <!-- Broadcast Banner -->
+    <!-- google-translated 2026-05-04 -->
     <string name="broadcast_gacha_win">%1$s memenangkan %2$s%3$s%4$s dari Lucky Spin!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="broadcast_gift_sent">%1$s mengirim %2$s%3$s%4$s ke %5$s!</string>
 
-    <string name="play_effect">Putar efek</string>
-    <string name="account_unlocked">Akun dibuka</string>
-    <string name="account_suspended">Akun ditangguhkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="play_effect">Mainkan Efek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_unlocked">Akun Tidak Terkunci</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended">Akun Ditangguhkan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="police_duck_description">Bebek polisi</string>
-    <string name="device_banned_title">Perangkat diblokir</string>
-    <string name="network_banned_title">Jaringan diblokir</string>
-    <string name="device_banned_description">Perangkat ini telah diblokir dari penggunaan ShyTalk.</string>
-    <string name="network_banned_description">Jaringan Anda telah diblokir dari penggunaan ShyTalk. Coba hubungkan dari jaringan lain.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_banned_title">Perangkat Dilarang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="network_banned_title">Jaringan Dilarang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_banned_description">Perangkat ini telah dilarang menggunakan ShyTalk.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="network_banned_description">Jaringan Anda telah dilarang menggunakan ShyTalk. Coba sambungkan dari jaringan lain.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="full_screen_photo">Foto layar penuh</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cover_photo">Foto sampul</string>
-    <string name="change_cover_photo">Ubah foto sampul</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="change_cover_photo">Ganti foto sampul</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile_photo">Foto profil</string>
-    <string name="change_profile_photo">Ubah foto profil</string>
-    <string name="edit_profile">Edit profil</string>
-    <string name="app_name_label">ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="change_profile_photo">Ganti foto profil</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_profile">Sunting profil</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="app_name_label">Bicara Pemalu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_day">HARI</string>
-    <string name="time_unit_hour">JAM</string>
-    <string name="time_unit_minute">MNT</string>
-    <string name="time_unit_second">DTK</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_hour">SDM</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_minute">menit</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_second">DETIK</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_millisecond">MS</string>
 
-    <string name="splash_tagline">Ruang obrolan suara, dirancang ulang.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="splash_tagline">Ruang obrolan suara, ditata ulang.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="quantity_all">SEMUA (%1$d)</string>
-    <string name="english_language">Inggris</string>
-    <string name="google_sign_in_failed">Gagal masuk dengan Google</string>
-    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="english_language">Bahasa inggris</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="google_sign_in_failed">Gagal masuk ke Google</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="apple_sign_in_failed">Masuk Apple gagal</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_in_with_apple">Masuk dengan Apple</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_link">Kirim Tautan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="paste_link">Tempel Tautan</string>
-    <string name="resend_link">Kirim Ulang</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="resend_link">Kirim ulang</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="use_different_email">Gunakan email lain</string>
-    <string name="email_link_paste_hint">Jika tautan tidak terbuka otomatis, salin dari email Anda dan ketuk Tempel Tautan</string>
-    <string name="error_invalid_email_link">Itu tidak tampak seperti tautan masuk yang valid. Silakan salin tautan lengkap dari email Anda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_link_paste_hint">Buka tautan di email Anda, lalu kembali dan ketuk Tempel Tautan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_invalid_email_link">Sepertinya itu bukan tautan masuk yang valid. Silakan tempel tautan lengkap dari email Anda.</string>
 
     <!-- PIN & Security -->
+    <!-- google-translated 2026-05-04 -->
     <string name="enter_pin">Masukkan PIN Anda</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_mismatch">PIN tidak cocok. Coba lagi.</string>
-    <string name="pin_locked">Terlalu banyak percobaan. Coba lagi dalam %1$d menit.</string>
-    <string name="pin_locked_reauth">Akun terkunci. Silakan masuk kembali untuk mengatur ulang PIN Anda.</string>
-    <string name="reset_pin">Atur Ulang PIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked">Terlalu banyak upaya. Coba lagi dalam %1$d menit.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked_reauth">Akun terkunci. Silakan masuk lagi untuk mengatur ulang PIN Anda.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reset_pin">Setel ulang PIN</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="account_locked">Akun Terkunci</string>
-    <string name="unlock">Buka Kunci</string>
-    <string name="enable">Aktifkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlock">Membuka kunci</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable">Memungkinkan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="too_many_requests">Terlalu banyak permintaan. Coba lagi nanti.</string>
-    <string name="verify">Verifikasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="verify">Memeriksa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security">Keamanan</string>
     <!-- Starting Screens -->
+    <!-- google-translated 2026-05-04 -->
     <string name="starting_screen_pre_launch_title">ShyTalk belum tersedia</string>
-    <string name="starting_screen_pre_launch_message">ShyTalk belum dirilis. Untuk mendaftar sebagai penguji aplikasi, hubungi Shyden. Pengujian tersedia untuk pengguna iOS dan Android.</string>
-    <string name="starting_screen_dismiss">Lanjutkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_pre_launch_message">ShyTalk belum dirilis. Untuk mengajukan permohonan pengujian aplikasi, hubungi Shyden. Pengujian tersedia untuk pengguna iOS dan Android.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_dismiss">Melanjutkan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="starting_screen_police_duck_description">Ilustrasi peringatan</string>
-    <string name="starting_screen_loading">Memuat…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_loading">Memuat\u2026</string>
     <!-- Security -->
+    <!-- google-translated 2026-05-04 -->
     <string name="security_title">Keamanan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_app_lock">Kunci Aplikasi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_app_lock_desc">Memerlukan PIN atau biometrik untuk membuka kunci</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_lock_timeout">Batas Waktu Kunci</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_1min">1 menit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_5min">5 menit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_15min">15 menit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_30min">30 menit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_never">Tidak pernah</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_login">Login Biometrik</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_desc">Gunakan sidik jari atau wajah untuk membuka kunci</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_unavailable">Tidak tersedia di perangkat ini</string>
-    <string name="security_reset_pin">Atur Ulang PIN</string>
-    <string name="security_reset_pin_desc">Verifikasi identitas Anda untuk mengatur PIN baru</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin">Setel ulang PIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin_desc">Verifikasi identitas Anda untuk menetapkan PIN baru</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_linked_accounts">Akun Tertaut</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_linked_accounts_desc">Kelola metode masuk</string>
     <!-- Email sign-in -->
+    <!-- google-translated 2026-05-04 -->
     <string name="email_sign_in_title">Masuk dengan email</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_enter_address">Masukkan alamat email Anda</string>
-    <string name="email_label">Email</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_label">E-mail</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_send_code">Kirim kode</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_code_sent_to">Kode dikirim ke</string>
-    <string name="email_code_label">Kode 6 digit</string>
-    <string name="email_verify">Verifikasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_label">kode 6 digit</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_verify">Memeriksa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_resend_in">Kirim ulang dalam %1$ds</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_resend_code">Kirim ulang kode</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_code_expires">Kode kedaluwarsa dalam 10 menit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_invalid_address">Masukkan alamat email yang valid</string>
-    <string name="email_disposable_blocked">Alamat email sekali pakai tidak diizinkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_disposable_blocked">Alamat email sekali pakai tidak diperbolehkan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_send_failed">Gagal mengirim kode</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_enter_code">Masukkan kode 6 digit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_invalid_code">Kode tidak valid</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_resend_failed">Gagal mengirim ulang</string>
     <!-- PIN -->
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_create_title">Buat PIN</string>
-    <string name="pin_confirm_title">Konfirmasi PIN Anda</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_confirm_title">Konfirmasikan PIN Anda</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_enable_biometric_title">Aktifkan login biometrik?</string>
-    <string name="pin_enable_biometric_desc">Gunakan sidik jari atau wajah Anda untuk membuka ShyTalk dengan cepat.</string>
-    <string name="pin_enable">Aktifkan</string>
-    <string name="pin_not_now">Nanti saja</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable_biometric_desc">Gunakan sidik jari atau wajah Anda untuk membuka kunci ShyTalk dengan cepat.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable">Memungkinkan</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_not_now">Tidak sekarang</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_change_hint">Anda dapat mengubah atau menonaktifkan ini di pengaturan Keamanan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_choose_length">Pilih panjang PIN</string>
-    <string name="pin_digits">digit</string>
-    <string name="pin_confirm">Konfirmasi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_digits">angka</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_confirm">Mengonfirmasi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_next">Berikutnya</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_enter_digits">Masukkan %1$d digit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_device_not_registered">Perangkat tidak terdaftar. Silakan masuk lagi.</string>
-    <string name="pin_setup_failed">Gagal mengatur PIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_setup_failed">Gagal menyetel PIN</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_too_short">PIN terlalu pendek</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_verify_title">Verifikasi identitas Anda</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_verify_subtitle">Masukkan PIN Anda untuk melanjutkan</string>
-    <string name="pin_verifying">Memverifikasi…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verifying">Memverifikasi\u2026</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_wrong_attempts">PIN salah. %1$d percobaan tersisa.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_account_locked">Akun terkunci</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_verify_failed">Verifikasi gagal</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_session_expired">Sesi berakhir. Silakan masuk lagi.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_use_biometric">Gunakan biometrik</string>
-    <string name="pin_delete">Hapus</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_delete">Menghapus</string>
     <!-- Biometric -->
-    <string name="biometric_unlock_title">Buka Kunci ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_unlock_title">Buka kunci ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_unlock_desc">Gunakan sidik jari atau wajah Anda untuk membuka kunci</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_sign_failed">Penandatanganan gagal</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_verify_failed">Verifikasi biometrik gagal</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_start_failed">Tidak dapat memulai verifikasi biometrik</string>
     <!-- Auth loading -->
-    <string name="signing_in_loading">Sedang masuk…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in_loading">Masuk\u2026</string>
     <!-- Time -->
+    <!-- google-translated 2026-05-04 -->
     <string name="time_just_now">baru saja</string>
-    <string name="time_minutes_ago">%1$d menit lalu</string>
-    <string name="time_hours_ago">%1$d jam lalu</string>
-    <string name="time_days_ago">%1$d hari lalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_minutes_ago">%1$d menit yang lalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_hours_ago">%1$d jam yang lalu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_days_ago">%1$d hari yang lalu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_expired">Kedaluwarsa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days">%1$d hari</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_hours">%1$d jam</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_minutes">%1$d menit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_less_than_minute">Kurang dari 1 menit</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_dots_state">%1$d dari %2$d digit dimasukkan</string>
-    <string name="export_data">Export My Data</string>
-    <string name="export_data_pending">Export requested. Check your email for the download link.</string>
-    <string name="replace_room_title">Close existing room?</string>
-    <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
-    <string name="replace_room_confirm">Close and create new</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data">Ekspor Data Saya</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data_pending">Ekspor diminta. Periksa email Anda untuk tautan unduhan.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_title">Tutup ruangan yang ada?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_message">Anda sudah memiliki ruang aktif. Membuka ruangan baru akan menutup ruangan yang sudah ada. Apakah Anda ingin melanjutkan?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_confirm">Tutup dan buat yang baru</string>
 
     <!-- Seasonal Events -->
+    <!-- google-translated 2026-05-04 -->
     <string name="seasonal_khmer_new_year_greeting">Selamat Tahun Baru Khmer!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seasonal_khmer_new_year_cta">Pelajari tentang Choul Chnam Thmey</string>
-    <string name="seasonal_event_dismiss">Tutup</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seasonal_event_dismiss">Membubarkan</string>
 
     <!-- google-translated 2026-05-04 -->
     <string name="age_verif_submit_title">Verifikasi usia Anda</string>
