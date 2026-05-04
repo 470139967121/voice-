@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">सभी एडमिन &amp; मॉड</string>
     <string name="attach_evidence">सबूत संलग्न करें</string>
     <string name="cant_message_user">आप इस उपयोगकर्ता को संदेश नहीं भेज सकते</string>
-    <string name="pm_locked_other_user_notice">आप इस व्यक्ति को संदेश नहीं भेज सकते क्योंकि हमें लगता है कि वे 18 वर्ष से कम के हैं।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">आप इस व्यक्ति को संदेश नहीं भेज सकते क्योंकि हमारा मानना ​​है कि उनकी आयु 18 वर्ष से कम है।</string>
     <string name="chat">चैट</string>
     <string name="close_group">ग्रुप बंद करें</string>
     <string name="close_group_warning">यह सभी के लिए ग्रुप बंद कर देगा। संदेश मॉडरेशन के लिए सुरक्षित रहेंगे।</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">चौल छ्नाम थ्मेय के बारे में जानें</string>
     <string name="seasonal_event_dismiss">बंद करें</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">अपनी आयु सत्यापित करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">यह कैसे काम करता है</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">हमें यह पुष्टि करने के लिए सरकार द्वारा जारी आईडी की एक तस्वीर की आवश्यकता है कि आप कम से कम 18 वर्ष के हैं। छवि को पारगमन में एन्क्रिप्ट किया जाता है, एक मानव मॉडरेटर द्वारा समीक्षा की जाती है, और निर्णय दर्ज होते ही स्थायी रूप से हटा दिया जाता है - आमतौर पर 24 घंटों के भीतर। केवल जन्म तिथि और सत्यापन परिणाम रखा गया है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">मैं समझता हूं - जारी रखें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">कौन सा दस्तावेज़?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">आप जिस प्रकार की आईडी सबमिट करेंगे उसे चुनें। दस्तावेज़ पर जन्मतिथि आपके खाते से मेल खाना चाहिए।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">पासपोर्ट</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">ड्राइवर का लाइसेंस</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">राष्ट्रीय आईडी कार्ड</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">फ़ोटो जोड़ें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">आईडी का स्पष्ट फोटो चुनें. सुनिश्चित करें कि जन्मतिथि पूरी तरह से पढ़ने योग्य है।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">तस्विर का चयन करो</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">फ़ोटो बदलें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">सबमिट करने के लिए तैयार हैं?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">एक बार सबमिट करने के बाद, फोटो को समीक्षा के लिए भेजा जाता है। निर्णय रिकॉर्ड होने पर आपको एक सिस्टम संदेश प्राप्त होगा।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">आईडी प्रकार:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">तस्वीर:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">जुड़ा हुआ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">समीक्षा हेतु सबमिट करें</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">धन्यवाद</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">आपका सबमिशन कतार में है. निर्णय दर्ज होने पर हम आपको यहां संदेश भेजेंगे।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">हो गया</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">पीछे</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">कृपया सबमिट करने से पहले एक आईडी प्रकार चुनें।</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">कृपया सबमिट करने से पहले एक फ़ोटो जोड़ें.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">सबमिट नहीं किया जा सका - कृपया अपना कनेक्शन जांचें और पुनः प्रयास करें।</string>
 </resources>

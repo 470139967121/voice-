@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">Tüm yöneticiler &amp; moderatörler</string>
     <string name="attach_evidence">Kanıt Ekle</string>
     <string name="cant_message_user">Bu kullanıcıya mesaj gönderemezsiniz</string>
-    <string name="pm_locked_other_user_notice">Bu kişiyi 18 yaşından küçük olduğuna inandığımız için mesaj gönderemezsiniz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">Bu kişiye mesaj gönderemezsiniz çünkü onun 18 yaşının altında olduğunu düşünüyoruz.</string>
     <string name="chat">Sohbet</string>
     <string name="close_group">Grubu Kapat</string>
     <string name="close_group_warning">Bu, grubu herkes için kapatacaktır. Mesajlar moderasyon için korunur.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Choul Chnam Thmey hakkında bilgi edinin</string>
     <string name="seasonal_event_dismiss">Kapat</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Yaşınızı doğrulayın</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Bu nasıl çalışır?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">En az 18 yaşında olduğunuzu doğrulamak için devlet tarafından verilmiş bir kimliğin fotoğrafına ihtiyacımız var. Görüntü aktarım sırasında şifrelenir, bir insan moderatör tarafından incelenir ve karar kaydedilir kaydedilmez, genellikle 24 saat içinde kalıcı olarak silinir. Yalnızca doğum tarihi ve doğrulama sonucu tutulur.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Anladım - devam et</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Hangi belge?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Göndereceğiniz kimlik türünü seçin. Belgedeki DOB, hesabınızdaki DOB ile eşleşmelidir.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Pasaport</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Ehliyet</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Ulusal kimlik kartı</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Fotoğrafı ekle</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Kimliğin net bir fotoğrafını seçin. Doğum tarihinin tamamen okunabilir olduğundan emin olun.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Fotoğraf seç</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Fotoğrafı değiştir</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Göndermeye hazır mısınız?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Fotoğraf gönderildikten sonra incelemeye gönderilir. Bir karar kaydedildiğinde bir sistem mesajı alırsınız.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">Kimlik türü:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Fotoğraf:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">ekli</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">İnceleme için gönder</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Teşekkür ederim</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Gönderiminiz sırada. Bir karar kaydedildiğinde size buradan mesaj göndereceğiz.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Tamamlamak</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Geri</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Lütfen göndermeden önce bir kimlik türü seçin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Lütfen göndermeden önce bir fotoğraf ekleyin.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Gönderilemedi; lütfen bağlantınızı kontrol edip tekrar deneyin.</string>
 </resources>

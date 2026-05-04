@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Усі адміни &amp; модератори</string>
     <string name="attach_evidence">Прикріпити доказ</string>
     <string name="cant_message_user">Ви не можете написати цьому користувачу</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">Ви не можете надіслати повідомлення цій особі, оскільки ми вважаємо, що їй менше 18 років.</string>
     <string name="chat">Чат</string>
     <string name="close_group">Закрити групу</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Дізнайтеся про Чол Чнам Тхмей</string>
     <string name="seasonal_event_dismiss">Закрити</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Підтвердьте свій вік</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Як це працює</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Нам потрібна фотографія офіційного посвідчення особи, щоб підтвердити, що вам є принаймні 18 років. Зображення шифрується під час передачі, переглядається людиною-модератором і назавжди видаляється, щойно буде прийнято рішення — зазвичай протягом 24 годин. Зберігається лише дата народження та результат перевірки.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Розумію — продовжуй</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Який документ?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Виберіть тип ідентифікатора, який ви надсилатимете. DOB у документі має збігатися з номером вашого облікового запису.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Паспорт</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Водійське посвідчення</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Національне посвідчення особи</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Додайте фото</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Виберіть чітке фото посвідчення особи. Переконайтеся, що дата народження повністю читається.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Виберіть фото</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Замінити фото</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Готові подати?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Після надсилання фотографія надсилається на перевірку. Коли рішення буде записано, ви отримаєте системне повідомлення.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">Тип ідентифікатора:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">фото:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">додається</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Надіслати на перевірку</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">дякую</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Ваша заявка в черзі. Ми надішлемо вам повідомлення тут, коли буде записано рішення.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Готово</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Назад</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Перш ніж надсилати, виберіть тип ідентифікатора.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Перед надсиланням додайте фото.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Не вдалося надіслати — перевірте з’єднання та повторіть спробу.</string>
 </resources>

@@ -260,7 +260,8 @@
     <string name="all_admins_and_mods">អ្នកគ្រប់គ្រង &amp; ម៉ូដ</string>
     <string name="attach_evidence">ភ្ជាប់ភស្តុតាង</string>
     <string name="cant_message_user">អ្នកមិនអាចផ្ញើសារទៅអ្នកប្រើនេះ</string>
-    <string name="pm_locked_other_user_notice">អ្នកមិនអាចផ្ញើសារទៅកាន់មនុស្សនេះបានទេ ព្រោះយើងគិតថាគាត់មានអាយុក្រោម 18 ឆ្នាំ។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">អ្នកមិនអាចផ្ញើសារទៅកាន់បុគ្គលនេះបានទេ ដោយសារយើងជឿថាពួកគេមានអាយុក្រោម 18 ឆ្នាំ។</string>
     <string name="chat">ជំនួញ</string>
     <string name="close_group">បិទក្រុម</string>
     <string name="close_group_warning">នេះនឹងបិទក្រុមសម្រាប់អ្នកទាំងអស់។</string>
@@ -942,4 +943,56 @@
     <string name="seasonal_khmer_new_year_cta">ស្វែងយល់អំពីចូលឆ្នាំថ្មើ</string>
     <string name="seasonal_event_dismiss">បដិសេធ</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">ផ្ទៀងផ្ទាត់អាយុរបស់អ្នក។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">របៀបដែលវាដំណើរការ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">យើងត្រូវការរូបថតនៃអត្តសញ្ញាណប័ណ្ណដែលចេញដោយរដ្ឋាភិបាល ដើម្បីបញ្ជាក់ថាអ្នកមានអាយុយ៉ាងតិច 18 ឆ្នាំ។ រូបភាពនេះត្រូវបានអ៊ិនគ្រីបក្នុងពេលដឹកជញ្ជូន ពិនិត្យដោយអ្នកសម្របសម្រួលមនុស្ស ហើយត្រូវបានលុបជាអចិន្ត្រៃយ៍នៅពេលដែលការសម្រេចចិត្តត្រូវបានកត់ត្រា — ជាធម្មតាក្នុងរយៈពេល 24 ម៉ោង។ មានតែថ្ងៃខែឆ្នាំកំណើត និងលទ្ធផលផ្ទៀងផ្ទាត់ប៉ុណ្ណោះដែលត្រូវបានរក្សាទុក។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">ខ្ញុំយល់ - បន្ត</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">ឯកសារមួយណា?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">ជ្រើសរើសប្រភេទ ID ដែលអ្នកនឹងដាក់ស្នើ។ DOB នៅលើឯកសារត្រូវតែផ្គូផ្គងមួយនៅលើគណនីរបស់អ្នក។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">លិខិតឆ្លងដែន</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">ប័ណ្ណបើកបរ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">អត្តសញ្ញាណប័ណ្ណសញ្ជាតិខ្មែរ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">បន្ថែមរូបថត</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">ជ្រើសរើសរូបថតច្បាស់លាស់នៃអត្តសញ្ញាណប័ណ្ណ។ ត្រូវប្រាកដថាថ្ងៃខែឆ្នាំកំណើតអាចអានបានពេញលេញ។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">ជ្រើសរើសរូបថត</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">ជំនួសរូបថត</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">ត្រៀម​ដាក់​បញ្ជូន​ហើយ​ឬ​នៅ?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">នៅពេលដាក់ស្នើ រូបថតត្រូវបានផ្ញើសម្រាប់ការពិនិត្យ។ អ្នកនឹងទទួលបានសារប្រព័ន្ធ នៅពេលដែលការសម្រេចចិត្តត្រូវបានកត់ត្រា។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">ប្រភេទលេខសម្គាល់៖</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">រូបថត៖</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">ភ្ជាប់</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">ដាក់ស្នើសម្រាប់ការពិនិត្យឡើងវិញ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">សូមអរគុណ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">ការដាក់ស្នើរបស់អ្នកស្ថិតនៅក្នុងជួរ។ យើងនឹងផ្ញើសារទៅកាន់អ្នកនៅទីនេះ នៅពេលដែលការសម្រេចចិត្តត្រូវបានកត់ត្រា។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">រួចរាល់</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">ត្រឡប់មកវិញ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">សូមជ្រើសរើសប្រភេទ ID មុនពេលបញ្ជូន។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">សូមបន្ថែមរូបថតមុនពេលដាក់ស្នើ។</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">មិនអាចដាក់ស្នើបានទេ — សូមពិនិត្យមើលការតភ្ជាប់របស់អ្នក ហើយព្យាយាមម្តងទៀត។</string>
 </resources>

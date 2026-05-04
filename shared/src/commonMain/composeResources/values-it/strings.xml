@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">Tutti gli admin &amp; mod</string>
     <string name="attach_evidence">Allega prova</string>
     <string name="cant_message_user">Non puoi inviare messaggi a questo utente</string>
-    <string name="pm_locked_other_user_notice">Non puoi inviare messaggi a questa persona perché crediamo abbia meno di 18 anni.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">Non puoi inviare messaggi a questa persona perché riteniamo che abbia meno di 18 anni.</string>
     <string name="chat">Chat</string>
     <string name="close_group">Chiudi gruppo</string>
     <string name="close_group_warning">Questo chiuderà il gruppo per tutti. I messaggi vengono conservati per la moderazione.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Scopri Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Chiudi</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Verifica la tua età</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Come funziona</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Abbiamo bisogno della foto di un documento d\'identità rilasciato dal governo per confermare che hai almeno 18 anni. L\'immagine viene crittografata durante il transito, esaminata da un moderatore umano ed eliminata definitivamente non appena viene registrata una decisione, di solito entro 24 ore. Vengono conservati solo la data di nascita e l\'esito della verifica.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Capisco: continua</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Quale documento?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Scegli il tipo di documento d\'identità che invierai. Il DOB sul documento deve corrispondere a quello sul tuo account.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Passaporto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Patente di guida</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Carta d\'identità nazionale</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Aggiungi la foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Scegli una foto nitida del documento d\'identità. Assicurati che la data di nascita sia completamente leggibile.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Scegli la foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Sostituisci foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Pronto per inviare?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Una volta inviata, la foto viene inviata per la revisione. Riceverai un messaggio di sistema quando viene registrata una decisione.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">Tipo di documento d\'identità:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Foto:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">allegato</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Invia per la revisione</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Grazie</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">La tua presentazione è in coda. Ti invieremo un messaggio qui quando verrà registrata una decisione.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Fatto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Indietro</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Scegli un tipo di ID prima di inviare.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Si prega di aggiungere una foto prima di inviare.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Impossibile inviare: controlla la connessione e riprova.</string>
 </resources>

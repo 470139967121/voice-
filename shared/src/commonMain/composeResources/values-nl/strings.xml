@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">Alle beheerders &amp; moderators</string>
     <string name="attach_evidence">Bewijs bijvoegen</string>
     <string name="cant_message_user">Je kunt deze gebruiker geen bericht sturen</string>
-    <string name="pm_locked_other_user_notice">Je kunt deze persoon geen bericht sturen omdat wij denken dat zij jonger zijn dan 18.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">Je kunt deze persoon geen bericht sturen omdat we denken dat hij/zij jonger is dan 18 jaar.</string>
     <string name="chat">Chat</string>
     <string name="close_group">Groep sluiten</string>
     <string name="close_group_warning">Dit sluit de groep voor iedereen. Berichten worden bewaard voor moderatie.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Ontdek Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Sluiten</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Controleer uw leeftijd</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Hoe dit werkt</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">We hebben een foto nodig van een door de overheid uitgegeven identiteitsbewijs om te bevestigen dat u ten minste 18 jaar oud bent. De afbeelding wordt tijdens de verzending gecodeerd, beoordeeld door een menselijke moderator en permanent verwijderd zodra er een beslissing is vastgelegd – meestal binnen 24 uur. Alleen de geboortedatum en het verificatieresultaat worden bewaard.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Ik begrijp het – ga door</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Welk document?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Kies het type identiteitsbewijs dat u indient. Het geboortedatum op het document moet overeenkomen met die op uw account.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Paspoort</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Rijbewijs</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Nationale identiteitskaart</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Voeg de foto toe</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Kies een duidelijke foto van het identiteitsbewijs. Zorg ervoor dat de geboortedatum volledig leesbaar is.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Kies foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Vervang foto</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Klaar om in te dienen?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Nadat de foto is verzonden, wordt deze ter beoordeling verzonden. U krijgt een systeemmelding als er een besluit is vastgelegd.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">ID-type:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Foto:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">bijgevoegd</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Ter beoordeling indienen</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Bedankt</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Je inzending staat in de wachtrij. Wij zullen u hier berichten wanneer er een besluit is vastgelegd.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Klaar</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Rug</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Kies een ID-type voordat u het verzendt.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Voeg een foto toe voordat u deze verzendt.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Kan niet verzenden. Controleer uw verbinding en probeer het opnieuw.</string>
 </resources>

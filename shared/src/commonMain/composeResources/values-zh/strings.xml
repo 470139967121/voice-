@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">所有管理员 &amp; 版主</string>
     <string name="attach_evidence">附上证据</string>
     <string name="cant_message_user">无法向此用户发送消息</string>
-    <string name="pm_locked_other_user_notice">您无法向此人发送消息，因为我们认为他们未满18岁。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">您不能向此人发送消息，因为我们认为他们未满 18 岁。</string>
     <string name="chat">聊天</string>
     <string name="close_group">关闭群组</string>
     <string name="close_group_warning">这将为所有人关闭群组。消息将保留以供审核。</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">了解柬埔寨新年</string>
     <string name="seasonal_event_dismiss">关闭</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">验证您的年龄</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">这是如何运作的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">我们需要一张政府颁发的身份证件照片来确认您已年满 18 岁。该图像在传输过程中会被加密，由人工审核员审核，并在记录决定后立即永久删除（通常在 24 小时内）。仅保留出生日期和验证结果。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">我明白了——继续</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">哪个文件？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">选择您要提交的 ID 类型。文件上的出生日期必须与您帐户上的出生日期相符。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">护照</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">驾照</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">国民身份证</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">添加照片</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">选择一张清晰的身份证照片。确保出生日期清晰可读。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">选择照片</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">替换照片</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">准备好提交了吗？</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">提交后，照片将被发送以供审核。记录决定后，您将收到一条系统消息。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">身份证类型：</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">照片：</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">随附的</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">提交审核</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">谢谢</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">您的提交已在队列中。当决定被记录时，我们会在这里向您发送消息。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">完毕</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">后退</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">请在提交前选择 ID 类型。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">提交前请添加照片。</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">无法提交 - 请检查您的连接并重试。</string>
 </resources>

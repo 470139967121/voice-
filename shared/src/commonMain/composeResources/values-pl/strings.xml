@@ -252,7 +252,8 @@
     <string name="all_admins_and_mods">Wszyscy admini &amp; moderatorzy</string>
     <string name="attach_evidence">Dołącz dowody</string>
     <string name="cant_message_user">Nie możesz napisać do tego użytkownika</string>
-    <string name="pm_locked_other_user_notice">Nie możesz wysłać wiadomości do tej osoby, ponieważ uważamy, że ma mniej niż 18 lat.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_locked_other_user_notice">Nie możesz wysłać wiadomości do tej osoby, ponieważ według nas ma ona mniej niż 18 lat.</string>
     <string name="chat">Czat</string>
     <string name="close_group">Zamknij grupę</string>
     <string name="close_group_warning">To zamknie grupę dla wszystkich. Wiadomości zostaną zachowane na potrzeby moderacji.</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Dowiedz się o Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Zamknij</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Sprawdź swój wiek</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Jak to działa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Potrzebujemy zdjęcia dokumentu tożsamości wydanego przez organ państwowy, aby potwierdzić, że masz co najmniej 18 lat. Zdjęcie jest szyfrowane podczas przesyłania, sprawdzane przez moderatora i trwale usuwane natychmiast po zarejestrowaniu decyzji — zwykle w ciągu 24 godzin. Przechowywana jest jedynie data urodzenia i wynik weryfikacji.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Rozumiem – kontynuuj</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Który dokument?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Wybierz typ dokumentu tożsamości, który prześlesz. Data urodzenia na dokumencie musi odpowiadać tej na Twoim koncie.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Paszport</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Prawo jazdy</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Krajowy dowód osobisty</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Dodaj zdjęcie</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Wybierz wyraźne zdjęcie dokumentu tożsamości. Upewnij się, że data urodzenia jest w pełni czytelna.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Wybierz zdjęcie</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Zamień zdjęcie</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Gotowy do przesłania?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Po przesłaniu zdjęcie zostaje przesłane do sprawdzenia. Gdy decyzja zostanie zarejestrowana, otrzymasz wiadomość systemową.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">Typ identyfikatora:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Zdjęcie:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">przyłączony</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Prześlij do sprawdzenia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Dziękuję</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Twoje zgłoszenie czeka w kolejce. Po zarejestrowaniu decyzji poinformujemy Cię tutaj.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Zrobione</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Z powrotem</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Przed przesłaniem wybierz typ identyfikatora.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Przed przesłaniem proszę dodać zdjęcie.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Nie można przesłać — sprawdź połączenie i spróbuj ponownie.</string>
 </resources>

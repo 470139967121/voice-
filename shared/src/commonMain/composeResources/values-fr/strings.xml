@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Tous les admins &amp; mods</string>
     <string name="attach_evidence">Joindre une preuve</string>
     <string name="cant_message_user">Vous ne pouvez pas envoyer de message &#224; cet utilisateur</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">Vous ne pouvez pas envoyer de message à cette personne car nous pensons qu\'elle a moins de 18 ans.</string>
     <string name="chat">Chat</string>
     <string name="close_group">Fermer le groupe</string>
@@ -853,4 +854,56 @@
     <string name="seasonal_khmer_new_year_cta">Découvrez Choul Chnam Thmey</string>
     <string name="seasonal_event_dismiss">Fermer</string>
 
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_title">Vérifiez votre âge</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_title">Comment ça marche</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_body">Nous avons besoin d\'une photo d\'une pièce d\'identité émise par le gouvernement pour confirmer que vous avez au moins 18 ans. L\'image est cryptée pendant le transport, examinée par un modérateur humain et définitivement supprimée dès qu\'une décision est enregistrée, généralement dans les 24 heures. Seules la date de naissance et le résultat de la vérification sont conservés.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_explanation_continue">Je comprends — continuez</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_title">Quel document ?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_method_body">Choisissez le type de pièce d\'identité que vous soumettrez. La date de naissance sur le document doit correspondre à celle de votre compte.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_passport">Passeport</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_drivers_license">Le permis de conduire</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_method_national_id">Carte d\'identité nationale</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_title">Ajouter la photo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_body">Choisissez une photo claire de la pièce d\'identité. Assurez-vous que la date de naissance est entièrement lisible.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_pick">Choisir une photo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_image_replace">Remplacer la photo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_title">Prêt à soumettre ?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_body">Une fois soumise, la photo est envoyée pour examen. Vous recevrez un message système lorsqu\'une décision sera enregistrée.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_method">Type d\'identification :</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_field_photo">Photo:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_photo_attached">ci-joint</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_confirm_submit">Soumettre pour examen</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_title">Merci</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_body">Votre soumission est dans la file d\'attente. Nous vous enverrons un message ici lorsqu’une décision sera enregistrée.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_step_submitted_done">Fait</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_back">Dos</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_method">Veuillez choisir un type d\'identification avant de soumettre.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_no_image">Veuillez ajouter une photo avant de soumettre.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="age_verif_submit_error_generic">Impossible de soumettre. Veuillez vérifier votre connexion et réessayer.</string>
 </resources>
