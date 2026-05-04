@@ -1,858 +1,1640 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Common actions -->
+    <!-- google-translated 2026-05-04 -->
     <string name="all_caps">TẤT CẢ</string>
-    <string name="back">Quay lại</string>
-    <string name="cancel">Hủy</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="back">Mặt sau</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cancel">Hủy bỏ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="change">Thay đổi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="close">Đóng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="confirm">Xác nhận</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="continue_button">Tiếp tục</string>
-    <string name="create">Tạo</string>
-    <string name="delete">Xóa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create">Tạo nên</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete">Xóa bỏ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="done">Xong</string>
-    <string name="edit">Chỉnh sửa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit">Biên tập</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="error_generic">Đã xảy ra lỗi</string>
-    <string name="got_it">Đã hiểu</string>
-    <string name="learn_more">Tìm Hiểu Thêm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="got_it">Hiểu rồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="learn_more">Tìm hiểu thêm</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="loading">Đang tải…</string>
-    <string name="maybe_later">Để Sau</string>
-    <string name="message_action">Nhắn tin</string>
-    <string name="next">Tiếp</string>
-    <string name="ok">OK</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="maybe_later">Có lẽ sau này</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_action">Tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="next">Kế tiếp</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ok">ĐƯỢC RỒI</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="retry">Thử lại</string>
-    <string name="save">Lưu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="save">Cứu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send">Gửi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sending">Đang gửi...</string>
-    <string name="transfer">Chuyển</string>
-    <string name="unknown">Không rõ</string>
-    <string name="using">Đang sử dụng...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer">Chuyển khoản</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unknown">Không xác định</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="using">Sử dụng...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="you">Bạn</string>
 
     <!-- Message bubbles -->
+    <!-- google-translated 2026-05-04 -->
     <string name="edited">đã chỉnh sửa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tap_to_join">Nhấn để tham gia</string>
-    <string name="message_recalled_by_you">Bạn đã thu hồi tin nhắn này</string>
-    <string name="message_recalled">Tin nhắn này đã bị thu hồi</string>
-    <string name="message_hidden_by_mod">Tin nhắn này đã bị quản trị viên ẩn</string>
-    <string name="invite_to_mic">Mời lên mic</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled_by_you">Bạn đã nhớ lại tin nhắn này</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_recalled">Tin nhắn này đã được thu hồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_hidden_by_mod">Tin nhắn này đã bị người điều hành ẩn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_mic">Mời cầm mic</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="closed">Đã đóng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edited_count">Đã chỉnh sửa (%1$d)</string>
-    <string name="read">Đã đọc</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="read">Đọc</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sent">Đã gửi</string>
-    <string name="sticker">Nhãn dán</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sticker">Hình dán</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="image">Hình ảnh</string>
 
     <!-- Context menu -->
-    <string name="react">Bày tỏ</string>
-    <string name="reply">Trả lời</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="react">Phản ứng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reply">Hồi đáp</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="copy">Sao chép</string>
-    <string name="recall">Thu hồi</string>
-    <string name="add_to_stickers">Thêm vào Nhãn dán</string>
-    <string name="hide_message">Ẩn Tin nhắn</string>
-    <string name="report_message">Báo cáo Tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="recall">Nhớ lại</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="add_to_stickers">Thêm vào Hình dán</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_message">Ẩn tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message">Tin nhắn báo cáo</string>
 
     <!-- Translation -->
+    <!-- google-translated 2026-05-04 -->
     <string name="translate">Dịch</string>
-    <string name="translated_from">Đã dịch từ %1$s</string>
-    <string name="show_original">Hiện bản gốc</string>
-    <string name="translation_limit_reached">Đã hết giới hạn trong ngày. Nâng cấp Super Shy để dịch không giới hạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translated_from">Được dịch từ %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_original">Hiển thị bản gốc</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translation_limit_reached">Đã đạt đến giới hạn hàng ngày. Nâng cấp lên SuperShy để có bản dịch không giới hạn.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="auto_translate">Tự động dịch</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="auto_translate_description">Tự động dịch tin nhắn đến sang ngôn ngữ của bạn</string>
-    <string name="translations_remaining">Còn %1$d lượt dịch hôm nay</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="translations_remaining">%1$d bản dịch còn lại hôm nay</string>
 
     <!-- Settings -->
+    <!-- google-translated 2026-05-04 -->
     <string name="settings">Cài đặt</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="language">Ngôn ngữ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="blocked_users">Người dùng bị chặn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="account">Tài khoản</string>
-    <string name="privacy">Quyền riêng tư</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="privacy">Sự riêng tư</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="notifications">Thông báo</string>
-    <string name="permissions">Quyền hạn</string>
-    <string name="about">Giới thiệu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="permissions">Quyền</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="about">Về</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_out">Đăng xuất</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_out_confirm">Bạn có chắc chắn muốn đăng xuất không?</string>
 
     <!-- Home -->
-    <string name="create_room">Tạo Phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create_room">Tạo phòng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="create_room_prompt">Đặt tên cho phòng của bạn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="home">Trang chủ</string>
-    <string name="in_room_count">%1$d người trong phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="in_room_count">%1$d trong phòng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="join">Tham gia</string>
-    <string name="no_active_rooms">Không có phòng nào đang hoạt động</string>
-    <string name="no_rooms">Không có phòng nào</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_active_rooms">Không có phòng hoạt động</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_rooms">Không có phòng trống</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_name">Tên phòng</string>
-    <string name="room_name_label">Tên Phòng</string>
-    <string name="seats_count">%1$d/%2$d ghế</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_name_label">Tên phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seats_count">%1$d/%2$d chỗ ngồi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="speakers_count">%1$d/%2$d người nói</string>
-    <string name="tap_plus_to_create">Nhấn + để tạo phòng</string>
-    <string name="visitors_count">%1$d khách</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_plus_to_create">Nhấn vào + để tạo một cái</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="visitors_count">%1$d khách truy cập</string>
 
     <!-- Profile -->
+    <!-- google-translated 2026-05-04 -->
     <string name="connections">Kết nối</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="display_name">Tên hiển thị</string>
-    <string name="dob_privacy_note">Ngày sinh là bắt buộc nhưng bạn có thể ẩn tuổi trong cài đặt quyền riêng tư.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dob_privacy_note">Ngày sinh của bạn là bắt buộc nhưng bạn có thể ẩn tuổi của mình trong cài đặt quyền riêng tư.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="dob_required_subtitle">Chúng tôi cần ngày sinh của bạn để tiếp tục.</string>
-    <string name="follow">Theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="follow">Theo</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="follow_back">Theo dõi lại</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="followers">Người theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="followers_count">Người theo dõi (%1$d)</string>
-    <string name="following">Đang theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following">Tiếp theo</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="following_count">Đang theo dõi (%1$d)</string>
-    <string name="following_list_private">Danh sách theo dõi của người dùng này ở chế độ riêng tư</string>
-    <string name="get_super_shy">Nhận Super Shy</string>
-    <string name="gift_wall">Tường Quà tặng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="following_list_private">Danh sách theo dõi của người dùng này là riêng tư</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy">Trở nên siêu nhút nhát</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift_wall">Tường quà tặng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gift_value_coins">Giá trị: %1$d xu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_followers_yet">Chưa có người theo dõi</string>
-    <string name="no_profile_visitors">Chưa có ai ghé thăm hồ sơ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_profile_visitors">Chưa có khách truy cập hồ sơ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="not_following_anyone">Chưa theo dõi ai</string>
-    <string name="one_more_step">Thêm Một Bước Nữa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="one_more_step">Thêm một bước nữa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile">Hồ sơ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile_setup_subtitle">Chọn tên hiển thị và nhập ngày sinh của bạn</string>
-    <string name="received_times">Đã nhận %1$d lần</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="received_times">Đã nhận được %1$d lần</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="remove_follower">Xóa người theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report">Báo cáo</string>
-    <string name="select_date_of_birth">Chọn Ngày sinh</string>
-    <string name="select_nationality">Chọn Quốc tịch</string>
-    <string name="search_countries">Tìm quốc gia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_date_of_birth">Chọn ngày sinh</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="select_nationality">Chọn quốc tịch</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_countries">Tìm kiếm quốc gia</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="selected">Đã chọn</string>
-    <string name="set_up_your_profile">Thiết Lập Hồ Sơ</string>
-    <string name="stalker_visit_info">Đã ghé thăm hồ sơ bạn %1$s, %2$d lần trong 3 tháng qua</string>
-    <string name="stalkers_count">Người theo dõi ẩn (%1$d)</string>
-    <string name="stalkers_super_shy_description">Xem ai đã ghé thăm hồ sơ của bạn! Tính năng theo dõi hồ sơ là đặc quyền của Super Shy.</string>
-    <string name="super_shy_benefit">Đặc Quyền Super Shy</string>
-    <string name="top_senders">Người Gửi Hàng Đầu</string>
-    <string name="block">Chặn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_up_your_profile">Thiết lập hồ sơ của bạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalker_visit_info">Đã theo dõi bạn %1$s, %2$d lần trong 3 tháng qua</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_count">Kẻ theo dõi (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers_super_shy_description">Xem ai đã truy cập hồ sơ của bạn! Kẻ theo dõi hồ sơ là một tính năng Super Shy độc quyền.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_benefit">Lợi ích siêu nhút nhát</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="top_senders">Người gửi hàng đầu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block">Khối</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unblock">Bỏ chặn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="undo_remove">Hoàn tác xóa</string>
-    <string name="unfollow">Bỏ theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unfollow">Hủy theo dõi</string>
 
     <!-- Room -->
-    <string name="alias">Biệt danh</string>
-    <string name="approve">Chấp nhận</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="alias">Bí danh</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="approve">Chấp thuận</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="audience">Khán giả</string>
-    <string name="back_to_home">Về Trang chủ</string>
-    <string name="backpack">Ba lô</string>
-    <string name="backpack_empty">Ba lô của bạn trống.\nQuay vòng quay để nhận quà!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="back_to_home">Quay lại trang chủ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="backpack">Balo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="backpack_empty">Ba lô của bạn trống.\nHãy quay bánh xe để nhận quà!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="ban">Cấm</string>
-    <string name="block_user">Chặn Người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_user">Chặn người dùng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="block_user_confirm">Bạn có chắc chắn muốn chặn %1$s không?</string>
-    <string name="close_room">Đóng Phòng</string>
-    <string name="daily">Hàng ngày</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room">Đóng phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="daily">Hằng ngày</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="deny">Từ chối</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="empty_seat">Ghế trống</string>
-    <string name="filter_gift_animations_description">Lọc bỏ hiệu ứng của các quà giá rẻ.</string>
-    <string name="gift">Quà tặng</string>
-    <string name="gift_animations">Hiệu Ứng Quà Tặng</string>
-    <string name="host">Chủ phòng phụ</string>
-    <string name="hosts">Chủ phòng phụ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_gift_animations_description">Lọc hình ảnh động để có quà tặng rẻ hơn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift">Quà</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="gift_animations">Hoạt hình quà tặng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="host">Chủ nhà</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hosts">Máy chủ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="invite_to_seat">Mời ngồi</string>
-    <string name="kick">Đuổi</string>
-    <string name="kick_user">Đuổi Người dùng</string>
-    <string name="kick_user_confirm">Bạn có chắc chắn muốn đuổi %1$s khỏi phòng không? Họ sẽ không thể tham gia lại.</string>
-    <string name="leave_room">Rời Phòng</string>
-    <string name="leave_seat">Rời ghế</string>
-    <string name="lock_seating">Khóa Chỗ Ngồi</string>
-    <string name="lock_seating_description">Chỉ chủ phòng mới có thể mời người dùng ngồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick">Đá</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_user">Đá người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_user_confirm">Bạn có chắc chắn muốn đuổi %1$s ra khỏi phòng không? Họ sẽ không thể tham gia lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room">Rời khỏi phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_seat">Rời khỏi chỗ ngồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating">Khóa chỗ ngồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lock_seating_description">Chỉ chủ sở hữu mới có thể mời người dùng ngồi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="buy_coins">Mua xu</string>
-    <string name="collect_all">NHẬN TẤT CẢ (%1$d)</string>
-    <string name="increased_drop_rate">TỶ LỆ TRÚNG TĂNG</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="collect_all">THU TẤT CẢ (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="increased_drop_rate">TỶ LỆ GIẢM TĂNG</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="loading_prices">Đang tải giá…</string>
-    <string name="lucky_spin">Lucky Spin</string>
-    <string name="lucky_spin_title">LUCKY SPIN</string>
-    <string name="need_more_coins">Cần thêm xu!</string>
-    <string name="no_packages_available">Không có gói nào</string>
-    <string name="no_spins_yet">Chưa có lượt quay</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin">Vòng quay may mắn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="lucky_spin_title">VÒNG QUAY MAY MẮN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="need_more_coins">Cần nhiều tiền hơn!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_packages_available">Không có gói nào có sẵn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_spins_yet">Chưa có vòng quay nào</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="prizes">Giải thưởng</string>
-    <string name="skip_animation">BỎ QUA HIỆU ỨNG</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="skip_animation">BỎ QUA HÌNH ẢNH</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="spin">QUAY</string>
-    <string name="spin_count">%1$d LƯỢT QUAY</string>
-    <string name="spin_history">Lịch Sử Quay</string>
-    <string name="spin_results">Kết Quả Quay</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_count">%1$d(S) VÒNG QUAY</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_history">Lịch sử quay</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="spin_results">Kết quả quay</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message">Tin nhắn</string>
-    <string name="move_to_audience">Chuyển về Khán giả</string>
-    <string name="move_to_seat">Chuyển lên Ghế</string>
-    <string name="move_to_which_seat">Chuyển đến ghế nào?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_audience">Chuyển đến Đối tượng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_seat">Di chuyển đến chỗ ngồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_which_seat">Di chuyển đến chỗ ngồi nào?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mute">Tắt tiếng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_audience_members">Không có khán giả</string>
-    <string name="no_pending_requests">Không có yêu cầu đang chờ</string>
-    <string name="no_reason_given">Không có lý do</string>
-    <string name="no_one_on_mic">Không ai trên mic</string>
-    <string name="occupied">Đã có người</string>
-    <string name="open_for_duration">Đã mở %1$s</string>
-    <string name="owner">Chủ phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_pending_requests">Không có yêu cầu đang chờ xử lý</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_reason_given">Không có lý do nào được đưa ra</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_one_on_mic">Không có ai cầm mic</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="occupied">Chiếm lĩnh</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="open_for_duration">Mở cho %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner">Người sở hữu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reason_optional">Lý do (tùy chọn)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reject">Từ chối</string>
-    <string name="remove">Xóa</string>
-    <string name="remove_as_host">Xóa quyền Chủ phòng phụ</string>
-    <string name="remove_from_room">Xóa khỏi Phòng</string>
-    <string name="request">Yêu cầu</string>
-    <string name="request_a_seat">Yêu Cầu Ghế</string>
-    <string name="request_seat">Yêu Cầu Ghế</string>
-    <string name="requesting">Đang yêu cầu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove">Di dời</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_as_host">Xóa làm máy chủ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="remove_from_room">Xóa khỏi phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request">Lời yêu cầu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_a_seat">Yêu cầu chỗ ngồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="request_seat">Yêu cầu chỗ ngồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="requesting">Yêu cầu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room">Phòng</string>
-    <string name="room_closed">Phòng Đã Đóng</string>
-    <string name="room_closing_no_super_shy">Chủ phòng không có Super Shy, phòng này sẽ sớm đóng.</string>
-    <string name="room_closing_in">Phòng đóng sau %1$d:%2$s</string>
-    <string name="room_closing_soon">Phòng Sắp Đóng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closed">Phòng đã đóng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_no_super_shy">Chủ phòng không có Super Shy nên phòng này sẽ sớm đóng cửa.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_in">Phòng sẽ đóng sau %1$d:%2$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_closing_soon">Phòng sắp đóng cửa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="room_settings">Cài đặt phòng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="rooms">Phòng</string>
-    <string name="seat_requests">Yêu Cầu Ghế</string>
-    <string name="seat_swap_with">Ghế %1$d (đổi với %2$s)</string>
-    <string name="set_alias">Đặt Biệt danh</string>
-    <string name="set_alias_description">Đặt biệt danh cá nhân cho %1$s. Chỉ bạn mới thấy biệt danh này.</string>
-    <string name="set_as_host">Đặt làm Chủ phòng phụ</string>
-    <string name="showing_all_gift_animations">Hiển thị tất cả hiệu ứng quà tặng</string>
-    <string name="showing_animations_worth">Chỉ hiển thị hiệu ứng từ %1$d+ xu</string>
-    <string name="speakers">Người nói</string>
-    <string name="take_a_seat">Ngồi vào Ghế</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seat_requests">Yêu cầu chỗ ngồi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seat_swap_with">Chỗ ngồi %1$d (hoán đổi với %2$s)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias">Đặt bí danh</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_alias_description">Đặt bí danh cá nhân cho %1$s. Chỉ có bạn mới nhìn thấy điều này.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="set_as_host">Đặt làm máy chủ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="showing_all_gift_animations">Hiển thị tất cả hình ảnh động quà tặng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="showing_animations_worth">Chỉ hiển thị hình ảnh động có giá trị %1$d+ xu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="speakers">Loa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="take_a_seat">Hãy ngồi xuống</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmute">Bật tiếng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmuted">Đã bật tiếng</string>
-    <string name="user">Người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="user">người dùng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user_id">ID: %1$d</string>
-    <string name="visitor_count">%1$d khách</string>
-    <string name="voice">Giọng nói</string>
-    <string name="voice_unavailable">Giọng nói không khả dụng</string>
-    <string name="you_have_super_shy_room">Bạn có Super Shy! Mở phòng riêng với thời gian kéo dài lên đến %1$d giờ.</string>
-    <string name="get_super_shy_rooms">Nhận Super Shy để tận hưởng phòng kéo dài đến %1$d giờ!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="visitor_count">%1$d khách truy cập</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice">Tiếng nói</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_unavailable">Không có giọng nói</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_have_super_shy_room">Bạn có Siêu nhút nhát! Mở phòng riêng của bạn trong thời gian kéo dài tối đa %1$d giờ.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="get_super_shy_rooms">Hãy mua Super Shy để tận hưởng những căn phòng kéo dài tới %1$d giờ!</string>
 
     <!-- Room - Notifications -->
+    <!-- google-translated 2026-05-04 -->
     <string name="accept">Chấp nhận</string>
-    <string name="decline">Từ chối</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="decline">Sự suy sụp</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="go_back">Quay lại</string>
-    <string name="go_to_seat">Đến Ghế</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="go_to_seat">Đi tới chỗ ngồi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="invited_to_sit">Bạn đã được mời ngồi!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="request_accepted">Yêu cầu của bạn đã được chấp nhận!</string>
-    <string name="seat_number">Ghế %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seat_number">Chỗ ngồi %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="user_wants_to_sit">%1$s muốn ngồi</string>
 
     <!-- Room - Chat -->
+    <!-- google-translated 2026-05-04 -->
     <string name="cancel_edit">Hủy chỉnh sửa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edit_message_placeholder">Chỉnh sửa tin nhắn...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_placeholder">Tin nhắn...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="new_messages">Tin nhắn mới</string>
 
     <!-- Room - Backpack -->
-    <string name="action_cannot_be_undone">HÀNH ĐỘNG NÀY KHÔNG THỂ HOÀN TÁC.</string>
-    <string name="confirm_send">Xác Nhận Gửi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="action_cannot_be_undone">KHÔNG THỂ HOÀN TÁC HÀNH ĐỘNG NÀY.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm_send">Xác nhận gửi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="from_backpack_items">Từ ba lô: %1$d vật phẩm</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="gifts">Quà tặng</string>
-    <string name="send_all">Gửi Tất Cả</string>
-    <string name="send_all_includes">Bao gồm TẤT CẢ %1$d vật phẩm trong %2$d loại quà khác nhau.</string>
-    <string name="send_all_warning">Bạn sắp gửi TOÀN BỘ ba lô cho %1$s.</string>
-    <string name="send_everything_confirm">Tôi hiểu, gửi tất cả</string>
-    <string name="to_label">Đến</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all">Gửi tất cả</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_includes">Điều này bao gồm TẤT CẢ %1$d mặt hàng trên %2$d quà tặng khác nhau.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_all_warning">Bạn sắp gửi TOÀN BỘ ba lô của mình tới %1$s.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_everything_confirm">Tôi hiểu rồi, gửi mọi thứ đi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="to_label">ĐẾN</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="total_cost_coins">Tổng chi phí: %1$d xu</string>
-    <string name="use_button">Dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="use_button">Sử dụng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="you_have_count">Bạn có: %1$d</string>
-    <string name="your_balance_coins">Số dư: %1$d xu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="your_balance_coins">Số dư của bạn: %1$d xu</string>
 
     <!-- Messaging -->
+    <!-- google-translated 2026-05-04 -->
     <string name="additional_details_optional">Chi tiết bổ sung (tùy chọn)</string>
-    <string name="all_admins_and_mods">Tất cả quản trị viên &amp; điều hành viên</string>
-    <string name="attach_evidence">Đính kèm Bằng chứng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="all_admins_and_mods">Tất cả quản trị viên và mod</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="attach_evidence">Đính kèm bằng chứng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cant_message_user">Bạn không thể nhắn tin cho người dùng này</string>
     <!-- google-translated 2026-05-04 -->
     <string name="pm_locked_other_user_notice">Bạn không thể nhắn tin cho người này vì chúng tôi tin rằng họ dưới 18 tuổi.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="chat">Trò chuyện</string>
-    <string name="close_group">Đóng Nhóm</string>
-    <string name="close_group_warning">Điều này sẽ đóng nhóm cho tất cả mọi người. Tin nhắn được giữ lại để kiểm duyệt.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_group">Đóng nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_group_warning">Điều này sẽ đóng nhóm cho tất cả mọi người. Tin nhắn được bảo quản để kiểm duyệt.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="compressing">Đang nén...</string>
-    <string name="conversation_start_hint">Bắt đầu trò chuyện từ hồ sơ hoặc\nthẻ người dùng trong phòng</string>
-    <string name="create_group">Tạo Nhóm</string>
-    <string name="current_version">Hiện tại</string>
-    <string name="delete_conversation">Xóa Cuộc trò chuyện</string>
-    <string name="delete_conversation_warning">Điều này sẽ xóa cuộc trò chuyện khỏi danh sách của bạn. Tin nhắn được giữ lại và sẽ xuất hiện lại nếu người kia nhắn cho bạn.</string>
-    <string name="description_label">Mô tả</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="conversation_start_hint">Bắt đầu cuộc trò chuyện từ\nhồ sơ hoặc thẻ người dùng của ai đó trong phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="create_group">Tạo nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="current_version">Hiện hành</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_conversation">Xóa cuộc trò chuyện</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_conversation_warning">Thao tác này sẽ xóa cuộc trò chuyện khỏi danh sách của bạn. Tin nhắn được giữ nguyên và sẽ xuất hiện lại nếu người kia nhắn tin lại cho bạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description_label">Sự miêu tả</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="description_optional">Mô tả (tùy chọn)</string>
-    <string name="edit_history">Lịch Sử Chỉnh Sửa</string>
-    <string name="editing_message">Đang chỉnh sửa tin nhắn</string>
-    <string name="evidence">Bằng chứng</string>
-    <string name="evidence_required">Cần ít nhất một ảnh chụp màn hình hoặc bản ghi.</string>
-    <string name="general">Chung</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_history">Chỉnh sửa lịch sử</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="editing_message">Chỉnh sửa tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="evidence">Chứng cớ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="evidence_required">Cần có ít nhất một ảnh chụp màn hình hoặc bản ghi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="general">Tổng quan</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="group">Nhóm</string>
-    <string name="group_chat">Nhóm Chat</string>
-    <string name="group_name_label">Tên Nhóm</string>
-    <string name="group_name_required">Tên Nhóm *</string>
-    <string name="group_settings">Cài Đặt Nhóm</string>
-    <string name="invite_to_room">Mời vào Phòng</string>
-    <string name="last_seen">Lần cuối trực tuyến %1$s</string>
-    <string name="leave_group">Rời Nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_chat">Trò chuyện nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_name_label">Tên nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_name_required">Tên nhóm *</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="group_settings">Cài đặt nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="invite_to_room">Mời vào phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="last_seen">Nhìn thấy lần cuối %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_group">Rời khỏi nhóm</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="members">Thành viên</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="members_count">%1$d thành viên</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_ellipsis">Tin nhắn...</string>
-    <string name="message_permissions">Quyền Tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_permissions">Quyền tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_image">[Hình ảnh]</string>
-    <string name="message_preview_recalled">[Tin nhắn đã thu hồi]</string>
-    <string name="message_preview_room_invite">[Lời mời Phòng]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_recalled">[Tin nhắn bị thu hồi]</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_room_invite">[Mời vào phòng]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="message_preview_sticker">[Nhãn dán]</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="messages">Tin nhắn</string>
-    <string name="mod_notifications">Thông Báo Điều Hành</string>
-    <string name="move_to_front">Đưa lên đầu</string>
-    <string name="mute_notifications">Tắt Thông báo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mod_notifications">Thông báo sửa đổi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="move_to_front">Di chuyển về phía trước</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mute_notifications">Tắt tiếng thông báo</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="mute_reason">. Lý do: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="muted">Đã tắt tiếng</string>
-    <string name="muted_for_hours_minutes">Bạn bị tắt tiếng trong %1$d giờ %2$d phút</string>
-    <string name="muted_for_minutes">Bạn bị tắt tiếng trong %1$d phút</string>
-    <string name="muted_indefinitely">Bạn đã bị tắt tiếng</string>
-    <string name="new_group">Nhóm Mới</string>
-    <string name="new_group_selected">Nhóm Mới (%1$d đã chọn)</string>
-    <string name="new_message">Tin Nhắn Mới</string>
-    <string name="no_action_needed">Không Cần Hành Động</string>
-    <string name="no_followers_following_found">Không tìm thấy người theo dõi</string>
-    <string name="no_matches_found">Không tìm thấy kết quả</string>
-    <string name="no_messages">Chưa có tin nhắn</string>
-    <string name="no_pending_reports">Không có báo cáo đang chờ</string>
-    <string name="no_stickers_yet">Chưa có nhãn dán</string>
-    <string name="no_users_found">Không tìm thấy người dùng</string>
-    <string name="notify_owner_only">Chỉ thông báo cho chủ phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_hours_minutes">Bạn bị tắt tiếng trong %1$dh %2$dm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_for_minutes">Bạn bị tắt tiếng trong %1$dm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="muted_indefinitely">Bạn đang bị tắt tiếng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_group">Nhóm mới</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_group_selected">Nhóm Mới (đã chọn %1$d)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="new_message">Tin nhắn mới</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_action_needed">Không cần hành động</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_followers_following_found">Không tìm thấy người theo dõi hoặc người theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_matches_found">Không tìm thấy kết quả phù hợp</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_messages">Chưa có tin nhắn nào</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_pending_reports">Không có báo cáo đang chờ xử lý</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_stickers_yet">Chưa có nhãn dán nào</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_users_found">Không tìm thấy người dùng nào</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notify_owner_only">Chỉ thông báo cho chủ sở hữu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="online">Trực tuyến</string>
-    <string name="only_admins_can_send">Chỉ quản trị viên và điều hành viên mới có thể gửi tin nhắn trong nhóm này</string>
-    <string name="only_owner_can_change_permissions">Chỉ chủ nhóm mới có thể thay đổi quyền hạn.</string>
-    <string name="owner_only">Chỉ chủ nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_admins_can_send">Chỉ quản trị viên và mod mới có thể gửi tin nhắn trong nhóm này</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="only_owner_can_change_permissions">Chỉ chủ sở hữu nhóm mới có thể thay đổi quyền.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner_only">Chỉ chủ sở hữu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="participants">Người tham gia</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="participants_count">Người tham gia (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin">Ghim</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="recent">Gần đây</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="replying_to">Đang trả lời %1$s</string>
-    <string name="report_message_prompt">Tại sao bạn báo cáo tin nhắn này?</string>
-    <string name="report_review">Xem Xét Báo Cáo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_message_prompt">Tại sao bạn lại báo cáo tin nhắn này?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_review">Đánh giá báo cáo</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_user">Báo cáo %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_user_prompt">Tại sao bạn báo cáo người dùng này?</string>
-    <string name="reset_to_default">Đặt lại Mặc định</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reset_to_default">Đặt lại về mặc định</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="result_count">%1$d kết quả</string>
-    <string name="review_report">Xem Xét Báo Cáo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="review_report">Báo cáo đánh giá</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_admin">Quản trị viên</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="role_member">Thành viên</string>
-    <string name="role_mod">Điều hành viên</string>
-    <string name="role_owner">Chủ nhóm</string>
-    <string name="save_description">Lưu Mô tả</string>
-    <string name="search_all_users">Tìm tất cả người dùng</string>
-    <string name="search_conversations">Tìm cuộc trò chuyện...</string>
-    <string name="search_messages">Tìm tin nhắn...</string>
-    <string name="search_people">Tìm người...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_mod">mod</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="role_owner">Người sở hữu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="save_description">Lưu mô tả</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_all_users">Tìm kiếm tất cả người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_conversations">Tìm kiếm cuộc trò chuyện...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_messages">Tìm kiếm tin nhắn...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="search_people">Tìm kiếm người...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="select_action">Chọn hành động:</string>
-    <string name="selected_count">Đã chọn %1$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="selected_count">%1$d đã chọn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="start_conversation">Bắt đầu cuộc trò chuyện</string>
-    <string name="submit_report">Gửi Báo Cáo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submit_report">Gửi báo cáo</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="submitting">Đang gửi...</string>
-    <string name="system_messages">Tin Nhắn Hệ Thống</string>
-    <string name="transfer_ownership">Chuyển Quyền Sở Hữu</string>
-    <string name="transfer_ownership_warning">Chọn thành viên để chuyển quyền sở hữu. Bạn sẽ mất quyền chủ nhóm. Hành động này không thể hoàn tác.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="system_messages">Tin nhắn hệ thống</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer_ownership">Chuyển quyền sở hữu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transfer_ownership_warning">Chọn một thành viên để chuyển quyền sở hữu. Bạn sẽ mất đặc quyền của chủ sở hữu. Điều này không thể hoàn tác được.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="type_message">Nhập tin nhắn…</string>
-    <string name="typing">đang nhập...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="typing">đang gõ...</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unmute_action">Bật tiếng</string>
-    <string name="unmute_notifications">Bật Thông báo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unmute_notifications">Bật tiếng thông báo</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unpin">Bỏ ghim</string>
-    <string name="view_profile">Xem Hồ sơ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="view_profile">Xem hồ sơ</string>
 
     <!-- Messaging - report reasons -->
-    <string name="report_reason_spam">Spam</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reason_spam">Thư rác</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_harassment">Quấy rối</string>
-    <string name="report_reason_inappropriate">Nội dung Không phù hợp</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reason_inappropriate">Nội dung không phù hợp</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_other">Khác</string>
 
     <!-- Messaging - report actions -->
-    <string name="report_action_warning">Cảnh cáo</string>
-    <string name="report_action_temp_suspension">Tạm ngưng</string>
-    <string name="report_action_perm_suspension">Cấm vĩnh viễn</string>
-    <string name="report_action_pm_ban">Cấm nhắn tin riêng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_warning">Cảnh báo vấn đề</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_temp_suspension">Đình chỉ tạm thời</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_perm_suspension">Đình chỉ vĩnh viễn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_action_pm_ban">Cấm từ PM</string>
 
     <!-- Messaging - report details -->
+    <!-- google-translated 2026-05-04 -->
     <string name="report_reason_prefix">Lý do: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_type_prefix">Loại: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_details_prefix">Chi tiết: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="report_message_prefix">Tin nhắn: \"%1$s\"</string>
-    <string name="report_reporter_reported">Người báo cáo: %1$s | Bị báo cáo: %2$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_reporter_reported">Phóng viên: %1$s | Đã báo cáo: %2$s</string>
 
     <!-- Messaging - system message labels -->
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_member_joins">Thành viên tham gia</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_member_leaves">Thành viên rời đi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sys_role_changes">Thay đổi vai trò</string>
-    <string name="sys_permission_changes">Thay đổi quyền hạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sys_permission_changes">Thay đổi quyền</string>
 
     <!-- Messaging - permission labels -->
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_send">Ai có thể gửi tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_add_members">Ai có thể thêm thành viên</string>
-    <string name="perm_who_can_edit_info">Ai có thể sửa thông tin nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="perm_who_can_edit_info">Ai có thể chỉnh sửa thông tin nhóm</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_delete_messages">Ai có thể xóa tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_mute_members">Ai có thể tắt tiếng thành viên</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="perm_who_can_remove_members">Ai có thể xóa thành viên</string>
 
     <!-- Messaging - date separators -->
+    <!-- google-translated 2026-05-04 -->
     <string name="today">Hôm nay</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="yesterday">Hôm qua</string>
 
     <!-- Daily Reward -->
+    <!-- google-translated 2026-05-04 -->
     <string name="awesome">Tuyệt vời!</string>
-    <string name="claim_todays_reward">Nhận Thưởng Hôm Nay</string>
-    <string name="coins">xu</string>
-    <string name="day_fri">T6</string>
-    <string name="day_mon">T2</string>
-    <string name="day_sat">T7</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_todays_reward">Yêu cầu phần thưởng hôm nay</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="coins">đồng xu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_fri">Thứ sáu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_mon">Thứ hai</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sat">Đã ngồi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="day_streak">Chuỗi %1$d ngày</string>
-    <string name="day_sun">CN</string>
-    <string name="day_thu">T5</string>
-    <string name="day_tue">T3</string>
-    <string name="day_wed">T4</string>
-    <string name="later">Để sau</string>
-    <string name="milestone">Cột mốc</string>
-    <string name="milestone_bonus">Thưởng cột mốc!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_sun">Mặt trời</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_thu">Thứ năm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_tue">thứ ba</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="day_wed">Thứ tư</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="later">Sau đó</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="milestone">Cột mốc quan trọng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="milestone_bonus">Phần thưởng cột mốc!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="plus_coins">+%1$d xu!</string>
-    <string name="reward_claimed">Đã Nhận Thưởng!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reward_claimed">Đã nhận được phần thưởng!</string>
 
     <!-- Economy -->
-    <string name="bean_redeem_description">1 hạt đậu = 1 xu. Đổi từ 2.000+ để nhận thêm 10% bonus!</string>
-    <string name="bonus_coins">+%1$d bonus</string>
-    <string name="buy_shy_coins">Mua ShyCoins</string>
-    <string name="confirm_redemption">Xác Nhận Đổi</string>
-    <string name="daily_reward">Thưởng Hàng Ngày</string>
-    <string name="redeem">Đổi</string>
-    <string name="redeem_all">Đổi Tất Cả</string>
-    <string name="redeem_beans_for_coins">Đổi %1$s hạt đậu lấy %2$s xu?</string>
-    <string name="redeem_shy_beans">Đổi ShyBeans</string>
-    <string name="send_gift">Gửi Quà</string>
-    <string name="shy_beans">ShyBeans</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bean_redeem_description">1 hạt đậu = 1 đồng xu. Đổi hơn 2.000 để nhận tiền thưởng 10%!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bonus_coins">+%1$d tiền thưởng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="buy_shy_coins">Mua xu nhút nhát</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="confirm_redemption">Xác nhận quy đổi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="daily_reward">Phần thưởng hàng ngày</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem">Chuộc lại</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_all">Đổi tất cả</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_beans_for_coins">Đổi %1$s đậu lấy %2$s xu?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="redeem_shy_beans">Đổi đậu nhút nhát</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_gift">Gửi quà</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shy_beans">đậu nhút nhát</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="shy_coins">ShyCoins</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_all">Tất cả</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_gacha">Gacha</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_gifts">Quà tặng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_purchases">Mua hàng</string>
-    <string name="filter_redemptions">Đổi thưởng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="filter_redemptions">Quy đổi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="filter_rewards">Phần thưởng</string>
-    <string name="no_filtered_transactions">Không có giao dịch %1$s</string>
-    <string name="no_transactions_yet">Chưa có giao dịch</string>
-    <string name="transaction_history">Lịch Sử Giao Dịch</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_filtered_transactions">Không có giao dịch %1$s nào</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_transactions_yet">Chưa có giao dịch nào</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="transaction_history">Lịch sử giao dịch</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="transactions">Giao dịch</string>
-    <string name="wallet">Ví</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="wallet">Cái ví</string>
 
     <!-- Super Shy -->
-    <string name="benefit_daily_bonus">+10% xu đăng nhập hàng ngày (làm tròn lên)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_daily_bonus">+10% số xu đăng nhập hàng ngày (làm tròn)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_extended_room">Thời gian phòng kéo dài (12 giờ)</string>
-    <string name="benefit_full_room">Phòng đầy đủ 8 ghế</string>
-    <string name="benefit_gold_name">Tên hiển thị vàng ở mọi nơi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_full_room">Phòng đầy đủ 8 chỗ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefit_gold_name">Tên hiển thị vàng ở khắp mọi nơi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_profile_frame">Khung hồ sơ độc quyền</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="benefit_star_badge">Huy hiệu ngôi sao bên cạnh tên</string>
-    <string name="benefits">Đặc quyền</string>
-    <string name="choose_a_plan">Chọn gói</string>
-    <string name="claim_30_days_free">Nhận 30 Ngày Miễn Phí</string>
-    <string name="claimed">Đã nhận!</string>
-    <string name="claimed_activate_backpack">Để kích hoạt, hãy tìm trong ba lô khi bạn đang ở phòng chat.</string>
-    <string name="claiming">Đang nhận…</string>
-    <string name="currently_active">Đang Hoạt Động</string>
-    <string name="days_remaining">Còn %1$d ngày</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="benefits">Những lợi ích</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_a_plan">Chọn một kế hoạch</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claim_30_days_free">Yêu cầu 30 ngày miễn phí</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed">Đã xác nhận quyền sở hữu!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claimed_activate_backpack">Để kích hoạt nó, hãy tìm nó trong ba lô của bạn khi ở trong phòng trò chuyện.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="claiming">Đang yêu cầu…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="currently_active">Hiện đang hoạt động</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="days_remaining">Còn lại %1$d ngày</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="one_time_payment">Thanh toán một lần</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_month">mỗi tháng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="per_year">mỗi năm</string>
-    <string name="super_shy">Super Shy</string>
-    <string name="super_shy_for_life">Bạn là Super Shy vĩnh viễn!</string>
-    <string name="tap_to_claim_backpack">Nhấn để nhận — thêm vào ba lô của bạn</string>
-    <string name="testing_mode_super_shy">Chế độ thử nghiệm — không tính phí thật. Nhấn vào gói để kích hoạt Super Shy ngay.</string>
-    <string name="tier_label">Gói: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy">siêu nhút nhát</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_for_life">Bạn siêu nhút nhát suốt đời!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_claim_backpack">Nhấn để xác nhận — đã thêm vào ba lô của bạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="testing_mode_super_shy">Chế độ thử nghiệm - không tính tiền thật. Nhấn vào một kế hoạch để kích hoạt ngay tính năng Siêu nhút nhát.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_label">Cấp: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tier_lifetime">Trọn đời</string>
-    <string name="tier_monthly">Hàng tháng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tier_monthly">hàng tháng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="tier_yearly">Hàng năm</string>
-    <string name="upgrade_to_lifetime">Nâng cấp lên Trọn Đời</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="upgrade_to_lifetime">Nâng cấp lên trọn đời</string>
 
     <!-- Legal -->
-    <string name="accept_all_and_continue">Chấp Nhận Tất Cả &amp; Tiếp Tục</string>
-    <string name="community_standards">Tiêu Chuẩn Cộng Đồng</string>
-    <string name="cyber_bullying_policy">Chính Sách Chống Bắt Nạt Mạng</string>
-    <string name="i_have_read_and_agree">Tôi đã đọc và đồng ý với </string>
-    <string name="privacy_policy">Chính Sách Bảo Mật</string>
-    <string name="review_and_accept_policies">Vui lòng xem xét và chấp nhận các chính sách để tiếp tục.</string>
-    <string name="terms_and_conditions">Điều Khoản &amp; Điều Kiện</string>
-    <string name="welcome_to_shytalk">Chào Mừng Đến ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="accept_all_and_continue">Chấp nhận tất cả và tiếp tục</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="community_standards">Tiêu chuẩn cộng đồng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cyber_bullying_policy">Chính sách bắt nạt trên mạng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_have_read_and_agree">Tôi đã đọc và đồng ý với</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="privacy_policy">Chính sách bảo mật</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="review_and_accept_policies">Vui lòng xem lại và chấp nhận chính sách của chúng tôi để tiếp tục.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="terms_and_conditions">Điều khoản &amp; Điều kiện</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="welcome_to_shytalk">Chào mừng đến với ShyTalk</string>
 
     <!-- Auth -->
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_in">Đăng nhập</string>
-    <string name="verification_code">Mã Xác Nhận</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="verification_code">Mã xác minh</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="continue_with_google">Tiếp tục với Google</string>
 
     <!-- Missing translations (English fallback) -->
-    <string name="account_restricted">Account Restricted</string>
-    <string name="account_suspended_description">This user\'s account has been suspended.</string>
-    <string name="account_suspended_label">Account Suspended</string>
-    <string name="active_days_ago">Active %1$dd ago</string>
-    <string name="active_hours_ago">Active %1$dh ago</string>
-    <string name="active_just_now">Active just now</string>
-    <string name="active_long_ago">Active 30+ days ago</string>
-    <string name="active_minutes_ago">Active %1$dm ago</string>
-    <string name="allow">Allow</string>
-    <string name="allowed">Allowed</string>
-    <string name="appeal">Appeal</string>
-    <string name="appeal_not_eligible">You are not eligible to appeal this suspension.</string>
-    <string name="appeal_placeholder">Explain why your suspension should be lifted…</string>
-    <string name="appeal_submitted">Your appeal has been submitted and will be reviewed. If successful, your suspension will be lifted. You will not receive any further feedback on your appeal and you cannot submit another appeal.</string>
-    <string name="appeal_unsuccessful">Your appeal has been reviewed and was not successful. You cannot submit another appeal.</string>
-    <string name="ban_expires">Expires: %1$s</string>
-    <string name="ban_permanent">This ban is permanent.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_restricted">Tài khoản bị hạn chế</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_description">Tài khoản của người dùng này đã bị đình chỉ.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_suspended_label">Tài khoản bị đình chỉ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_days_ago">Đang hoạt động %1$dd trước</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_hours_ago">Đang hoạt động %1$dh trước</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_just_now">Vừa mới hoạt động</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_long_ago">Hoạt động hơn 30 ngày trước</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="active_minutes_ago">Đang hoạt động %1$dm trước</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allow">Cho phép</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="allowed">Cho phép</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal">Bắt mắt</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_not_eligible">Bạn không đủ điều kiện để khiếu nại việc đình chỉ này.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_placeholder">Giải thích lý do tại sao việc đình chỉ của bạn nên được dỡ bỏ…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_submitted">Đơn khiếu nại của bạn đã được gửi và sẽ được xem xét. Nếu thành công, việc đình chỉ của bạn sẽ được dỡ bỏ. Bạn sẽ không nhận được thêm bất kỳ phản hồi nào về khiếu nại của mình và bạn không thể gửi khiếu nại khác.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="appeal_unsuccessful">Kháng nghị của bạn đã được xem xét và không thành công. Bạn không thể gửi khiếu nại khác.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_expires">Hết hạn: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_permanent">Lệnh cấm này là vĩnh viễn.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="suspension_also_device_banned">Thiết bị của bạn cũng đã bị cấm.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="suspension_also_network_banned">Mạng của bạn cũng đã bị cấm.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="suspension_also_device_and_network_banned">Thiết bị và mạng của bạn cũng đã bị cấm.</string>
-    <string name="ban_reason">Reason: %1$s</string>
-    <string name="banned_by">Banned by: %1$s</string>
-    <string name="banned_from_room">Banned from Room</string>
-    <string name="block_confirm">Block %1$s?</string>
-    <string name="block_description">They won\'t be able to view your profile.</string>
-    <string name="blocked_by_user">You have been blocked by this user</string>
-    <string name="blocked_by_user_in_room_description">A user in this room has blocked you. You may have a limited experience. Enter anyway?</string>
-    <string name="blocked_user_in_room">Blocked User in Room</string>
-    <string name="blocked_user_in_room_description">A user you have blocked is in this room. They will be able to communicate with you. Enter anyway?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="ban_reason">Lý do: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_by">Bị cấm bởi: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="banned_from_room">Bị cấm vào phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_confirm">Chặn %1$s?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="block_description">Họ sẽ không thể xem hồ sơ của bạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user">Bạn đã bị chặn bởi người dùng này</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_by_user_in_room_description">Một người dùng trong phòng này đã chặn bạn. Bạn có thể có một kinh nghiệm hạn chế. Vẫn nhập?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room">Người dùng bị chặn trong phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="blocked_user_in_room_description">Người dùng bạn đã chặn đang ở trong phòng này. Họ sẽ có thể liên lạc với bạn. Vẫn nhập?</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="bluetooth">Bluetooth</string>
-    <string name="bluetooth_description">Connect to Bluetooth audio devices during voice chat.</string>
-    <string name="cache_cleared">Cache Cleared</string>
-    <string name="cache_cleared_description">App cache has been cleared.</string>
-    <string name="cannot_enter_room">Cannot Enter Room</string>
-    <string name="chat_display">Chat Display</string>
-    <string name="check_for_updates">Check for Updates</string>
-    <string name="checking_for_updates">Checking for updates…</string>
-    <string name="choose_another_room">Choose Another Room</string>
-    <string name="clear">Clear</string>
-    <string name="clear_cache">Clear Cache</string>
-    <string name="clear_cache_confirm">Clear %1$s of cached data?</string>
-    <string name="clear_cache_with_size">Clear Cache (%1$s)</string>
-    <string name="close_room_description">This will close the room for everyone.</string>
-    <string name="close_room_question">Close Room?</string>
-    <string name="closing">Closing...</string>
-    <string name="connecting">Connecting...</string>
-    <string name="connection_trouble">ShyTalk is having trouble reaching our servers. Please check your internet connection and try again.</string>
-    <string name="contact_support_help">If you need help, contact shytalk.help@gmail.com</string>
-    <string name="contact_support_hint">If the problem persists, contact shytalk.help@gmail.com</string>
-    <string name="contact_us">Contact Us</string>
-    <string name="shyden_ltd_brand">ShyTalk là thương hiệu của Shyden Ltd (Số công ty 17110487), 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, Vương quốc Anh.</string>
-    <string name="delete_account">Delete Account</string>
-    <string name="delete_account_description">Your account and all data will be permanently deleted after the grace period. You can cancel by signing in before then.</string>
-    <string name="delete_account_scheduled">Your account is scheduled for deletion on %1$s. Would you like to cancel?</string>
-    <string name="delete_account_cancel">Cancel Deletion</string>
-    <string name="delete_account_continue">Continue with Deletion</string>
-    <string name="delete_account_success">Your account has been scheduled for deletion.</string>
-    <string name="delete_account_pin_required">Verify your identity to delete your account</string>
-    <string name="delete_account_confirm_title">Are you sure?</string>
-    <string name="delete_account_confirm_body">This will permanently delete your account and all associated data after the grace period. This action cannot be undone.</string>
-    <string name="denied">Denied</string>
-    <string name="description">Description</string>
-    <string name="device_locked_description">This device is already linked to another account.\nOnly one account is allowed per device.\n\nFor support, contact shytalk.help@gmail.com</string>
-    <string name="device_not_supported">Device Not Supported</string>
-    <string name="device_not_supported_description">ShyTalk cannot run on rooted or emulated devices. Please use an unmodified device.</string>
-    <string name="display_over_other_apps">Display over other apps</string>
-    <string name="display_over_other_apps_description">Allow ShyTalk to show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="dnd_end_time">DND End Time</string>
-    <string name="dnd_start_time">DND Start Time</string>
-    <string name="do_not_disturb">Do Not Disturb</string>
-    <string name="download_now">Download Now</string>
-    <string name="edit_room_name">Edit Room Name</string>
-    <string name="email">Email</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="bluetooth_description">Kết nối với thiết bị âm thanh Bluetooth trong khi trò chuyện thoại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared">Đã xóa bộ nhớ đệm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cache_cleared_description">Bộ nhớ đệm ứng dụng đã bị xóa.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="cannot_enter_room">Không thể vào phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="chat_display">Hiển thị trò chuyện</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_for_updates">Kiểm tra cập nhật</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="checking_for_updates">Đang kiểm tra cập nhật…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="choose_another_room">Chọn phòng khác</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear">Thông thoáng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache">Xóa bộ nhớ đệm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_confirm">Xóa %1$s dữ liệu được lưu trong bộ nhớ đệm?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="clear_cache_with_size">Xóa bộ nhớ đệm (%1$s)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_description">Điều này sẽ đóng phòng cho tất cả mọi người.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="close_room_question">Đóng phòng?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="closing">Đang đóng...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connecting">Đang kết nối...</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connection_trouble">ShyTalk đang gặp sự cố khi truy cập máy chủ của chúng tôi. Vui lòng kiểm tra kết nối internet của bạn và thử lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_help">Nếu bạn cần trợ giúp, hãy liên hệ với nhút nhát.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_support_hint">Nếu sự cố vẫn tiếp diễn, hãy liên hệ với nhút nhát.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="contact_us">Liên hệ với chúng tôi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shyden_ltd_brand">ShyTalk là thương hiệu của Shyden Ltd (Công ty số 17110487), 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, Vương quốc Anh.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account">Xóa tài khoản</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_description">Tài khoản của bạn và tất cả dữ liệu sẽ bị xóa vĩnh viễn sau thời gian gia hạn. Bạn có thể hủy bằng cách đăng nhập trước thời điểm đó.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_scheduled">Tài khoản của bạn được lên lịch xóa vào %1$s. Bạn có muốn hủy không?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_cancel">Hủy xóa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_continue">Tiếp tục với việc xóa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_success">Tài khoản của bạn đã được lên lịch xóa.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_pin_required">Xác minh danh tính của bạn để xóa tài khoản của bạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_title">Bạn có chắc không?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="delete_account_confirm_body">Điều này sẽ xóa vĩnh viễn tài khoản của bạn và tất cả dữ liệu liên quan sau thời gian gia hạn. Không thể hoàn tác hành động này.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="denied">Từ chối</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="description">Sự miêu tả</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_locked_description">Thiết bị này đã được liên kết với một tài khoản khác.\nMỗi thiết bị chỉ được phép có một tài khoản.\n\nĐể được hỗ trợ, hãy liên hệ nhút nhát.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported">Thiết bị không được hỗ trợ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="device_not_supported_description">ShyTalk không thể chạy trên các thiết bị đã root hoặc mô phỏng. Vui lòng sử dụng một thiết bị chưa được sửa đổi.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps">Hiển thị trên các ứng dụng khác</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="display_over_other_apps_description">Cho phép ShyTalk hiển thị bong bóng nổi khi bạn rời khỏi phòng thoại để bạn có thể nhanh chóng quay lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_end_time">Thời gian kết thúc DND</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="dnd_start_time">Thời gian bắt đầu DND</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="do_not_disturb">Đừng làm phiền</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="download_now">Tải xuống ngay</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="edit_room_name">Chỉnh sửa tên phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email">E-mail</string>
 
     <!-- Settings - Linked Accounts page -->
-    <string name="linked_accounts">Tài khoản đã liên kết</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="linked_accounts">Tài khoản được liên kết</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="linked">Đã liên kết</string>
-    <string name="unlinked">Chưa liên kết</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlinked">Đã hủy liên kết</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlink">Hủy liên kết</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlink_provider_confirm">Hủy liên kết %1$s?</string>
-    <string name="unlink_provider_description">Bạn có thể liên kết lại tài khoản này sau, nhưng bạn sẽ cần xác minh lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unlink_provider_description">Bạn có thể liên kết lại tài khoản này sau nhưng bạn sẽ cần phải xác minh lại.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cannot_unlink_last_provider">Bạn phải có ít nhất hai tài khoản được liên kết trước khi có thể hủy liên kết một tài khoản.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="provider_google">Google</string>
-    <string name="provider_apple">Apple</string>
-    <string name="provider_email">Email</string>
-    <string name="no_linked_accounts">Không tìm thấy tài khoản liên kết nào</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_apple">Quả táo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="provider_email">E-mail</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_linked_accounts">Không tìm thấy tài khoản được liên kết</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlinking_provider">Đang hủy liên kết…</string>
-    <string name="connect_account">Liên kết tài khoản</string>
-    <string name="connect">Liên kết</string>
-    <string name="signed_in_with">Signed in with</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect_account">Kết nối tài khoản</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="connect">Kết nối</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signed_in_with">Đã đăng nhập bằng</string>
 
-    <string name="enable_dnd">Enable Do Not Disturb</string>
-    <string name="enable_dnd_description">Silence all PM notifications during the scheduled time.</string>
-    <string name="end">End</string>
-    <string name="enter">Enter</string>
-    <string name="error_block_user">Failed to block user</string>
-    <string name="error_check_updates">Failed to check for updates</string>
-    <string name="error_could_not_submit_report">Could not submit report</string>
-    <string name="error_follow_user">Failed to follow user</string>
-    <string name="error_load_user_data">Failed to load user data</string>
-    <string name="error_load_users">Failed to load users</string>
-    <string name="error_max_groups">You can own a maximum of %1$d groups</string>
-    <string name="error_max_participants">Maximum %1$d participants allowed</string>
-    <string name="error_no_users_selected">No users selected</string>
-    <string name="error_not_enough_beans">Not enough beans</string>
-    <string name="error_not_enough_coins">Not enough coins</string>
-    <string name="error_prices_changed">Prices have changed! Please check the new costs and try again.</string>
-    <string name="error_resolve_report">Failed to resolve report</string>
-    <string name="error_save_dob">Failed to save date of birth</string>
-    <string name="error_submit_appeal">Failed to submit appeal</string>
-    <string name="error_submit_report">Failed to submit report</string>
-    <string name="error_title">Error</string>
-    <string name="error_unblock_user">Failed to unblock user</string>
-    <string name="error_unfollow_user">Failed to unfollow user</string>
-    <string name="error_update_privacy">Failed to update privacy setting</string>
-    <string name="error_upload_evidence">Failed to upload evidence</string>
-    <string name="error_upload_group_photo">Failed to upload group photo</string>
-    <string name="everyone">Everyone</string>
-    <string name="hide_age">Hide Age</string>
-    <string name="hide_age_description">Others won&apos;t see your age on your profile.</string>
-    <string name="hide_following_description">Others won&apos;t see who you follow. Followers are always visible.</string>
-    <string name="hide_following_list">Hide Following List</string>
-    <string name="hide_online_status">Hide Online Status</string>
-    <string name="hide_online_status_description">Others won&apos;t see when you&apos;re online.</string>
-    <string name="i_understand">I Understand</string>
-    <string name="i_understand_and_accept">I Understand and Accept</string>
-    <string name="kick_reason">Reason: %1$s</string>
-    <string name="kicked_by_name">You were kicked by %1$s.</string>
-    <string name="kicked_from_room">You have been kicked from this room.</string>
-    <string name="leave">Leave</string>
-    <string name="leave_room_description">You will leave the voice room.</string>
-    <string name="leave_room_question">Leave Room?</string>
-    <string name="message_preview">Message Preview</string>
-    <string name="message_preview_description">Show message text in notifications.</string>
-    <string name="mic_permission_denied">Microphone permission denied. You won\'t be able to use voice chat.</string>
-    <string name="microphone">Microphone</string>
-    <string name="microphone_description">Required for voice chat in rooms.</string>
-    <string name="must_be_16">Bạn phải đủ 16 tuổi trở lên</string>
-    <string name="no_blocked_users">No blocked users</string>
-    <string name="no_one">No one</string>
-    <string name="not_allowed_to_enter">You are not allowed to enter this room.</string>
-    <string name="not_now">Not now</string>
-    <string name="notice">Notice</string>
-    <string name="notification_sound">Notification Sound</string>
-    <string name="notification_sound_description">Play a sound when a new message arrives.</string>
-    <string name="notifications_permission_description">Receive alerts when you&apos;re in a live room in the background.</string>
-    <string name="official_warning">Official Warning</string>
-    <string name="overlay_permission_description">Show a floating bubble when you leave a voice room, so you can quickly return.</string>
-    <string name="people_i_follow">People I follow</string>
-    <string name="pm_notifications">PM Notifications</string>
-    <string name="pm_notifications_description">Receive notifications for new private messages.</string>
-    <string name="private_messages">Private Messages</string>
-    <string name="profile_not_available">This profile is not available</string>
-    <string name="profile_not_found">Profile not found</string>
-    <string name="removed_from_room">Removed from Room</string>
-    <string name="report_thank_you">Thank you for your report. We will review it shortly.</string>
-    <string name="report_user_generic">Report User</string>
-    <string name="retrying">Retrying…</string>
-    <string name="room_alerts">Room Alerts</string>
-    <string name="self_destruct_countdown">Self-Destruct Countdown</string>
-    <string name="self_destruct_description">Play a voice announcement when a room&apos;s 5-minute self-destruct timer starts or stops.</string>
-    <string name="show_date_separators">Show Date Separators</string>
-    <string name="show_date_separators_description">Show date labels between messages on different days.</string>
-    <string name="show_timestamps">Show Timestamps</string>
-    <string name="show_timestamps_description">Display message timestamps in chat.</string>
-    <string name="shytalk_id">ShyTalk ID</string>
-    <string name="sign_in_with_google">Sign in with Google</string>
-    <string name="sign_in_with_email">Đăng nhập bằng email</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd">Bật chế độ Không làm phiền</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable_dnd_description">Im lặng tất cả các thông báo PM trong thời gian đã lên lịch.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="end">Kết thúc</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enter">Đi vào</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_block_user">Không chặn được người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_check_updates">Không thể kiểm tra cập nhật</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_could_not_submit_report">Không thể gửi báo cáo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_follow_user">Không thể theo dõi người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_user_data">Không tải được dữ liệu người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_load_users">Không tải được người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_groups">Bạn có thể sở hữu tối đa %1$d nhóm</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_max_participants">Cho phép tối đa %1$d người tham gia</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_no_users_selected">Không có người dùng nào được chọn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_beans">Không đủ đậu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_not_enough_coins">Không đủ xu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_prices_changed">Giá đã thay đổi! Vui lòng kiểm tra chi phí mới và thử lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_resolve_report">Không giải quyết được báo cáo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_save_dob">Không lưu được ngày sinh</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_appeal">Không thể gửi khiếu nại</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_submit_report">Không gửi được báo cáo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_title">Lỗi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unblock_user">Không thể bỏ chặn người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_unfollow_user">Không thể hủy theo dõi người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_update_privacy">Không cập nhật được cài đặt quyền riêng tư</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_evidence">Không thể tải lên bằng chứng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_upload_group_photo">Không tải được ảnh nhóm lên</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="everyone">Mọi người</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age">Ẩn tuổi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_age_description">Những người khác sẽ không nhìn thấy tuổi của bạn trên hồ sơ của bạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_description">Những người khác sẽ không thấy bạn theo dõi ai. Người theo dõi luôn được hiển thị.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_following_list">Ẩn danh sách theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status">Ẩn trạng thái trực tuyến</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="hide_online_status_description">Những người khác sẽ không nhìn thấy khi bạn trực tuyến.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand">Tôi hiểu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="i_understand_and_accept">Tôi hiểu và chấp nhận</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kick_reason">Lý do: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_by_name">Bạn đã bị %1$s đá.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="kicked_from_room">Bạn đã bị đuổi khỏi phòng này.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave">Rời khỏi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_description">Bạn sẽ rời khỏi phòng giọng nói.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="leave_room_question">Rời khỏi phòng?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview">Xem trước tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="message_preview_description">Hiển thị văn bản tin nhắn trong thông báo.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="mic_permission_denied">Quyền sử dụng micrô bị từ chối. Bạn sẽ không thể sử dụng trò chuyện thoại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone">Micrô</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="microphone_description">Cần thiết để trò chuyện bằng giọng nói trong phòng.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="must_be_16">Bạn phải ít nhất 16 tuổi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_blocked_users">Không có người dùng bị chặn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="no_one">Không ai</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_allowed_to_enter">Bạn không được phép vào phòng này.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="not_now">Không phải bây giờ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notice">Để ý</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound">Âm thanh thông báo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notification_sound_description">Phát âm thanh khi có tin nhắn mới.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="notifications_permission_description">Nhận thông báo khi bạn đang ở chế độ nền trong phòng trực tiếp.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="official_warning">Cảnh báo chính thức</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="overlay_permission_description">Hiển thị bong bóng nổi khi bạn rời khỏi phòng thoại để bạn có thể nhanh chóng quay lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="people_i_follow">Những người tôi theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications">Thông báo PM</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pm_notifications_description">Nhận thông báo về tin nhắn riêng tư mới.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="private_messages">Tin nhắn riêng tư</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_available">Hồ sơ này không có sẵn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="profile_not_found">Không tìm thấy hồ sơ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="removed_from_room">Đã xóa khỏi phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_thank_you">Cảm ơn bạn đã báo cáo của bạn. Chúng tôi sẽ xem xét nó trong thời gian ngắn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="report_user_generic">Báo cáo người dùng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="retrying">Đang thử lại…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="room_alerts">Cảnh báo phòng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_countdown">Đếm ngược tự hủy</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="self_destruct_description">Phát thông báo bằng giọng nói khi đồng hồ hẹn giờ tự hủy 5 phút của phòng bắt đầu hoặc dừng.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators">Hiển thị dấu phân cách ngày</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_date_separators_description">Hiển thị nhãn ngày giữa các tin nhắn vào những ngày khác nhau.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps">Hiển thị dấu thời gian</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_timestamps_description">Hiển thị dấu thời gian tin nhắn trong trò chuyện.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="shytalk_id">ID nhút nhát</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_google">Đăng nhập bằng Google</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="sign_in_with_email">Đăng nhập bằng Email</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_hint">Địa chỉ email</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_link_sent">Kiểm tra email của bạn</string>
-    <string name="check_your_email_description">Chúng tôi đã gửi liên kết đăng nhập đến email của bạn. Nhấn vào liên kết để tiếp tục.</string>
-    <string name="signing_in">Signing in…</string>
-    <string name="error_disposable_email">Disposable email addresses are not allowed. Please use a permanent email address.</string>
-    <string name="stalkers">Stalkers</string>
-    <string name="start">Start</string>
-    <string name="submit_appeal">Submit Appeal</string>
-    <string name="success_coins_added">+%1$s coins added!</string>
-    <string name="success_purchase">Purchase successful!</string>
-    <string name="success_redeemed_beans">Redeemed %1$s beans</string>
-    <string name="success_redeemed_beans_bonus">Redeemed %1$s beans (10%% bonus!)</string>
-    <string name="success_report_resolved">Report resolved</string>
-    <string name="success_sent_backpack">entire backpack (%1$d items)</string>
-    <string name="success_super_shy_activated">Super Shy activated! +30 days</string>
-    <string name="super_shy_days">Super Shy ✦ %1$dd</string>
-    <string name="super_shy_lifetime">Super Shy ✦ Lifetime</string>
-    <string name="support_contact">For support, contact shytalk.help@gmail.com</string>
-    <string name="suspension_ends_at">Ends: %1$s</string>
-    <string name="suspension_ends_in">Your suspension will end in:</string>
-    <string name="suspension_login_again">You can log in again now.\nBe good this time!</string>
-    <string name="suspension_permanent">This suspension is permanent.</string>
-    <string name="suspension_reason">Reason: %1$s</string>
-    <string name="tap_to_return">Tap to return</string>
-    <string name="technical_difficulties">Technical Difficulties</string>
-    <string name="technical_difficulties_description">ShyTalk is currently experiencing technical difficulties. Some features may not work correctly. Services will be restored automatically.</string>
-    <string name="unable_to_connect">Unable to Connect</string>
-    <string name="unblock_confirm">Unblock %1$s?</string>
-    <string name="unblock_description">They will be able to view your profile again.</string>
-    <string name="up_to_date">Up to Date</string>
-    <string name="up_to_date_description">You&apos;re on the latest version.</string>
-    <string name="update_available">Update Available</string>
-    <string name="update_available_description">Version %1$s is available.</string>
-    <string name="update_available_soft">A new version (%1$s) of ShyTalk is available.</string>
-    <string name="update_now">Update Now</string>
-    <string name="update_required">Update Required</string>
-    <string name="update_required_description">A new version of ShyTalk is available. Please update to continue using the app.</string>
-    <string name="update_open_store_failed">Cannot open the app store automatically. Please update ShyTalk manually from your device app store.</string>
-    <string name="view_community_standards">View Community Standards</string>
-    <string name="voice_chat_reimagined">Voice chat rooms, reimagined.</string>
-    <string name="voice_chat_unavailable">Voice chat is temporarily unavailable</string>
-    <string name="wallet_with_balance">Wallet · %1$s</string>
-    <string name="warning_consequence">Continued violations may result in suspension of your account.</string>
-    <string name="warning_reviewed">Your account has been reviewed and a warning has been issued.</string>
-    <string name="warning_reviewed_for_reason">Your account has been reviewed for %1$s and a warning has been issued.</string>
-    <string name="who_can_message_description">Control who can send you private messages.</string>
-    <string name="who_can_message_me">Who can message me</string>
-    <string name="you_were_banned">You were banned from this room.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="check_your_email_description">Chúng tôi đã gửi liên kết đăng nhập tới email của bạn. Nhấn vào liên kết để tiếp tục.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in">Đang đăng nhập…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_disposable_email">Địa chỉ email dùng một lần không được phép. Vui lòng sử dụng địa chỉ email cố định.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="stalkers">Kẻ theo dõi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="start">Bắt đầu</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="submit_appeal">Gửi khiếu nại</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_coins_added">+%1$s xu đã được thêm vào!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_purchase">Mua hàng thành công!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans">Đã đổi đậu %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_redeemed_beans_bonus">Đã đổi %1$s đậu (thưởng 10%%!)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_report_resolved">Đã giải quyết báo cáo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_sent_backpack">toàn bộ ba lô (%1$d vật phẩm)</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="success_super_shy_activated">Siêu nhút nhát đã kích hoạt! +30 ngày</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_days">Siêu nhút nhát ✦ %1$dd</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="super_shy_lifetime">Siêu Nhút Nhát ✦ Trọn Đời</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="support_contact">Để được hỗ trợ, hãy liên hệ với nhút nhát.help@gmail.com</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_at">Kết thúc: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_ends_in">Việc đình chỉ của bạn sẽ kết thúc sau:</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_login_again">Bạn có thể đăng nhập lại ngay bây giờ.\nLần này hãy thật tốt nhé!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_permanent">Việc đình chỉ này là vĩnh viễn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="suspension_reason">Lý do: %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="tap_to_return">Nhấn để quay lại</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties">Khó khăn kỹ thuật</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="technical_difficulties_description">ShyTalk hiện đang gặp sự cố kỹ thuật. Một số tính năng có thể không hoạt động chính xác. Dịch vụ sẽ được khôi phục tự động.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unable_to_connect">Không thể kết nối</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_confirm">Bỏ chặn %1$s?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="unblock_description">Họ sẽ có thể xem lại hồ sơ của bạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date">Cập nhật</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="up_to_date_description">Bạn đang dùng phiên bản mới nhất.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available">Cập nhật có sẵn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_description">Đã có phiên bản %1$s.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_available_soft">Đã có phiên bản mới (%1$s) của ShyTalk.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_now">Cập nhật ngay</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required">Yêu cầu cập nhật</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_required_description">Đã có phiên bản mới của ShyTalk. Vui lòng cập nhật để tiếp tục sử dụng ứng dụng.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="update_open_store_failed">Không thể tự động mở cửa hàng ứng dụng. Vui lòng cập nhật ShyTalk theo cách thủ công từ cửa hàng ứng dụng trên thiết bị của bạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="view_community_standards">Xem tiêu chuẩn cộng đồng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_reimagined">Phòng trò chuyện bằng giọng nói được thiết kế lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="voice_chat_unavailable">Trò chuyện thoại tạm thời không khả dụng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="wallet_with_balance">Ví · %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_consequence">Việc tiếp tục vi phạm có thể dẫn đến việc đình chỉ tài khoản của bạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed">Tài khoản của bạn đã được xem xét và cảnh báo đã được đưa ra.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="warning_reviewed_for_reason">Tài khoản của bạn đã được xem xét trong %1$s và cảnh báo đã được đưa ra.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_description">Kiểm soát ai có thể gửi tin nhắn riêng tư cho bạn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="who_can_message_me">Ai có thể nhắn tin cho tôi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="you_were_banned">Bạn đã bị cấm vào phòng này.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="getting_ready">Đang chuẩn bị…</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all_warning_title">⚠️ CẢNH BÁO ⚠️</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_all_total_value">Tổng giá trị: 🪙 %1$d xu</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_gift_header">Gửi %1$dx %2$s</string>
-    <string name="send_gift_header_multiple">Gửi %1$dx %2$s cho %3$d người dùng</string>
-    <string name="owner_away_banner">Chủ phòng vắng - Phòng đóng sau %1$s</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="send_gift_header_multiple">Gửi %1$dx %2$s tới người dùng %3$d</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="owner_away_banner">Chủ đi vắng - Phòng sẽ đóng sau %1$s</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="messages_title">Tin nhắn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="no_conversations_yet">Chưa có cuộc trò chuyện nào</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="spin_again_with_cost">%1$s QUAY LẠI · 🪙%2$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="age_years_old">%1$d tuổi</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="show_less">ít hơn</string>
-    <string name="show_more">thêm</string>
-    <string name="video_too_large">Video quá lớn. Vui lòng dùng clip ngắn hơn.</string>
-    <string name="file_too_large">Tệp quá lớn. Kích thước tối đa 10 MB.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="show_more">hơn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="video_too_large">Video quá lớn để tải lên. Vui lòng sử dụng một clip ngắn hơn.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="file_too_large">Tệp quá lớn. Kích thước tối đa là 10 MB.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="this_user">người dùng này</string>
 
     <!-- Degraded Mode Banner -->
-    <string name="reduced_functionality">Chức năng hạn chế — một số tính năng có thể không khả dụng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="reduced_functionality">Giảm chức năng - một số tính năng có thể không khả dụng</string>
 
     <!-- Fullscreen Image Viewer -->
+    <!-- google-translated 2026-05-04 -->
     <string name="image_number">Hình ảnh %1$d</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="page_indicator">%1$d / %2$d</string>
 
     <!-- Broadcast Banner -->
-    <string name="broadcast_gacha_win">%1$s đã thắng %2$s%3$s%4$s từ Vòng Quay May Mắn!</string>
-    <string name="broadcast_gift_sent">%1$s đã gửi %2$s%3$s%4$s cho %5$s!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="broadcast_gacha_win">%1$s đã thắng %2$s%3$s%4$s từ Vòng quay may mắn!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="broadcast_gift_sent">%1$s đã gửi %2$s%3$s%4$s tới %5$s!</string>
 
-    <string name="play_effect">Phát hiệu ứng</string>
-    <string name="account_unlocked">Tài khoản đã mở khóa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="play_effect">Chơi hiệu ứng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="account_unlocked">Đã mở khóa tài khoản</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="account_suspended">Tài khoản bị đình chỉ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="police_duck_description">Vịt cảnh sát</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="device_banned_title">Thiết bị bị cấm</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="network_banned_title">Mạng bị cấm</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="device_banned_description">Thiết bị này đã bị cấm sử dụng ShyTalk.</string>
-    <string name="network_banned_description">Mạng của bạn đã bị cấm sử dụng ShyTalk. Hãy thử kết nối từ mạng khác.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="network_banned_description">Mạng của bạn đã bị cấm sử dụng ShyTalk. Hãy thử kết nối từ một mạng khác.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="full_screen_photo">Ảnh toàn màn hình</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="cover_photo">Ảnh bìa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="change_cover_photo">Thay đổi ảnh bìa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="profile_photo">Ảnh hồ sơ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="change_profile_photo">Thay đổi ảnh hồ sơ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="edit_profile">Chỉnh sửa hồ sơ</string>
-    <string name="app_name_label">ShyTalk</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="app_name_label">nhút nhát</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_day">NGÀY</string>
-    <string name="time_unit_hour">GIỞ</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_hour">nhân sự</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_minute">PHÚT</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_unit_second">GIÂY</string>
-    <string name="time_unit_millisecond">MS</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_unit_millisecond">bệnh đa xơ cứng</string>
 
-    <string name="splash_tagline">Phòng trò chuyện thoại, được tái thiết kế.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="splash_tagline">Phòng trò chuyện bằng giọng nói được thiết kế lại.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="quantity_all">TẤT CẢ (%1$d)</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="english_language">Tiếng Anh</string>
-    <string name="google_sign_in_failed">Đăng nhập Google thất bại</string>
-    <string name="apple_sign_in_failed">Apple Sign-In failed</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="google_sign_in_failed">Đăng nhập Google không thành công</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="apple_sign_in_failed">Đăng nhập Apple không thành công</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="sign_in_with_apple">Đăng nhập bằng Apple</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="send_link">Gửi liên kết</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="paste_link">Dán liên kết</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="resend_link">Gửi lại</string>
-    <string name="use_different_email">Dùng email khác</string>
-    <string name="email_link_paste_hint">Nếu liên kết không mở tự động, hãy sao chép từ email và nhấn Dán liên kết</string>
-    <string name="error_invalid_email_link">Đó không giống liên kết đăng nhập hợp lệ. Vui lòng sao chép toàn bộ liên kết từ email.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="use_different_email">Sử dụng một email khác</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_link_paste_hint">Mở liên kết trong email của bạn, sau đó quay lại và nhấn vào Dán liên kết.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="error_invalid_email_link">Có vẻ như đó không phải là liên kết đăng nhập hợp lệ. Vui lòng dán liên kết đầy đủ từ email của bạn.</string>
 
     <!-- PIN & Security -->
-    <string name="enter_pin">Nhập mã PIN</string>
-    <string name="pin_mismatch">Mã PIN không khớp. Vui lòng thử lại.</string>
-    <string name="pin_locked">Quá nhiều lần thử. Thử lại sau %1$d phút.</string>
-    <string name="pin_locked_reauth">Tài khoản bị khóa. Vui lòng đăng nhập lại để đặt lại mã PIN.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enter_pin">Nhập mã PIN của bạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_mismatch">Mã PIN không khớp. Hãy thử lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked">Quá nhiều nỗ lực. Hãy thử lại sau %1$d phút.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_locked_reauth">Tài khoản bị khóa. Vui lòng đăng nhập lại để đặt lại mã PIN của bạn.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="reset_pin">Đặt lại mã PIN</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="account_locked">Tài khoản bị khóa</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="unlock">Mở khóa</string>
-    <string name="enable">Bật</string>
-    <string name="too_many_requests">Quá nhiều yêu cầu. Vui lòng thử lại sau.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="enable">Cho phép</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="too_many_requests">Quá nhiều yêu cầu. Hãy thử lại sau.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="verify">Xác minh</string>
-    <string name="security">Bảo mật</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security">Bảo vệ</string>
     <!-- Starting Screens -->
-    <string name="starting_screen_pre_launch_title">ShyTalk chưa khả dụng</string>
-    <string name="starting_screen_pre_launch_message">ShyTalk chưa được phát hành. Để đăng ký thử nghiệm ứng dụng, hãy liên hệ Shyden. Thử nghiệm có sẵn cho người dùng iOS và Android.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_pre_launch_title">ShyTalk chưa có sẵn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_pre_launch_message">ShyTalk vẫn chưa được phát hành. Để đăng ký thử nghiệm ứng dụng, hãy liên hệ với Shyden. Thử nghiệm có sẵn cho người dùng iOS và Android.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="starting_screen_dismiss">Tiếp tục</string>
-    <string name="starting_screen_police_duck_description">Hình minh họa cảnh báo</string>
-    <string name="starting_screen_loading">Đang tải…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_police_duck_description">Minh họa cảnh báo</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="starting_screen_loading">Đang tải\u2026</string>
     <!-- Security -->
-    <string name="security_title">Bảo mật</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_title">Bảo vệ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_app_lock">Khóa ứng dụng</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_app_lock_desc">Yêu cầu mã PIN hoặc sinh trắc học để mở khóa</string>
-    <string name="security_lock_timeout">Thời gian chờ khóa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_lock_timeout">Khóa thời gian chờ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_1min">1 phút</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_5min">5 phút</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_15min">15 phút</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_30min">30 phút</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_timeout_never">Không bao giờ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_biometric_login">Đăng nhập sinh trắc học</string>
-    <string name="security_biometric_desc">Dùng vân tay hoặc khuôn mặt để mở khóa</string>
-    <string name="security_biometric_unavailable">Không khả dụng trên thiết bị này</string>
-    <string name="security_reset_pin">Đặt lại PIN</string>
-    <string name="security_reset_pin_desc">Xác minh danh tính để đặt mã PIN mới</string>
-    <string name="security_linked_accounts">Tài khoản liên kết</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_biometric_desc">Sử dụng vân tay hoặc khuôn mặt để mở khóa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_biometric_unavailable">Không có sẵn trên thiết bị này</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin">Đặt lại mã PIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_reset_pin_desc">Xác minh danh tính của bạn để đặt mã PIN mới</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="security_linked_accounts">Tài khoản được liên kết</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="security_linked_accounts_desc">Quản lý phương thức đăng nhập</string>
     <!-- Email sign-in -->
+    <!-- google-translated 2026-05-04 -->
     <string name="email_sign_in_title">Đăng nhập bằng email</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_enter_address">Nhập địa chỉ email của bạn</string>
-    <string name="email_label">Email</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_label">E-mail</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_send_code">Gửi mã</string>
-    <string name="email_code_sent_to">Đã gửi mã đến</string>
-    <string name="email_code_label">Mã 6 chữ số</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_sent_to">Mã được gửi tới</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_code_label">mã 6 chữ số</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_verify">Xác minh</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_resend_in">Gửi lại sau %1$ds</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_resend_code">Gửi lại mã</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_code_expires">Mã hết hạn sau 10 phút</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_invalid_address">Nhập địa chỉ email hợp lệ</string>
-    <string name="email_disposable_blocked">Không cho phép sử dụng email dùng một lần</string>
-    <string name="email_send_failed">Gửi mã thất bại</string>
-    <string name="email_enter_code">Nhập mã 6 chữ số</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_disposable_blocked">Địa chỉ email dùng một lần không được phép</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_send_failed">Không gửi được mã</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_enter_code">Nhập mã gồm 6 chữ số</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="email_invalid_code">Mã không hợp lệ</string>
-    <string name="email_resend_failed">Gửi lại thất bại</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="email_resend_failed">Không thể gửi lại</string>
     <!-- PIN -->
-    <string name="pin_create_title">Tạo PIN</string>
-    <string name="pin_confirm_title">Xác nhận PIN</string>
-    <string name="pin_enable_biometric_title">Bật đăng nhập sinh trắc học?</string>
-    <string name="pin_enable_biometric_desc">Dùng vân tay hoặc khuôn mặt để mở khóa ShyTalk nhanh chóng.</string>
-    <string name="pin_enable">Bật</string>
-    <string name="pin_not_now">Để sau</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_create_title">Tạo mã PIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_confirm_title">Xác nhận mã PIN của bạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable_biometric_title">Cho phép đăng nhập sinh trắc học?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable_biometric_desc">Sử dụng dấu vân tay hoặc khuôn mặt của bạn để mở khóa ShyTalk nhanh chóng.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_enable">Cho phép</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_not_now">Không phải bây giờ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_change_hint">Bạn có thể thay đổi hoặc tắt tính năng này trong cài đặt Bảo mật</string>
-    <string name="pin_choose_length">Chọn độ dài PIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_choose_length">Chọn độ dài mã PIN</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_digits">chữ số</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_confirm">Xác nhận</string>
-    <string name="pin_next">Tiếp</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_next">Kế tiếp</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_enter_digits">Nhập %1$d chữ số</string>
-    <string name="pin_device_not_registered">Thiết bị chưa đăng ký. Vui lòng đăng nhập lại.</string>
-    <string name="pin_setup_failed">Đặt PIN thất bại</string>
-    <string name="pin_too_short">PIN quá ngắn</string>
-    <string name="pin_verify_title">Xác minh danh tính</string>
-    <string name="pin_verify_subtitle">Nhập PIN để tiếp tục</string>
-    <string name="pin_verifying">Đang xác minh…</string>
-    <string name="pin_wrong_attempts">Sai PIN. Còn %1$d lần thử.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_device_not_registered">Thiết bị chưa được đăng ký. Vui lòng đăng nhập lại.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_setup_failed">Không đặt được mã PIN</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_too_short">mã PIN quá ngắn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_title">Xác minh danh tính của bạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_subtitle">Nhập mã PIN của bạn để tiếp tục</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verifying">Đang xác minh\u2026</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_wrong_attempts">Mã PIN sai. Còn lại %1$d lần thử.</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_account_locked">Tài khoản bị khóa</string>
-    <string name="pin_verify_failed">Xác minh thất bại</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_verify_failed">Xác minh không thành công</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="pin_session_expired">Phiên đã hết hạn. Vui lòng đăng nhập lại.</string>
-    <string name="pin_use_biometric">Dùng sinh trắc học</string>
-    <string name="pin_delete">Xóa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_use_biometric">Sử dụng sinh trắc học</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_delete">Xóa bỏ</string>
     <!-- Biometric -->
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_unlock_title">Mở khóa ShyTalk</string>
-    <string name="biometric_unlock_desc">Dùng vân tay hoặc khuôn mặt để mở khóa</string>
-    <string name="biometric_sign_failed">Ký thất bại</string>
-    <string name="biometric_verify_failed">Xác minh sinh trắc học thất bại</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_unlock_desc">Sử dụng dấu vân tay hoặc khuôn mặt của bạn để mở khóa</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_sign_failed">Ký không thành công</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="biometric_verify_failed">Xác minh sinh trắc học không thành công</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="biometric_start_failed">Không thể bắt đầu xác minh sinh trắc học</string>
     <!-- Auth loading -->
-    <string name="signing_in_loading">Đang đăng nhập…</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="signing_in_loading">Đang đăng nhập\u2026</string>
     <!-- Time -->
-    <string name="time_just_now">vừa xong</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_just_now">ngay bây giờ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_minutes_ago">%1$d phút trước</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_hours_ago">%1$d giờ trước</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days_ago">%1$d ngày trước</string>
-    <string name="time_expired">Đã hết hạn</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_expired">Hết hạn</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_days">%1$d ngày</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_hours">%1$d giờ</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="time_minutes">%1$d phút</string>
-    <string name="time_less_than_minute">Ít hơn 1 phút</string>
-    <string name="pin_dots_state">Đã nhập %1$d trong %2$d chữ số</string>
-    <string name="export_data">Export My Data</string>
-    <string name="export_data_pending">Export requested. Check your email for the download link.</string>
-    <string name="replace_room_title">Close existing room?</string>
-    <string name="replace_room_message">You already have an active room. Opening a new room will close your existing one.</string>
-    <string name="replace_room_confirm">Close and create new</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="time_less_than_minute">Chưa đầy 1 phút</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="pin_dots_state">Đã nhập %1$d trong tổng số %2$d chữ số</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data">Xuất dữ liệu của tôi</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="export_data_pending">Đã yêu cầu xuất khẩu. Kiểm tra email của bạn để biết liên kết tải xuống.</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_title">Đóng phòng hiện có?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_message">Bạn đã có một phòng hoạt động. Việc mở một phòng mới sẽ đóng phòng hiện tại của bạn. Bạn có muốn tiếp tục không?</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="replace_room_confirm">Đóng và tạo mới</string>
 
     <!-- Seasonal Events -->
-    <string name="seasonal_khmer_new_year_greeting">Chúc mừng năm mới Khmer!</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seasonal_khmer_new_year_greeting">Chúc mừng năm mới của người Khmer!</string>
+    <!-- google-translated 2026-05-04 -->
     <string name="seasonal_khmer_new_year_cta">Tìm hiểu về Choul Chnam Thmey</string>
-    <string name="seasonal_event_dismiss">Đóng</string>
+    <!-- google-translated 2026-05-04 -->
+    <string name="seasonal_event_dismiss">Miễn nhiệm</string>
 
     <!-- google-translated 2026-05-04 -->
     <string name="age_verif_submit_title">Xác minh tuổi của bạn</string>
