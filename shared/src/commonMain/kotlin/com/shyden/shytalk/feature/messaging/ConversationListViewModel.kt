@@ -108,19 +108,40 @@ class ConversationListViewModel(
     }
 
     private suspend fun loadConversationDetails(conversations: List<Conversation>) {
-        // Get current user's blocked list
+        // Get current user's doc — needed for both blocked-list AND
+        // pmLocked checks. Failure is regulatory-boundary critical.
+        // We treat Resource.Error AND Resource.Loading identically as
+        // "could not verify" — Loading shouldn't be observable from a
+        // suspend `getUser`, but pinning it explicitly avoids future
+        // surprises if the repository is rewritten to streaming.
+        val userResult = userRepository.getUser(currentUserId)
         val currentUser =
-            when (val result = userRepository.getUser(currentUserId)) {
-                is Resource.Success -> result.data
-
-                is Resource.Error -> {
-                    logW(TAG, "Failed to fetch current user for blocklist: ${result.message}")
-                    null
-                }
-
-                else -> null
+            when (userResult) {
+                is Resource.Success -> userResult.data
+                is Resource.Error -> null
+                is Resource.Loading -> null
             }
-        val blockedByMe = currentUser?.blockedUserIds ?: emptySet()
+
+        // Fail-CLOSED if we can't verify pmLocked state (PR 11 / Apple
+        // guideline 1.1.4). A transient Firestore error must NOT leak
+        // PM threads to a possibly-locked account. Bumped from logW to
+        // logE because this is a regulatory boundary failure that
+        // ops/Sentry must surface, not a routine warning.
+        if (currentUser == null) {
+            logE(TAG, "PM-lock fail-closed: getUser failed for $currentUserId")
+            _uiState.update { it.copy(isLoading = false, conversations = emptyList(), totalUnreadCount = 0L) }
+            return
+        }
+
+        // Sub-18 (currentUser PM-locked): emit an empty list and skip
+        // counterparty fetches. PR 11 — minors cannot see PM threads
+        // at all; even surfacing a conversation summary would leak the
+        // counterparty's identity to a locked account.
+        if (currentUser.pmLocked) {
+            _uiState.update { it.copy(isLoading = false, conversations = emptyList(), totalUnreadCount = 0L) }
+            return
+        }
+        val blockedByMe = currentUser.blockedUserIds
 
         // Collect other user IDs we need to fetch (for 1-on-1 only)
         val otherUserIds = conversations.filter { !it.isGroup }.mapNotNull { it.otherUserId(currentUserId) }

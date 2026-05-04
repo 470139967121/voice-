@@ -82,6 +82,8 @@ private val EXPECTED_USER_MAP_KEYS =
         "ageVerified",
         "ageVerifiedAt",
         "ageVerificationMethod",
+        "pmLocked",
+        "lastPmLockCheck",
     )
 
 class UserToMapTest {

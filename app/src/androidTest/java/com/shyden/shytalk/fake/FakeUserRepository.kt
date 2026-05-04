@@ -134,6 +134,8 @@ class FakeUserRepository : UserRepository {
 
     override suspend fun liftExpiredSuspension(userId: String): Resource<Unit> = Resource.Success(Unit)
 
+    override suspend fun checkPmLockOnLogin(userId: String): Resource<Unit> = Resource.Success(Unit)
+
     override suspend fun getAliases(userId: String): Resource<Map<String, String>> = Resource.Success(emptyMap())
 
     override suspend fun setAlias(

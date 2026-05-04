@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Tất cả quản trị viên &amp; điều hành viên</string>
     <string name="attach_evidence">Đính kèm Bằng chứng</string>
     <string name="cant_message_user">Bạn không thể nhắn tin cho người dùng này</string>
+    <string name="pm_locked_other_user_notice">Bạn không thể nhắn tin cho người này vì chúng tôi tin rằng họ dưới 18 tuổi.</string>
     <string name="chat">Trò chuyện</string>
     <string name="close_group">Đóng Nhóm</string>
     <string name="close_group_warning">Điều này sẽ đóng nhóm cho tất cả mọi người. Tin nhắn được giữ lại để kiểm duyệt.</string>

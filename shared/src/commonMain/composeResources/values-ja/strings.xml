@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">すべての管理者 &amp; モデレーター</string>
     <string name="attach_evidence">証拠を添付</string>
     <string name="cant_message_user">このユーザーにメッセージを送れません</string>
+    <string name="pm_locked_other_user_notice">この人物は18歳未満と判断されているため、メッセージを送ることができません。</string>
     <string name="chat">チャット</string>
     <string name="close_group">グループを閉じる</string>
     <string name="close_group_warning">グループが全員に対して閉じられます。メッセージはモデレーションのために保持されます。</string>

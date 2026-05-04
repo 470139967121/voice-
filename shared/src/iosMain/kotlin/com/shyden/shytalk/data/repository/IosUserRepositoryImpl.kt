@@ -351,6 +351,11 @@ class IosUserRepositoryImpl(
             api.post("/api/users/$userId/lift-suspension")
         }
 
+    override suspend fun checkPmLockOnLogin(userId: String): Resource<Unit> =
+        firebaseCall("Failed to check PM lock state") {
+            api.post("/api/users/$userId/pm-lock-check")
+        }
+
     override suspend fun setAlias(
         userId: String,
         targetUserId: String,

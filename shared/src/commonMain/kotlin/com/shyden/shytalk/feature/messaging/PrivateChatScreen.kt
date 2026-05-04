@@ -813,8 +813,34 @@ fun PrivateChatScreen(
                 }
             }
 
-            // Input row (hidden for blocked users, system conversations, muted users, and permission-restricted)
-            if (!uiState.isBlocked && !uiState.isSystemConversation && uiState.currentUserMuteInfo == null && canSend) {
+            // PM-lock notice (PR 11) — counterparty is sub-18 / locked.
+            // Replaces the input row with a softer notice that keeps the
+            // history visible. Distinct from the hard `isBlocked` banner
+            // at the top because the user CAN still scroll their old
+            // messages, just can't send new ones.
+            if (uiState.otherUserPmLocked && !uiState.isBlocked && !uiState.isSystemConversation) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().testTag("privateChat_pmLockedNotice"),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Text(
+                        text = stringResource(Res.string.pm_locked_other_user_notice),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
+            }
+
+            // Input row (hidden for blocked users, system conversations, muted users,
+            // permission-restricted, and counterparty PM-lock — see notice above)
+            val canRenderInput =
+                !uiState.isBlocked &&
+                    !uiState.isSystemConversation &&
+                    uiState.currentUserMuteInfo == null &&
+                    canSend &&
+                    !uiState.otherUserPmLocked
+            if (canRenderInput) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     tonalElevation = 3.dp,

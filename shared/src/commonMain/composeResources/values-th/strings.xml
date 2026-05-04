@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">แอดมิน &amp; ผู้ดูแลทั้งหมด</string>
     <string name="attach_evidence">แนบหลักฐาน</string>
     <string name="cant_message_user">คุณไม่สามารถส่งข้อความถึงผู้ใช้นี้ได้</string>
+    <string name="pm_locked_other_user_notice">คุณไม่สามารถส่งข้อความถึงบุคคลนี้ได้ เพราะเราเชื่อว่าพวกเขาอายุต่ำกว่า 18 ปี</string>
     <string name="chat">แชท</string>
     <string name="close_group">ปิดกลุ่ม</string>
     <string name="close_group_warning">การกระทำนี้จะปิดกลุ่มสำหรับทุกคน ข้อความจะถูกเก็บไว้สำหรับการตรวจสอบ</string>

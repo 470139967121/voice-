@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">Tutti gli admin &amp; mod</string>
     <string name="attach_evidence">Allega prova</string>
     <string name="cant_message_user">Non puoi inviare messaggi a questo utente</string>
+    <string name="pm_locked_other_user_notice">Non puoi inviare messaggi a questa persona perché crediamo abbia meno di 18 anni.</string>
     <string name="chat">Chat</string>
     <string name="close_group">Chiudi gruppo</string>
     <string name="close_group_warning">Questo chiuderà il gruppo per tutti. I messaggi vengono conservati per la moderazione.</string>

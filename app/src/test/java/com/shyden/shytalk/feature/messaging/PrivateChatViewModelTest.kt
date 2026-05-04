@@ -265,6 +265,127 @@ class PrivateChatViewModelTest {
             assertFalse(vm.uiState.value.isBlocked)
         }
 
+    // ===== PM-lock (PR 11) =====
+    //
+    // Two distinct visible states drive UI behaviour:
+    //
+    // 1) `otherUserPmLocked` — the COUNTERPARTY is sub-18 / locked. The
+    //    18+ viewer still sees the conversation but the input is
+    //    disabled with a message explaining we believe the recipient is
+    //    under 18. Critically: this is NOT modelled as `isBlocked`,
+    //    because `isBlocked` shows a hard "you cannot message" blocker
+    //    that hides history and the input row entirely. We want history
+    //    + a softer notice.
+    // 2) `isBlocked` (with a pmLocked-specific reason) — the CURRENT
+    //    user is locked. They cannot view the conversation at all.
+    //    Falling through the conv-list filter is the primary path; this
+    //    second-line gate handles deep-link / restored navigation.
+
+    @Test
+    fun `otherUser pmLocked surfaces otherUserPmLocked but not isBlocked`() =
+        runTest {
+            val otherUser = TestData.createTestUser(uid = otherUserId).copy(pmLocked = true)
+            coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(otherUser)
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            assertTrue(
+                "Counterparty PM-lock must surface otherUserPmLocked",
+                vm.uiState.value.otherUserPmLocked,
+            )
+            assertFalse(
+                "otherUserPmLocked is the soft-disabled-input state — must NOT trigger isBlocked",
+                vm.uiState.value.isBlocked,
+            )
+        }
+
+    @Test
+    fun `currentUser pmLocked sets isBlocked with PM-lock reason`() =
+        runTest {
+            val currentUser = TestData.createTestUser(uid = currentUserId).copy(pmLocked = true)
+            coEvery { userRepository.getUser(currentUserId) } returns Resource.Success(currentUser)
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            assertTrue(vm.uiState.value.isBlocked)
+            // The conv-list filters most paths out, but a deep-link or
+            // a restored Saver could land a pmLocked user here. Pin the
+            // hard-block as the second-line defense.
+            assertNotNull(vm.uiState.value.blockReason)
+        }
+
+    @Test
+    fun `sendMessage is gated when otherUserPmLocked`() =
+        runTest {
+            // Backstop: even if the screen disables the input, a deep-
+            // link / automation / restored Saver could still call
+            // sendMessage. Refuse — PM-lock is a regulatory boundary,
+            // not a UI hint.
+            val otherUser = TestData.createTestUser(uid = otherUserId).copy(pmLocked = true)
+            coEvery { userRepository.getUser(otherUserId) } returns Resource.Success(otherUser)
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+            vm.sendMessage("Hi")
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) {
+                pmRepository.sendTextMessage(
+                    conversationId = any(),
+                    senderId = any(),
+                    senderName = any(),
+                    text = any(),
+                    replyToMessageId = any(),
+                    replyToText = any(),
+                    replyToSenderName = any(),
+                )
+            }
+        }
+
+    @Test
+    fun `neither user pmLocked leaves both fields false`() =
+        runTest {
+            // Default seed: TestData.createTestUser builds users with
+            // pmLocked=false. Pin the negative — sanity check that the
+            // new flag doesn't fire on existing happy-path inputs.
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.otherUserPmLocked)
+            assertFalse(vm.uiState.value.isBlocked)
+        }
+
+    @Test
+    fun `getUser failure on currentUser fails CLOSED — isBlocked is set`() =
+        runTest {
+            // Regulatory boundary (Apple guideline 1.1.4): if we cannot
+            // read the user-doc to evaluate pmLocked, the screen MUST
+            // refuse send instead of falling through with no restriction.
+            // A transient Firestore error would otherwise let a sub-18
+            // user message in violation of the lock. Fail-closed.
+            coEvery { userRepository.getUser(currentUserId) } returns Resource.Error("transient firestore error")
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            assertTrue(vm.uiState.value.isBlocked)
+            assertNotNull(vm.uiState.value.blockReason)
+        }
+
+    @Test
+    fun `getUser failure on otherUser fails CLOSED — isBlocked is set`() =
+        runTest {
+            coEvery { userRepository.getUser(otherUserId) } returns Resource.Error("transient firestore error")
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            assertTrue(vm.uiState.value.isBlocked)
+            assertNotNull(vm.uiState.value.blockReason)
+        }
+
     @Test
     fun `pmPrivacy EVERYONE does not block`() =
         runTest {

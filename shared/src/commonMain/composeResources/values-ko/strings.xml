@@ -252,6 +252,7 @@
     <string name="all_admins_and_mods">모든 관리자 &amp; 운영자</string>
     <string name="attach_evidence">증거 첨부</string>
     <string name="cant_message_user">이 사용자에게 메시지를 보낼 수 없습니다</string>
+    <string name="pm_locked_other_user_notice">이 사용자는 18세 미만인 것으로 판단되어 메시지를 보낼 수 없습니다.</string>
     <string name="chat">채팅</string>
     <string name="close_group">그룹 닫기</string>
     <string name="close_group_warning">모든 사람의 그룹이 닫힙니다. 메시지는 관리 목적으로 보존됩니다.</string>

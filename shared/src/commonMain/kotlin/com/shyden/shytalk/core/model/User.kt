@@ -83,6 +83,27 @@ data class User(
     val ageVerified: Boolean = false,
     val ageVerifiedAt: Long? = null,
     val ageVerificationMethod: String? = null,
+    /**
+     * PM-lock flag (PR 11). Set true for users currently below 18; the
+     * `conversations/{id}/messages/...` write+read paths gate on this.
+     * Sub-18 user view: their conversation list and thread contents
+     * are hidden. 18+ counter-party view: thread visible but input
+     * disabled with the "this user cannot receive messages" copy.
+     *
+     * Set by the migration script (PR 11) for legacy 13-17 accounts,
+     * by the modify-DOB handler when admin reverts a user to <18, and
+     * cleared automatically by the auth login first-of-day check when
+     * a previously-locked user has aged in.
+     */
+    val pmLocked: Boolean = false,
+    /**
+     * Day-of-year stamp (UTC ms at start of day) of the most recent
+     * first-login auto-unlock check. Used to throttle the aging-in
+     * scan to once per user per day — dormant accounts don't pay the
+     * Firestore-quota cost, and active users don't pay it on every
+     * launch.
+     */
+    val lastPmLockCheck: Long? = null,
 ) {
     val isActivelySuspended: Boolean
         get() {
@@ -184,6 +205,8 @@ data class User(
             "ageVerified" to ageVerified,
             "ageVerifiedAt" to ageVerifiedAt,
             "ageVerificationMethod" to ageVerificationMethod,
+            "pmLocked" to pmLocked,
+            "lastPmLockCheck" to lastPmLockCheck,
         )
 
     companion object {
@@ -297,6 +320,8 @@ data class User(
                 ageVerified = map["ageVerified"].asBool(),
                 ageVerifiedAt = map["ageVerifiedAt"]?.let { timestampToMillis(it) },
                 ageVerificationMethod = map["ageVerificationMethod"] as? String,
+                pmLocked = map["pmLocked"].asBool(),
+                lastPmLockCheck = map["lastPmLockCheck"]?.let { timestampToMillis(it) },
             )
     }
 }
