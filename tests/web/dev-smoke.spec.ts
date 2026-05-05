@@ -249,14 +249,29 @@ test.describe("Dev Smoke — follow / unfollow journey", () => {
   test("POST follow → GET target shows smoke as a follower → POST unfollow leaves no trace", async () => {
     const followBody = { targetUserId: smoke.targetUniqueId };
 
-    // Pre-clean: best-effort unfollow. arrayRemove is idempotent so
-    // this is a 200 no-op when the smoke account is not currently
-    // following the target. We do NOT assert success here because the
-    // useful signal is the actual follow assertion below.
-    await smoke.api.post(`${API_BASE}/api/users/${smoke.uniqueId}/unfollow`, {
-      headers: authedHeaders(),
-      data: followBody,
-    });
+    // Pre-clean: unconditional unfollow. arrayRemove is idempotent
+    // so this is a 200 no-op when the smoke account is not currently
+    // following the target — but we ASSERT 200 (not "best-effort
+    // ignore the result") because a 5xx here would mask a recurring
+    // failure on the actual follow phase below.
+    //
+    // Ownership contract (per `feedback-environment-isolation`):
+    // the smoke→target follow edge is contractually owned by THIS
+    // suite. No admin action, manual test, or second-gate run is
+    // permitted to populate it from outside. The pre-clean
+    // unconditionally wipes the edge to ensure a deterministic
+    // starting state — and it's safe to do so because no external
+    // process is allowed to set it. This contract is enforced by
+    // the dev environment having ONLY this smoke suite using
+    // SMOKE_TARGET_UNIQUE_ID = 10000008.
+    const preClean = await smoke.api.post(
+      `${API_BASE}/api/users/${smoke.uniqueId}/unfollow`,
+      { headers: authedHeaders(), data: followBody },
+    );
+    expect(
+      preClean.ok(),
+      `pre-clean unfollow expected 200 (idempotent), got ${preClean.status()}: ${await preClean.text()}`,
+    ).toBe(true);
 
     // Phase 1 — follow.
     const followRes = await smoke.api.post(
@@ -269,7 +284,9 @@ test.describe("Dev Smoke — follow / unfollow journey", () => {
     ).toBe(true);
     expect((await followRes.json()).success, "follow body.success=true").toBe(true);
 
-    // Phase 2 — verify the target's view of the fan-out.
+    // Phase 2a — verify the TARGET's view of the fan-out. This
+    // catches a regression where the SECOND batch.update fails
+    // (target's followerIds doesn't update).
     const targetAfterFollow = await smoke.api.get(
       `${API_BASE}/api/users/${smoke.targetUniqueId}`,
       { headers: authedHeaders() },
@@ -283,13 +300,57 @@ test.describe("Dev Smoke — follow / unfollow journey", () => {
       Array.isArray(targetBody.followerIds),
       `target.followerIds must be an array, got ${typeof targetBody.followerIds}`,
     ).toBe(true);
-    // Defensive coerce on the API side — the route stores
-    // Number(uniqueId) today, but the cast guards against a future
-    // change that introduces strings (cf. PR #473 asBool() drift).
+    // Type-strictness check: catches mid-migration drift where the
+    // route emits BOTH numeric and string forms of the same id
+    // (e.g., [10000007, "10000007"]). A simple .map(Number) would
+    // collapse both to 10000007 and the includes() assertion would
+    // pass against corrupt data. Asserting strict-number type AND
+    // post-coerce dedup catches the drift loud.
+    expect(
+      targetBody.followerIds.every((x: unknown) => typeof x === "number"),
+      `target.followerIds must be strict numbers, got ${JSON.stringify(targetBody.followerIds)}`,
+    ).toBe(true);
     const followerIds: number[] = targetBody.followerIds.map(Number);
+    expect(
+      new Set(followerIds).size,
+      `target.followerIds must have no duplicates after coerce: ${JSON.stringify(followerIds)}`,
+    ).toBe(followerIds.length);
     expect(
       followerIds.includes(smoke.uniqueId),
       `target.followerIds=${JSON.stringify(followerIds)} must include smoke uniqueId=${smoke.uniqueId} after follow`,
+    ).toBe(true);
+
+    // Phase 2b — verify the SMOKE user's own view (followingIds).
+    // Symmetric to Phase 2a: catches a regression where the FIRST
+    // batch.update fails (smoke's followingIds doesn't update).
+    // Together with Phase 2a, asserts both sides of the atomic
+    // batch — a partial-write split would now fail one of them.
+    const smokeAfterFollow = await smoke.api.get(
+      `${API_BASE}/api/users/${smoke.uniqueId}`,
+      { headers: authedHeaders() },
+    );
+    expect(
+      smokeAfterFollow.ok(),
+      `smoke GET expected 200, got ${smokeAfterFollow.status()}: ${await smokeAfterFollow.text()}`,
+    ).toBe(true);
+    const smokeBody = await smokeAfterFollow.json();
+    expect(
+      Array.isArray(smokeBody.followingIds),
+      `smoke.followingIds must be an array, got ${typeof smokeBody.followingIds}`,
+    ).toBe(true);
+    // Same type-strictness + dedup check as Phase 2a.
+    expect(
+      smokeBody.followingIds.every((x: unknown) => typeof x === "number"),
+      `smoke.followingIds must be strict numbers, got ${JSON.stringify(smokeBody.followingIds)}`,
+    ).toBe(true);
+    const followingIds: number[] = smokeBody.followingIds.map(Number);
+    expect(
+      new Set(followingIds).size,
+      `smoke.followingIds must have no duplicates: ${JSON.stringify(followingIds)}`,
+    ).toBe(followingIds.length);
+    expect(
+      followingIds.includes(smoke.targetUniqueId),
+      `smoke.followingIds=${JSON.stringify(followingIds)} must include target uniqueId=${smoke.targetUniqueId} after follow`,
     ).toBe(true);
 
     // Phase 3 — unfollow.
@@ -302,10 +363,8 @@ test.describe("Dev Smoke — follow / unfollow journey", () => {
       `unfollow expected 200, got ${unfollowRes.status()}: ${await unfollowRes.text()}`,
     ).toBe(true);
 
-    // Phase 4 — verify cleanup. After unfollow the target's
-    // followerIds must NOT include the smoke uniqueId. This is what
-    // makes the test leave-clean — the next run starts from the same
-    // state regardless of how many times this has run before.
+    // Phase 4a — verify TARGET cleanup. After unfollow the target's
+    // followerIds must NOT include the smoke uniqueId.
     const targetAfterUnfollow = await smoke.api.get(
       `${API_BASE}/api/users/${smoke.targetUniqueId}`,
       { headers: authedHeaders() },
@@ -317,6 +376,22 @@ test.describe("Dev Smoke — follow / unfollow journey", () => {
     expect(
       cleanFollowerIds.includes(smoke.uniqueId),
       `target.followerIds=${JSON.stringify(cleanFollowerIds)} must NOT include smoke uniqueId=${smoke.uniqueId} after unfollow`,
+    ).toBe(false);
+
+    // Phase 4b — verify SMOKE cleanup. Symmetric to 4a.
+    // The leave-clean promise applies to BOTH users — partial
+    // cleanup is just as bad as partial follow.
+    const smokeAfterUnfollow = await smoke.api.get(
+      `${API_BASE}/api/users/${smoke.uniqueId}`,
+      { headers: authedHeaders() },
+    );
+    expect(smokeAfterUnfollow.ok()).toBe(true);
+    const cleanFollowingIds: number[] = (await smokeAfterUnfollow.json()).followingIds.map(
+      Number,
+    );
+    expect(
+      cleanFollowingIds.includes(smoke.targetUniqueId),
+      `smoke.followingIds=${JSON.stringify(cleanFollowingIds)} must NOT include target uniqueId=${smoke.targetUniqueId} after unfollow`,
     ).toBe(false);
   });
 
