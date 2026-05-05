@@ -498,7 +498,15 @@ router.post('/economy/gacha', async (req, res) => {
 
     const config = await loadEconomyConfig();
     const pullCosts = config.pullCosts || { 1: 10, 10: 100, 100: 1000 };
-    const cost = pullCosts[String(pullCount)];
+    // Audit M3 (Phase 2A): drop the unnecessary `String(pullCount)`
+    // coercion. JS object keys are always strings under the hood
+    // (numeric literals like `{1: 10}` are stored as `{'1': 10}`),
+    // so `pullCosts[pullCount]` resolves identically to
+    // `pullCosts[String(pullCount)]`. The audit raised a theoretical
+    // "Firestore numeric-key" concern, but Firestore Admin SDK
+    // returns plain JS objects with string-only keys regardless of
+    // how the doc was originally written. Simpler is better.
+    const cost = pullCosts[pullCount];
     if (!cost) return res.status(400).json({ error: 'Invalid pull count' });
 
     // Price validation
