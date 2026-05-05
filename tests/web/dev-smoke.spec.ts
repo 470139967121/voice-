@@ -92,19 +92,32 @@ test.beforeAll(async () => {
   //    server-side `uniqueId`. Catches the firebaseUid → uniqueId
   //    resolution path in the auth middleware AND the suspension
   //    cache wiring.
+  //
+  //    Wire format: `{ provider, identifier }` — the route looks
+  //    up `identityMap/{provider}:{identifier}` to find the user.
+  //    `email` as a top-level field is NOT accepted by the route
+  //    handler, so we send `provider: 'email'` + `identifier: <email>`
+  //    matching what the smoke account was registered with via
+  //    POST /api/users (provider 'email'). A regression here means
+  //    real email-provider sign-in is broken.
   const expressSignIn = await api.post(`${API_BASE}/api/users/sign-in`, {
     headers: {
       Authorization: `Bearer ${idToken}`,
       "Content-Type": "application/json",
     },
-    data: { email: SMOKE_EMAIL },
+    data: { provider: "email", identifier: SMOKE_EMAIL },
   });
   expect(
     expressSignIn.ok(),
     `Express /api/users/sign-in must succeed (${expressSignIn.status()}: ${await expressSignIn.text()})`,
   ).toBe(true);
   const me = await expressSignIn.json();
-  const uniqueId: number = me.uniqueId ?? me.user?.uniqueId;
+  // The route returns `{ found: true, uniqueId }`. `found: false`
+  // means the identity-map row is missing — the smoke account was
+  // never registered (or got deleted). Fail loud rather than letting
+  // a downstream test produce a confusing 404.
+  expect(me.found, `sign-in returned found=${me.found}: ${JSON.stringify(me)}`).toBe(true);
+  const uniqueId: number = me.uniqueId;
   expect(uniqueId, "uniqueId returned by Express sign-in").toBeTruthy();
 
   smoke = { api, idToken, uniqueId };
@@ -149,10 +162,12 @@ test.describe("Dev Smoke — critical user-facing API journeys", () => {
     });
     expect(res.ok(), `${res.status()}: ${await res.text()}`).toBe(true);
     const body = await res.json();
-    // The response shape must include `shyCoins` (number) — every
-    // wallet/IAP/gift flow reads it. A field rename or omission would
-    // hard-break the app.
-    expect(typeof body.shyCoins).toBe("number");
+    // The route returns `{ coins, beans }` (already coerced from the
+    // user-doc `shyCoins`/`shyBeans` fields). Both must be numbers —
+    // every wallet/IAP/gift flow on the app side reads these. A field
+    // rename or omission would hard-break the app.
+    expect(typeof body.coins, `coins shape: ${JSON.stringify(body)}`).toBe("number");
+    expect(typeof body.beans, `beans shape: ${JSON.stringify(body)}`).toBe("number");
   });
 
   test("POST /api/economy/daily-reward succeeds OR returns 409 already-claimed (idempotent)", async () => {
