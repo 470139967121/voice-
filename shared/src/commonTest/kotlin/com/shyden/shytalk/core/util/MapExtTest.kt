@@ -1,10 +1,31 @@
 package com.shyden.shytalk.core.util
 
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MapExtTest {
+    // ── Type-drift logger swap (saved + restored per test) ──────────
+    private val capturedDrifts = mutableListOf<Pair<String, Boolean>>()
+    private var savedLogger: ((String, Boolean) -> Unit)? = null
+
+    @BeforeTest
+    fun installCapturingLogger() {
+        savedLogger = asBoolTypeDriftLogger
+        capturedDrifts.clear()
+        asBoolTypeDriftLogger = { typeName, default ->
+            capturedDrifts += typeName to default
+        }
+    }
+
+    @AfterTest
+    fun restoreLogger() {
+        savedLogger?.let { asBoolTypeDriftLogger = it }
+    }
+
     // ── Boolean values ──────────────────────────────────────────────
 
     @Test
@@ -148,5 +169,80 @@ class MapExtTest {
     fun `asBool ignores default when value is Number`() {
         val value: Any? = 0
         assertFalse(value.asBool(default = true))
+    }
+
+    // ── Type-drift logging (security-critical) ──────────────────────
+    //
+    // Many call sites read security-sensitive flags (`isSuspended`,
+    // `suspensionCanAppeal`, `ageVerified`, `pmLocked`) via this
+    // helper. Silent fallback to `default` when Firestore returns a
+    // String or other unexpected shape would let a corrupted/migrated
+    // doc bypass a gate without anyone noticing. The drift logger
+    // turns that into a visible signal so we can investigate.
+
+    @Test
+    fun `asBool with String value invokes type-drift logger`() {
+        val value: Any? = "true"
+        value.asBool()
+        assertEquals(1, capturedDrifts.size)
+        assertEquals("String", capturedDrifts[0].first)
+    }
+
+    @Test
+    fun `asBool with List value invokes type-drift logger`() {
+        val value: Any? = listOf(1, 2, 3)
+        value.asBool()
+        assertEquals(1, capturedDrifts.size)
+    }
+
+    @Test
+    fun `asBool with Map value invokes type-drift logger`() {
+        val value: Any? = mapOf("k" to "v")
+        value.asBool()
+        assertEquals(1, capturedDrifts.size)
+    }
+
+    @Test
+    fun `asBool with arbitrary object invokes type-drift logger`() {
+        val value: Any? = object {}
+        value.asBool()
+        assertEquals(1, capturedDrifts.size)
+    }
+
+    @Test
+    fun `asBool drift logger receives the default value passed by caller`() {
+        val value: Any? = "yes"
+        value.asBool(default = true)
+        assertEquals(1, capturedDrifts.size)
+        assertEquals(true, capturedDrifts[0].second)
+
+        capturedDrifts.clear()
+        value.asBool(default = false)
+        assertEquals(1, capturedDrifts.size)
+        assertEquals(false, capturedDrifts[0].second)
+    }
+
+    @Test
+    fun `asBool with Boolean does NOT invoke type-drift logger`() {
+        true.asBool()
+        false.asBool()
+        assertTrue(capturedDrifts.isEmpty())
+    }
+
+    @Test
+    fun `asBool with Number does NOT invoke type-drift logger`() {
+        (1).asBool()
+        (0L).asBool()
+        (1.0).asBool()
+        (0.0f).asBool()
+        assertTrue(capturedDrifts.isEmpty())
+    }
+
+    @Test
+    fun `asBool with null does NOT invoke type-drift logger`() {
+        // Null is field-absent, not type drift — common and benign.
+        val value: Any? = null
+        value.asBool()
+        assertTrue(capturedDrifts.isEmpty())
     }
 }
