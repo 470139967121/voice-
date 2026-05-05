@@ -5,37 +5,37 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch, tag, or commit SHA to deploy. Leave blank to use the ref selected in the run-workflow dropdown above (which only lists branches and tags — use this field for commit SHAs).'
+        description: "Branch, tag, or commit SHA to deploy. Leave blank to use the ref selected in the run-workflow dropdown above (which only lists branches and tags — use this field for commit SHAs)."
         required: false
         type: string
-        default: ''
+        default: ""
       backend:
-        description: 'Deploy Express API to dev'
+        description: "Deploy Express API to dev"
         type: boolean
         default: true
       web:
-        description: 'Deploy web to dev'
+        description: "Deploy web to dev"
         type: boolean
         default: true
       android-testers:
-        description: 'Distribute APK to testers'
+        description: "Distribute APK to testers"
         type: boolean
         default: true
       ios-testers:
-        description: 'Distribute iOS to TestFlight'
+        description: "Distribute iOS to TestFlight"
         type: boolean
         default: true
       playwright:
-        description: 'Run sanity checks after deploy (pages load, API responds)'
+        description: "Run sanity checks after deploy (pages load, API responds)"
         type: boolean
         default: true
       release-notes:
-        description: 'Firebase App Distribution release notes (what to test)'
+        description: "Firebase App Distribution release notes (what to test)"
         type: string
-        default: ''
+        default: ""
 
 permissions:
-  contents: write       # needed by playwright-tests.yml allure-report (gh-pages deploy)
+  contents: write # needed by playwright-tests.yml allure-report (gh-pages deploy)
   actions: read
 
 env:
@@ -204,7 +204,7 @@ jobs:
       - name: Deploy web to dev site
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: '9315582c39b627dca58dfa83602db385'
+          CLOUDFLARE_ACCOUNT_ID: "9315582c39b627dca58dfa83602db385"
           DEV_FIREBASE_API_KEY: ${{ secrets.DEV_FIREBASE_API_KEY }}
         run: |
           sed "s|<DEV_FIREBASE_API_KEY>|$DEV_FIREBASE_API_KEY|" public/admin/config.dev.example.js > public/admin/config.js
@@ -651,3 +651,74 @@ jobs:
           # untouched.
           DEV_BASIC_AUTH_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
         run: npx playwright test tests/web/dev-sanity.spec.ts --project=chromium --reporter=list
+
+  smoke-tests:
+    name: Dev Smoke Tests
+    # Runs end-to-end against the deployed dev environment using a
+    # real (non-admin) Firebase test account. Catches infrastructure
+    # regressions that page-load sanity checks miss: Firebase Auth,
+    # firebaseUid → uniqueId resolution, transactional Firestore
+    # writes, public-write Firestore rules.
+    #
+    # Gating: depends on sanity-check (page-load tier) so we don't
+    # waste a smoke run on an obviously-broken deploy. The deploy
+    # job itself is RED on smoke failure — see `feedback-tests-always-block`.
+    needs: [deploy-backend-dev, sanity-check]
+    if: |
+      always() &&
+      inputs.playwright &&
+      needs.deploy-backend-dev.result == 'success' &&
+      needs.sanity-check.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: ${{ inputs.ref != '' && '0' || '1' }}
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Verify smoke-test secrets are present
+        # Fail fast if the operator forgot to configure the secrets —
+        # otherwise Playwright would `test.skip()` the entire suite
+        # silently and the deploy would look healthy with zero
+        # coverage. Per `feedback-tests-always-block` we never accept
+        # a silent skip on a gating job.
+        env:
+          SMOKE_FIREBASE_API_KEY: ${{ secrets.SMOKE_FIREBASE_API_KEY || secrets.DEV_FIREBASE_API_KEY }}
+          SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: |
+          missing=()
+          [ -n "$SMOKE_FIREBASE_API_KEY" ] || missing+=("SMOKE_FIREBASE_API_KEY (or DEV_FIREBASE_API_KEY)")
+          [ -n "$SMOKE_TEST_EMAIL" ] || missing+=("SMOKE_TEST_EMAIL")
+          [ -n "$SMOKE_TEST_PASSWORD" ] || missing+=("SMOKE_TEST_PASSWORD")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing smoke-test secrets: ${missing[*]}"
+            echo "::error::See tests/web/dev-smoke.spec.ts header for setup instructions."
+            exit 1
+          fi
+
+      - name: Run dev smoke tests
+        env:
+          API_BASE_URL: https://dev-api.shytalk.shyden.co.uk
+          # SMOKE_FIREBASE_API_KEY is the public Firebase web API key
+          # (same value as DEV_FIREBASE_API_KEY — these keys are not
+          # secrets, they identify the project to the Auth REST API).
+          # Falls back to DEV_FIREBASE_API_KEY so single-secret setups
+          # work without duplication.
+          SMOKE_FIREBASE_API_KEY: ${{ secrets.SMOKE_FIREBASE_API_KEY || secrets.DEV_FIREBASE_API_KEY }}
+          SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+          # Smoke spec only hits API + Firebase Auth REST. No web
+          # surface, so DEV_BASIC_AUTH_PASSWORD is not required here.
+        run: npx playwright test tests/web/dev-smoke.spec.ts --project=chromium --reporter=list
