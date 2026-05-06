@@ -5,14 +5,20 @@ const mockCollectionGet = jest.fn();
 const mockBatchDelete = jest.fn();
 const mockBatchCommit = jest.fn().mockResolvedValue();
 
+// Query chain supports `.where(...).limit(N).get()` for the cron's
+// CRON_LIMIT cap. The chain returns the same `mockCollectionGet`
+// regardless of the limit value, so existing test expectations still
+// hold.
+const mockLimit = jest.fn(() => ({ get: mockCollectionGet }));
 const mockWhere = jest.fn(() => ({
   get: mockCollectionGet,
+  limit: mockLimit,
 }));
 
 const mockCollection = jest.fn(() => ({
   where: (...args) => {
     mockWhere(...args);
-    return { get: mockCollectionGet };
+    return { get: mockCollectionGet, limit: mockLimit };
   },
 }));
 
@@ -413,5 +419,54 @@ describe('expireBans', () => {
     await expireBans();
 
     expect(mockCleanupInvalidTokens).toHaveBeenCalledWith(['invalid-token'], 'admin1');
+  });
+
+  test('logs truncation warning when query hits CRON_LIMIT (500)', async () => {
+    const log = require('../../src/utils/log');
+    const warnSpy = jest.spyOn(log, 'warn').mockImplementation(() => {});
+
+    // 500 device bans (= CRON_LIMIT) — none expired so no batch work
+    const futureExpiry = new Date(Date.now() + 86400000).toISOString();
+    const fullPage = Array.from({ length: 500 }, (_, i) => ({
+      id: `dev${i}`,
+      data: () => ({ expiresAt: futureExpiry }),
+      ref: { path: `deviceBans/dev${i}` },
+    }));
+    mockCollectionGet.mockResolvedValueOnce({ docs: fullPage, size: 500 });
+    mockCollectionGet.mockResolvedValueOnce({ docs: [], size: 0 });
+
+    await expireBans();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'cron',
+      expect.stringContaining('deviceBans hit CRON_LIMIT'),
+      expect.objectContaining({ limit: 500 }),
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  test('logs truncation warning on networkBans hitting CRON_LIMIT', async () => {
+    const log = require('../../src/utils/log');
+    const warnSpy = jest.spyOn(log, 'warn').mockImplementation(() => {});
+
+    const futureExpiry = new Date(Date.now() + 86400000).toISOString();
+    mockCollectionGet.mockResolvedValueOnce({ docs: [], size: 0 });
+    const fullPage = Array.from({ length: 500 }, (_, i) => ({
+      id: `net${i}`,
+      data: () => ({ expiresAt: futureExpiry }),
+      ref: { path: `networkBans/net${i}` },
+    }));
+    mockCollectionGet.mockResolvedValueOnce({ docs: fullPage, size: 500 });
+
+    await expireBans();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'cron',
+      expect.stringContaining('networkBans hit CRON_LIMIT'),
+      expect.objectContaining({ limit: 500 }),
+    );
+
+    warnSpy.mockRestore();
   });
 });

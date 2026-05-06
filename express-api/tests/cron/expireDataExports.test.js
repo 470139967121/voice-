@@ -21,8 +21,12 @@ jest.mock('../../src/utils/firebase', () => ({
       update: (...args) => mockDocUpdate(path, ...args),
     })),
     collection: jest.fn(() => {
+      // Chain supports `.where().where().limit().get()` for the cron's
+      // CRON_LIMIT cap. limit returns the same chain so further calls
+      // (and .get()) work uniformly.
       const chain = {
         where: jest.fn().mockImplementation(() => chain),
+        limit: jest.fn().mockImplementation(() => chain),
         get: mockCollectionGet,
       };
       return chain;
@@ -128,6 +132,36 @@ describe('expireDataExports cron', () => {
     await expireDataExports();
 
     // Should not delete active exports
+    expect(mockDeleteObjects).not.toHaveBeenCalled();
+  });
+
+  test('logs truncation warning when query hits CRON_LIMIT (500)', async () => {
+    // All 500 docs are not-yet-expired (future expiresAt), so the loop hits
+    // `continue` for every one — keeps the test fast while still tripping
+    // the `size === CRON_LIMIT` truncation branch.
+    const futureExpiry = Date.now() + 24 * 3600000;
+    const fullPage = Array.from({ length: 500 }, (_, i) => ({
+      id: `1000${String(i).padStart(4, '0')}`,
+      data: () => ({
+        dataExportStatus: 'ready',
+        dataExportR2Key: `exports/1000${String(i).padStart(4, '0')}/gen.zip`,
+        dataExportExpiresAt: futureExpiry,
+      }),
+    }));
+    mockCollectionGet.mockResolvedValueOnce({
+      docs: fullPage,
+      size: 500,
+      empty: false,
+    });
+
+    await expireDataExports();
+
+    expect(log.warn).toHaveBeenCalledWith(
+      'cron',
+      expect.stringContaining('hit CRON_LIMIT'),
+      expect.objectContaining({ limit: 500 }),
+    );
+    // No deletions because all docs are not-yet-expired
     expect(mockDeleteObjects).not.toHaveBeenCalled();
   });
 });
