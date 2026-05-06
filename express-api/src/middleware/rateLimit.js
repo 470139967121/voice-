@@ -83,15 +83,87 @@ const portalLimiter = rateLimit({
   skip: () => isNonProd(),
 });
 
+// Bounded LRU store for the recoveryLimiter. The default `MemoryStore` from
+// `express-rate-limit` uses an unbounded `Map` and only prunes expired keys
+// once per `windowMs` — at 24h with email-keyed buckets, a botnet of unique
+// emails can grow the Map to millions of entries before any pruning. The
+// Oracle free-tier API VM has 1 GB RAM; sustained attack → OOM-killed pm2
+// → restart loop that wipes legitimate-user counters too. Phase 2H finding #4.
+//
+// Caps the keyspace at MAX_KEYS (10_000 — sufficient for ~3K active users
+// at 3 attempts/24h each, far above realistic ShyTalk recovery volume) and
+// evicts the least-recently-used entry on overflow. Entries past `windowMs`
+// self-clear when accessed.
+class BoundedLruRateLimitStore {
+  constructor({ windowMs, maxKeys = 10_000 }) {
+    this.windowMs = windowMs;
+    this.maxKeys = maxKeys;
+    this.hits = new Map(); // insertion-ordered → cheap LRU via delete+set
+  }
+  init() {}
+  async increment(key) {
+    const now = Date.now();
+    let entry = this.hits.get(key);
+    if (entry && now >= entry.resetTime.getTime()) {
+      entry = undefined;
+    }
+    if (!entry) {
+      entry = { totalHits: 0, resetTime: new Date(now + this.windowMs) };
+    } else {
+      // LRU touch: re-insert to move to the most-recent end.
+      this.hits.delete(key);
+    }
+    entry.totalHits += 1;
+    this.hits.set(key, entry);
+    while (this.hits.size > this.maxKeys) {
+      const oldestKey = this.hits.keys().next().value;
+      this.hits.delete(oldestKey);
+    }
+    return { totalHits: entry.totalHits, resetTime: entry.resetTime };
+  }
+  async decrement(key) {
+    const entry = this.hits.get(key);
+    if (entry && entry.totalHits > 0) entry.totalHits -= 1;
+  }
+  async resetKey(key) {
+    this.hits.delete(key);
+  }
+  async resetAll() {
+    this.hits.clear();
+  }
+  // Test-only observability hook.
+  _size() {
+    return this.hits.size;
+  }
+}
+
 // Recovery endpoints (password reset, TOTP recovery): 3 per 24 hours per email
 const recoveryLimiter = rateLimit({
+  store: new BoundedLruRateLimitStore({ windowMs: 24 * 60 * 60 * 1000, maxKeys: 10_000 }),
   windowMs: 24 * 60 * 60 * 1000,
   max: 3,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  keyGenerator: (req) => req.body?.email?.toLowerCase() || req.ip,
+  // Trim AND lowercase to match the route-side normalisation (portal.js:524
+  // does `email.trim().toLowerCase()` before user lookup). Without `.trim()`
+  // an attacker could spam OTPs to `victim@x.com` by alternating
+  // ` victim@x.com`, `victim@x.com `, and `victim@x.com` — three distinct
+  // rate-limit buckets all targeting the same Firebase user (Phase 2H finding #3).
+  keyGenerator: (req) => {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : null;
+    return email || req.ip;
+  },
   validate: false,
   skip: () => isNonProd(),
 });
 
-module.exports = { generalLimiter, writeLimiter, sensitiveLimiter, portalLimiter, recoveryLimiter };
+module.exports = {
+  generalLimiter,
+  writeLimiter,
+  sensitiveLimiter,
+  portalLimiter,
+  recoveryLimiter,
+  // Test-only export so suite can pin LRU eviction without standing up the
+  // full rate-limit middleware. Production callers use `recoveryLimiter` only.
+  BoundedLruRateLimitStore,
+};
