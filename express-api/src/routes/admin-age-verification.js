@@ -62,6 +62,13 @@ const { now } = require('../utils/helpers');
 const log = require('../utils/log');
 const { requireAdmin } = require('../middleware/auth');
 
+// Phase 2H finding #2 dedup: scope admin guard by path prefix.
+const _adminGuardWrapper = async (req, res, next) => {
+  if (await requireAdmin(req, res)) return;
+  next();
+};
+router.use('/admin/age-verification', _adminGuardWrapper);
+
 function isAtLeast18FromDob(dateOfBirthMs) {
   if (typeof dateOfBirthMs !== 'number' || !Number.isFinite(dateOfBirthMs)) return false;
   const today = new Date();
@@ -128,7 +135,7 @@ function requireNonBlankReason(reason) {
 // ─── GET /pending ───────────────────────────────────────────────────
 
 router.get('/admin/age-verification/pending', async (req, res) => {
-  if (requireAdmin(req, res)) return;
+  if (await requireAdmin(req, res)) return;
   try {
     const snap = await db
       .collection('ageVerificationSubmissions')
@@ -157,7 +164,7 @@ router.get('/admin/age-verification/pending', async (req, res) => {
 // deleted from R2 best-effort).
 
 router.get('/admin/age-verification/:id/image-url', async (req, res) => {
-  if (requireAdmin(req, res)) return;
+  if (await requireAdmin(req, res)) return;
   const { id } = req.params;
   try {
     const subRef = db.doc(`ageVerificationSubmissions/${id}`);
@@ -188,7 +195,7 @@ router.get('/admin/age-verification/:id/image-url', async (req, res) => {
 // ─── POST /:id/approve ──────────────────────────────────────────────
 
 router.post('/admin/age-verification/:id/approve', async (req, res) => {
-  if (requireAdmin(req, res)) return;
+  if (await requireAdmin(req, res)) return;
   const { id } = req.params;
   const errorId = 'AGE_VERIF_APPROVE';
   try {
@@ -254,7 +261,7 @@ router.post('/admin/age-verification/:id/approve', async (req, res) => {
 // ─── POST /:id/reject ───────────────────────────────────────────────
 
 router.post('/admin/age-verification/:id/reject', async (req, res) => {
-  if (requireAdmin(req, res)) return;
+  if (await requireAdmin(req, res)) return;
   const { id } = req.params;
   const errorId = 'AGE_VERIF_REJECT';
   try {
@@ -313,7 +320,7 @@ router.post('/admin/age-verification/:id/reject', async (req, res) => {
 // ─── POST /:id/modify-dob ───────────────────────────────────────────
 
 router.post('/admin/age-verification/:id/modify-dob', async (req, res) => {
-  if (requireAdmin(req, res)) return;
+  if (await requireAdmin(req, res)) return;
   const { id } = req.params;
   const errorId = 'AGE_VERIF_MODIFY_DOB';
   try {
