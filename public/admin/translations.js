@@ -52,6 +52,30 @@ var ADMIN_TRANSLATIONS = {
     table_device_id: 'Device ID', table_user: 'User', table_model: 'Model',
     table_os: 'OS', table_last_ip: 'Last IP', table_isp: 'ISP',
     table_country: 'Country', table_last_seen: 'Last Seen',
+    // Tabs / sub-tabs (User panel — Age Verification + Identity + Audit Log + Suggestions)
+    tab_suggestions: 'Suggestions', tab_audit_log: 'Audit Log',
+    subtab_identity: 'Identity', subtab_age_verification: 'Age Verification',
+    // User → Age Verification panel
+    age_verif_panel_title: 'Age Verification',
+    age_verif_panel_subtitle: "Review the user's submitted government ID and decide. Approve confirms the user is 18+. Reject keeps them sub-18 and notifies them. If the ID shows a different DOB, use Modify-DOB to correct the record.",
+    age_verif_no_pending_for_user: 'No pending verification submission for this user.',
+    age_verif_other_pending_label: 'Other pending submissions across the system:',
+    age_verif_jump_next: 'Jump to next pending',
+    age_verif_image_disclaimer: 'Image is destroyed when the decision is recorded.',
+    age_verif_field_method: 'ID method:',
+    age_verif_field_recorded_dob: 'Recorded DOB:',
+    age_verif_field_submitted_at: 'Submitted at:',
+    age_verif_field_submission_id: 'Submission ID:',
+    age_verif_match_question: "Does the ID confirm the user's recorded date of birth?",
+    age_verif_match_yes: 'Yes — DOB on the ID matches the recorded value',
+    age_verif_match_no: 'No — the ID shows a different DOB',
+    age_verif_approve_help: 'Approve: confirms the user as 18+ verified. Reject: keeps them sub-18 and sends a system PM with the reason.',
+    age_verif_approve_button: 'Approve (mark verified)',
+    age_verif_reject_summary: 'Reject instead…',
+    age_verif_reject_button: 'Reject submission',
+    age_verif_modify_help: "Update the user's DOB to match the value shown on the ID. The user is unlocked or kept locked automatically based on the new age.",
+    age_verif_new_dob_label: 'Date of birth on the ID:',
+    age_verif_modify_button: 'Update DOB & decide',
   },
   ar: {
     tab_users: '\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0648\u0646', tab_appeals: '\u0627\u0644\u0637\u0639\u0648\u0646', tab_reports: '\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631', tab_gifts: '\u0627\u0644\u0647\u062F\u0627\u064A\u0627',
@@ -377,18 +401,34 @@ var ADMIN_TRANSLATIONS = {
   zh: { tab_users: '\u7528\u6237', tab_appeals: '\u7533\u8BC9', tab_reports: '\u4E3E\u62A5', tab_gifts: '\u793C\u7269', tab_economy: '\u7ECF\u6D4E', tab_maintenance: '\u7EF4\u62A4', tab_monitor: '\u8F6C\u76D8\u76D1\u63A7', tab_banners: '\u6A2A\u5E45', tab_funfacts: '\u8DA3\u95FB', tab_backups: '\u5907\u4EFD', tab_logs: '\u65E5\u5FD7', tab_devices: '\u8BBE\u5907', tab_starting_screens: '\u542F\u52A8\u5C4F\u5E55', btn_sign_in: '\u767B\u5F55', btn_sign_out: '\u9000\u51FA', btn_search: '\u641C\u7D22', placeholder_search_uid: '\u8F93\u5165\u7528\u6237ID', subtab_profile: '\u4E2A\u4EBA\u8D44\u6599', subtab_moderation: '\u7BA1\u7406', subtab_security: '\u5B89\u5168', subtab_economy: '\u7ECF\u6D4E', label_uid: 'UID', label_display_name: '\u663E\u793A\u540D', label_user_type: '\u7C7B\u578B', label_nationality: '\u56FD\u7C4D', label_description: '\u63CF\u8FF0', label_email: '\u90AE\u7BB1', label_date_of_birth: '\u51FA\u751F\u65E5\u671F', label_unique_id: '\u552F\u4E00ID', btn_suspend_user: '\u6682\u505C', btn_unsuspend_user: '\u6062\u590D', btn_warn: '\u8B66\u544A', btn_reset_device: '\u91CD\u7F6E\u8BBE\u5907', btn_reset_gcs: '\u91CD\u7F6EGCS', label_shy_coins: 'Shy\u5E01', label_shy_beans: 'Shy\u8C46', label_super_shy: '\u8D85\u7EA7Shy', label_login_streak: '\u767B\u5F55\u8FDE\u7EED', status_banned: '\u5C01\u7981', status_active: '\u6D3B\u8DC3', status_suspended: '\u6682\u505C', status_pending: '\u5F85\u5904\u7406', filter_pending: '\u5F85\u5904\u7406', filter_approved: '\u5DF2\u6279\u51C6', filter_denied: '\u5DF2\u62D2\u7EDD', filter_resolved: '\u5DF2\u89E3\u51B3', filter_archived: '\u5DF2\u5F52\u6863', btn_approve: '\u6279\u51C6', btn_deny: '\u62D2\u7EDD', btn_resolve: '\u89E3\u51B3', btn_save: '\u4FDD\u5B58', btn_cancel: '\u53D6\u6D88', btn_delete: '\u5220\u9664', btn_apply: '\u5E94\u7528', btn_refresh: '\u5237\u65B0', btn_load_more: '\u52A0\u8F7D\u66F4\u591A', msg_loading: '\u52A0\u8F7D\u4E2D...', msg_no_data: '\u672A\u627E\u5230\u6570\u636E', msg_saved: '\u5DF2\u4FDD\u5B58', msg_error: '\u9519\u8BEF', label_log_level: '\u7EA7\u522B', label_log_source: '\u6765\u6E90', btn_export_json: '\u5BFC\u51FAJSON', btn_export_csv: '\u5BFC\u51FACSV', table_device_id: '\u8BBE\u5907ID', table_user: '\u7528\u6237', table_model: '\u578B\u53F7', table_os: '\u7CFB\u7EDF', table_last_ip: '\u6700\u540EIP', table_isp: '\u8FD0\u8425\u5546', table_country: '\u56FD\u5BB6', table_last_seen: '\u6700\u540E\u767B\u5F55' },
 };
 
-// Apply translations to elements with data-i18n attribute
+// Apply translations to elements with data-i18n attribute.
+// When the element has child elements (e.g. a notification-badge <span>
+// inside a tab button), replace only the first text node so the children
+// survive — setting `textContent` would wipe them. Without this guard,
+// adding a translation key for a button-with-badge silently destroys
+// the badge on every applyLanguage() call.
 function applyAdminTranslations(lang) {
   var t = ADMIN_TRANSLATIONS[lang] || ADMIN_TRANSLATIONS.en;
   document.querySelectorAll('[data-i18n]').forEach(function(el) {
     var key = el.getAttribute('data-i18n');
-    if (t[key]) {
-      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-        el.placeholder = t[key];
-      } else {
-        el.textContent = t[key];
-      }
+    if (!t[key]) return;
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      el.placeholder = t[key];
+      return;
     }
+    if (el.children.length > 0) {
+      // Has child elements — find first text node and replace ONLY that.
+      for (var i = 0; i < el.childNodes.length; i++) {
+        if (el.childNodes[i].nodeType === Node.TEXT_NODE) {
+          el.childNodes[i].nodeValue = t[key];
+          return;
+        }
+      }
+      // No text node yet — prepend one so we don't disturb the children.
+      el.insertBefore(document.createTextNode(t[key]), el.firstChild);
+      return;
+    }
+    el.textContent = t[key];
   });
 }
 
