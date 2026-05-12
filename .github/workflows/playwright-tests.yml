@@ -165,6 +165,19 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-browsers-${{ needs.prepare-playwright.outputs.pw-version }}
 
+      # Always run install — it's idempotent. Playwright checks the on-disk
+      # browser revision against the package's expected revision and only
+      # downloads when they don't match. The cache just speeds up the
+      # no-op path. WITHOUT this step, a cache-hit that returned a stale or
+      # incomplete blob (different chromium revision than the installed
+      # `playwright` package expects, or a partial extraction) leaves the
+      # runner with no usable browser and every test fails in 2ms with
+      # `browserType.launch: Executable doesn't exist`. Conditional-on-
+      # cache-miss is NOT enough — the failure is cache-hit-with-stale-
+      # content, not cache-miss.
+      - name: Install Playwright browsers (idempotent)
+        run: npx playwright install
+
       - name: Cache apt packages for Playwright
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
