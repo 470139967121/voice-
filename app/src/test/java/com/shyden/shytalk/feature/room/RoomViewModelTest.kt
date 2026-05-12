@@ -3406,6 +3406,568 @@ class RoomViewModelTest {
             assertFalse(viewModel.uiState.value.isSubmittingReport)
         }
 
+    // ===== reportMessage Tests =====
+    //
+    // B3 (Room message reporting, UK OSA). Mirrors PrivateChatViewModel.reportMessage
+    // but adapted to the room's conversationId = roomId convention and the room's
+    // Message type. Server-side contract is identical (POST /api/reports).
+    //
+    // The four tests below cover: happy path field passing, missing target user
+    // (corrupted message), repository failure surfaces in uiState, and the
+    // server-trusted "no evidence on message reports" invariant (storage
+    // repository must NOT be called — different from reportUser).
+
+    @Test
+    fun `reportMessage - success passes roomId as conversationId and message fields`() =
+        roomTest {
+            val targetUid = "sender-7"
+            val targetUser = TestData.createTestUser(uid = targetUid, displayName = "Bad Actor")
+            coEvery { userRepository.getUser(targetUid) } returns Resource.Success(targetUser)
+            coEvery {
+                reportRepository.reportMessage(
+                    reporterId = any(),
+                    reporterName = any(),
+                    reporterUniqueId = any(),
+                    reportedUserId = any(),
+                    reportedUserName = any(),
+                    reportedUserUniqueId = any(),
+                    conversationId = any(),
+                    messageId = any(),
+                    messageText = any(),
+                    reason = any(),
+                    description = any(),
+                )
+            } returns Resource.Success(Unit)
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            val message =
+                Message(
+                    messageId = "msg-42",
+                    senderId = targetUid,
+                    senderName = "Bad Actor",
+                    text = "offensive content",
+                    type = MessageType.TEXT,
+                )
+
+            viewModel.reportMessage(message, "Harassment", "context")
+            advanceUntilIdle()
+
+            // conversationId MUST be the roomId, not "" (the reportUser convention).
+            // Server uses conversationId to scope per-room moderation queries — a
+            // blank value silently drops room reports out of the per-room admin view.
+            coVerify {
+                reportRepository.reportMessage(
+                    reporterId = currentUserId,
+                    reporterName = "Current User",
+                    reporterUniqueId = any(),
+                    reportedUserId = targetUid,
+                    reportedUserName = "Bad Actor",
+                    reportedUserUniqueId = any(),
+                    conversationId = "room-1",
+                    messageId = "msg-42",
+                    messageText = "offensive content",
+                    reason = "Harassment",
+                    description = "context",
+                )
+            }
+            // Same uiState flag as reportUser — RoomScreen's LaunchedEffect already
+            // surfaces report_thank_you on this transition, so reusing the flag
+            // avoids a second snackbar wire-up.
+            assertTrue(viewModel.uiState.value.reportSubmitted)
+            assertFalse(viewModel.uiState.value.isSubmittingReport)
+        }
+
+    @Test
+    fun `reportMessage - never calls storageRepository (no evidence on message reports)`() =
+        roomTest {
+            val targetUid = "sender-8"
+            val targetUser = TestData.createTestUser(uid = targetUid, displayName = "Sender")
+            coEvery { userRepository.getUser(targetUid) } returns Resource.Success(targetUser)
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Success(Unit)
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-1", senderId = targetUid, senderName = "Sender", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            advanceUntilIdle()
+
+            // Message reports do not upload evidence (unlike reportUser). If a future
+            // refactor accidentally couples them, this regression test catches the
+            // resulting wasted R2 PUT on every room report.
+            coVerify(exactly = 0) { storageRepository.uploadImage(any(), any(), any(), any()) }
+        }
+
+    @Test
+    fun `reportMessage - error when sender resolution fails sets reportError`() =
+        roomTest {
+            val targetUid = "ghost-sender"
+            coEvery { userRepository.getUser(targetUid) } returns Resource.Error("Not found")
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-2", senderId = targetUid, senderName = "Ghost", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            advanceUntilIdle()
+
+            assertEquals("Could not submit report", viewModel.uiState.value.reportError)
+            assertFalse(viewModel.uiState.value.reportSubmitted)
+            assertFalse(viewModel.uiState.value.isSubmittingReport)
+        }
+
+    @Test
+    fun `reportMessage - repository failure surfaces reportError`() =
+        roomTest {
+            val targetUid = "sender-9"
+            val targetUser = TestData.createTestUser(uid = targetUid, displayName = "Sender")
+            coEvery { userRepository.getUser(targetUid) } returns Resource.Success(targetUser)
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Error("backend down")
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-3", senderId = targetUid, senderName = "Sender", text = "bad", type = MessageType.TEXT),
+                "Other",
+                "long context that exceeds nothing",
+            )
+            advanceUntilIdle()
+
+            assertEquals("Failed to submit report", viewModel.uiState.value.reportError)
+            assertFalse(viewModel.uiState.value.reportSubmitted)
+            assertFalse(viewModel.uiState.value.isSubmittingReport)
+        }
+
+    // ── reportMessage branch enumeration (added 2026-05-11, per the
+    // strengthened TDD rule). Every branch in the function body gets at least
+    // one test:
+    //   1a/1b/1c — currentUser via cache hit / repo Success / repo Error→null
+    //   2a/2b/2c — targetUser via cache hit / repo Success / repo Error→null
+    //   3a/3b/3c — null short-circuit: current-null, target-null, both-null
+    //   4a/4b/4c — Resource Success / Error / Loading from reportRepository
+    //   5      — isSubmittingReport flips on entry and clears on each exit
+    //   6      — reportError is reset to null on a fresh submission
+    //   7      — reportSubmitted does NOT flip on the Error path
+    //   8      — every value in reportMessageReasons is forwarded verbatim
+    //   9      — Resource.Loading from repository leaves state untouched
+    //
+    // The earlier 4 tests covered 1b/2b/4a, 2c/3-pure, 4b, and a no-evidence
+    // invariant. The 9 tests below close the remaining gaps.
+
+    @Test
+    fun `reportMessage - current user resolution failure also blocks submission`() =
+        roomTest {
+            // Branch 1c + 3a: currentUser repo lookup fails, target lookup succeeds —
+            // the null short-circuit must still fire (covers the LEFT operand of
+            // the `||` independently from the right).
+            coEvery { userRepository.getUser(currentUserId) } returns Resource.Error("auth down")
+            val targetUid = "sender-c1"
+            coEvery { userRepository.getUser(targetUid) } returns
+                Resource.Success(TestData.createTestUser(uid = targetUid, displayName = "T"))
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-c1", senderId = targetUid, senderName = "T", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            advanceUntilIdle()
+
+            assertEquals("Could not submit report", viewModel.uiState.value.reportError)
+            assertFalse(viewModel.uiState.value.reportSubmitted)
+            assertFalse(viewModel.uiState.value.isSubmittingReport)
+            // Defence-in-depth: the report endpoint must NOT be called when either
+            // side of the user pair is null. Without this assertion the VM could
+            // silently send `Resource.Error.data!!` and 500 the server.
+            coVerify(exactly = 0) {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            }
+        }
+
+    @Test
+    fun `reportMessage - both users null short-circuits without crashing`() =
+        roomTest {
+            // Branch 3c — both `currentUser == null` AND `targetUser == null` together.
+            // The if uses `||`, so if Kotlin ever changed short-circuit semantics
+            // (or someone refactors to `&&` by mistake), this row would still pass
+            // the guard wrongly. Pin the AND-of-nulls path.
+            val targetUid = "sender-c2"
+            coEvery { userRepository.getUser(currentUserId) } returns Resource.Error("auth down")
+            coEvery { userRepository.getUser(targetUid) } returns Resource.Error("not found")
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-c2", senderId = targetUid, senderName = "Z", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            advanceUntilIdle()
+
+            assertEquals("Could not submit report", viewModel.uiState.value.reportError)
+            assertFalse(viewModel.uiState.value.reportSubmitted)
+        }
+
+    @Test
+    fun `reportMessage - reportError is reset to null at the start of each submission`() =
+        roomTest {
+            // Branch 6 — stale error from a previous failed submission must NOT
+            // persist after the user retries. Without this reset the UI shows
+            // "Failed to submit report" red text even though the in-flight call
+            // is succeeding.
+            val targetUid = "sender-r"
+            coEvery { userRepository.getUser(targetUid) } returns
+                Resource.Success(TestData.createTestUser(uid = targetUid, displayName = "T"))
+            // First call: server fails so reportError gets set.
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Error("transient")
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            val message =
+                Message(messageId = "m-r", senderId = targetUid, senderName = "T", text = "x", type = MessageType.TEXT)
+            viewModel.reportMessage(message, "Spam", "")
+            advanceUntilIdle()
+            assertEquals("Failed to submit report", viewModel.uiState.value.reportError)
+
+            // Second call: server succeeds. The stale error from call 1 must be
+            // cleared during the initial state-update of call 2 — otherwise the
+            // success path would render with the old error still visible.
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Success(Unit)
+
+            viewModel.reportMessage(message, "Spam", "")
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.uiState.value.reportError)
+            assertTrue(viewModel.uiState.value.reportSubmitted)
+        }
+
+    @Test
+    fun `reportMessage - Resource Loading from repository does not mutate uiState`() =
+        roomTest {
+            // Branch 4c — the `is Resource.Loading -> Unit` arm. If a refactor
+            // accidentally drops the arm or treats Loading as Error/Success, the
+            // VM would either green-toast or red-toast on a still-pending request.
+            // Lock the no-op contract.
+            val targetUid = "sender-l"
+            coEvery { userRepository.getUser(targetUid) } returns
+                Resource.Success(TestData.createTestUser(uid = targetUid, displayName = "T"))
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Loading
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-l", senderId = targetUid, senderName = "T", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            advanceUntilIdle()
+
+            // Loading is treated as "no terminal yet" — neither flag flips.
+            assertFalse(viewModel.uiState.value.reportSubmitted)
+            assertEquals(null, viewModel.uiState.value.reportError)
+            // isSubmittingReport remains true because no terminal arrived.
+            assertTrue(viewModel.uiState.value.isSubmittingReport)
+        }
+
+    @Test
+    fun `reportMessage - all four canonical reasons are forwarded verbatim`() =
+        roomTest {
+            // Branch 8 — the four `reportMessageReasons` values must pass through
+            // unchanged. A typo or accidental lowercase() somewhere in the chain
+            // would silently drift the admin-side reason list out of sync.
+            val targetUid = "sender-reason"
+            coEvery { userRepository.getUser(targetUid) } returns
+                Resource.Success(TestData.createTestUser(uid = targetUid, displayName = "T"))
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Success(Unit)
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            val message =
+                Message(messageId = "m-reason", senderId = targetUid, senderName = "T", text = "x", type = MessageType.TEXT)
+            for (reason in listOf("Spam", "Harassment", "Inappropriate Content", "Other")) {
+                viewModel.reportMessage(message, reason, "")
+                advanceUntilIdle()
+                coVerify {
+                    reportRepository.reportMessage(
+                        reporterId = any(),
+                        reporterName = any(),
+                        reporterUniqueId = any(),
+                        reportedUserId = any(),
+                        reportedUserName = any(),
+                        reportedUserUniqueId = any(),
+                        conversationId = any(),
+                        messageId = any(),
+                        messageText = any(),
+                        reason = reason,
+                        description = any(),
+                    )
+                }
+            }
+        }
+
+    @Test
+    fun `reportMessage - blank description still forwards correctly (server side stores empty)`() =
+        roomTest {
+            // Edge input: blank description must be passed through as "" — the
+            // server expects an empty string, not null, for the optional field.
+            // Without this regression test, a future refactor that coerces blank
+            // to null would change the on-wire shape silently.
+            val targetUid = "sender-b"
+            coEvery { userRepository.getUser(targetUid) } returns
+                Resource.Success(TestData.createTestUser(uid = targetUid, displayName = "T"))
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Success(Unit)
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-b", senderId = targetUid, senderName = "T", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            advanceUntilIdle()
+
+            coVerify {
+                reportRepository.reportMessage(
+                    reporterId = any(),
+                    reporterName = any(),
+                    reporterUniqueId = any(),
+                    reportedUserId = any(),
+                    reportedUserName = any(),
+                    reportedUserUniqueId = any(),
+                    conversationId = any(),
+                    messageId = any(),
+                    messageText = any(),
+                    reason = any(),
+                    description = "",
+                )
+            }
+        }
+
+    @Test
+    fun `reportMessage - empty messageText still passes through (e g deleted-text edge)`() =
+        roomTest {
+            // Edge input: `message.text` may be empty (deleted message, gift-only
+            // message rendered as TEXT, etc.). The endpoint accepts empty text;
+            // the client must not pre-filter or 400-block.
+            val targetUid = "sender-e"
+            coEvery { userRepository.getUser(targetUid) } returns
+                Resource.Success(TestData.createTestUser(uid = targetUid, displayName = "T"))
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Success(Unit)
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-e", senderId = targetUid, senderName = "T", text = "", type = MessageType.TEXT),
+                "Other",
+                "",
+            )
+            advanceUntilIdle()
+
+            coVerify {
+                reportRepository.reportMessage(
+                    reporterId = any(),
+                    reporterName = any(),
+                    reporterUniqueId = any(),
+                    reportedUserId = any(),
+                    reportedUserName = any(),
+                    reportedUserUniqueId = any(),
+                    conversationId = any(),
+                    messageId = "m-e",
+                    messageText = "",
+                    reason = any(),
+                    description = any(),
+                )
+            }
+            assertTrue(viewModel.uiState.value.reportSubmitted)
+        }
+
+    @Test
+    fun `reportMessage - reporter and reported uniqueIds are placed in the correct field slots`() =
+        roomTest {
+            // Field-order sanity test. Without this, a future refactor that
+            // swapped `reporterUniqueId` and `reportedUserUniqueId` would compile
+            // (both Long) and pass any test that uses `any()` for those slots.
+            // Lock the exact uniqueId-to-field assignment.
+            val targetUid = "sender-id"
+            val targetUniqueId = 9999L
+            val targetUser =
+                TestData.createTestUser(uid = targetUid, displayName = "T").copy(uniqueId = targetUniqueId)
+            val reporterUniqueId = 1234L
+            coEvery { userRepository.getUser(currentUserId) } returns
+                Resource.Success(
+                    TestData
+                        .createTestUser(uid = currentUserId, displayName = "Current User")
+                        .copy(uniqueId = reporterUniqueId),
+                )
+            coEvery { userRepository.getUser(targetUid) } returns Resource.Success(targetUser)
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Success(Unit)
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-id", senderId = targetUid, senderName = "T", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            advanceUntilIdle()
+
+            coVerify {
+                reportRepository.reportMessage(
+                    reporterId = currentUserId,
+                    reporterName = any(),
+                    reporterUniqueId = reporterUniqueId,
+                    reportedUserId = targetUid,
+                    reportedUserName = any(),
+                    reportedUserUniqueId = targetUniqueId,
+                    conversationId = any(),
+                    messageId = any(),
+                    messageText = any(),
+                    reason = any(),
+                    description = any(),
+                )
+            }
+        }
+
+    @Test
+    fun `reportMessage - reportedUserId is targetUser firebaseUid not User uid`() =
+        roomTest {
+            // Pins the server-contract fix from PR #651: `resolveUniqueId`
+            // middleware queries `users.where('firebaseUid','==',value)` so the
+            // client MUST send firebaseUid, NOT `User.uid` (which is the
+            // Firestore doc key = numeric uniqueId in this app). Without this
+            // test, a regression that swaps `targetUser.firebaseUid` back to
+            // `targetUser.uid` slips through because the default TestData
+            // fixture has uid == firebaseUid. Construct a user where they
+            // differ to detect the regression unambiguously.
+            val targetUid = "sender-id-test"
+            val targetFirebaseUid = "fb-uid-xyz-789"
+            val targetUser =
+                TestData
+                    .createTestUser(uid = targetUid, displayName = "T")
+                    .copy(firebaseUid = targetFirebaseUid)
+            coEvery { userRepository.getUser(targetUid) } returns Resource.Success(targetUser)
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns Resource.Success(Unit)
+
+            // Same trick for the reporter (current user).
+            val reporterFirebaseUid = "fb-uid-current-456"
+            coEvery { userRepository.getUser(currentUserId) } returns
+                Resource.Success(
+                    TestData
+                        .createTestUser(uid = currentUserId, displayName = "Current User")
+                        .copy(firebaseUid = reporterFirebaseUid),
+                )
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-fb", senderId = targetUid, senderName = "T", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            advanceUntilIdle()
+
+            coVerify {
+                reportRepository.reportMessage(
+                    reporterId = reporterFirebaseUid,
+                    reporterName = any(),
+                    reporterUniqueId = any(),
+                    reportedUserId = targetFirebaseUid,
+                    reportedUserName = any(),
+                    reportedUserUniqueId = any(),
+                    conversationId = any(),
+                    messageId = any(),
+                    messageText = any(),
+                    reason = any(),
+                    description = any(),
+                )
+            }
+        }
+
+    @Test
+    fun `reportMessage - isSubmittingReport remains true while a previous attempt is in flight`() =
+        roomTest {
+            // State machine assertion: while the suspension is awaiting the repo
+            // result, `isSubmittingReport` must be `true` (UI shows spinner).
+            // This isolates branch 5's "on" half from its "off" half.
+            val targetUid = "sender-flight"
+            coEvery { userRepository.getUser(targetUid) } returns
+                Resource.Success(TestData.createTestUser(uid = targetUid, displayName = "T"))
+            // Suspend-forever repository call so we can observe the in-flight state.
+            coEvery {
+                reportRepository.reportMessage(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } coAnswers {
+                kotlinx.coroutines.awaitCancellation()
+            }
+
+            viewModel = createViewModel()
+            emitRoomAsOwner()
+            advanceUntilIdle()
+
+            viewModel.reportMessage(
+                Message(messageId = "m-flight", senderId = targetUid, senderName = "T", text = "x", type = MessageType.TEXT),
+                "Spam",
+                "",
+            )
+            // Let the launch reach the suspending repo call but NOT past it.
+            advanceTimeBy(1)
+
+            assertTrue(viewModel.uiState.value.isSubmittingReport)
+            assertFalse(viewModel.uiState.value.reportSubmitted)
+            assertEquals(null, viewModel.uiState.value.reportError)
+        }
+
     // ===== editMessage Tests =====
 
     @Test

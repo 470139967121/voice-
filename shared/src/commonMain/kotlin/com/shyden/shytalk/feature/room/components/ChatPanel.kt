@@ -89,6 +89,7 @@ fun ChatPanel(
     aliases: Map<String, String> = emptyMap(),
     translations: Map<String, String> = emptyMap(),
     onTranslateMessage: (String) -> Unit = {},
+    onReportMessage: (Message) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -185,6 +186,12 @@ fun ChatPanel(
                         onEditMessage =
                             if (isSelf && message.type == com.shyden.shytalk.core.model.MessageType.TEXT) {
                                 { onStartEditMessage(message.messageId, message.text) }
+                            } else {
+                                null
+                            },
+                        onReportMessage =
+                            if (isRoomMessageReportable(isSelf = isSelf, type = message.type, senderId = message.senderId)) {
+                                { onReportMessage(message) }
                             } else {
                                 null
                             },

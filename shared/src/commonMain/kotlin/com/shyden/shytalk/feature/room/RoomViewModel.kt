@@ -32,6 +32,8 @@ import com.shyden.shytalk.data.repository.SeatRequestRepository
 import com.shyden.shytalk.data.repository.StorageRepository
 import com.shyden.shytalk.data.repository.TranslationRepository
 import com.shyden.shytalk.data.repository.UserRepository
+import com.shyden.shytalk.feature.report.UserReportOutcome
+import com.shyden.shytalk.feature.report.submitUserReport
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -1750,41 +1752,80 @@ class RoomViewModel(
                 return@launch
             }
 
-            // Upload evidence
-            val evidenceUrls = mutableListOf<String>()
-            for ((bytes, mimeType) in evidenceImages) {
-                when (
-                    val result =
-                        storageRepository.uploadImage(
-                            currentUser.uid,
-                            "report_evidence",
-                            bytes,
-                            mimeType,
-                        )
-                ) {
-                    is Resource.Success -> evidenceUrls.add(result.data)
+            when (
+                submitUserReport(
+                    reportRepository = reportRepository,
+                    storageRepository = storageRepository,
+                    currentUser = currentUser,
+                    targetUser = targetUser,
+                    reason = reason,
+                    description = description,
+                    evidenceImages = evidenceImages,
+                )
+            ) {
+                UserReportOutcome.Success ->
+                    _uiState.update { it.copy(isSubmittingReport = false, reportSubmitted = true) }
 
-                    is Resource.Error -> {
-                        _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to upload evidence") }
-                        return@launch
+                UserReportOutcome.EvidenceUploadFailed ->
+                    _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to upload evidence") }
+
+                UserReportOutcome.ReportSubmitFailed ->
+                    _uiState.update { it.copy(isSubmittingReport = false, reportError = "Failed to submit report") }
+            }
+        }
+    }
+
+    fun clearReportSubmitted() {
+        _uiState.update { it.copy(reportSubmitted = false, reportError = null) }
+    }
+
+    /**
+     * Report a specific room chat message (B3 — UK OSA per-message reporting).
+     *
+     * Differs from [reportUser] in three deliberate ways: (a) no evidence upload
+     * (the message text + messageId are the evidence), (b) conversationId is the
+     * roomId so per-room admin filters scope correctly, (c) the sender is resolved
+     * from `message.senderId` rather than a tap target.
+     */
+    fun reportMessage(
+        message: Message,
+        reason: String,
+        description: String,
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingReport = true, reportError = null) }
+
+            val currentUser =
+                userCache[_uiState.value.currentUserId]
+                    ?: when (val result = userRepository.getUser(_uiState.value.currentUserId)) {
+                        is Resource.Success -> result.data
+                        else -> null
                     }
-
-                    is Resource.Loading -> Unit
-                }
+            val targetUser =
+                userCache[message.senderId]
+                    ?: when (val result = userRepository.getUser(message.senderId)) {
+                        is Resource.Success -> result.data
+                        else -> null
+                    }
+            if (currentUser == null || targetUser == null) {
+                _uiState.update { it.copy(isSubmittingReport = false, reportError = "Could not submit report") }
+                return@launch
             }
 
             when (
-                reportRepository.reportUser(
-                    reporterId = currentUser.uid,
+                // See reportUser above for why these are firebaseUid not uid.
+                reportRepository.reportMessage(
+                    reporterId = currentUser.firebaseUid,
                     reporterName = currentUser.displayName,
                     reporterUniqueId = currentUser.uniqueId,
-                    reportedUserId = targetUser.uid,
+                    reportedUserId = targetUser.firebaseUid,
                     reportedUserName = targetUser.displayName,
                     reportedUserUniqueId = targetUser.uniqueId,
-                    conversationId = "",
+                    conversationId = roomId,
+                    messageId = message.messageId,
+                    messageText = message.text,
                     reason = reason,
                     description = description,
-                    evidenceUrls = evidenceUrls,
                 )
             ) {
                 is Resource.Success -> {
@@ -1798,10 +1839,6 @@ class RoomViewModel(
                 is Resource.Loading -> Unit
             }
         }
-    }
-
-    fun clearReportSubmitted() {
-        _uiState.update { it.copy(reportSubmitted = false, reportError = null) }
     }
 
     // --- Notification Queue ---
