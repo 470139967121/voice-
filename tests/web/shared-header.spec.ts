@@ -3,11 +3,17 @@ import { test, expect } from '@playwright/test';
 /**
  * Shared header component tests.
  *
- * The shared header appears on ALL web pages with:
+ * The shared header appears on every public marketing/legal page with:
  * - Logo (left) linking to home
  * - User auth state (right): avatar + name when signed in, "Sign In" when not
  * - Language selector globe button
- * - Consistent look across roadmap, landing, legal, portal, admin pages
+ *
+ * Intentionally excluded:
+ * - /admin and /portal — both render their own custom authentication UI
+ *   that would conflict with the shared header.
+ * - /events/khmer-new-year.html — a deliberately standalone seasonal
+ *   experience whose `tests/web/khmer-new-year-page.spec.ts` pins zero
+ *   navigation links in header/main.
  */
 
 const PAGES = [
@@ -16,6 +22,9 @@ const PAGES = [
   { name: 'privacy', path: '/privacy.html' },
   { name: 'terms', path: '/terms.html' },
   { name: 'community-guidelines', path: '/community-guidelines.html' },
+  { name: 'cyber-bullying', path: '/cyber-bullying.html' },
+  { name: 'do-not-sell', path: '/do-not-sell.html' },
+  { name: '404', path: '/404.html' },
 ];
 
 test.describe('Shared Header — Presence on all pages', () => {
@@ -58,6 +67,25 @@ test.describe('Shared Header — Unauthenticated state', () => {
     await page.waitForTimeout(3_000);
     const userInfo = page.locator('[data-testid="header-user-info"]');
     expect(await userInfo.count()).toBe(0);
+  });
+});
+
+test.describe('Shared Header — Sign In fallback on pages without login modal', () => {
+  // shared-header.js falls back to `window.location.href = '/portal/'` when
+  // `window.shytalkShowLoginModal` is not registered on the host page. Only
+  // roadmap.html registers that modal hook; all legal + 404 pages take the
+  // redirect branch. This block pins that contract on community-guidelines
+  // (a representative legal page) so the fallback can't silently regress.
+  test('Sign In on /community-guidelines.html redirects to /portal/', async ({ page }) => {
+    await page.goto('/community-guidelines.html');
+    const hasModalHook = await page.evaluate(
+      () => typeof (window as { shytalkShowLoginModal?: unknown }).shytalkShowLoginModal === 'function',
+    );
+    expect(hasModalHook).toBe(false);
+    const signInBtn = page.locator('[data-testid="header-signin-btn"]');
+    await signInBtn.waitFor({ timeout: 10_000 });
+    await signInBtn.click();
+    await page.waitForURL(/\/portal\/?$/, { timeout: 5_000 });
   });
 });
 
