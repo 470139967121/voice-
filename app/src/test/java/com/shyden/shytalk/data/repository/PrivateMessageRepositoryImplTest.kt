@@ -383,10 +383,124 @@ class PrivateMessageRepositoryImplTest {
             val result =
                 repo.createGroupConversation(
                     creatorId = "user-1",
+                    cohort = "adult",
                     participantIds = listOf("user-2", "user-3"),
                     groupName = "Test Group",
                 )
             assertTrue(result is Resource.Success)
+        }
+
+    @Test
+    fun `createGroupConversation initial create writes participantIds with only creatorId (UK OSA PR 8 size-1 rule)`() =
+        runTest {
+            // Defensive pin on the load-bearing security invariant:
+            // the initial doc.set() at create-time MUST NOT bulk-seed
+            // additional participants. The firestore.rules layer
+            // requires participantIds.size() == 1 on group create.
+            // Captures the data map passed to set() and asserts the
+            // size-1 invariant on the load-bearing field.
+            val capturedData = slot<Map<String, Any?>>()
+            every { mockDocRef.set(capture(capturedData)) } returns Tasks.forResult(null)
+
+            val result =
+                repo.createGroupConversation(
+                    creatorId = "user-1",
+                    cohort = "adult",
+                    participantIds = listOf("user-2", "user-3"),
+                    groupName = "Test Group",
+                )
+            assertTrue(result is Resource.Success)
+
+            @Suppress("UNCHECKED_CAST")
+            val initialParticipants = capturedData.captured["participantIds"] as List<String>
+            assertEquals(1, initialParticipants.size)
+            assertEquals("user-1", initialParticipants[0])
+        }
+
+    @Test
+    fun `createGroupConversation stamps cohort field on the doc (UK OSA PR 8 rules bind)`() =
+        runTest {
+            // firestore.rules requires the stamped cohort to match
+            // the caller's JWT claim. A regression that omits the
+            // field would fail the rule on the real backend.
+            val capturedData = slot<Map<String, Any?>>()
+            every { mockDocRef.set(capture(capturedData)) } returns Tasks.forResult(null)
+
+            val result =
+                repo.createGroupConversation(
+                    creatorId = "user-1",
+                    cohort = "minor",
+                    participantIds = listOf("user-2"),
+                    groupName = "Cohort-stamped",
+                )
+            assertTrue(result is Resource.Success)
+            assertEquals("minor", capturedData.captured["cohort"])
+        }
+
+    @Test
+    fun `createGroupConversation calls update once per extra participant (one-at-a-time growth)`() =
+        runTest {
+            // Mirrors the rules' one-at-a-time per-add invariant: the
+            // impl must NOT bulk-add via a single doc.set. Each extra
+            // participant gets its own update + arrayUnion so the
+            // per-add cohort `get()` in firestore.rules fires per id.
+            val result =
+                repo.createGroupConversation(
+                    creatorId = "user-1",
+                    cohort = "adult",
+                    participantIds = listOf("user-2", "user-3", "user-4"),
+                    groupName = "Multi-add",
+                )
+            assertTrue(result is Resource.Success)
+
+            io.mockk.verify(exactly = 3) {
+                mockDocRef.update("participantIds", any())
+            }
+        }
+
+    @Test
+    fun `createGroupConversation per-participant add failure does not abort the call`() =
+        runTest {
+            // Partial-group is more useful than aborted-group: a
+            // failed add for one member leaves an orphaned single-
+            // member group the creator can re-add to. This is a
+            // deliberate UX trade-off documented in the impl.
+            every { mockDocRef.update("participantIds", any()) } returns
+                Tasks.forException(RuntimeException("transient firestore error"))
+
+            val result =
+                repo.createGroupConversation(
+                    creatorId = "user-1",
+                    cohort = "adult",
+                    participantIds = listOf("user-2"),
+                    groupName = "Partial-add",
+                )
+            // Despite the update failure, the create as a whole
+            // succeeds — the initial doc.set is the load-bearing op.
+            assertTrue(result is Resource.Success)
+        }
+
+    @Test
+    fun `createGroupConversation deduplicates creator from the extra-participants loop`() =
+        runTest {
+            // If the caller mistakenly includes the creator's id in
+            // the participantIds list (common UX shape: ViewModel
+            // passes the full member list), the loop must skip the
+            // creator (already added at create time). Otherwise the
+            // initial doc.set's [creator] + arrayUnion(creator) is a
+            // no-op write that wastes a Firestore quota slot.
+            val result =
+                repo.createGroupConversation(
+                    creatorId = "user-1",
+                    cohort = "adult",
+                    participantIds = listOf("user-1", "user-2"),
+                    groupName = "Dedup-creator",
+                )
+            assertTrue(result is Resource.Success)
+            // Only user-2 should trigger an update (user-1 dedup'd).
+            io.mockk.verify(exactly = 1) {
+                mockDocRef.update("participantIds", any())
+            }
         }
 
     // endregion
