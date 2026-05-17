@@ -2646,6 +2646,71 @@ describe('UI driver — Android element-tag assertion (Then <P>\'s Android UI sh
   });
 });
 
+describe('UI driver — Android tap on element with tag (When <P> on Android taps "<X>")', () => {
+  test('tap on found element calls androidTap with bounds centre', async () => {
+    const dump = '<node resource-id="signup_createAccountButton" bounds="[100,200][300,400]" />';
+    const tapSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump), androidTap: tapSpy },
+    });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android taps "signup_createAccountButton"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Bounds [100,200][300,400] → centre (200, 300)
+    expect(tapSpy).toHaveBeenCalledWith(200, 300);
+  });
+
+  test('tap on missing element fails — does not silently pass', async () => {
+    const dump = '<node resource-id="other_tag" bounds="[0,0][50,50]" />';
+    const tapSpy = jest.fn();
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump), androidTap: tapSpy },
+    });
+    const r = await executeStep({ kind: 'When', text: 'Adam on Android taps "missing_tag"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/missing_tag/);
+    expect(tapSpy).not.toHaveBeenCalled();
+  });
+
+  test('fully-qualified resource-id form also resolves', async () => {
+    const dump =
+      '<node resource-id="com.shyden.shytalk.dev:id/signup_createAccountButton" bounds="[10,20][30,40]" />';
+    const tapSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump), androidTap: tapSpy },
+    });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android taps "signup_createAccountButton"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Bounds [10,20][30,40] → centre (20, 30)
+    expect(tapSpy).toHaveBeenCalledWith(20, 30);
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx(); // no uiDriver
+    const r = await executeStep({ kind: 'When', text: 'Adam on Android taps "any_tag"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('element with no bounds attribute fails with clear error', async () => {
+    const dump = '<node resource-id="weird_no_bounds" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump), androidTap: jest.fn() },
+    });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android taps "weird_no_bounds"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/bounds/i);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

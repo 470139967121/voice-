@@ -1238,6 +1238,59 @@ const matchers = [
       return { ok: false, error: `unknown platform "${platform}" for UI step` };
     },
   },
+  {
+    // Android tap on element with the given resource-id tag. Reads the UI
+    // dump, locates the element's bounds=`[x1,y1][x2,y2]` attribute,
+    // computes the centre, and calls ctx.uiDriver.androidTap(x, y).
+    //
+    // Tag matching accepts the same short OR fully-qualified shapes as
+    // the "shows the element with tag" matcher above. Bounds extraction
+    // uses a node-local regex anchored to the same element to avoid
+    // grabbing the bounds of an unrelated nearby element.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+taps "([^"]+)"$/,
+    async handler(m, ctx) {
+      const tag = m[3];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (tag=${tag})` };
+      }
+      if (!ctx.uiDriver.androidUiDump || !ctx.uiDriver.androidTap) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver requires both androidUiDump and androidTap',
+        };
+      }
+      const dump = await ctx.uiDriver.androidUiDump();
+      // Find the node by resource-id (short OR fully-qualified), capturing
+      // the bounds attribute on the SAME node. The element opens with `<node`
+      // and the resource-id appears as an attribute; bounds is also an
+      // attribute on the same node, so we capture them within a single
+      // attribute run (no `<` in between).
+      const escTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(
+        `resource-id="(?:[^"]*:id/)?${escTag}"[^<]*?bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"|bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"[^<]*?resource-id="(?:[^"]*:id/)?${escTag}"`,
+      );
+      const match = re.exec(dump);
+      if (!match) {
+        // Distinguish "tag not found" from "tag found but no bounds"
+        const tagPresent = dump.includes(`resource-id="${tag}"`) || dump.includes(`:id/${tag}"`);
+        if (tagPresent) {
+          return {
+            ok: false,
+            error: `tag "${tag}" found in dump but no bounds attribute on the same node`,
+          };
+        }
+        return { ok: false, error: `tag "${tag}" not found in Android UI dump` };
+      }
+      const x1 = parseInt(match[1] || match[5], 10);
+      const y1 = parseInt(match[2] || match[6], 10);
+      const x2 = parseInt(match[3] || match[7], 10);
+      const y2 = parseInt(match[4] || match[8], 10);
+      const cx = Math.floor((x1 + x2) / 2);
+      const cy = Math.floor((y1 + y2) / 2);
+      await ctx.uiDriver.androidTap(cx, cy);
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so
