@@ -2197,6 +2197,81 @@ describe('LiveKit Docker precondition (Given the LiveKit Docker container is run
   });
 });
 
+describe('Sign-in with custom-claim seeding (Given <P> is signed in … with custom claim X=Y)', () => {
+  function withSignInFetch(uniqueId = 50000120) {
+    return jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' +
+          Buffer.from(JSON.stringify({ uniqueId, admin: false })).toString('base64url') +
+          '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+  }
+
+  test('isAdmin=true is added to session.customClaims (NOT user doc)', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ fetch: withSignInFetch(), db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Greta [P-12] is signed in on Web Admin Chromium with custom claim isAdmin=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const session = ctx.sessions.get('Greta');
+    expect(session.customClaims.isAdmin).toBe(true);
+    // Custom claims do NOT spill into user doc
+    expect(db._docs['users/50000120']).toBeUndefined();
+  });
+
+  test('compound `with custom claim X=Y and Z=W` seeds both into customClaims', async () => {
+    const ctx = makeCtx({ fetch: withSignInFetch(), db: makeStatefulFakeDb({}) });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Greta [P-12] is signed in on Web with custom claim isAdmin=true and adminLevel=2',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const session = ctx.sessions.get('Greta');
+    expect(session.customClaims.isAdmin).toBe(true);
+    expect(session.customClaims.adminLevel).toBe(2);
+  });
+
+  test('non-custom-claim `with` clause still seeds user doc as before — regression check', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ fetch: withSignInFetch(50000010), db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] is signed in on Web Chromium with shyCoins=5000' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].shyCoins).toBe(5000);
+  });
+
+  test('existing JWT-decoded claims are preserved when merging — additive only', async () => {
+    const ctx = makeCtx({ fetch: withSignInFetch(50000120), db: makeStatefulFakeDb({}) });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Greta [P-12] is signed in on Web with custom claim isAdmin=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const session = ctx.sessions.get('Greta');
+    // Original JWT claim (uniqueId) survives
+    expect(session.customClaims.uniqueId).toBe(50000120);
+    // New custom claim added
+    expect(session.customClaims.isAdmin).toBe(true);
+  });
+});
+
 describe('State-seed end-to-end via runFeatureFile', () => {
   test('every fixture scenario passes after seed + read round-trip', async () => {
     const fakeFetch = jest.fn(async (url) => {

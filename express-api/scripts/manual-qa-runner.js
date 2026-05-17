@@ -380,24 +380,40 @@ const matchers = [
           customClaims: decodeJwtPayload(body.idToken),
         });
       }
-      // If a `with` clause was captured, seed those fields onto the user doc.
-      // Same flow for ephemeral and real personas — the ephemeral path just
-      // happens to also seed the synthetic uniqueId's user doc.
+      // If a `with` clause was captured, route based on prefix:
+      //   - `with custom claim X=Y` → merge into session.customClaims
+      //     (JWT side, not user doc). The runner can't mint a real JWT
+      //     with custom claims; seeding here lets downstream claim-
+      //     assertion matchers see the expected value.
+      //   - any other shape → user-doc state-seed (existing behaviour).
       if (withClause && withClause.trim()) {
-        if (!ctx.db) {
-          return {
-            ok: false,
-            error:
-              'ctx.db (firebase-admin Firestore) not initialised but `with <state>` clause requires it',
-          };
+        const trimmed = withClause.trim();
+        if (trimmed.startsWith('custom claim ')) {
+          const claimText = trimmed.replace(/^custom claim\s+/, '');
+          let claims;
+          try {
+            claims = parseSignInWithClause(claimText);
+          } catch (e) {
+            return { ok: false, error: e.message };
+          }
+          const session = ctx.sessions.get(name);
+          session.customClaims = { ...session.customClaims, ...claims };
+        } else {
+          if (!ctx.db) {
+            return {
+              ok: false,
+              error:
+                'ctx.db (firebase-admin Firestore) not initialised but `with <state>` clause requires it',
+            };
+          }
+          let fields;
+          try {
+            fields = parseSignInWithClause(withClause);
+          } catch (e) {
+            return { ok: false, error: e.message };
+          }
+          await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
         }
-        let fields;
-        try {
-          fields = parseSignInWithClause(withClause);
-        } catch (e) {
-          return { ok: false, error: e.message };
-        }
-        await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
       }
       return { ok: true };
     },
