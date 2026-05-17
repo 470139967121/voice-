@@ -1187,6 +1187,57 @@ const matchers = [
       return { ok: true };
     },
   },
+  // ── UI driver matchers (proof-of-concept, ctx.uiDriver-injected) ──
+  // First UI matcher for the runner. Driver is dependency-injected via
+  // ctx.uiDriver so tests can mock it and prod can shell out to adb/simctl
+  // via child_process. Web UI is delegated to Playwright MCP (outside the
+  // Node runner's scope — see /manual-qa skill description).
+  //
+  // Android dump comes from `adb shell uiautomator dump && adb shell cat
+  // /sdcard/window_dump.xml` (the runner does the shell-out; ctx.uiDriver
+  // returns the dumped XML as a string). Tag is matched against
+  // `resource-id="<tag>"` exactly OR `resource-id="<pkg>:id/<tag>"` —
+  // adb emits the fully-qualified form even when the Gherkin step uses
+  // the short tag, so the matcher accepts both.
+  {
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (\w+(?:\s+\w+){0,2}) UI shows the element with tag "([^"]+)"$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const tag = m[4];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (platform=${platform}, tag=${tag}). Configure the driver in main() or pass a mock in tests.`,
+        };
+      }
+      if (platform.startsWith('Android')) {
+        if (!ctx.uiDriver.androidUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+        }
+        const dump = await ctx.uiDriver.androidUiDump();
+        const shortMatch = dump.includes(`resource-id="${tag}"`);
+        const qualifiedMatch = dump.includes(`:id/${tag}"`);
+        if (!shortMatch && !qualifiedMatch) {
+          return { ok: false, error: `tag "${tag}" not found in Android UI dump` };
+        }
+        return { ok: true };
+      }
+      if (platform.startsWith('iOS')) {
+        return {
+          ok: false,
+          error: `iOS UI driver (simctl) not yet implemented for tag "${tag}". Add ctx.uiDriver.iosUiDump.`,
+        };
+      }
+      if (platform.startsWith('Web')) {
+        return {
+          ok: false,
+          error: `Web UI driver delegated to Playwright MCP — out of Node-runner scope. Tag "${tag}" cannot be asserted here.`,
+        };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for UI step` };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so

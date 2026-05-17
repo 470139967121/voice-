@@ -2559,6 +2559,93 @@ describe('j19 migration query verbs', () => {
   });
 });
 
+describe('UI driver — Android element-tag assertion (Then <P>\'s Android UI shows the element with tag "<X>")', () => {
+  test('element present in UI dump passes', async () => {
+    const dump =
+      '<node resource-id="main_pmTab" text="" bounds="[0,0][100,100]" />' +
+      '<node resource-id="main_homeTab" text="Home" />';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Hayato\'s Android UI shows the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.uiDriver.androidUiDump).toHaveBeenCalled();
+  });
+
+  test('element absent from UI dump fails with clear error', async () => {
+    const dump = '<node resource-id="main_homeTab" />';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Hayato\'s Android UI shows the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/main_pmTab/);
+  });
+
+  test('fully-qualified resource-id (com.shyden.shytalk.dev:id/X) also matches the short tag form', async () => {
+    // Real adb uiautomator dump emits `com.shyden.shytalk.dev:id/main_pmTab`
+    // even when the Gherkin step uses the short tag. The matcher should
+    // accept both forms.
+    const dump = '<node resource-id="com.shyden.shytalk.dev:id/main_pmTab" />';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Hayato\'s Android UI shows the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no ctx.uiDriver configured — explicit error (not silent pass)', async () => {
+    const ctx = makeCtx(); // no uiDriver
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Hayato\'s Android UI shows the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('iOS UI step fails with "not yet implemented" (Minor severity tracker)', async () => {
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn() } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI shows the element with tag "restricted_banner"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iOS|not.*implement|simctl/i);
+  });
+
+  test('Web UI step fails with "out of Node scope" (delegated to Playwright MCP)', async () => {
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn() } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Greta\'s Web Admin UI shows the element with tag "admin_age_verification"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Web|Playwright|out.*scope/i);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
