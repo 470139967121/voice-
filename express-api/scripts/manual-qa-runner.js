@@ -288,7 +288,10 @@ const matchers = [
   // MVP: no-op pass for all targets — actual websocket probe is future work
   // (track via a follow-up issue if the j09 contract needs strict liveness).
   {
-    pattern: /^the LiveKit Docker container is running on ws:\/\/[^\s]+$/,
+    // Trailing `on ws://...` suffix is optional — j09 BG declares it with
+    // the URL, j09 scenarios elide it. Both pass as no-op preconditions
+    // pending a future websocket-liveness probe.
+    pattern: /^the LiveKit Docker container is running(?:\s+on\s+ws:\/\/[^\s]+)?$/,
     async handler(_m, _ctx) {
       return { ok: true };
     },
@@ -1017,30 +1020,44 @@ const matchers = [
     },
   },
   {
-    // Multi-field user-doc state-seed. Writes any number of comma-separated
-    // `field=value` pairs to `users/<persona.uniqueId>` in one step.
+    // Multi-field user-doc state-seed. Two related verbs share this matcher:
+    //   - `has user doc with X=Y, A=B` — MERGE into existing user doc
+    //     (preserves any pre-existing fields not declared by the step).
+    //   - `exists with X=Y, A=B` — FULL REPLACE: the step is the
+    //     authoritative state, any prior fields are wiped. Also lets the
+    //     step's `uniqueId=...` value override the registry's uniqueId for
+    //     doc-path selection (j04/j18 Officia setup with uniqueId=1).
+    //
     // Quoted strings preserve embedded commas; `[]` is the empty-array
-    // sentinel (parseLiteral doesn't know arrays); every other value
-    // delegates to parseLiteral. Distinct from the single-field matcher
-    // above — this is the shape j03/j05/j06 use for known-state setup.
+    // sentinel. Distinct from the single-field matcher above — this is the
+    // shape j03/j05/j06 use for known-state setup.
     // `.+$` is greedy and anchored to end-of-string. No nested quantifiers,
     // no character-class overlap with surrounding patterns — match is linear.
     // eslint-disable-next-line sonarjs/slow-regex
-    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+has user doc with\s+(.+)$/,
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+(exists|has user doc) with\s+(.+)$/,
     async handler(m, ctx) {
       if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
       const name = m[1];
       const personaId = m[2];
+      const verb = m[3];
+      const fieldsText = m[4];
       const personas = loadPersonas();
       const p = personas.get(personaId) || personas.get(name);
       if (!p) return { ok: false, error: `persona "${name}" not in registry` };
       let fields;
       try {
-        fields = parseUserDocFields(m[3]);
+        fields = parseUserDocFields(fieldsText);
       } catch (e) {
         return { ok: false, error: e.message };
       }
-      await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
+      if (verb === 'exists') {
+        // Full-state seed — uniqueId from body if present, else registry.
+        const uniqueId = fields.uniqueId !== undefined ? fields.uniqueId : p.uniqueId;
+        await ctx.db.doc(`users/${uniqueId}`).set(fields);
+      } else {
+        // has user doc with — merge into existing
+        await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
+      }
       return { ok: true };
     },
   },

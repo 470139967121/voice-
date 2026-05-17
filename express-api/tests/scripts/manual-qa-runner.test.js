@@ -2113,6 +2113,90 @@ describe('Ephemeral persona sign-in (Adam P-01, Mia P-03 — accounts not in pro
   });
 });
 
+describe('Persona exists-with full-state seed (Given <P> [P-NN] exists with <fields>)', () => {
+  test('Officia (P-19, uniqueId=1) full-state seed writes all fields', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Officia [P-19] exists with uniqueId=1, userType=SHYTALK_OFFICIAL, isOfficial=true, isUnblockable=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const doc = db._docs['users/1'];
+    expect(doc.uniqueId).toBe(1);
+    expect(doc.userType).toBe('SHYTALK_OFFICIAL');
+    expect(doc.isOfficial).toBe(true);
+    expect(doc.isUnblockable).toBe(true);
+  });
+
+  test('exists-with does NOT merge — fully replaces the user doc', async () => {
+    const db = makeStatefulFakeDb({
+      'users/1': { uniqueId: 1, staleField: 'should-be-gone' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Officia [P-19] exists with uniqueId=1, isOfficial=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/1'].staleField).toBeUndefined();
+    expect(db._docs['users/1'].isOfficial).toBe(true);
+  });
+
+  test('uniqueId in the step body is the source of truth for doc path — overrides registry', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Officia [P-19] exists with uniqueId=42, isOfficial=true' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/42']).toBeDefined();
+    expect(db._docs['users/1']).toBeUndefined();
+  });
+
+  test('without uniqueId in body — falls back to persona registry uniqueId', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Officia [P-19] exists with isOfficial=true' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/1'].isOfficial).toBe(true);
+  });
+
+  test('missing db is an explicit error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Officia [P-19] exists with uniqueId=1, isOfficial=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+});
+
+describe('LiveKit Docker precondition (Given the LiveKit Docker container is running)', () => {
+  test('passes as a no-op precondition — mirrors the existing local-stack precondition', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'the LiveKit Docker container is running' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('State-seed end-to-end via runFeatureFile', () => {
   test('every fixture scenario passes after seed + read round-trip', async () => {
     const fakeFetch = jest.fn(async (url) => {
