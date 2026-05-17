@@ -1203,11 +1203,12 @@ const matchers = [
     },
   },
   {
-    // Collection scan with optional `where <field>="<value>"` predicate.
-    // Filter is in-memory rather than via Firestore .where() because the
-    // runner often runs against fake DBs that don't implement .where().
-    // Stores `{docs: [data, …]}` on ctx.lastQueryResult.
-    pattern: /^a query is run for every "([^"]+)\/\*" doc(?:\s+where\s+(\w+)="([^"]+)")?$/,
+    // Collection scan with optional single predicate. Accepts either
+    // `where` or `with` as the predicate keyword — cycle-3 scenarios use
+    // both interchangeably. Filter is in-memory rather than via Firestore
+    // .where() because the runner often runs against fake DBs that don't
+    // implement .where(). Stores `{docs: [data, …]}` on ctx.lastQueryResult.
+    pattern: /^a query is run for every "([^"]+)\/\*" doc(?:\s+(?:where|with)\s+(\w+)="([^"]+)")?$/,
     async handler(m, ctx) {
       if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
       const snap = await ctx.db.collection(m[1]).get();
@@ -1215,6 +1216,31 @@ const matchers = [
       if (m[2] && m[3] !== undefined) {
         docs = docs.filter((d) => d[m[2]] === m[3]);
       }
+      ctx.lastQueryResult = { docs };
+      return { ok: true };
+    },
+  },
+  {
+    // Plural-form `"X/*" docs with <field>="<val>" and <field>="<val>"`.
+    // No `every` prefix, supports multi-predicate via `and`. j19 mixed-
+    // cohort-rooms scenario shape. Filter is in-memory.
+    // `.+$` is greedy + anchored — no overlap with the surrounding pattern
+    // pieces, so backtracking is linear.
+    // eslint-disable-next-line sonarjs/slow-regex
+    pattern: /^a query is run for "([^"]+)\/\*" docs with\s+(.+)$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const colPath = m[1];
+      let predicate;
+      try {
+        predicate = parseSignInWithClause(m[2]);
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+      const snap = await ctx.db.collection(colPath).get();
+      const docs = snap.docs
+        .map((d) => d.data())
+        .filter((d) => Object.entries(predicate).every(([k, v]) => d[k] === v));
       ctx.lastQueryResult = { docs };
       return { ok: true };
     },

@@ -2509,6 +2509,79 @@ describe('j19 migration query verbs', () => {
     );
     expect(r.ok).toBe(true);
   });
+
+  test('`with` predicate keyword also works (j19 variant)', async () => {
+    // Cycle-3 uses both `where` and `with` for predicates — accept either.
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        rooms: [
+          { state: 'OPEN', cohort: 'adult' },
+          { state: 'CLOSED', cohort: 'minor' },
+          { state: 'OPEN', cohort: 'mixed' },
+        ],
+      },
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'When', text: 'a query is run for every "rooms/*" doc with state="OPEN"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.lastQueryResult.docs).toHaveLength(2);
+  });
+
+  test('plural-form `"X/*" docs with field=Y and field=Z` (multi-predicate, no "every")', async () => {
+    // j19's mixed-cohort-room scenario shape.
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        rooms: [
+          { state: 'CLOSED', closedBy: 'migration' },
+          { state: 'CLOSED', closedBy: 'user' },
+          { state: 'OPEN', closedBy: null },
+          { state: 'CLOSED', closedBy: 'migration' },
+        ],
+      },
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'a query is run for "rooms/*" docs with state="CLOSED" and closedBy="migration"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.lastQueryResult.docs).toHaveLength(2);
+    expect(ctx.lastQueryResult.docs.every((d) => d.state === 'CLOSED')).toBe(true);
+    expect(ctx.lastQueryResult.docs.every((d) => d.closedBy === 'migration')).toBe(true);
+  });
+});
+
+describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
+  test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' + Buffer.from(JSON.stringify({ uniqueId: 50000090 })).toString('base64url') + '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const db = makeStatefulFakeDb({ 'users/50000090': {} });
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Bao [P-17] is signed in on Web Chromium with userType=TEACHER and teachingLanguages=["zh", "en"]',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000090'].userType).toBe('TEACHER');
+    expect(db._docs['users/50000090'].teachingLanguages).toEqual(['zh', 'en']);
+  });
 });
 
 describe('State-seed end-to-end via runFeatureFile', () => {
