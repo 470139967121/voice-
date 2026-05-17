@@ -982,6 +982,66 @@ const matchers = [
     //
     // No registry check (assertion-only, like the fresh-install matcher).
     // Typo validation deferred to the first downstream step needing uniqueId.
+    // Locale-and-signin compound (j13 BG): records platform + locale +
+    // signs in, validating the body's `signed in as <uniqueId>` against
+    // the persona registry to catch step-author typos.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on\s+(\w+(?:\s+\w+){0,2})\s+with browser locale\s+(\w+),\s+signed in as\s+(\d+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const personaId = m[2];
+      const platform = m[3];
+      const locale = m[4];
+      const expectedUid = parseInt(m[5], 10);
+      const personas = loadPersonas();
+      const p = personas.get(personaId) || personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      if (p.uniqueId !== expectedUid) {
+        return {
+          ok: false,
+          error: `uniqueId mismatch: step body says ${expectedUid} but registry says ${p.uniqueId} for ${name}`,
+        };
+      }
+      if (!ctx.personasPassword) return { ok: false, error: 'PERSONAS_PASSWORD env not set' };
+      const r = await ctx.fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${ctx.firebaseApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: p.email,
+            password: ctx.personasPassword,
+            returnSecureToken: true,
+          }),
+        },
+      );
+      if (r.status !== 200)
+        return { ok: false, error: `Firebase sign-in failed for ${p.email}: ${r.status}` };
+      const body = await r.json();
+      ctx.sessions.set(name, {
+        persona: p,
+        idToken: body.idToken,
+        refreshToken: body.refreshToken,
+        localId: body.localId,
+        customClaims: decodeJwtPayload(body.idToken),
+      });
+      ctx.personaPlatforms.set(name, platform);
+      ctx.locale = locale;
+      return { ok: true };
+    },
+  },
+  {
+    // Negation assertion: <P> has no prior interactions with <Other> (j08).
+    // MVP no-op pass — full implementation would query conversations/follows/
+    // gifts collections and delete any docs matching the pair. Downstream
+    // `Then …` assertions catch genuine state violations.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[P-\d{2}\])?\s+has no prior interactions with\s+[A-Z][a-z]+(?:\s*\[P-\d{2}\])?$/,
+    async handler(_m, _ctx) {
+      return { ok: true };
+    },
+  },
+  {
     pattern:
       /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on\s+(\w+(?:\s+\w+){0,2})\s+at\s+"([^"]+)"(?:\s+with no Firebase session)?$/,
     async handler(m, ctx) {

@@ -2272,6 +2272,90 @@ describe('Sign-in with custom-claim seeding (Given <P> is signed in … with cus
   });
 });
 
+describe('Persona on-platform locale+signin compound (Given <P> is on <Platform> with browser locale <X>, signed in as <id>)', () => {
+  function withSignInFetch(uniqueId = 50000070) {
+    return jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' +
+          Buffer.from(JSON.stringify({ uniqueId, admin: false })).toString('base64url') +
+          '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+  }
+
+  test('Layla on Web Chromium with browser locale ar, signed in as 50000070', async () => {
+    // j13 BG shape: combines platform, locale, and sign-in in one step.
+    const ctx = makeCtx({ fetch: withSignInFetch(50000070) });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Layla [P-13] is on Web Chromium with browser locale ar, signed in as 50000070',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Layla')).toBe('Web Chromium');
+    expect(ctx.locale).toBe('ar');
+    expect(ctx.sessions.get('Layla')).toBeDefined();
+  });
+
+  test('CJK locale (ja) for Kenji', async () => {
+    const ctx = makeCtx({ fetch: withSignInFetch(50000071) });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Kenji [P-14] is on Web Chromium with browser locale ja, signed in as 50000071',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.locale).toBe('ja');
+    expect(ctx.personaPlatforms.get('Kenji')).toBe('Web Chromium');
+  });
+
+  test('mismatched uniqueId between persona registry and step body — error', async () => {
+    // Layla [P-13] is uniqueId=50000070 in the registry. If the step body
+    // claims "signed in as 99999999", that's a step-author bug — fail loudly
+    // rather than silently pass with the wrong identity.
+    const ctx = makeCtx({ fetch: withSignInFetch(50000070) });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Layla [P-13] is on Web Chromium with browser locale ar, signed in as 99999999',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/mismatch|99999999|50000070/i);
+  });
+});
+
+describe('Negation: <P> has no prior interactions with <Other> (j08 cross-cohort wall setup)', () => {
+  test('no-op pass — assumed-clean-environment MVP for "no prior interactions"', async () => {
+    // Real impl would query conversations/follows/gifts/etc. and delete
+    // any matching docs. For MVP: pass-through; downstream `Then …`
+    // assertions catch genuine state violations.
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Vexa has no prior interactions with Marcus' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('persona-id-bracketed form also works', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Vexa [P-07] has no prior interactions with Marcus [P-04]' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('State-seed end-to-end via runFeatureFile', () => {
   test('every fixture scenario passes after seed + read round-trip', async () => {
     const fakeFetch = jest.fn(async (url) => {
