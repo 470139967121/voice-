@@ -170,6 +170,34 @@ function classifySeverity(scenarioTags) {
 
 // ── Persona registry lookup ─────────────────────────────────────────
 
+// Ephemeral personas (P-01 Adam, P-03 Mia) are NOT in the provisioner
+// registry — by design, they're freshly-signed-up inside j01/j02. The runner
+// still needs to know them so scenarios like j07 (which assumes Adam is
+// post-j01 state) can declare them as signed-in without hitting Firebase
+// Auth (no real account exists).
+//
+// Synthetic uniqueIds use the 9xxxxxxx range — collision-free against real
+// test personas (50000xx, 60000xx) and real users (10000xx, 20000xx).
+// Marked with `ephemeral: true` so the sign-in handler can branch.
+const EPHEMERAL_PERSONAS = [
+  {
+    id: 'P-01',
+    uniqueId: 90000001,
+    email: 'adam-ephemeral@shytalk.dev.test',
+    displayName: 'Adam (P-01 adult new)',
+    cohort: 'adult',
+    ephemeral: true,
+  },
+  {
+    id: 'P-03',
+    uniqueId: 90000003,
+    email: 'mia-ephemeral@shytalk.dev.test',
+    displayName: 'Mia (P-03 minor new)',
+    cohort: 'minor',
+    ephemeral: true,
+  },
+];
+
 let _personasCache = null;
 function loadPersonas() {
   if (_personasCache) return _personasCache;
@@ -178,6 +206,12 @@ function loadPersonas() {
   _personasCache = new Map();
   for (const p of personas) {
     // First name is the human label ("Alice (P-02 adult power)" → "Alice")
+    const firstName = p.displayName.split(/\s+/)[0];
+    _personasCache.set(firstName, p);
+    _personasCache.set(p.id, p);
+  }
+  // Merge ephemeral personas — same lookup shape so callers don't branch.
+  for (const p of EPHEMERAL_PERSONAS) {
     const firstName = p.displayName.split(/\s+/)[0];
     _personasCache.set(firstName, p);
     _personasCache.set(p.id, p);
@@ -285,36 +319,83 @@ const matchers = [
   // The strategy is permissive consumption: anything after `is signed in`
   // that doesn't drive a distinct API call is treated as documentation.
   {
+    // The `with <kv-clause>` group now captures a broad payload (any non-paren
+    // run of chars) so the handler can seed user-doc fields. Previously this
+    // sub-clause was narrow (`with cohort=\w+`) and informational-only; the
+    // 2026-05-17 cycle work made it state-mutating so j05/j06/j07-style
+    // scenarios can declare known starting wallets / flags directly on the
+    // sign-in step.
+    // The `[^()]+?` class excludes `(`/`)` so it cannot overlap with the
+    // surrounding paren groups, making backtracking linear in input length.
+    // Inputs are author-controlled Gherkin step text, not user input.
+    /* eslint-disable sonarjs/slow-regex */
     pattern:
-      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is signed in(?:\s+on\s+\w+(?:\s+\w+){0,2})?(?:\s+AND\s+on\s+\w+(?:\s+\w+){0,2})?(?:\s+with\s+cohort=\w+)?(?:\s+\([^)]*\))?(?:\s+\(no admin claim\))?(?:\s+at\s+the\s+"[^"]+"\s+screen)?$/,
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is signed in(?:\s+on\s+\w+(?:\s+\w+){0,2})?(?:\s+AND\s+on\s+\w+(?:\s+\w+){0,2})?(?:\s+with\s+([^()]+?))?(?:\s+\([^)]*\))?(?:\s+\(no admin claim\))?(?:\s+at\s+the\s+"[^"]+"\s+screen)?$/,
+    /* eslint-enable sonarjs/slow-regex */
     async handler(m, ctx) {
       const name = m[1];
+      const withClause = m[3];
       const personas = loadPersonas();
       const p = personas.get(m[2]) || personas.get(name);
       if (!p) return { ok: false, error: `persona "${name}" not in registry` };
-      if (!ctx.personasPassword) return { ok: false, error: 'PERSONAS_PASSWORD env not set' };
-      const r = await ctx.fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${ctx.firebaseApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: p.email,
-            password: ctx.personasPassword,
-            returnSecureToken: true,
-          }),
-        },
-      );
-      if (r.status !== 200)
-        return { ok: false, error: `Firebase sign-in failed for ${p.email}: ${r.status}` };
-      const body = await r.json();
-      ctx.sessions.set(name, {
-        persona: p,
-        idToken: body.idToken,
-        refreshToken: body.refreshToken,
-        localId: body.localId,
-        customClaims: decodeJwtPayload(body.idToken),
-      });
+
+      if (p.ephemeral) {
+        // Ephemeral personas (Adam P-01, Mia P-03) have no Firebase account.
+        // Skip the REST call; synthesise a session so downstream state-assert
+        // and UI-reference steps still work. The idToken sentinel begins
+        // with `synthetic:` so any code that tries to use it for real auth
+        // fails loudly rather than silently passing.
+        ctx.sessions.set(name, {
+          persona: p,
+          idToken: `synthetic:${name}:${p.uniqueId}`,
+          refreshToken: null,
+          localId: String(p.uniqueId),
+          customClaims: { uniqueId: p.uniqueId, cohort: p.cohort, ephemeral: true },
+        });
+      } else {
+        if (!ctx.personasPassword) return { ok: false, error: 'PERSONAS_PASSWORD env not set' };
+        const r = await ctx.fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${ctx.firebaseApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: p.email,
+              password: ctx.personasPassword,
+              returnSecureToken: true,
+            }),
+          },
+        );
+        if (r.status !== 200)
+          return { ok: false, error: `Firebase sign-in failed for ${p.email}: ${r.status}` };
+        const body = await r.json();
+        ctx.sessions.set(name, {
+          persona: p,
+          idToken: body.idToken,
+          refreshToken: body.refreshToken,
+          localId: body.localId,
+          customClaims: decodeJwtPayload(body.idToken),
+        });
+      }
+      // If a `with` clause was captured, seed those fields onto the user doc.
+      // Same flow for ephemeral and real personas — the ephemeral path just
+      // happens to also seed the synthetic uniqueId's user doc.
+      if (withClause && withClause.trim()) {
+        if (!ctx.db) {
+          return {
+            ok: false,
+            error:
+              'ctx.db (firebase-admin Firestore) not initialised but `with <state>` clause requires it',
+          };
+        }
+        let fields;
+        try {
+          fields = parseSignInWithClause(withClause);
+        } catch (e) {
+          return { ok: false, error: e.message };
+        }
+        await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
+      }
       return { ok: true };
     },
   },
@@ -813,21 +894,153 @@ const matchers = [
   // and in adversarial-precondition setup. Merge semantics — sibling fields
   // are preserved.
   {
-    // Platform clause is bounded: up to 3 alphanumeric tokens (Web / Android /
-    // iOS Sim / Web Chromium / Android physical). Bounded repetition keeps
-    // backtracking linear.
-    pattern:
-      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?(?:\s+on\s+\w+(?:\s+\w+){0,2})?\s+has\s+(\w+)=(.+)$/,
+    // State-seed for one or more user-doc fields. Originally single-field
+    // (`has shyCoins=1000`); wake-5 (2026-05-17) generalised the value
+    // capture to delegate to parseSignInWithClause, which supports:
+    //   - compound forms ("has shyCoins=100 and isAgeVerified=false")
+    //   - array literals ("has followingIds=[50000010, 50000060]")
+    //   - trailing parentheticals ("has X=[…] (two adult follows)")
+    //
+    // The leading `(\w+=` portion of the capture excludes patterns like
+    // "has user doc with X=Y" — those are matched by the dedicated
+    // multi-field user-doc matcher further down. Platform clause is
+    // bounded to up to 3 alphanumeric tokens.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?(?:\s+on\s+\w+(?:\s+\w+){0,2})?\s+has\s+(\w+=.+)$/,
     async handler(m, ctx) {
       if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
       const name = m[1];
       const personaId = m[2];
-      const field = m[3];
-      const value = parseLiteral(m[4].trim());
       const personas = loadPersonas();
       const p = personas.get(personaId) || personas.get(name);
       if (!p) return { ok: false, error: `persona "${name}" not in registry` };
-      await ctx.db.doc(`users/${p.uniqueId}`).set({ [field]: value }, { merge: true });
+      let fields;
+      try {
+        fields = parseSignInWithClause(m[3]);
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+      await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Persona fresh-install assertion. Asserts the persona has NO Firebase
+    // session (clearing any prior one), and records the platform on
+    // ctx.personaPlatforms for downstream UI-action steps to dispatch to
+    // the right driver. No Firestore writes, no auth calls — this is
+    // pure bookkeeping for scenarios that begin from a cold-launch state.
+    //
+    // Accepts ephemeral personas (P-01 Adam, P-03 Mia) which by design
+    // have no entry in the provisioner registry — j01/j02 exercise the
+    // signup flow precisely because these users don't exist yet. Persona-
+    // name typo validation deliberately deferred to the first downstream
+    // step that needs a uniqueId (e.g. "has user doc with ..."), where
+    // the failure surfaces with proper "not in registry" context.
+    //
+    // Platform is bounded to up to 3 alphanumeric tokens (Android,
+    // iOS Sim, Web Chromium, Android physical). Bounded repetition
+    // keeps backtracking linear.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on\s+(\w+(?:\s+\w+){0,2})\s+with the app installed but no Firebase session$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      ctx.sessions.delete(name);
+      if (!ctx.personaPlatforms) ctx.personaPlatforms = new Map();
+      ctx.personaPlatforms.set(name, platform);
+      return { ok: true };
+    },
+  },
+  {
+    // Persona on-platform-at-path bookkeeping. Records the platform AND the
+    // path/URL on the persona's tracked context, so downstream UI-action
+    // steps know which surface to dispatch to. Optional `with no Firebase
+    // session` suffix clears any prior session (j03 BG line).
+    //
+    // Used by j03/j04/j06/j10/j11 to set Greta's admin context, and by j03
+    // for Lena's pre-signin landing page. The path is a quoted string —
+    // typically starts with `/` but the matcher doesn't constrain that.
+    //
+    // No registry check (assertion-only, like the fresh-install matcher).
+    // Typo validation deferred to the first downstream step needing uniqueId.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on\s+(\w+(?:\s+\w+){0,2})\s+at\s+"([^"]+)"(?:\s+with no Firebase session)?$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const urlPath = m[4];
+      const clearSession = m[0].endsWith('with no Firebase session');
+      if (clearSession) ctx.sessions.delete(name);
+      if (!ctx.personaPlatforms) ctx.personaPlatforms = new Map();
+      if (!ctx.personaPaths) ctx.personaPaths = new Map();
+      ctx.personaPlatforms.set(name, platform);
+      ctx.personaPaths.set(name, urlPath);
+      return { ok: true };
+    },
+  },
+  {
+    // ageVerificationSubmission state-seed for j04. Writes a submission doc
+    // to the top-level `ageVerificationSubmissions/` collection so the
+    // scenario's later admin-review steps have something to act on.
+    //
+    // Doc id is deterministic (test-<uniqueId>-<status>) for idempotency —
+    // repeated seeds for the same persona+status overwrite cleanly. Real
+    // prod code uses auto-IDs but the runner doesn't need that complexity
+    // and a stable id makes scenario reads predictable.
+    //
+    // Schema mirrors the production write in routes/age-verification.js:
+    // userId (stringified uniqueId), status (lowercased), submittedAt
+    // (ms epoch). The optional "ID image showing DOB=YYYY-MM-DD" suffix
+    // is captured as `dobOnId` — a runner-only field that downstream
+    // scenarios can read to simulate the admin's DOB-extraction step
+    // without needing a real image upload.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+submitted an ageVerificationSubmission with status="(\w+)"(?:\s+and an ID image showing DOB=(\d{4}-\d{2}-\d{2}))?$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const name = m[1];
+      const personaId = m[2];
+      const status = m[3].toLowerCase();
+      const dobOnId = m[4];
+      const personas = loadPersonas();
+      const p = personas.get(personaId) || personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      const docId = `ageVerificationSubmissions/test-${p.uniqueId}-${status}`;
+      const doc = {
+        userId: String(p.uniqueId),
+        status,
+        submittedAt: Date.now(),
+      };
+      if (dobOnId) doc.dobOnId = dobOnId;
+      await ctx.db.doc(docId).set(doc);
+      return { ok: true };
+    },
+  },
+  {
+    // Multi-field user-doc state-seed. Writes any number of comma-separated
+    // `field=value` pairs to `users/<persona.uniqueId>` in one step.
+    // Quoted strings preserve embedded commas; `[]` is the empty-array
+    // sentinel (parseLiteral doesn't know arrays); every other value
+    // delegates to parseLiteral. Distinct from the single-field matcher
+    // above — this is the shape j03/j05/j06 use for known-state setup.
+    // `.+$` is greedy and anchored to end-of-string. No nested quantifiers,
+    // no character-class overlap with surrounding patterns — match is linear.
+    // eslint-disable-next-line sonarjs/slow-regex
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+has user doc with\s+(.+)$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const name = m[1];
+      const personaId = m[2];
+      const personas = loadPersonas();
+      const p = personas.get(personaId) || personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      let fields;
+      try {
+        fields = parseUserDocFields(m[3]);
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+      await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
       return { ok: true };
     },
   },
@@ -890,6 +1103,8 @@ async function executeStep(step, ctx) {
 async function runScenario(scenario, parsed, ctx) {
   // Reset per-scenario state
   ctx.sessions = new Map();
+  ctx.personaPlatforms = new Map();
+  ctx.personaPaths = new Map();
   ctx.lastResponse = null;
   ctx.lastVisit = null;
   ctx.locale = 'en';
@@ -1134,6 +1349,148 @@ function parseKvPairs(text) {
     out[key] = parseLiteral(val);
   }
   return out;
+}
+
+/**
+ * Parse comma-separated `key=value` pairs for the multi-field user-doc
+ * state-seed matcher (Given <P> has user doc with k=v, k=v, …).
+ *
+ * Distinct from parseKvPairs (which splits on ` and `) — Gherkin scenarios
+ * phrase user-doc state with commas, matching how the codebase's plan
+ * authors actually write them.
+ *
+ * Quoted strings preserve embedded commas (`bio="hi, welcome"` stays one
+ * pair). `[]` is an explicit empty-array sentinel because parseLiteral
+ * has no array form — every other value flows through parseLiteral for
+ * consistent literal coercion.
+ *
+ * Throws on empty input, pairs missing `=`, or non-identifier keys.
+ */
+function parseUserDocFields(text) {
+  const pairs = [];
+  let buf = '';
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '\\' && i + 1 < text.length && text[i + 1] === '"') {
+      buf += '"';
+      i++;
+      continue;
+    }
+    if (c === '"') inString = !inString;
+    if (c === ',' && !inString) {
+      if (buf.trim()) pairs.push(buf.trim());
+      buf = '';
+    } else {
+      buf += c;
+    }
+  }
+  if (buf.trim()) pairs.push(buf.trim());
+  if (pairs.length === 0) throw new Error('empty user-doc fields');
+
+  const out = {};
+  for (const pair of pairs) {
+    const eq = pair.indexOf('=');
+    if (eq < 0) throw new Error(`malformed user-doc pair (missing "="): "${pair}"`);
+    const key = pair.slice(0, eq).trim();
+    const valRaw = pair.slice(eq + 1).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+      throw new Error(`user-doc key not identifier-shaped: "${key}"`);
+    }
+    out[key] = valRaw === '[]' ? [] : parseLiteral(valRaw);
+  }
+  return out;
+}
+
+/**
+ * Parse the field-list portion of the `is signed in with …` matcher and
+ * the generalised `has …` state-seed matcher.
+ *
+ * Supports:
+ *   1. Both `,` and ` and ` as field separators (Gherkin scenarios use
+ *      either, sometimes both in the same step).
+ *   2. Trailing `(…)` parenthetical stripped — conventional documentation
+ *      like `(post-j01 state)`, `(same Firebase user)`, `(two adult follows)`.
+ *   3. Array literal values like `followingIds=[50000010, 50000060]` —
+ *      bracket depth is tracked during tokenisation so commas inside `[…]`
+ *      do not break the outer pair split. Empty arrays (`[]`) and
+ *      mixed-type elements both work via per-element parseLiteral.
+ *   4. Quoted strings preserve embedded commas and embedded ` and ` —
+ *      tokenisation respects quote state throughout.
+ *
+ * Throws on empty input, pairs missing `=`, or non-identifier keys.
+ */
+function parseSignInWithClause(text) {
+  // `[^)]*` excludes `)` so it cannot overlap with the literal `\)` that
+  // follows; anchored to end-of-string. Linear match.
+  // eslint-disable-next-line sonarjs/slow-regex
+  const stripped = text.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  const pairs = [];
+  let buf = '';
+  let inString = false;
+  let bracketDepth = 0;
+  let i = 0;
+  while (i < stripped.length) {
+    const c = stripped[i];
+    if (c === '\\' && i + 1 < stripped.length && stripped[i + 1] === '"') {
+      buf += '"';
+      i += 2;
+      continue;
+    }
+    if (c === '"') inString = !inString;
+    if (!inString) {
+      if (c === '[') bracketDepth++;
+      else if (c === ']') bracketDepth--;
+      if (bracketDepth === 0) {
+        if (c === ',') {
+          if (buf.trim()) pairs.push(buf.trim());
+          buf = '';
+          i++;
+          continue;
+        }
+        if (stripped.slice(i, i + 5) === ' and ') {
+          if (buf.trim()) pairs.push(buf.trim());
+          buf = '';
+          i += 5;
+          continue;
+        }
+      }
+    }
+    buf += c;
+    i++;
+  }
+  if (buf.trim()) pairs.push(buf.trim());
+  if (pairs.length === 0) throw new Error('empty sign-in `with` clause');
+
+  const out = {};
+  for (const pair of pairs) {
+    const eq = pair.indexOf('=');
+    if (eq < 0) throw new Error(`malformed sign-in with-pair (missing "="): "${pair}"`);
+    const key = pair.slice(0, eq).trim();
+    const valRaw = pair.slice(eq + 1).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+      throw new Error(`sign-in with-key not identifier-shaped: "${key}"`);
+    }
+    out[key] = parseValueLiteralOrArray(valRaw);
+  }
+  return out;
+}
+
+/**
+ * Coerce a raw value string to its literal form. Distinct from parseLiteral
+ * in that it also recognises array syntax — `[]` is an empty array, and
+ * `[a, b, c]` is a flat array whose elements are each coerced via
+ * parseLiteral. Nested arrays are not supported; no journey scenario
+ * needs them today.
+ */
+function parseValueLiteralOrArray(valRaw) {
+  if (valRaw === '[]') return [];
+  if (valRaw.startsWith('[') && valRaw.endsWith(']')) {
+    const inner = valRaw.slice(1, -1).trim();
+    if (!inner) return [];
+    return inner.split(',').map((s) => parseLiteral(s.trim()));
+  }
+  return parseLiteral(valRaw);
 }
 
 /**

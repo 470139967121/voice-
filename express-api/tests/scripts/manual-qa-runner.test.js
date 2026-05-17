@@ -370,6 +370,8 @@ function makeCtx(overrides = {}) {
     firebaseApiKey: 'fake-key',
     personasPassword: 'fake-pw-not-real-just-stub-fixture',
     sessions: new Map(),
+    personaPlatforms: new Map(),
+    personaPaths: new Map(),
     lastResponse: null,
     locale: 'en',
     fetch: jest.fn(),
@@ -1392,6 +1394,725 @@ describe('Persona state-seed matcher (Given <Persona> has <field>=<value>)', () 
   });
 });
 
+describe('Persona user-doc multi-field state-seed matcher (Given <P> has user doc with k=v, k=v, …)', () => {
+  test('writes multiple comma-separated fields in one step', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] has user doc with shyCoins=5000, beans=2000, gcs=100',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].shyCoins).toBe(5000);
+    expect(db._docs['users/50000010'].beans).toBe(2000);
+    expect(db._docs['users/50000010'].gcs).toBe(100);
+  });
+
+  test('handles mixed types — int + quoted string + int + empty-array literal', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Lena [P-05] has user doc with acceptedPrivacyVersion=2, lastLoginRewardDate="2026-04-01", loginStreak=0, fcmTokens=[]',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000020'].acceptedPrivacyVersion).toBe(2);
+    expect(db._docs['users/50000020'].lastLoginRewardDate).toBe('2026-04-01');
+    expect(db._docs['users/50000020'].loginStreak).toBe(0);
+    expect(db._docs['users/50000020'].fcmTokens).toEqual([]);
+  });
+
+  test('single-field form (no comma) is also accepted', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] has user doc with cohort="adult"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].cohort).toBe('adult');
+  });
+
+  test('merge semantics preserve pre-existing fields', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000010': { displayName: 'Alice', existingField: 'keep-me' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] has user doc with shyCoins=42' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].shyCoins).toBe(42);
+    expect(db._docs['users/50000010'].existingField).toBe('keep-me');
+    expect(db._docs['users/50000010'].displayName).toBe('Alice');
+  });
+
+  test('quoted-string value containing a comma is NOT split on the inner comma', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] has user doc with bio="hi, welcome", shyCoins=10',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].bio).toBe('hi, welcome');
+    expect(db._docs['users/50000010'].shyCoins).toBe(10);
+  });
+
+  test('unknown persona fails loudly', async () => {
+    const ctx = makeCtx({ db: makeStatefulFakeDb({}) });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zorpax [P-99] has user doc with x=1' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/persona|registry/i);
+  });
+
+  test('missing db is an explicit error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Given', text: 'Alice [P-02] has user doc with x=1' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore|admin/i);
+  });
+
+  test('malformed pair (no =) surfaces a clear error rather than silently ignoring', async () => {
+    const ctx = makeCtx({ db: makeStatefulFakeDb({ 'users/50000010': {} }) });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] has user doc with shyCoins5000' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/=|missing|malformed/i);
+  });
+});
+
+describe('Persona fresh-install assertion (Given <P> is on <Platform> with the app installed but no Firebase session)', () => {
+  test('Android single-token platform passes when no session exists', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam [P-01] is on Android with the app installed but no Firebase session',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.has('Adam')).toBe(false);
+    expect(ctx.personaPlatforms.get('Adam')).toBe('Android');
+  });
+
+  test('iOS Sim multi-token platform passes', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Mia [P-03] is on iOS Sim with the app installed but no Firebase session',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Mia')).toBe('iOS Sim');
+  });
+
+  test('Web Chromium multi-token platform passes', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is on Web Chromium with the app installed but no Firebase session',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Alice')).toBe('Web Chromium');
+  });
+
+  test('clears any prior session for that persona — no Firebase session is enforced', async () => {
+    const ctx = makeCtx();
+    ctx.sessions.set('Adam', { idToken: 'stale-token', persona: { uniqueId: 50000005 } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam [P-01] is on Android with the app installed but no Firebase session',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.has('Adam')).toBe(false);
+  });
+
+  test('persona-id-less form (just first name) also works', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice is on Android with the app installed but no Firebase session',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Alice')).toBe('Android');
+  });
+
+  test('accepts ephemeral persona (Adam P-01) — the whole point of fresh signup scenarios', async () => {
+    // Adam P-01 / Mia P-03 are deliberately NOT in the provisioner
+    // registry — j01/j02 walk them through signup. This assertion-only
+    // matcher must accept them. Typo-catching is deferred to downstream
+    // steps that actually need a uniqueId.
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam [P-01] is on Android with the app installed but no Firebase session',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Adam')).toBe('Android');
+  });
+
+  test('Android physical 2-token platform passes', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is on Android physical with the app installed but no Firebase session',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Alice')).toBe('Android physical');
+  });
+});
+
+describe('Sign-in with kv-pair state seed (Given <P> is signed in on <Platform> with <fields>)', () => {
+  function withSignInFetch(uniqueId = 50000010) {
+    return jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' +
+          Buffer.from(JSON.stringify({ uniqueId, admin: false })).toString('base64url') +
+          '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+  }
+
+  test('multi-field comma-separated state seeds user doc after sign-in', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ fetch: withSignInFetch(50000010), db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is signed in on Web Chromium with shyCoins=5000, beans=2000, gcs=100',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Alice')).toBeDefined();
+    expect(db._docs['users/50000010'].shyCoins).toBe(5000);
+    expect(db._docs['users/50000010'].beans).toBe(2000);
+    expect(db._docs['users/50000010'].gcs).toBe(100);
+  });
+
+  test('single-field with shyCoins=5000 also seeds', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ fetch: withSignInFetch(50000010), db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] is signed in on Android physical with shyCoins=5000' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].shyCoins).toBe(5000);
+  });
+
+  test('"X and Y" separator works alongside trailing parenthetical', async () => {
+    // j07's first-step shape: Adam will eventually go here when ephemeral
+    // sign-in lands; for now we use Hayato (P-06, in registry) to prove
+    // the parsing.
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ fetch: withSignInFetch(50000030), db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] is signed in on Android with cohort=adult and isAgeVerified=true (post-j01 state)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].cohort).toBe('adult');
+    expect(db._docs['users/50000030'].isAgeVerified).toBe(true);
+  });
+
+  test('no `with` clause — existing sign-in semantics unchanged', async () => {
+    const ctx = makeCtx({ fetch: withSignInFetch() });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] is signed in on Android' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Alice')).toBeDefined();
+  });
+
+  test('quoted-string value in `with` clause writes correctly', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ fetch: withSignInFetch(50000010), db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is signed in on Web Chromium with lastSeenAt="2026-05-17T15:00:00Z"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].lastSeenAt).toBe('2026-05-17T15:00:00Z');
+  });
+
+  test('trailing parenthetical alone (no with-clause kv pairs) — sign-in still passes, no seed', async () => {
+    const ctx = makeCtx({ fetch: withSignInFetch() });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is signed in on Android (no admin claim)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('with-clause requires ctx.db — explicit error if missing', async () => {
+    const ctx = makeCtx({ fetch: withSignInFetch() }); // no db
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is signed in on Android with shyCoins=5000',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+});
+
+describe('ageVerificationSubmission state-seed matcher (j04 first-step shape)', () => {
+  test('creates submission doc with status + DOB-on-ID for Hayato', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] submitted an ageVerificationSubmission with status="PENDING" and an ID image showing DOB=2011-05-12',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const docId = 'ageVerificationSubmissions/test-50000030-pending';
+    expect(db._docs[docId]).toBeDefined();
+    expect(db._docs[docId].userId).toBe('50000030');
+    expect(db._docs[docId].status).toBe('pending');
+    expect(db._docs[docId].dobOnId).toBe('2011-05-12');
+  });
+
+  test('status is lowercased — runner contract matches express-api enum', async () => {
+    // Real schema uses lowercase ('pending'/'approved'/'rejected') but
+    // scenarios sometimes write the human-readable uppercase. Normalise
+    // in one place (the matcher) rather than asking authors to remember.
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] submitted an ageVerificationSubmission with status="APPROVED"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['ageVerificationSubmissions/test-50000030-approved'].status).toBe('approved');
+  });
+
+  test('DOB-on-ID is optional — status-only form works for j04 cycle scenarios', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] submitted an ageVerificationSubmission with status="PENDING"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const doc = db._docs['ageVerificationSubmissions/test-50000030-pending'];
+    expect(doc.userId).toBe('50000030');
+    expect(doc.status).toBe('pending');
+    expect(doc.dobOnId).toBeUndefined();
+  });
+
+  test('submittedAt timestamp is set on creation', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const beforeMs = Date.now();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] submitted an ageVerificationSubmission with status="PENDING"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const doc = db._docs['ageVerificationSubmissions/test-50000030-pending'];
+    expect(typeof doc.submittedAt).toBe('number');
+    expect(doc.submittedAt).toBeGreaterThanOrEqual(beforeMs);
+    expect(doc.submittedAt).toBeLessThanOrEqual(Date.now());
+  });
+
+  test('idempotent — repeated calls for same (user, status) overwrite the same doc id', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] submitted an ageVerificationSubmission with status="PENDING" and an ID image showing DOB=2010-01-01',
+      },
+      ctx,
+    );
+    await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] submitted an ageVerificationSubmission with status="PENDING" and an ID image showing DOB=2011-05-12',
+      },
+      ctx,
+    );
+    // Second call overwrites the first — DOB updated, no duplicate docs.
+    const docs = Object.keys(db._docs).filter((k) => k.startsWith('ageVerificationSubmissions/'));
+    expect(docs).toHaveLength(1);
+    expect(db._docs[docs[0]].dobOnId).toBe('2011-05-12');
+  });
+
+  test('unknown persona fails loudly', async () => {
+    const ctx = makeCtx({ db: makeStatefulFakeDb({}) });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Zorpax [P-99] submitted an ageVerificationSubmission with status="PENDING"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/persona|registry/i);
+  });
+
+  test('missing db is an explicit error', async () => {
+    const ctx = makeCtx(); // no db
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] submitted an ageVerificationSubmission with status="PENDING"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+});
+
+describe('Persona has-state-seed — array literals + compound `and` + trailing paren (j04 BG shapes)', () => {
+  test('array literal: has followingIds=[N, N] writes array to user doc', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] has followingIds=[50000010, 50000060]',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].followingIds).toEqual([50000010, 50000060]);
+  });
+
+  test('array literal with trailing parenthetical — paren stripped, array intact', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] has followingIds=[50000010, 50000060] (two adult follows)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].followingIds).toEqual([50000010, 50000060]);
+  });
+
+  test('compound "and" — has shyCoins=100 and isAgeVerified=false writes both fields', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] has shyCoins=100 and isAgeVerified=false',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].shyCoins).toBe(100);
+    expect(db._docs['users/50000030'].isAgeVerified).toBe(false);
+  });
+
+  test('mixed: array + scalar via `and` — has followingIds=[50000010] and shyCoins=200', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] has followingIds=[50000010] and shyCoins=200',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].followingIds).toEqual([50000010]);
+    expect(db._docs['users/50000030'].shyCoins).toBe(200);
+  });
+
+  test('empty array literal: has followingIds=[] writes empty array', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] has followingIds=[]',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].followingIds).toEqual([]);
+  });
+
+  test('mixed-type array: has tags=["adult", "verified"] writes array of strings', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] has tags=["adult", "verified"]',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].tags).toEqual(['adult', 'verified']);
+  });
+
+  test('single-field shape (pre-existing) still works — has shyCoins=42', async () => {
+    // Regression check: the wake-1 single-field tests must keep passing
+    // after this wake's generalisation.
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'Alice [P-02] has shyCoins=42' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].shyCoins).toBe(42);
+  });
+});
+
+describe('Persona on-platform-at-path matcher (Given <P> is on <Platform> at "<path>")', () => {
+  test('Web Admin at "/admin#age-verification" records platform + path', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Greta [P-12] is on Web Admin at "/admin#age-verification"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Greta')).toBe('Web Admin');
+    expect(ctx.personaPaths.get('Greta')).toBe('/admin#age-verification');
+  });
+
+  test('with-no-Firebase-session suffix clears any prior session AND records path', async () => {
+    // j03's BG line: "Lena [P-05] is on Web Chromium at \"/\" with no Firebase session"
+    const ctx = makeCtx();
+    ctx.sessions.set('Lena', { idToken: 'stale', persona: { uniqueId: 50000020 } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Lena [P-05] is on Web Chromium at "/" with no Firebase session',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Lena')).toBe('Web Chromium');
+    expect(ctx.personaPaths.get('Lena')).toBe('/');
+    expect(ctx.sessions.has('Lena')).toBe(false);
+  });
+
+  test('persona-id-less form (just name) works', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Greta is on Web Admin at "/admin#users"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPaths.get('Greta')).toBe('/admin#users');
+  });
+
+  test('multi-token platform: "iOS Sim at /chat" works', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Mia [P-03] is on iOS Sim at "/chat"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Mia')).toBe('iOS Sim');
+    expect(ctx.personaPaths.get('Mia')).toBe('/chat');
+  });
+
+  test('path with query string preserved', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is on Web Chromium at "/discover?cohort=adult&limit=20"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPaths.get('Alice')).toBe('/discover?cohort=adult&limit=20');
+  });
+
+  test('records platform/path without requiring Firebase session — pure bookkeeping', async () => {
+    // Confirms the matcher does NOT require a prior sign-in. Greta has no
+    // session — the matcher must still record her context.
+    const ctx = makeCtx();
+    expect(ctx.sessions.has('Greta')).toBe(false);
+    const r = await executeStep(
+      { kind: 'Given', text: 'Greta [P-12] is on Web Admin at "/admin#reports"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Greta')).toBe('Web Admin');
+  });
+});
+
+describe('Ephemeral persona sign-in (Adam P-01, Mia P-03 — accounts not in provisioner)', () => {
+  test('Adam can be signed-in with state seed — no Firebase REST call attempted', async () => {
+    // Adam P-01 is ephemeral. The matcher must NOT attempt to authenticate
+    // against Firebase (no account exists); instead create a synthetic
+    // session record AND seed his declared state into Firestore.
+    const fetchSpy = jest.fn();
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam [P-01] is signed in on Android with cohort=adult and isAgeVerified=true (post-j01 state)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // No real auth call attempted
+    expect(fetchSpy).not.toHaveBeenCalled();
+    // Synthetic session is recorded
+    const session = ctx.sessions.get('Adam');
+    expect(session).toBeDefined();
+    expect(session.idToken).toMatch(/^synthetic:/);
+    expect(session.persona.id).toBe('P-01');
+    // State seeded onto Adam's user doc
+    const adamUid = session.persona.uniqueId;
+    expect(db._docs[`users/${adamUid}`].cohort).toBe('adult');
+    expect(db._docs[`users/${adamUid}`].isAgeVerified).toBe(true);
+  });
+
+  test('Mia can be signed-in with state seed — same pattern as Adam', async () => {
+    const fetchSpy = jest.fn();
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Mia [P-03] is signed in on iOS Sim with cohort=minor',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const session = ctx.sessions.get('Mia');
+    expect(session.persona.id).toBe('P-03');
+    expect(session.persona.cohort).toBe('minor');
+    const miaUid = session.persona.uniqueId;
+    expect(db._docs[`users/${miaUid}`].cohort).toBe('minor');
+  });
+
+  test('ephemeral uniqueIds are in the 9xxxxxxx test range — no collision with real personas (5xxxxxxx, 6xxxxxxx)', async () => {
+    const ctx = makeCtx({ fetch: jest.fn(), db: makeStatefulFakeDb({}) });
+    await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam [P-01] is signed in on Android with cohort=adult',
+      },
+      ctx,
+    );
+    const adamUid = ctx.sessions.get('Adam').persona.uniqueId;
+    expect(adamUid).toBeGreaterThanOrEqual(90000000);
+    expect(adamUid).toBeLessThan(100000000);
+  });
+
+  test('non-ephemeral persona (Alice P-02) still hits real Firebase REST sign-in', async () => {
+    // Regression check: ephemeral handling must not bypass real auth for
+    // registered personas. Alice still goes through signInWithPassword.
+    let signInUrlSeen = null;
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        signInUrlSeen = url;
+        const idToken =
+          'h.' + Buffer.from(JSON.stringify({ uniqueId: 50000010 })).toString('base64url') + '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const ctx = makeCtx({ fetch: fetchSpy });
+    const r = await executeStep({ kind: 'Given', text: 'Alice [P-02] is signed in' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(signInUrlSeen).toBeTruthy();
+    expect(ctx.sessions.get('Alice').idToken).not.toMatch(/^synthetic:/);
+  });
+
+  test('ephemeral sign-in without ctx.db is OK if the `with` clause is omitted', async () => {
+    // Pure session bookkeeping — no state seed, no db required.
+    const ctx = makeCtx({ fetch: jest.fn() }); // no db
+    const r = await executeStep(
+      { kind: 'Given', text: 'Adam [P-01] is signed in on Android' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Adam')).toBeDefined();
+  });
+
+  test('ephemeral sign-in WITH `with` clause requires ctx.db — error if missing', async () => {
+    const ctx = makeCtx({ fetch: jest.fn() }); // no db
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam [P-01] is signed in on Android with cohort=adult',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+});
+
 describe('State-seed end-to-end via runFeatureFile', () => {
   test('every fixture scenario passes after seed + read round-trip', async () => {
     const fakeFetch = jest.fn(async (url) => {
@@ -1435,8 +2156,13 @@ describe('OSA Background verbs (cycle 1 findings)', () => {
     });
   }
 
-  test('sign-in tolerates "with cohort=X" qualifier', async () => {
-    const ctx = makeCtx({ fetch: withSignInFetch() });
+  test('sign-in "with cohort=X" clause now seeds user doc (was: tolerated as docs)', async () => {
+    // PR-E originally treated `with cohort=X` as informational. The
+    // 2026-05-17 wake-3 change made it state-mutating so scenarios can
+    // declare known starting state directly on the sign-in step.
+    // Trailing parenthetical is still treated as documentation.
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ fetch: withSignInFetch(), db });
     const r = await executeStep(
       {
         kind: 'Given',
@@ -1446,6 +2172,7 @@ describe('OSA Background verbs (cycle 1 findings)', () => {
     );
     expect(r.ok).toBe(true);
     expect(ctx.sessions.get('Hayato')).toBeDefined();
+    expect(db._docs['users/50000030'].cohort).toBe('adult');
   });
 
   test('sign-in tolerates "AND on <Platform>" multi-device form', async () => {
@@ -1680,6 +2407,10 @@ describe('OSA Background verbs end-to-end via runFeatureFile', () => {
           exists: docStore[docPath] !== undefined,
           data: () => docStore[docPath],
         }),
+        set: async (patch, opts = {}) => {
+          if (opts.merge) docStore[docPath] = { ...(docStore[docPath] || {}), ...patch };
+          else docStore[docPath] = { ...patch };
+        },
       }),
       collection: probeDb.collection,
     };
