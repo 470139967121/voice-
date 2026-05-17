@@ -2436,6 +2436,81 @@ describe('Negation: <P> has no prior interactions with <Other> (j08 cross-cohort
   });
 });
 
+describe('j19 migration query verbs', () => {
+  test('single-doc query stores result on ctx.lastQueryResult', async () => {
+    const db = makeStatefulFakeDb({ 'users/1': { uniqueId: 1, isOfficial: true } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'When', text: 'a query is run for the user doc "users/1"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.lastQueryResult).toBeDefined();
+    expect(ctx.lastQueryResult.exists).toBe(true);
+    expect(ctx.lastQueryResult.data.uniqueId).toBe(1);
+  });
+
+  test('single-doc query for missing path still passes — exists=false', async () => {
+    const ctx = makeCtx({ db: makeStatefulFakeDb({}) });
+    const r = await executeStep(
+      { kind: 'When', text: 'a query is run for the user doc "users/99999999"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.lastQueryResult.exists).toBe(false);
+  });
+
+  test('collection scan stores all docs on ctx.lastQueryResult', async () => {
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        users: [
+          { uniqueId: 50000010, cohort: 'adult' },
+          { uniqueId: 60000010, cohort: 'minor' },
+        ],
+      },
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'When', text: 'a query is run for every "users/*" doc' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(Array.isArray(ctx.lastQueryResult.docs)).toBe(true);
+    expect(ctx.lastQueryResult.docs).toHaveLength(2);
+  });
+
+  test('filtered collection scan: where cohort="adult"', async () => {
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        users: [
+          { uniqueId: 50000010, cohort: 'adult' },
+          { uniqueId: 60000010, cohort: 'minor' },
+          { uniqueId: 50000020, cohort: 'adult' },
+        ],
+      },
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'When', text: 'a query is run for every "users/*" doc where cohort="adult"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.lastQueryResult.docs).toHaveLength(2);
+    expect(ctx.lastQueryResult.docs.every((d) => d.cohort === 'adult')).toBe(true);
+  });
+
+  test('migration script execution is a no-op pass (MVP)', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'the migration script is executed with --dry-run against dev' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('State-seed end-to-end via runFeatureFile', () => {
   test('every fixture scenario passes after seed + read round-trip', async () => {
     const fakeFetch = jest.fn(async (url) => {

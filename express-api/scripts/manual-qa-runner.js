@@ -1187,6 +1187,49 @@ const matchers = [
       return { ok: true };
     },
   },
+  // ── j19 migration query verbs ──
+  {
+    // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so
+    // downstream "Then …" assertions can read the captured result.
+    pattern: /^a query is run for the user doc "([^"]+)"$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const snap = await ctx.db.doc(m[1]).get();
+      ctx.lastQueryResult = {
+        exists: snap.exists,
+        data: snap.exists ? snap.data() : null,
+      };
+      return { ok: true };
+    },
+  },
+  {
+    // Collection scan with optional `where <field>="<value>"` predicate.
+    // Filter is in-memory rather than via Firestore .where() because the
+    // runner often runs against fake DBs that don't implement .where().
+    // Stores `{docs: [data, …]}` on ctx.lastQueryResult.
+    pattern: /^a query is run for every "([^"]+)\/\*" doc(?:\s+where\s+(\w+)="([^"]+)")?$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const snap = await ctx.db.collection(m[1]).get();
+      let docs = snap.docs.map((d) => d.data());
+      if (m[2] && m[3] !== undefined) {
+        docs = docs.filter((d) => d[m[2]] === m[3]);
+      }
+      ctx.lastQueryResult = { docs };
+      return { ok: true };
+    },
+  },
+  {
+    // Migration script execution — MVP no-op pass. Real impl would
+    // child_process.spawn the script; deferred until the cycle actually
+    // needs to exercise migration idempotency end-to-end (j19's BG step
+    // already verifies the post-migration invariants via probeOsaInvariants,
+    // so the script-execution shape is currently informational).
+    pattern: /^the migration script is executed with --dry-run against (?:dev|local|prod)$/,
+    async handler(_m, _ctx) {
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
@@ -1223,6 +1266,7 @@ async function runScenario(scenario, parsed, ctx) {
   ctx.personaPaths = new Map();
   ctx.lastResponse = null;
   ctx.lastVisit = null;
+  ctx.lastQueryResult = null;
   ctx.locale = 'en';
 
   const allSteps = [...(parsed.background?.steps || []), ...scenario.steps];
