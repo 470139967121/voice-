@@ -2711,6 +2711,107 @@ describe('UI driver — Android tap on element with tag (When <P> on Android tap
   });
 });
 
+describe('UI driver — Android type text into element (When <P> on Android types "<text>" into "<tag>")', () => {
+  test('typing into a found field focuses (taps centre) then dispatches text', async () => {
+    const dump = '<node resource-id="signup_emailField" bounds="[200,20][320,80]" />';
+    const tapSpy = jest.fn(async () => {});
+    const typeSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: {
+        androidUiDump: jest.fn(async () => dump),
+        androidTap: tapSpy,
+        androidTypeText: typeSpy,
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Adam on Android types "adam-new@shytalk.dev" into "signup_emailField"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Bounds [200,20][320,80] → centre (260, 50)
+    expect(tapSpy).toHaveBeenCalledWith(260, 50);
+    expect(typeSpy).toHaveBeenCalledWith('adam-new@shytalk.dev');
+    // Tap MUST happen before type — adb input text writes to the focused element.
+    expect(tapSpy.mock.invocationCallOrder[0]).toBeLessThan(typeSpy.mock.invocationCallOrder[0]);
+  });
+
+  test('typing into a missing field fails — no tap, no type', async () => {
+    const dump = '<node resource-id="other_field" bounds="[0,0][10,10]" />';
+    const tapSpy = jest.fn();
+    const typeSpy = jest.fn();
+    const ctx = makeCtx({
+      uiDriver: {
+        androidUiDump: jest.fn(async () => dump),
+        androidTap: tapSpy,
+        androidTypeText: typeSpy,
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Adam on Android types "anything" into "missing_field"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/missing_field/);
+    expect(tapSpy).not.toHaveBeenCalled();
+    expect(typeSpy).not.toHaveBeenCalled();
+  });
+
+  test('no ctx.uiDriver — loud error before any driver call', async () => {
+    const ctx = makeCtx(); // no uiDriver
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "x" into "any_tag"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('quoted text passes through verbatim — special chars preserved (e.g. !@#)', async () => {
+    const dump = '<node resource-id="signup_passwordField" bounds="[0,0][100,40]" />';
+    const tapSpy = jest.fn(async () => {});
+    const typeSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: {
+        androidUiDump: jest.fn(async () => dump),
+        androidTap: tapSpy,
+        androidTypeText: typeSpy,
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Adam on Android types "TestPassw0rd!" into "signup_passwordField"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(typeSpy).toHaveBeenCalledWith('TestPassw0rd!');
+  });
+
+  test('missing androidTypeText driver method — explicit error, not a silent pass', async () => {
+    const dump = '<node resource-id="any_field" bounds="[0,0][10,10]" />';
+    const ctx = makeCtx({
+      uiDriver: {
+        androidUiDump: jest.fn(async () => dump),
+        androidTap: jest.fn(),
+        // androidTypeText intentionally missing
+      },
+    });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "anything" into "any_field"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTypeText/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

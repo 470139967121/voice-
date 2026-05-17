@@ -1291,6 +1291,60 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Android types text into the field with the given resource-id tag.
+    // Locates the field's bounds, taps the centre to focus, then dispatches
+    // text via androidTypeText. Tap-then-type ordering is load-bearing —
+    // adb's `input text` writes to whichever element has IME focus.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+types "([^"]+)" into "([^"]+)"$/,
+    async handler(m, ctx) {
+      const text = m[3];
+      const tag = m[4];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (tag=${tag})` };
+      }
+      if (!ctx.uiDriver.androidUiDump || !ctx.uiDriver.androidTap) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver requires both androidUiDump and androidTap',
+        };
+      }
+      if (!ctx.uiDriver.androidTypeText) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver.androidTypeText not configured',
+        };
+      }
+      const dump = await ctx.uiDriver.androidUiDump();
+      const escTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Bidirectional regex: bounds may precede or follow resource-id on the
+      // same <node>. Same shape as the tap matcher — see comment above for
+      // rationale on the duplication.
+      const re = new RegExp(
+        `resource-id="(?:[^"]*:id/)?${escTag}"[^<]*?bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"|bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"[^<]*?resource-id="(?:[^"]*:id/)?${escTag}"`,
+      );
+      const match = re.exec(dump);
+      if (!match) {
+        const tagPresent = dump.includes(`resource-id="${tag}"`) || dump.includes(`:id/${tag}"`);
+        if (tagPresent) {
+          return {
+            ok: false,
+            error: `tag "${tag}" found in dump but no bounds attribute on the same node`,
+          };
+        }
+        return { ok: false, error: `tag "${tag}" not found in Android UI dump` };
+      }
+      const x1 = parseInt(match[1] || match[5], 10);
+      const y1 = parseInt(match[2] || match[6], 10);
+      const x2 = parseInt(match[3] || match[7], 10);
+      const y2 = parseInt(match[4] || match[8], 10);
+      const cx = Math.floor((x1 + x2) / 2);
+      const cy = Math.floor((y1 + y2) / 2);
+      await ctx.uiDriver.androidTap(cx, cy);
+      await ctx.uiDriver.androidTypeText(text);
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so
