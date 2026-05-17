@@ -2333,6 +2333,86 @@ describe('Persona on-platform locale+signin compound (Given <P> is on <Platform>
   });
 });
 
+describe('Sign-in `at the "X" tab` form (j09 Theo on the rooms tab)', () => {
+  function withSignInFetch(uniqueId = 50000110) {
+    return jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' +
+          Buffer.from(JSON.stringify({ uniqueId, admin: false })).toString('base64url') +
+          '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+  }
+
+  test('Theo signed in on Android physical at the "rooms" tab — accepted', async () => {
+    const ctx = makeCtx({ fetch: withSignInFetch() });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Theo [P-10] is signed in on Android physical at the "rooms" tab',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Theo')).toBeDefined();
+  });
+
+  test('existing "at the X screen" form still works — regression check', async () => {
+    const ctx = makeCtx({ fetch: withSignInFetch(50000010) });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] is signed in on Android at the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Alice')).toBeDefined();
+  });
+});
+
+describe('Network throttling matcher (j14 Ines on Slow 3G)', () => {
+  test('Slow 3G profile recorded — platform + throttle on ctx', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Ines [P-11] is on Web Chromium with Chrome DevTools network throttling set to "Slow 3G" (400kbps down, 400ms latency)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Ines')).toBe('Web Chromium');
+    expect(ctx.networkThrottle).toBe('Slow 3G');
+  });
+
+  test('Fast 3G profile also works (trailing-paren-free form)', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Ines [P-11] is on Web Chromium with Chrome DevTools network throttling set to "Fast 3G"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.networkThrottle).toBe('Fast 3G');
+  });
+
+  test('Offline profile also works', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Ines [P-11] is on Web Chromium with Chrome DevTools network throttling set to "Offline"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.networkThrottle).toBe('Offline');
+  });
+});
+
 describe('Negation: <P> has no prior interactions with <Other> (j08 cross-cohort wall setup)', () => {
   test('no-op pass — assumed-clean-environment MVP for "no prior interactions"', async () => {
     // Real impl would query conversations/follows/gifts/etc. and delete

@@ -333,7 +333,7 @@ const matchers = [
     // Inputs are author-controlled Gherkin step text, not user input.
     /* eslint-disable sonarjs/slow-regex */
     pattern:
-      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is signed in(?:\s+on\s+\w+(?:\s+\w+){0,2})?(?:\s+AND\s+on\s+\w+(?:\s+\w+){0,2})?(?:\s+with\s+([^()]+?))?(?:\s+\([^)]*\))?(?:\s+\(no admin claim\))?(?:\s+at\s+the\s+"[^"]+"\s+screen)?$/,
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is signed in(?:\s+on\s+\w+(?:\s+\w+){0,2})?(?:\s+AND\s+on\s+\w+(?:\s+\w+){0,2})?(?:\s+with\s+([^()]+?))?(?:\s+\([^)]*\))?(?:\s+\(no admin claim\))?(?:\s+at\s+the\s+"[^"]+"\s+(?:screen|tab))?$/,
     /* eslint-enable sonarjs/slow-regex */
     async handler(m, ctx) {
       const name = m[1];
@@ -1027,6 +1027,29 @@ const matchers = [
       });
       ctx.personaPlatforms.set(name, platform);
       ctx.locale = locale;
+      return { ok: true };
+    },
+  },
+  {
+    // Network throttling config (j14 Ines). Records the throttle profile on
+    // ctx.networkThrottle so a downstream UI driver (Playwright MCP) can
+    // apply it. MVP runner can't actually throttle network — Node-level
+    // throttling would require ServiceWorker injection or platform-specific
+    // proxy setup. Recording-only is the right MVP shape; the j14 scenarios
+    // also include explicit assertions on degraded UX so a real-network run
+    // would surface findings if the throttling didn't apply.
+    //
+    // Trailing parenthetical (e.g. `(400kbps down, 400ms latency)`) is
+    // informational documentation and stripped before matching.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on\s+(\w+(?:\s+\w+){0,2})\s+with Chrome DevTools network throttling set to\s+"([^"]+)"(?:\s+\([^)]*\))?$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const throttle = m[4];
+      if (!ctx.personaPlatforms) ctx.personaPlatforms = new Map();
+      ctx.personaPlatforms.set(name, platform);
+      ctx.networkThrottle = throttle;
       return { ok: true };
     },
   },
