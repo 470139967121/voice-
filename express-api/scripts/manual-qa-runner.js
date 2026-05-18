@@ -4957,6 +4957,156 @@ const matchers = [
       return { ok: false, error: `unknown platform "${platform}" for open-conversation step` };
     },
   },
+  {
+    // FCM push notification assertion. Two forms:
+    //   - "on X's Web with body containing \"Y\""        (web variant)
+    //   - "on X's Android device with body containing \"Y\" [and \"Z\"]"
+    //     (mobile variant, with optional second body fragment)
+    // Driver receives recipient name, platform string, and 1-or-2-element
+    // body-fragment array. The driver verifies a push was delivered AND
+    // the body contains ALL fragments.
+    pattern:
+      /^the tester sees an FCM push notification on ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android device|iOS device) with body containing "([^"]+)"(?: and "([^"]+)")?$/,
+    async handler(m, ctx) {
+      const recipient = m[1];
+      const platform = m[2];
+      const fragments = [m[3]];
+      if (m[4]) fragments.push(m[4]);
+      if (!ctx.webDriver?.seesFcmPushOnPlatform) {
+        return { ok: false, error: 'ctx.webDriver.seesFcmPushOnPlatform not configured' };
+      }
+      const ok = await ctx.webDriver.seesFcmPushOnPlatform(recipient, platform, fragments);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `no FCM push to ${recipient} on ${platform} containing ${fragments.map((f) => `"${f}"`).join(' and ')}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Types into conversation input (j07 PM compose). Platform-dispatch.
+    // Driver targets the platform's conversation input element and
+    // types the given body. No submit — separate step for that.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+types "([^"]+)" into the conversation input$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const body = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webTypeIntoConversationInput) {
+          return {
+            ok: false,
+            error: 'ctx.webDriver.webTypeIntoConversationInput not configured',
+          };
+        }
+        await ctx.webDriver.webTypeIntoConversationInput(body);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidTypeIntoConversationInput) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidTypeIntoConversationInput not configured',
+          };
+        }
+        await ctx.uiDriver.androidTypeIntoConversationInput(body);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosTypeIntoConversationInput) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.iosTypeIntoConversationInput not configured',
+          };
+        }
+        await ctx.uiDriver.iosTypeIntoConversationInput(body);
+        return { ok: true };
+      }
+      return {
+        ok: false,
+        error: `unknown platform "${platform}" for conversation-input-type step`,
+      };
+    },
+  },
+  {
+    // Past-tense PM state Given. Two forms:
+    //   - "X sent a message \"Y\" to Z"
+    //   - "X sent a message \"Y\" to Z N minutes ago"  (timestamp)
+    // Wake 30 strips trailing parens annotation (e.g. "(past edit window)").
+    // Driver seeds the messages collection with sender/body/recipient and
+    // optional createdAt offset from now.
+    pattern: /^([A-Z][a-z]+)\s+sent a message "([^"]+)" to ([A-Z][a-z]+)(?:\s+(\d+) minutes ago)?$/,
+    async handler(m, ctx) {
+      const sender = m[1];
+      const body = m[2];
+      const recipient = m[3];
+      const minutesAgo = m[4] ? parseInt(m[4], 10) : null;
+      if (!ctx.webDriver?.seedPastMessage) {
+        return { ok: false, error: 'ctx.webDriver.seedPastMessage not configured' };
+      }
+      await ctx.webDriver.seedPastMessage(sender, body, recipient, minutesAgo);
+      return { ok: true };
+    },
+  },
+  {
+    // Edit-body-and-confirms composite (j07 PM edit flow). Driver opens
+    // the edit modal, replaces the body, taps confirm. Platform-dispatch.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+changes the body to "([^"]+)" and confirms$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const newBody = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webEditBodyAndConfirm) {
+          return { ok: false, error: 'ctx.webDriver.webEditBodyAndConfirm not configured' };
+        }
+        await ctx.webDriver.webEditBodyAndConfirm(newBody);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidEditBodyAndConfirm) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidEditBodyAndConfirm not configured',
+          };
+        }
+        await ctx.uiDriver.androidEditBodyAndConfirm(newBody);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosEditBodyAndConfirm) {
+          return { ok: false, error: 'ctx.uiDriver.iosEditBodyAndConfirm not configured' };
+        }
+        await ctx.uiDriver.iosEditBodyAndConfirm(newBody);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for edit-body step` };
+    },
+  },
+  {
+    // Bare persona-exists Given. Wake 30's annotation strip is end-
+    // anchored — the corpus form `Marcus (P-04, minor) exists` has
+    // parens MID-step, so they aren't stripped upstream. Allow an
+    // optional mid-step parens annotation between the name and the
+    // `exists` verb.
+    pattern: /^([A-Z][a-z]+)(?:\s+\([^()]*\))?\s+exists$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const snap = await ctx.db.doc(`users/${p.uniqueId}`).get();
+      if (!snap.exists) {
+        return { ok: false, error: `users/${p.uniqueId} does not exist (${name})` };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

@@ -8628,6 +8628,150 @@ describe('Opens conversation with persona (action)', () => {
   });
 });
 
+describe('FCM push notification assertion (Android device + Web)', () => {
+  test('"... on X\'s Web with body containing \\"Y\\"" → driver call', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { seesFcmPushOnPlatform: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the tester sees an FCM push notification on Alice\'s Web with body containing "Adam"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Web', ['Adam']);
+  });
+
+  test('"... on X\'s Android device with body containing \\"Y\\" and \\"Z\\"" — two fragments', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { seesFcmPushOnPlatform: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the tester sees an FCM push notification on Selma\'s Android device with body containing "Alice" and "crown"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'Android device', ['Alice', 'crown']);
+  });
+
+  test('driver returns false — fail with body fragments in error', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { seesFcmPushOnPlatform: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the tester sees an FCM push notification on Alice\'s Web with body containing "Adam"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Adam/);
+  });
+});
+
+describe('Types into conversation input', () => {
+  test('"X on Web types \\"<body>\\" into the conversation input" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTypeIntoConversationInput: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Alice on Web types "hi adam, welcome to shytalk" into the conversation input',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('hi adam, welcome to shytalk');
+  });
+
+  test('Android variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidTypeIntoConversationInput: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "hey" into the conversation input' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('hey');
+  });
+});
+
+describe('Past-tense PM state Given', () => {
+  test('"Adam sent a message \\"X\\" to Alice" — state seed (no timestamp)', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { seedPastMessage: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Adam sent a message "tpyo here" to Alice' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'tpyo here', 'Alice', null);
+  });
+
+  test('"Adam sent a message \\"secret\\" to Alice 30 minutes ago" — timestamp variant', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { seedPastMessage: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam sent a message "secret" to Alice 30 minutes ago (past edit window)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'secret', 'Alice', 30);
+  });
+});
+
+describe('Edit-body-and-confirms composite', () => {
+  test('"X on Android changes the body to \\"Y\\" and confirms" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidEditBodyAndConfirm: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Adam on Android changes the body to "typo here" and confirms',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('typo here');
+  });
+
+  test('Web variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webEditBodyAndConfirm: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web changes the body to "fixed" and confirms' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('fixed');
+  });
+});
+
+describe('Bare persona-exists Given', () => {
+  test('"Marcus (P-04, minor) exists" (annotation stripped) verifies user doc', async () => {
+    const { personas } = require('../../scripts/provision-test-personas');
+    const marcus = personas.find((p) => p.id === 'P-04');
+    const db = makeStatefulFakeDb({ [`users/${marcus.uniqueId}`]: {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'Marcus (P-04, minor) exists' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('persona doc missing — fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'Marcus (P-04, minor) exists' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Marcus|users\//);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
