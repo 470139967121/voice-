@@ -8095,6 +8095,171 @@ describe('runScenario auto-populates {ts} scenarioVar from scenarioStartTime', (
   });
 });
 
+describe('Heading-locale UI assertion', () => {
+  test('"Lena\'s Web UI shows the heading in German" → driver call', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webHeadingInLocale: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Lena's Web UI shows the heading in German" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('de');
+  });
+
+  test('Japanese variant resolves to ja', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webHeadingInLocale: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's Web UI shows the heading in Japanese" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ja');
+  });
+
+  test('driver returns false — fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webHeadingInLocale: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Lena's Web UI shows the heading in German" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/German/);
+  });
+});
+
+describe('Highlight-pointing-at-section UI assertion', () => {
+  test('"X\'s Web UI shows a \\"Y\\" highlight pointing at section N" → driver call', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsHighlightAtSection: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        // Trailing parens annotation stripped by Wake 30.
+        text: 'Lena\'s Web UI shows a "What\'s changed" highlight pointing at section 11',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith("What's changed", 11);
+  });
+
+  test('driver returns false — fail with both name and section', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsHighlightAtSection: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Lena\'s Web UI shows a "Update" highlight pointing at section 5' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Update/);
+    expect(r.error).toMatch(/5/);
+  });
+});
+
+describe('Modal close via X button (composite)', () => {
+  test('"X on Web closes the modal via the X button without checking boxes" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webCloseModalViaX: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Lena on Web closes the modal via the X button without checking boxes',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('missing driver method — clear error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Lena on Web closes the modal via the X button without checking boxes',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webCloseModalViaX/);
+  });
+});
+
+describe('Firestore doc-absence with version constraint', () => {
+  test('doc missing entirely — ok', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have a new "usersAcceptedPolicies/50000020" with version 4',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('doc exists with older version — ok (not "new" at version 4)', async () => {
+    const db = makeStatefulFakeDb({
+      'usersAcceptedPolicies/50000020': { privacyVersion: 3 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have a new "usersAcceptedPolicies/50000020" with version 4',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('doc exists with target version — fail', async () => {
+    const db = makeStatefulFakeDb({
+      'usersAcceptedPolicies/50000020': { privacyVersion: 4 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have a new "usersAcceptedPolicies/50000020" with version 4',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Version=4/);
+  });
+});
+
+describe('Picks a NMB test image (Android, size variant)', () => {
+  test('"Adam on Android picks a 15MB test image" → driver call with size', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidPickTestImageBySize: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android picks a 15MB test image' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(15);
+  });
+});
+
+describe('Reverse-order gift selection (recipient first, then gift)', () => {
+  test('"Alice on Web selects recipient \\"Selma\\" and gift \\"crown\\"" → webSelectRecipientAndGift', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webSelectRecipientAndGift: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web selects recipient "Selma" and gift "crown"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'crown');
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

@@ -4426,6 +4426,150 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Heading-locale Web assertion. Driver checks the current page's
+    // heading (typically `<h1>` or aria-label="heading") is rendered in
+    // the named locale. 20 ShyTalk locales supported via name→ISO map.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web UI shows the heading in ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const LOCALE_NAME_TO_CODE = {
+        Arabic: 'ar',
+        German: 'de',
+        Spanish: 'es',
+        French: 'fr',
+        Hindi: 'hi',
+        Indonesian: 'id',
+        Italian: 'it',
+        Japanese: 'ja',
+        Khmer: 'km',
+        Korean: 'ko',
+        Dutch: 'nl',
+        Polish: 'pl',
+        Portuguese: 'pt',
+        Russian: 'ru',
+        Swedish: 'sv',
+        Thai: 'th',
+        Turkish: 'tr',
+        Ukrainian: 'uk',
+        Vietnamese: 'vi',
+        Chinese: 'zh',
+      };
+      const localeName = m[3];
+      const code = LOCALE_NAME_TO_CODE[localeName];
+      if (!code) {
+        return { ok: false, error: `unknown locale name "${localeName}"` };
+      }
+      if (!ctx.webDriver?.webHeadingInLocale) {
+        return { ok: false, error: 'ctx.webDriver.webHeadingInLocale not configured' };
+      }
+      const ok = await ctx.webDriver.webHeadingInLocale(code);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `Web UI heading is not in ${localeName} (${code})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Highlight-pointing-at-section UI assertion (j03 policy update).
+    // Driver locates the named highlight (typically a tooltip or
+    // visual call-out) and verifies it points at the named section
+    // index. Section identifier is numeric (legal section #11, etc.).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web UI shows a "([^"]+)" highlight pointing at section (\d+)$/,
+    async handler(m, ctx) {
+      const name = m[3];
+      const sectionIdx = parseInt(m[4], 10);
+      if (!ctx.webDriver?.webShowsHighlightAtSection) {
+        return { ok: false, error: 'ctx.webDriver.webShowsHighlightAtSection not configured' };
+      }
+      const ok = await ctx.webDriver.webShowsHighlightAtSection(name, sectionIdx);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `Web UI did not show "${name}" highlight at section ${sectionIdx}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Modal close via the X button without checking boxes (j03 dismiss
+    // flow). Composite — driver clicks the X (close icon) WITHOUT
+    // toggling any checkboxes on the modal. Used to verify the
+    // dismissal doesn't accidentally mark policy acceptance.
+    pattern: /^([A-Z][a-z]+)\s+on Web closes the modal via the X button without checking boxes$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webCloseModalViaX) {
+        return { ok: false, error: 'ctx.webDriver.webCloseModalViaX not configured' };
+      }
+      await ctx.webDriver.webCloseModalViaX();
+      return { ok: true };
+    },
+  },
+  {
+    // Firestore doc-absence with version constraint. Asserts that the
+    // named doc does NOT exist OR has a version field NOT equal to the
+    // given value. Used by j03 to verify dismissed policy modals don't
+    // accidentally write acceptance records.
+    pattern: /^the database does not have a new "([^"]+)" with version (\d+)$/,
+    async handler(m, ctx) {
+      const docPath = m[1];
+      const expectedVersion = parseInt(m[2], 10);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: true };
+      }
+      const data = snap.data();
+      // Check any field named *Version (privacyVersion, termsVersion, etc.)
+      // OR a literal "version" field.
+      const versionFields = Object.keys(data).filter(
+        (k) => k === 'version' || k.endsWith('Version'),
+      );
+      for (const field of versionFields) {
+        if (data[field] === expectedVersion) {
+          return {
+            ok: false,
+            error: `doc "${docPath}" has ${field}=${expectedVersion} but assertion expected absence`,
+          };
+        }
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Picks an N-megabyte test image (Android, size variant of Wake 46
+    // "selects test image from gallery"). Driver mocks the image picker
+    // to return a fixture of approximately the requested size — used to
+    // exercise size-limit code paths (e.g. 15MB rejected, 5MB accepted).
+    pattern: /^([A-Z][a-z]+)\s+on Android\s+picks a (\d+)MB test image$/,
+    async handler(m, ctx) {
+      const sizeMB = parseInt(m[2], 10);
+      if (!ctx.uiDriver?.androidPickTestImageBySize) {
+        return { ok: false, error: 'ctx.uiDriver.androidPickTestImageBySize not configured' };
+      }
+      await ctx.uiDriver.androidPickTestImageBySize(sizeMB);
+      return { ok: true };
+    },
+  },
+  {
+    // Reverse-order gift selection (j05). Wake 48 has the gift-first
+    // form ("selects gift X and recipient Y"); this is recipient-first
+    // ("selects recipient X and gift Y"). Disjoint by word order.
+    pattern: /^([A-Z][a-z]+)\s+on Web selects recipient "([^"]+)" and gift "([^"]+)"$/,
+    async handler(m, ctx) {
+      const recipient = m[2];
+      const giftName = m[3];
+      if (!ctx.webDriver?.webSelectRecipientAndGift) {
+        return { ok: false, error: 'ctx.webDriver.webSelectRecipientAndGift not configured' };
+      }
+      await ctx.webDriver.webSelectRecipientAndGift(recipient, giftName);
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
