@@ -4744,6 +4744,126 @@ describe('Android kill-and-relaunch matcher (When <P> on Android kills and relau
   });
 });
 
+describe('Android auth/token-refresh matchers (force-refresh + performs authenticated call)', () => {
+  test('`performs any authenticated API call` — calls androidPerformAuthenticatedCall(persona)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidPerformAuthenticatedCall: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Hayato on Android performs any authenticated API call' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato');
+  });
+
+  test('`force-refreshes via securetoken endpoint` — calls androidForceRefreshSecureToken(persona)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidForceRefreshSecureToken: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Hayato on Android force-refreshes via securetoken endpoint',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato');
+  });
+
+  test('`force-refreshes the JWT` — calls androidForceRefreshJwt(persona)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidForceRefreshJwt: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul on Android force-refreshes the JWT' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul');
+  });
+
+  test('P-NN annotation form on each variant', async () => {
+    const spy1 = jest.fn(async () => {});
+    const spy2 = jest.fn(async () => {});
+    const spy3 = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: {
+        androidPerformAuthenticatedCall: spy1,
+        androidForceRefreshSecureToken: spy2,
+        androidForceRefreshJwt: spy3,
+      },
+    });
+    await executeStep(
+      { kind: 'When', text: 'Hayato [P-06] on Android performs any authenticated API call' },
+      ctx,
+    );
+    await executeStep(
+      {
+        kind: 'When',
+        text: 'Hayato [P-06] on Android force-refreshes via securetoken endpoint',
+      },
+      ctx,
+    );
+    await executeStep(
+      { kind: 'When', text: 'Raul [P-08] on Android force-refreshes the JWT' },
+      ctx,
+    );
+    expect(spy1).toHaveBeenCalledWith('Hayato');
+    expect(spy2).toHaveBeenCalledWith('Hayato');
+    expect(spy3).toHaveBeenCalledWith('Raul');
+  });
+
+  test('no ctx.uiDriver — each variant emits a loud error', async () => {
+    const ctx = makeCtx();
+    for (const text of [
+      'Hayato on Android performs any authenticated API call',
+      'Hayato on Android force-refreshes via securetoken endpoint',
+      'Raul on Android force-refreshes the JWT',
+    ]) {
+      const r = await executeStep({ kind: 'When', text }, ctx);
+      expect(r.ok).toBe(false);
+      expect(r.error).toMatch(/uiDriver/i);
+    }
+  });
+
+  test('missing driver methods — each variant names its specific missing method', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r1 = await executeStep(
+      { kind: 'When', text: 'Hayato on Android performs any authenticated API call' },
+      ctx,
+    );
+    expect(r1.error).toMatch(/androidPerformAuthenticatedCall/);
+    const r2 = await executeStep(
+      {
+        kind: 'When',
+        text: 'Hayato on Android force-refreshes via securetoken endpoint',
+      },
+      ctx,
+    );
+    expect(r2.error).toMatch(/androidForceRefreshSecureToken/);
+    const r3 = await executeStep(
+      { kind: 'When', text: 'Raul on Android force-refreshes the JWT' },
+      ctx,
+    );
+    expect(r3.error).toMatch(/androidForceRefreshJwt/);
+  });
+
+  test('driver throws — bubbles up via executeStep wrapper', async () => {
+    const spy = jest.fn(async () => {
+      throw new Error('Firebase auth: REFRESH_TOKEN_EXPIRED');
+    });
+    const ctx = makeCtx({ uiDriver: { androidForceRefreshSecureToken: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Hayato on Android force-refreshes via securetoken endpoint',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/REFRESH_TOKEN_EXPIRED/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

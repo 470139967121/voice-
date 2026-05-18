@@ -2032,6 +2032,70 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // `<P> on Android performs any authenticated API call` — fires off an
+    // arbitrary authenticated request (driver picks a known-cheap endpoint
+    // like GET /api/health-with-auth). Used in j06 to demonstrate that a
+    // cohort-flipped session still authenticates against the API surface
+    // — distinct from "issues new JWT" which is the SDK-level flow.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+performs any authenticated API call$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (auth call for ${name})` };
+      }
+      if (!ctx.uiDriver.androidPerformAuthenticatedCall) {
+        return { ok: false, error: 'ctx.uiDriver.androidPerformAuthenticatedCall not configured' };
+      }
+      await ctx.uiDriver.androidPerformAuthenticatedCall(name);
+      return { ok: true };
+    },
+  },
+  {
+    // `<P> on Android force-refreshes via securetoken endpoint` — explicit
+    // POST to securetoken.googleapis.com/v1/token with refresh_token to get
+    // a fresh idToken. Used when the test needs to verify Firebase Auth's
+    // server-side token-refresh path picks up updated custom claims.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+force-refreshes via securetoken endpoint$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (securetoken refresh for ${name})`,
+        };
+      }
+      if (!ctx.uiDriver.androidForceRefreshSecureToken) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver.androidForceRefreshSecureToken not configured',
+        };
+      }
+      await ctx.uiDriver.androidForceRefreshSecureToken(name);
+      return { ok: true };
+    },
+  },
+  {
+    // `<P> on Android force-refreshes the JWT` — calls Firebase Auth client
+    // SDK's getIdToken(true), which uses the cached refresh token to issue
+    // a new idToken via the SDK's internal refresh flow. Different from
+    // securetoken-endpoint (REST-level) in that this exercises the SDK's
+    // cache + retry logic.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+force-refreshes the JWT$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (JWT refresh for ${name})` };
+      }
+      if (!ctx.uiDriver.androidForceRefreshJwt) {
+        return { ok: false, error: 'ctx.uiDriver.androidForceRefreshJwt not configured' };
+      }
+      await ctx.uiDriver.androidForceRefreshJwt(name);
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so
