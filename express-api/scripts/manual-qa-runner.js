@@ -1076,6 +1076,60 @@ const matchers = [
     },
   },
   {
+    // `no entry is added to "X" since "Y"` — collection (or subcollection)
+    // scan asserting that no doc has createdAt > sinceTs. Supports the
+    // `{ts}` placeholder which resolves to ctx.scenarioStartTime, OR an
+    // explicit ISO date / numeric millisecond literal.
+    //
+    // Docs missing the createdAt field are treated as "pre-existing"
+    // (not flagged as new) — that's the test-author's intent. If a real
+    // bug writes new entries without createdAt, that's a separate class
+    // of bug to catch with a different assertion.
+    pattern: /^no entry is added to "([^"]+)" since "([^"]+)"$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const collectionPath = m[1];
+      const sinceRaw = m[2];
+      let sinceTs;
+      if (sinceRaw === '{ts}') {
+        if (ctx.scenarioStartTime === undefined) {
+          return {
+            ok: false,
+            error:
+              '{ts} placeholder used but ctx.scenarioStartTime is unset (baseline missing) — runScenario should set it on each scenario start',
+          };
+        }
+        sinceTs = ctx.scenarioStartTime;
+      } else if (/^\d+$/.test(sinceRaw)) {
+        sinceTs = parseInt(sinceRaw, 10);
+      } else {
+        const parsed = Date.parse(sinceRaw);
+        if (Number.isNaN(parsed)) {
+          return { ok: false, error: `cannot parse "since" value "${sinceRaw}" as timestamp` };
+        }
+        sinceTs = parsed;
+      }
+      const snap = await ctx.db.collection(collectionPath).get();
+      const offenders = [];
+      for (const docRef of snap.docs) {
+        const data = docRef.data();
+        const createdAt = data?.createdAt;
+        if (typeof createdAt !== 'number') continue; // treat missing/non-numeric as pre-existing
+        if (createdAt > sinceTs) {
+          offenders.push({ id: docRef.id, createdAt });
+        }
+      }
+      if (offenders.length > 0) {
+        const summary = offenders.map((o) => `${o.id} (createdAt=${o.createdAt})`).join(', ');
+        return {
+          ok: false,
+          error: `collection "${collectionPath}" has ${offenders.length} entries added after ${sinceTs}: ${summary}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
     // Numeric strict-greater-than. Rejects non-numeric actual values rather
     // than relying on JavaScript's lexicographic / NaN coercion semantics
     // (which can silently report "abc > 100" as false and mask real bugs).
@@ -1809,6 +1863,7 @@ async function runScenario(scenario, parsed, ctx) {
   ctx.lastVisit = null;
   ctx.lastQueryResult = null;
   ctx.snapshots = new Map();
+  ctx.scenarioStartTime = Date.now();
   ctx.locale = 'en';
 
   const allSteps = [...(parsed.background?.steps || []), ...scenario.steps];

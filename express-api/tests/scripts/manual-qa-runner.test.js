@@ -3872,6 +3872,147 @@ describe('Snapshot baseline — `increased by N` matcher (Then the database has 
   });
 });
 
+describe('No-entry-added-since matcher (Then no entry is added to "X" since "Y")', () => {
+  test('empty collection — assertion holds (ok:true)', async () => {
+    const db = makeStatefulFakeDb({}, { 'users/50000040/transactions': [] });
+    const ctx = makeCtx({ db, scenarioStartTime: 1_700_000_000_000 });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no entry is added to "users/50000040/transactions" since "{ts}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('collection has docs created BEFORE scenarioStartTime — assertion holds', async () => {
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        'users/50000040/transactions': [
+          { _id: 'old1', amount: 100, createdAt: 1_699_999_000_000 },
+          { _id: 'old2', amount: 200, createdAt: 1_699_999_500_000 },
+        ],
+      },
+    );
+    const ctx = makeCtx({ db, scenarioStartTime: 1_700_000_000_000 });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no entry is added to "users/50000040/transactions" since "{ts}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('collection has a doc created AFTER scenarioStartTime — assertion FAILS', async () => {
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        'users/50000040/transactions': [
+          { _id: 'old', amount: 100, createdAt: 1_699_999_000_000 },
+          { _id: 'new', amount: 50, createdAt: 1_700_000_500_000 },
+        ],
+      },
+    );
+    const ctx = makeCtx({ db, scenarioStartTime: 1_700_000_000_000 });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no entry is added to "users/50000040/transactions" since "{ts}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/new|users\/50000040\/transactions/);
+  });
+
+  test('explicit ISO timestamp (not {ts}) — parses and compares correctly', async () => {
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        'users/X/logs': [
+          { _id: 'old', createdAt: Date.parse('2024-12-31T23:59:00Z') },
+          { _id: 'new', createdAt: Date.parse('2025-01-01T00:00:30Z') },
+        ],
+      },
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no entry is added to "users/X/logs" since "2025-01-01T00:00:00Z"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/new/);
+  });
+
+  test('explicit numeric timestamp (raw ms) — parses and compares correctly', async () => {
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        'users/X/logs': [{ _id: 'a', createdAt: 5000 }],
+      },
+    );
+    const ctx = makeCtx({ db });
+    // Since 3000 → "a" (createdAt=5000) added after → fail
+    const r = await executeStep(
+      { kind: 'Then', text: 'no entry is added to "users/X/logs" since "3000"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/a/);
+  });
+
+  test('docs without createdAt field are ignored (treated as "old", not erroneously flagged as "new")', async () => {
+    // Don't flag missing-createdAt as a new entry — that'd produce false positives
+    // for docs the test infra didn't bother to timestamp. If a real bug writes
+    // an entry without createdAt, that's a different bug to catch.
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        'users/X/transactions': [
+          { _id: 'no-ts', amount: 50 }, // missing createdAt
+        ],
+      },
+    );
+    const ctx = makeCtx({ db, scenarioStartTime: 1_700_000_000_000 });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no entry is added to "users/X/transactions" since "{ts}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no ctx.db — loud error', async () => {
+    const ctx = makeCtx({ db: undefined, scenarioStartTime: 1 });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no entry is added to "users/X/transactions" since "{ts}"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+
+  test('{ts} placeholder used without ctx.scenarioStartTime — loud error pointing at missing baseline', async () => {
+    const db = makeStatefulFakeDb({}, { 'users/X/transactions': [] });
+    const ctx = makeCtx({ db }); // scenarioStartTime intentionally absent
+    const r = await executeStep(
+      { kind: 'Then', text: 'no entry is added to "users/X/transactions" since "{ts}"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/scenarioStartTime|baseline|\{ts\}/i);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
