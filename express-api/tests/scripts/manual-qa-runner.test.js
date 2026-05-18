@@ -7490,6 +7490,173 @@ describe('User-doc state-seed with array field (followingIds=[...])', () => {
   });
 });
 
+describe('Web Admin tap-with-reason-and-dobOverride (j04 reject flow)', () => {
+  test('"taps \\"reject_and_dob_down\\" with reason \\"X\\" and dobOverride=\\"Y\\"" → driver call', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminTapWithReasonAndOverride: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "reject_and_dob_down" with reason "DOB on ID is 2011-05-12" and dobOverride="2011-05-12"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(
+      'reject_and_dob_down',
+      'DOB on ID is 2011-05-12',
+      '2011-05-12',
+    );
+  });
+});
+
+describe('Firestore count by PM key + addressee', () => {
+  test('"database has 1 entries in messages with PM key X addressed to N" — match found, count=1, ok', async () => {
+    const db = makeStatefulFakeDb({
+      'messages/m1': {
+        systemKey: 'age_seg_age_down_admin_pm',
+        addresseeUniqueId: 50000030,
+        body: 'translated text',
+      },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 1 entries in "messages" with the system PM key "age_seg_age_down_admin_pm" addressed to 50000030',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('count mismatch — fail', async () => {
+    const db = makeStatefulFakeDb({
+      'messages/m1': { systemKey: 'k1', addresseeUniqueId: 100 },
+      'messages/m2': { systemKey: 'k1', addresseeUniqueId: 100 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 1 entries in "messages" with the system PM key "k1" addressed to 100',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 1.*actual 2/);
+  });
+
+  test('zero entries — fail with both expected and actual', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 1 entries in "messages" with the system PM key "k1" addressed to 100',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 1.*actual 0/);
+  });
+});
+
+describe('PM body locale check (Japanese translation of template)', () => {
+  test('"the PM body is the Japanese translation of the age_down template" — driver verifies', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { pmBodyIsTranslationOfTemplate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the PM body is the Japanese translation of the age_down template' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ja', 'age_down');
+  });
+
+  test('driver returns false — fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { pmBodyIsTranslationOfTemplate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the PM body is the Japanese translation of the age_down template' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Japanese/);
+  });
+});
+
+describe('PM is from <sender> assertion', () => {
+  test('"the PM is from Officia" (after Wake-30 annotation strip) — driver call', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { pmIsFromSender: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        // Wake 30 strips trailing parens — runner sees "the PM is from Officia".
+        text: 'the PM is from Officia (uniqueId=1, userType=SHYTALK_OFFICIAL)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Officia');
+  });
+});
+
+describe('Relaunches the app and signs in (composite action)', () => {
+  test('Android: "Hayato on Android relaunches the app and signs in" → androidRelaunchAndSignIn', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidRelaunchAndSignIn: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Hayato on Android relaunches the app and signs in' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato');
+  });
+
+  test('iOS Sim variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosRelaunchAndSignIn: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim relaunches the app and signs in' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia');
+  });
+});
+
+describe('In-app banner about cohort change in <locale>', () => {
+  test('"X\'s Android UI shows the in-app banner about the cohort change in Japanese" → driver call', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsCohortChangeBanner: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Hayato's Android UI shows the in-app banner about the cohort change in Japanese",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ja');
+  });
+
+  test('driver returns false — fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsCohortChangeBanner: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Hayato's Android UI shows the in-app banner about the cohort change in Japanese",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/cohort change/i);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

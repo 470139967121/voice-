@@ -3848,6 +3848,212 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Web Admin tap-with-reason-AND-dobOverride (j04 reject_and_dob_down).
+    // Extends Wake 45's tap-with-reason matcher with the dobOverride
+    // parameter. Driver receives three args: action, reason, override.
+    pattern:
+      /^([A-Z][a-z]+)\s+on Web Admin\s+taps "([^"]+)" with reason "([^"]+)" and dobOverride="([^"]+)"$/,
+    async handler(m, ctx) {
+      const action = m[2];
+      const reason = m[3];
+      const dobOverride = m[4];
+      if (!ctx.webDriver?.webAdminTapWithReasonAndOverride) {
+        return {
+          ok: false,
+          error: 'ctx.webDriver.webAdminTapWithReasonAndOverride not configured',
+        };
+      }
+      await ctx.webDriver.webAdminTapWithReasonAndOverride(action, reason, dobOverride);
+      return { ok: true };
+    },
+  },
+  {
+    // Firestore count by system PM key + addressee uniqueId. Asserts the
+    // named collection has EXACTLY N entries matching both filters. Used
+    // by j04 to verify the admin-PM was created (and only one of it).
+    // In-memory filter — fake-DB lacks .where().
+    pattern:
+      /^the database has (\d+) entries in "([^"]+)" with the system PM key "([^"]+)" addressed to (\d+)$/,
+    async handler(m, ctx) {
+      const expectedCount = parseInt(m[1], 10);
+      const collection = m[2];
+      const systemKey = m[3];
+      const addresseeUid = parseInt(m[4], 10);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.collection(collection).get();
+      const matches = snap.docs.filter((d) => {
+        const data = d.data();
+        return data?.systemKey === systemKey && data?.addresseeUniqueId === addresseeUid;
+      });
+      if (matches.length !== expectedCount) {
+        return {
+          ok: false,
+          error: `${collection} count mismatch for systemKey="${systemKey}" addressee=${addresseeUid}: expected ${expectedCount}, actual ${matches.length}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // PM body locale-+-template check. Driver verifies the PM body matches
+    // the named template in the named locale — does the lookup against
+    // template registry and resolves placeholders before comparing.
+    // Driver method: pmBodyIsTranslationOfTemplate(localeCode, templateName).
+    pattern: /^the PM body is the ([A-Z][a-z]+) translation of the (\w+) template$/,
+    async handler(m, ctx) {
+      const LOCALE_NAME_TO_CODE = {
+        Arabic: 'ar',
+        German: 'de',
+        Spanish: 'es',
+        French: 'fr',
+        Hindi: 'hi',
+        Indonesian: 'id',
+        Italian: 'it',
+        Japanese: 'ja',
+        Khmer: 'km',
+        Korean: 'ko',
+        Dutch: 'nl',
+        Polish: 'pl',
+        Portuguese: 'pt',
+        Russian: 'ru',
+        Swedish: 'sv',
+        Thai: 'th',
+        Turkish: 'tr',
+        Ukrainian: 'uk',
+        Vietnamese: 'vi',
+        Chinese: 'zh',
+      };
+      const localeName = m[1];
+      const templateName = m[2];
+      const code = LOCALE_NAME_TO_CODE[localeName];
+      if (!code) {
+        return { ok: false, error: `unknown locale name "${localeName}"` };
+      }
+      if (!ctx.webDriver?.pmBodyIsTranslationOfTemplate) {
+        return { ok: false, error: 'ctx.webDriver.pmBodyIsTranslationOfTemplate not configured' };
+      }
+      const ok = await ctx.webDriver.pmBodyIsTranslationOfTemplate(code, templateName);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `PM body did not match the ${localeName} (${code}) translation of "${templateName}" template`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // PM is from <sender> assertion. Trailing parens annotation
+    // (e.g. "(uniqueId=1, userType=SHYTALK_OFFICIAL)") is stripped
+    // upstream by Wake 30's stripStepAnnotation, so the matcher sees the
+    // bare form "the PM is from Officia".
+    pattern: /^the PM is from ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const sender = m[1];
+      if (!ctx.webDriver?.pmIsFromSender) {
+        return { ok: false, error: 'ctx.webDriver.pmIsFromSender not configured' };
+      }
+      const ok = await ctx.webDriver.pmIsFromSender(sender);
+      if (!ok) {
+        return { ok: false, error: `PM is not from sender "${sender}"` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Relaunches the app and signs in (Android + iOS Sim). Composite —
+    // driver kills the process, restarts it, and signs in with the
+    // persona's stored credentials (no UI typing in the runner).
+    pattern: /^([A-Z][a-z]+)\s+on (Android|iOS Sim)\s+relaunches the app and signs in$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidRelaunchAndSignIn) {
+          return { ok: false, error: 'ctx.uiDriver.androidRelaunchAndSignIn not configured' };
+        }
+        await ctx.uiDriver.androidRelaunchAndSignIn(name);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosRelaunchAndSignIn) {
+          return { ok: false, error: 'ctx.uiDriver.iosRelaunchAndSignIn not configured' };
+        }
+        await ctx.uiDriver.iosRelaunchAndSignIn(name);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for relaunch step` };
+    },
+  },
+  {
+    // In-app banner about cohort change in <locale>. Driver method
+    // returns truthy iff the banner is currently rendered in the
+    // expected locale. Driver verifies both presence AND that the
+    // banner text matches the locale-specific copy.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Android|iOS Sim) UI shows the in-app banner about the cohort change in ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const LOCALE_NAME_TO_CODE = {
+        Arabic: 'ar',
+        German: 'de',
+        Spanish: 'es',
+        French: 'fr',
+        Hindi: 'hi',
+        Indonesian: 'id',
+        Italian: 'it',
+        Japanese: 'ja',
+        Khmer: 'km',
+        Korean: 'ko',
+        Dutch: 'nl',
+        Polish: 'pl',
+        Portuguese: 'pt',
+        Russian: 'ru',
+        Swedish: 'sv',
+        Thai: 'th',
+        Turkish: 'tr',
+        Ukrainian: 'uk',
+        Vietnamese: 'vi',
+        Chinese: 'zh',
+      };
+      const platform = m[3];
+      const localeName = m[4];
+      const code = LOCALE_NAME_TO_CODE[localeName];
+      if (!code) {
+        return { ok: false, error: `unknown locale name "${localeName}"` };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsCohortChangeBanner) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidShowsCohortChangeBanner not configured',
+          };
+        }
+        const ok = await ctx.uiDriver.androidShowsCohortChangeBanner(code);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `Android UI did not show the cohort change banner in ${localeName} (${code})`,
+          };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsCohortChangeBanner) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsCohortChangeBanner not configured' };
+        }
+        const ok = await ctx.uiDriver.iosShowsCohortChangeBanner(code);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `iOS UI did not show the cohort change banner in ${localeName} (${code})`,
+          };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for cohort-banner step` };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
