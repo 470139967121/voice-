@@ -8502,6 +8502,132 @@ describe('Tap-purchase-and-server-credits composite (Given state setup)', () => 
   });
 });
 
+describe('Persona "is signed in on <plat> at <path>" variant (j07)', () => {
+  test('"Alice [P-02] is signed in on Web Chromium at \\"/discovery\\"" records platform + path', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] is signed in on Web Chromium at "/discovery"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Alice')).toBe('Web Chromium');
+    expect(ctx.personaPaths.get('Alice')).toBe('/discovery');
+  });
+
+  test('Android variant routes correctly', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Adam is signed in on Android at "/feed"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Adam')).toBe('Android');
+    expect(ctx.personaPaths.get('Adam')).toBe('/feed');
+  });
+});
+
+describe('"neither user is following the other" bare relation assertion', () => {
+  test('driver returns true → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { neitherUserIsFollowingTheOther: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'neither user is following the other' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { neitherUserIsFollowingTheOther: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'neither user is following the other' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/following/);
+  });
+});
+
+describe('Bare stats UI assertion', () => {
+  test('"X\'s <plat> UI shows Y\'s stats" → driver verifies stats panel for target', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsStatsForUser: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        // Trailing "(followers, following, beans)" stripped by Wake 30.
+        text: "Adam's Android UI shows Alice's stats (followers, following, beans)",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+
+  test('Web variant routes correctly', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsStatsForUser: spy } });
+    const r = await executeStep({ kind: 'Then', text: "Alice's Web UI shows Adam's stats" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam');
+  });
+});
+
+describe('Selects from followed-users picker', () => {
+  test('"X on Android selects \\"Y\\" from the followed-users picker" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidSelectFromFollowedPicker: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android selects "Alice" from the followed-users picker' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+});
+
+describe('Navigates to conversation thread screen (composite UI assertion)', () => {
+  test('"X\'s <plat> UI navigates to the conversation thread screen with Y" → driver', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidIsOnConversationWith: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Adam's Android UI navigates to the conversation thread screen with Alice",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+});
+
+describe('Opens conversation with persona (action)', () => {
+  test('"X on Web opens the conversation with Y" → webOpenConversation', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webOpenConversation: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web opens the conversation with Adam' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam');
+  });
+
+  test('Android variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidOpenConversation: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Hayato on Android opens the conversation with Alice' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

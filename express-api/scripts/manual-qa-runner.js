@@ -4797,6 +4797,166 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Persona "is signed in on <plat> at <path>" variant (j07).
+    // Different verb order from Wake 45/50's "is on X signed in".
+    // Records persona platform + path on the tracking maps.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is signed in on\s+(Web Chromium|Web Safari|Web|Android|iOS Sim)\s+at "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const urlPath = m[4];
+      if (!ctx.personaPlatforms) ctx.personaPlatforms = new Map();
+      if (!ctx.personaPaths) ctx.personaPaths = new Map();
+      ctx.personaPlatforms.set(name, platform);
+      ctx.personaPaths.set(name, urlPath);
+      return { ok: true };
+    },
+  },
+  {
+    // "neither user is following the other" bare relation assertion
+    // (j07 pre-condition). Driver verifies that neither of the two
+    // most-recent personas-on-platform has the other in their
+    // followingIds.
+    pattern: /^neither user is following the other$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.neitherUserIsFollowingTheOther) {
+        return { ok: false, error: 'ctx.webDriver.neitherUserIsFollowingTheOther not configured' };
+      }
+      const ok = await ctx.webDriver.neitherUserIsFollowingTheOther();
+      if (!ok) {
+        return {
+          ok: false,
+          error: 'precondition failed: at least one user is following the other',
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Bare stats UI assertion. Trailing "(followers, following, beans)"
+    // descriptive annotation stripped by Wake 30. Platform-dispatch;
+    // driver verifies the stats panel is rendered for the target user.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows ([A-Z][a-z]+)'s stats$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const target = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webShowsStatsForUser) {
+          return { ok: false, error: 'ctx.webDriver.webShowsStatsForUser not configured' };
+        }
+        const ok = await ctx.webDriver.webShowsStatsForUser(target);
+        if (!ok) return { ok: false, error: `Web UI did not show stats for ${target}` };
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsStatsForUser) {
+          return { ok: false, error: 'ctx.uiDriver.androidShowsStatsForUser not configured' };
+        }
+        const ok = await ctx.uiDriver.androidShowsStatsForUser(target);
+        if (!ok) return { ok: false, error: `Android UI did not show stats for ${target}` };
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsStatsForUser) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsStatsForUser not configured' };
+        }
+        const ok = await ctx.uiDriver.iosShowsStatsForUser(target);
+        if (!ok) return { ok: false, error: `iOS UI did not show stats for ${target}` };
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for stats step` };
+    },
+  },
+  {
+    // Selects from followed-users picker (j07 PM compose flow).
+    // Driver opens the followed-users picker AND selects the named
+    // entry. Currently Android only — corpus doesn't have Web/iOS
+    // variants of this exact phrasing.
+    pattern: /^([A-Z][a-z]+)\s+on Android\s+selects "([^"]+)" from the followed-users picker$/,
+    async handler(m, ctx) {
+      const target = m[2];
+      if (!ctx.uiDriver?.androidSelectFromFollowedPicker) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver.androidSelectFromFollowedPicker not configured',
+        };
+      }
+      await ctx.uiDriver.androidSelectFromFollowedPicker(target);
+      return { ok: true };
+    },
+  },
+  {
+    // Navigates to conversation thread screen (composite UI assertion).
+    // Driver verifies the persona's current screen is the conversation
+    // thread AND the other party is the named target. Platform-dispatch.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI navigates to the conversation thread screen with ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const target = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webIsOnConversationWith) {
+          return { ok: false, error: 'ctx.webDriver.webIsOnConversationWith not configured' };
+        }
+        const ok = await ctx.webDriver.webIsOnConversationWith(target);
+        if (!ok) return { ok: false, error: `Web UI is not on conversation with ${target}` };
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidIsOnConversationWith) {
+          return { ok: false, error: 'ctx.uiDriver.androidIsOnConversationWith not configured' };
+        }
+        const ok = await ctx.uiDriver.androidIsOnConversationWith(target);
+        if (!ok) return { ok: false, error: `Android UI is not on conversation with ${target}` };
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosIsOnConversationWith) {
+          return { ok: false, error: 'ctx.uiDriver.iosIsOnConversationWith not configured' };
+        }
+        const ok = await ctx.uiDriver.iosIsOnConversationWith(target);
+        if (!ok) return { ok: false, error: `iOS UI is not on conversation with ${target}` };
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for conversation-thread step` };
+    },
+  },
+  {
+    // Opens the conversation with persona (action). Platform-dispatch;
+    // driver navigates to the existing conversation thread with the
+    // named target user.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+opens the conversation with ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const target = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webOpenConversation) {
+          return { ok: false, error: 'ctx.webDriver.webOpenConversation not configured' };
+        }
+        await ctx.webDriver.webOpenConversation(target);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidOpenConversation) {
+          return { ok: false, error: 'ctx.uiDriver.androidOpenConversation not configured' };
+        }
+        await ctx.uiDriver.androidOpenConversation(target);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosOpenConversation) {
+          return { ok: false, error: 'ctx.uiDriver.iosOpenConversation not configured' };
+        }
+        await ctx.uiDriver.iosOpenConversation(target);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for open-conversation step` };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
