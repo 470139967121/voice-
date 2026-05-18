@@ -768,6 +768,61 @@ const matchers = [
     },
   },
   {
+    // `the response from <path> has <field>="<value>" in every row`
+    // OR
+    // `the response from <path> has "<field>=<value>" in every row`
+    //
+    // Path token is descriptive (lastResponse.body is what's actually
+    // checked). Body is polymorphic: tries body-as-array first, falls
+    // back to the first Array-valued property of an object body.
+    //
+    // Empty array → vacuously true. If author wants "at least one row",
+    // they should use the N-result variant of this matcher.
+    pattern: /^the response from (\S+) has (?:"(\w+)=([^"]+)"|(\w+)="([^"]+)") in every row$/,
+    async handler(m, ctx) {
+      if (!ctx.lastResponse?.body) {
+        return { ok: false, error: 'no prior response body to inspect — When step missing?' };
+      }
+      // Either capture pair: m[2,3] for "field=value" quoted form,
+      // m[4,5] for field="value" unquoted-field form.
+      const field = m[2] || m[4];
+      const rawValue = m[3] || m[5];
+      const expected = parseLiteral(rawValue);
+      const body = ctx.lastResponse.body;
+      let rows;
+      if (Array.isArray(body)) {
+        rows = body;
+      } else if (body && typeof body === 'object') {
+        // Heuristic: first Array-valued property of the body.
+        const arrayProp = Object.entries(body).find(([, v]) => Array.isArray(v));
+        if (!arrayProp) {
+          return {
+            ok: false,
+            error: 'response body has no array property to iterate as rows',
+          };
+        }
+        rows = arrayProp[1];
+      } else {
+        return { ok: false, error: 'response body is not an array or object' };
+      }
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const actual = row?.[field];
+        // Coerce on either side: "18" should match 18 because parseLiteral
+        // normalizes the expected, but the row's actual value type is up
+        // to the API. Treat string-vs-number as equivalent for safety.
+        const match = actual === expected || String(actual) === String(expected);
+        if (!match) {
+          return {
+            ok: false,
+            error: `row[${i}].${field} was ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)} (every row must match)`,
+          };
+        }
+      }
+      return { ok: true };
+    },
+  },
+  {
     // `the response from <path> has <N> results`
     //
     // Tightly bound to the prior request's path so a misplaced When step

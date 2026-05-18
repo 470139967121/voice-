@@ -4013,6 +4013,153 @@ describe('No-entry-added-since matcher (Then no entry is added to "X" since "Y")
   });
 });
 
+describe('Response-from-path in-every-row matcher (Then the response from <path> has <field>="<value>" in every row)', () => {
+  test('all rows have matching field (unquoted-field syntax) — ok:true', async () => {
+    const ctx = makeCtx({
+      lastResponse: {
+        status: 200,
+        body: [
+          { id: 1, cohort: 'adult' },
+          { id: 2, cohort: 'adult' },
+          { id: 3, cohort: 'adult' },
+        ],
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards has cohort="adult" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('all rows have matching field (quoted-expression syntax `"field=value"`) — ok:true', async () => {
+    const ctx = makeCtx({
+      lastResponse: {
+        status: 200,
+        body: [
+          { id: 1, cohort: 'minor' },
+          { id: 2, cohort: 'minor' },
+        ],
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards has "cohort=minor" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('one row mismatches — assertion fails with row index in error', async () => {
+    const ctx = makeCtx({
+      lastResponse: {
+        status: 200,
+        body: [
+          { id: 1, cohort: 'adult' },
+          { id: 2, cohort: 'minor' }, // mismatch
+          { id: 3, cohort: 'adult' },
+        ],
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards has cohort="adult" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/minor/);
+    expect(r.error).toMatch(/cohort/);
+  });
+
+  test('body is object with first Array property — uses that array (e.g. {users: [...]})', async () => {
+    const ctx = makeCtx({
+      lastResponse: {
+        status: 200,
+        body: {
+          users: [
+            { id: 1, cohort: 'adult' },
+            { id: 2, cohort: 'adult' },
+          ],
+        },
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/users/search has cohort="adult" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('empty array — assertion holds vacuously (no rows means no mismatches)', async () => {
+    // Author intent: "every row matches" with zero rows is trivially true.
+    // If the author wanted "at least one row matches", a different assertion
+    // is needed (the existing N-result form).
+    const ctx = makeCtx({ lastResponse: { status: 200, body: [] } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards has cohort="adult" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no prior response — loud error', async () => {
+    const ctx = makeCtx(); // no lastResponse
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards has cohort="adult" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no.*response|prior request/i);
+  });
+
+  test('body has no array — loud error pointing at the body shape', async () => {
+    const ctx = makeCtx({
+      lastResponse: { status: 200, body: { id: 'just-an-id', name: 'no-array-here' } },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards has cohort="adult" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/array|rows/i);
+  });
+
+  test('numeric value coerces correctly (e.g. age=18)', async () => {
+    // parseLiteral handles number coercion; the matcher should compare
+    // 18 (number) against row.age (number), not the string "18".
+    const ctx = makeCtx({
+      lastResponse: {
+        status: 200,
+        body: [{ age: 18 }, { age: 18 }],
+      },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response from /api/users has age="18" in every row' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
