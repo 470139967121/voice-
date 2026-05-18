@@ -4667,9 +4667,11 @@ const matchers = [
   {
     // Past-tense purchase Given (j06 — state set up by a prior
     // successful purchase). Trailing parens "(shyCoins now N)"
-    // stripped by Wake 30. Driver verifies the persona's purchase
-    // history has a successful entry with the given receipt ID.
-    pattern: /^([A-Z][a-z]+)\s+purchased "([^"]+)" with receipt "([^"]+)" successfully$/,
+    // stripped by Wake 30. The "successfully" adverb is optional:
+    // both phrasings ("purchased X with receipt Y" and ".... Y
+    // successfully") indicate the same state — a completed purchase
+    // — and route to the same driver method.
+    pattern: /^([A-Z][a-z]+)\s+purchased "([^"]+)" with receipt "([^"]+)"(?: successfully)?$/,
     async handler(m, ctx) {
       const name = m[1];
       const packageId = m[2];
@@ -4702,6 +4704,96 @@ const matchers = [
         };
       }
       await ctx.webDriver.simulateNetworkDropBeforeResponse(name);
+      return { ok: true };
+    },
+  },
+  {
+    // Bare Android API POST. Captures endpoint + optional "with <rest>"
+    // suffix as opaque string. Driver parses the rest to extract
+    // productId/receipt/etc. params (or notes "no productId" for
+    // negative-test scenarios). Single matcher absorbs all j06 POST
+    // variants — saves writing five near-identical matchers.
+    //
+    // Regex linear: `.+$` greedy + anchored to end-of-string. Input
+    // is author-controlled (feature files). Safe.
+    // eslint-disable-next-line sonarjs/slow-regex
+    pattern: /^([A-Z][a-z]+)\s+on Android POSTs (\/api\/[\w/-]+)(?:\s+(.+))?$/,
+    async handler(m, ctx) {
+      const endpoint = m[2];
+      const rest = m[3] || '';
+      if (!ctx.uiDriver?.androidApiPost) {
+        return { ok: false, error: 'ctx.uiDriver.androidApiPost not configured' };
+      }
+      await ctx.uiDriver.androidApiPost(endpoint, rest);
+      return { ok: true };
+    },
+  },
+  {
+    // Retry-same-purchase composite (j06 recovery flow). Corpus step
+    // has `(same receipt)` MID-STEP, which Wake 30 doesn't strip
+    // (it strips trailing parens only). Allow optional mid-step
+    // parens after "purchase". Driver re-submits the most recent
+    // purchase request using the same receipt ID.
+    pattern:
+      /^([A-Z][a-z]+)\s+on Android retries the same purchase(?:\s+\([^()]*\))?\s+once network restores$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.uiDriver?.androidRetrySamePurchase) {
+        return { ok: false, error: 'ctx.uiDriver.androidRetrySamePurchase not configured' };
+      }
+      await ctx.uiDriver.androidRetrySamePurchase(name);
+      return { ok: true };
+    },
+  },
+  {
+    // Receipt-mismatch state-seed (j06 receipt forgery test). Sets up
+    // the test fixture so the next purchase submission would carry a
+    // receipt signed for one product but a submitted productId for a
+    // different one — used to verify the server rejects mismatched
+    // receipts.
+    pattern:
+      /^the receipt "([^"]+)" is signed for "([^"]+)" but ([A-Z][a-z]+) submits productId="([^"]+)"$/,
+    async handler(m, ctx) {
+      const receipt = m[1];
+      const signedFor = m[2];
+      const submitter = m[3];
+      const submittedProductId = m[4];
+      if (!ctx.webDriver?.setupReceiptMismatch) {
+        return { ok: false, error: 'ctx.webDriver.setupReceiptMismatch not configured' };
+      }
+      await ctx.webDriver.setupReceiptMismatch(receipt, signedFor, submitter, submittedProductId);
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin processes refund for receipt (j06 admin recovery). The
+    // refund flow reverses the coin credit AND records the admin
+    // action; both steps are driver-internal.
+    pattern: /^([A-Z][a-z]+)\s+on Web Admin processes a refund for receipt "([^"]+)"$/,
+    async handler(m, ctx) {
+      const receipt = m[2];
+      if (!ctx.webDriver?.webAdminProcessRefund) {
+        return { ok: false, error: 'ctx.webDriver.webAdminProcessRefund not configured' };
+      }
+      await ctx.webDriver.webAdminProcessRefund(receipt);
+      return { ok: true };
+    },
+  },
+  {
+    // Tap-purchase-and-server-credits composite Given (j06 state
+    // setup). Simulates a SUCCESSFUL purchase that credited the user —
+    // useful when a scenario needs the post-credit state without
+    // running the full POST + receipt validation chain. Driver writes
+    // the balance and transaction doc directly.
+    pattern:
+      /^([A-Z][a-z]+)\s+taps purchase and the server credits coins=(\d+) \+ writes transaction$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const coins = parseInt(m[2], 10);
+      if (!ctx.webDriver?.simulatePurchaseCredit) {
+        return { ok: false, error: 'ctx.webDriver.simulatePurchaseCredit not configured' };
+      }
+      await ctx.webDriver.simulatePurchaseCredit(name, coins);
       return { ok: true };
     },
   },

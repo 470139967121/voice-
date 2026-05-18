@@ -8395,6 +8395,113 @@ describe('Network drop simulation', () => {
   });
 });
 
+describe('Past-tense purchase matcher generalised (optional "successfully")', () => {
+  test('"X purchased \\"Y\\" with receipt \\"Z\\"" without successfully — driver call', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { hasPurchasedSuccessfully: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice purchased "coins-1000" with receipt "receipt-R3"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'coins-1000', 'receipt-R3');
+  });
+
+  test('with "successfully" still works (regression-guard from Wake 56)', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { hasPurchasedSuccessfully: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice purchased "coins-1000" with receipt "receipt-R1" successfully',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'coins-1000', 'receipt-R1');
+  });
+});
+
+describe('Bare API POST matcher (Android)', () => {
+  test('"X on Android POSTs /api/X" → androidApiPost(endpoint, "")', async () => {
+    const spy = jest.fn(async () => ({ status: 200 }));
+    const ctx = makeCtx({ uiDriver: { androidApiPost: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Android POSTs /api/economy/purchase' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/api/economy/purchase', '');
+  });
+
+  // Note: "POSTs X with productId=..." and "POSTs X with no productId"
+  // are handled by the pre-existing POSTs matcher at line ~530 (Wake 1
+  // era), which requires an active session and uses parseKvPairs.
+  // My new matcher fills only the bare-POSTs gap (no `with` clause).
+});
+
+describe('Retry-same-purchase composite (Wake 30 strip)', () => {
+  test('"X on Android retries the same purchase once network restores" (after parens strip) → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidRetrySamePurchase: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        // Trailing "(same receipt)" stripped by Wake 30 — runner sees the bare form.
+        text: 'Alice on Android retries the same purchase (same receipt) once network restores',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+});
+
+describe('Receipt-mismatch state-seed (j06)', () => {
+  test('"the receipt \\"X\\" is signed for \\"Y\\" but Alice submits productId=\\"Z\\"" → driver state setup', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { setupReceiptMismatch: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the receipt "receipt-R2" is signed for "coins-500" but Alice submits productId="coins-1000"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('receipt-R2', 'coins-500', 'Alice', 'coins-1000');
+  });
+});
+
+describe('Web Admin processes refund', () => {
+  test('"X on Web Admin processes a refund for receipt \\"Y\\"" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminProcessRefund: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin processes a refund for receipt "receipt-R3"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('receipt-R3');
+  });
+});
+
+describe('Tap-purchase-and-server-credits composite (Given state setup)', () => {
+  test('"Alice taps purchase and the server credits coins=N + writes transaction" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { simulatePurchaseCredit: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice taps purchase and the server credits coins=6000 + writes transaction',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 6000);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
