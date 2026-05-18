@@ -7303,6 +7303,193 @@ describe('Browser notification permission grant', () => {
   });
 });
 
+describe('Web Admin: opens unquoted tab name (slug form)', () => {
+  test('"Greta on Web Admin opens the age-verification tab" → webAdminOpenTab', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminOpenTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the age-verification tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('age-verification');
+  });
+
+  test('"opens the suspension-appeals tab" routes the same way', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminOpenTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the suspension-appeals tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('suspension-appeals');
+  });
+
+  test('quoted-tab variant (Wake 45) still routes through webAdminOpenTab too', async () => {
+    // Both quoted (Wake 45) and unquoted (Wake 51) variants delegate to
+    // webAdminOpenTab — they're disjoint by regex shape but converge on
+    // the same driver method. Quote inclusion is the corpus author's
+    // choice, not a different action.
+    const spyQuoted = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminOpenTab: spyQuoted } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the "/admin#age-verification" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spyQuoted).toHaveBeenCalledWith('/admin#age-verification');
+  });
+});
+
+describe("Web Admin: taps action on Name's submission (name-anchored)", () => {
+  test('"taps \\"review\\" on Hayato\'s submission" → webAdminActOnSubmissionByName', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmissionByName: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin taps "review" on Hayato\'s submission' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('review', 'Hayato');
+  });
+
+  test('"taps \\"approve\\" on Alice\'s submission" routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmissionByName: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin taps "approve" on Alice\'s submission' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('approve', 'Alice');
+  });
+});
+
+describe('Web Admin: UI shows the ID image (bare element-visible)', () => {
+  test('webAdminShowsIdImage() returns true — ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsIdImage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI shows the ID image" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('webAdminShowsIdImage() returns false — fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webAdminShowsIdImage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI shows the ID image" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/ID image/);
+  });
+});
+
+describe('Web Admin: UI shows parsed DOB candidate (quoted text)', () => {
+  test('dump contains the DOB string — ok', async () => {
+    const dump = '<div class="dob-candidate">2011-05-12</div>';
+    const ctx = makeCtx({ webDriver: { webUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Greta\'s Web Admin UI shows the parsed DOB candidate "2011-05-12"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('dump does NOT contain the DOB string — fail', async () => {
+    const dump = '<div class="dob-candidate">2004-01-01</div>';
+    const ctx = makeCtx({ webDriver: { webUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Greta\'s Web Admin UI shows the parsed DOB candidate "2011-05-12"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/2011-05-12/);
+  });
+});
+
+describe('User card tap matcher (iOS Sim + Android + Web)', () => {
+  test('iOS Sim: "Mia on iOS Sim taps Marcus\'s user card" → iosTapUserCard', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosTapUserCard: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Mia on iOS Sim taps Marcus's user card" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus');
+  });
+
+  test('Android: existing matcher (older signature) wins by first-match-wins, passes (tapper, target)', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidTapUserCard: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Hayato on Android taps Alice's user card" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // The pre-existing Android-specific matcher (line ~2860) catches this
+    // first and calls with (tapper, target). My new platform-dispatch
+    // matcher only fills in iOS Sim + Web gaps.
+    expect(spy).toHaveBeenCalledWith('Hayato', 'Alice');
+  });
+
+  test('Web variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTapUserCard: spy } });
+    const r = await executeStep({ kind: 'When', text: "Alice on Web taps Selma's user card" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma');
+  });
+});
+
+describe('User-doc state-seed with array field (followingIds=[...])', () => {
+  test('"Alice\'s user doc was manipulated to have followingIds=[X]" sets the array', async () => {
+    // Alice P-02 = 50000010 per registry
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: "Alice's user doc was manipulated to have followingIds=[50000020]",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].followingIds).toEqual([50000020]);
+  });
+
+  test('multi-element array', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: "Alice's user doc was manipulated to have followingIds=[50000020, 50000030]",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].followingIds).toEqual([50000020, 50000030]);
+  });
+
+  test('empty array', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: "Alice's user doc was manipulated to have followingIds=[]" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].followingIds).toEqual([]);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

@@ -3718,6 +3718,136 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Web Admin: open unquoted tab name (slug form). Wake 45's quoted
+    // matcher handles `opens the "X" tab`; this handles bare-slug
+    // `opens the X-Y tab` (kebab-case identifier). Disjoint by
+    // structure — the kebab form excludes `"`.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web Admin\s+opens the ([a-z][\w-]*) tab$/,
+    async handler(m, ctx) {
+      const tabName = m[3];
+      if (!ctx.webDriver?.webAdminOpenTab) {
+        return { ok: false, error: 'ctx.webDriver.webAdminOpenTab not configured' };
+      }
+      await ctx.webDriver.webAdminOpenTab(tabName);
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin: act on a submission identified by the submitter's NAME
+    // (not uniqueId). Wake 46 handles `submission for "<uid>"` (quoted
+    // uid or {varName}); this handles `Name's submission` (possessive).
+    pattern: /^([A-Z][a-z]+)\s+on Web Admin\s+taps "([^"]+)" on ([A-Z][a-z]+)'s submission$/,
+    async handler(m, ctx) {
+      const action = m[2];
+      const submitter = m[3];
+      if (!ctx.webDriver?.webAdminActOnSubmissionByName) {
+        return { ok: false, error: 'ctx.webDriver.webAdminActOnSubmissionByName not configured' };
+      }
+      await ctx.webDriver.webAdminActOnSubmissionByName(action, submitter);
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin: bare element-visible assertion for the ID image.
+    // Driver method returns truthy iff the image is currently rendered
+    // in the admin review pane.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web Admin UI shows the ID image$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webAdminShowsIdImage) {
+        return { ok: false, error: 'ctx.webDriver.webAdminShowsIdImage not configured' };
+      }
+      const shown = await ctx.webDriver.webAdminShowsIdImage();
+      if (!shown) {
+        return {
+          ok: false,
+          error: 'Web Admin UI should show the ID image but driver reports it is hidden',
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin: UI shows the parsed DOB candidate (quoted text).
+    // After OCR/admin-parsing extracts a DOB candidate from the ID
+    // image, the admin UI displays it for review. Substring check on
+    // the Web UI dump.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web Admin UI shows the parsed DOB candidate "([^"]+)"$/,
+    async handler(m, ctx) {
+      const dob = m[3];
+      if (!ctx.webDriver?.webUiDump) {
+        return { ok: false, error: 'ctx.webDriver.webUiDump not configured' };
+      }
+      const dump = await ctx.webDriver.webUiDump();
+      if (!dump.includes(dob)) {
+        return {
+          ok: false,
+          error: `Web Admin UI dump did not contain parsed DOB candidate "${dob}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // User card tap (discovery/profile-list variant of Wake 44's
+    // room-card matcher). Platform-dispatch.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+taps ([A-Z][a-z]+)'s user card$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const owner = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webTapUserCard) {
+          return { ok: false, error: 'ctx.webDriver.webTapUserCard not configured' };
+        }
+        await ctx.webDriver.webTapUserCard(owner);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidTapUserCard) {
+          return { ok: false, error: 'ctx.uiDriver.androidTapUserCard not configured' };
+        }
+        await ctx.uiDriver.androidTapUserCard(owner);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosTapUserCard) {
+          return { ok: false, error: 'ctx.uiDriver.iosTapUserCard not configured' };
+        }
+        await ctx.uiDriver.iosTapUserCard(owner);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for user-card tap step` };
+    },
+  },
+  {
+    // User-doc state-seed with array field. "manipulated" verb signals
+    // the value is NOT from normal API flow — useful for cross-cohort
+    // stale-follow scenarios. Writes via merge so other fields stay.
+    pattern: /^([A-Z][a-z]+)'s user doc was manipulated to have (\w+)=\[([^\]]*)\]$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const fieldName = m[2];
+      const rawArray = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const trimmed = rawArray.trim();
+      const elements =
+        trimmed === ''
+          ? []
+          : trimmed.split(',').map((s) => {
+              const n = parseInt(s.trim(), 10);
+              return Number.isNaN(n) ? s.trim() : n;
+            });
+      await ctx.db.doc(`users/${p.uniqueId}`).set({ [fieldName]: elements }, { merge: true });
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
