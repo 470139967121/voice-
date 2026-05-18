@@ -4687,6 +4687,63 @@ describe('Android search composite matchers (searches "X" in screen / types "X" 
   });
 });
 
+describe('Android kill-and-relaunch matcher (When <P> on Android kills and relaunches the app)', () => {
+  test('calls androidKillAndRelaunch with the persona name (for driver logging)', async () => {
+    const killSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidKillAndRelaunch: killSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android kills and relaunches the app' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(killSpy).toHaveBeenCalledWith('Adam');
+  });
+
+  test('P-NN annotation form handled correctly', async () => {
+    const killSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidKillAndRelaunch: killSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul [P-08] on Android kills and relaunches the app' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(killSpy).toHaveBeenCalledWith('Raul');
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android kills and relaunches the app' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing androidKillAndRelaunch driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android kills and relaunches the app' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidKillAndRelaunch/);
+  });
+
+  test('driver throws — bubbles up via executeStep wrapper', async () => {
+    const killSpy = jest.fn(async () => {
+      throw new Error('adb: device offline');
+    });
+    const ctx = makeCtx({ uiDriver: { androidKillAndRelaunch: killSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android kills and relaunches the app' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/adb: device offline/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

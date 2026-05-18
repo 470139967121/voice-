@@ -2007,6 +2007,31 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Android app kill + relaunch. Used in token-refresh scenarios where
+    // the test needs a fresh app process to pick up new claims after a
+    // server-side cohort flip (j06, j12).
+    //
+    // Driver implementation: `adb shell am force-stop <pkg>` then
+    // `am start -n <pkg>/.MainActivity`, then poll for activity ready.
+    // The matcher just delegates — process management lives in the driver.
+    //
+    // Persona name is passed to the driver for logging/scoping. The
+    // driver implementation may use it (e.g. re-auth on relaunch) or
+    // ignore it.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+kills and relaunches the app$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (kill+relaunch for ${name})` };
+      }
+      if (!ctx.uiDriver.androidKillAndRelaunch) {
+        return { ok: false, error: 'ctx.uiDriver.androidKillAndRelaunch not configured' };
+      }
+      await ctx.uiDriver.androidKillAndRelaunch(name);
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so
