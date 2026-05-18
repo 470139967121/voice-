@@ -2316,6 +2316,84 @@ const matchers = [
     },
   },
   {
+    // Cross-cohort containment check. Iterates ctx.lastQueryResult.docs
+    // (populated by a prior `When a query is run for every "users/*"`
+    // step), reads the named array field on each doc, and verifies no
+    // referenced user has the disallowed cohort.
+    //
+    // Used in j19 to verify OSA-#17 cohort segregation: adult-cohort
+    // users have no followingIds/followerIds pointing to minor-cohort
+    // users (and vice versa).
+    //
+    // Missing user-doc lookups are SILENTLY SKIPPED — the matcher tests
+    // cohort containment, not data integrity. A separate matcher would
+    // catch dangling-reference bugs.
+    pattern: /^no doc has any entry in "([^"]+)" whose (target|source) user has cohort="([^"]+)"$/,
+    async handler(m, ctx) {
+      const field = m[1];
+      const disallowedCohort = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      if (!ctx.lastQueryResult || !Array.isArray(ctx.lastQueryResult.docs)) {
+        return {
+          ok: false,
+          error:
+            'ctx.lastQueryResult.docs missing — run a `When a query is run for every ...` step first',
+        };
+      }
+      const offenders = [];
+      for (const doc of ctx.lastQueryResult.docs) {
+        const data = doc.data();
+        const ids = data?.[field];
+        if (!Array.isArray(ids)) continue;
+        for (const uid of ids) {
+          const userSnap = await ctx.db.doc(`users/${uid}`).get();
+          if (!userSnap.exists) continue; // dangling reference — skipped
+          const cohort = userSnap.data()?.cohort;
+          if (cohort === disallowedCohort) {
+            offenders.push({ uid, cohort });
+          }
+        }
+      }
+      if (offenders.length > 0) {
+        const summary = offenders.map((o) => `${o.uid} (cohort=${o.cohort})`).join(', ');
+        return {
+          ok: false,
+          error: `field "${field}" has ${offenders.length} entries with disallowed cohort="${disallowedCohort}": ${summary}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Web translation assertion. Driver method
+    // webShowsTranslationOf(locale, englishKey) returns truthy/falsy
+    // after looking up the translation file AND checking the DOM
+    // contains the translated string. Locale is hardcoded to 'ar' for
+    // this matcher; future locale-parametric form can be added if the
+    // corpus expands.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web UI shows Arabic translation of "([^"]+)"$/,
+    async handler(m, ctx) {
+      const englishKey = m[3];
+      if (!ctx.webDriver) {
+        return {
+          ok: false,
+          error: `Web step requires ctx.webDriver (translation of "${englishKey}")`,
+        };
+      }
+      if (!ctx.webDriver.webShowsTranslationOf) {
+        return { ok: false, error: 'ctx.webDriver.webShowsTranslationOf not configured' };
+      }
+      const ok = await ctx.webDriver.webShowsTranslationOf('ar', englishKey);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `Web UI did not show the Arabic (ar) translation of "${englishKey}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
     // Web text-content assertion. Substring match on `webUiDump()` —
     // production driver returns the document.body.innerText or similar
     // text-only view of the page. Trailing descriptive context (e.g.

@@ -5895,6 +5895,175 @@ describe('Android event-invite tap matcher (When <P> on Android taps "X" on the 
   });
 });
 
+describe('Cross-cohort Firestore matcher (Then no doc has any entry in "X" whose target|source user has cohort="Y")', () => {
+  function makeUserLookupDb(users) {
+    // ctx.db.doc("users/<uid>").get() resolves to { exists, data() }.
+    return {
+      doc: (docPath) => ({
+        get: async () => {
+          // Match `users/<uid>` paths.
+          const match = /^users\/(.+)$/.exec(docPath);
+          if (!match) return { exists: false, data: () => undefined };
+          const u = users[match[1]];
+          return { exists: u !== undefined, data: () => u };
+        },
+      }),
+    };
+  }
+
+  test('no doc has a target with the disallowed cohort — ok:true', async () => {
+    const db = makeUserLookupDb({
+      50000010: { cohort: 'adult' },
+      50000020: { cohort: 'adult' },
+    });
+    const ctx = makeCtx({
+      db,
+      lastQueryResult: {
+        docs: [{ exists: true, data: () => ({ followingIds: [50000010, 50000020] }) }],
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no doc has any entry in "followingIds" whose target user has cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('a doc has a target with the disallowed cohort — fails with offender details', async () => {
+    const db = makeUserLookupDb({
+      50000010: { cohort: 'adult' },
+      90000099: { cohort: 'minor' },
+    });
+    const ctx = makeCtx({
+      db,
+      lastQueryResult: {
+        docs: [{ exists: true, data: () => ({ followingIds: [50000010, 90000099] }) }],
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no doc has any entry in "followingIds" whose target user has cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/90000099/);
+    expect(r.error).toMatch(/minor/);
+  });
+
+  test('source variant routes through the same logic', async () => {
+    const db = makeUserLookupDb({
+      50000010: { cohort: 'adult' },
+    });
+    const ctx = makeCtx({
+      db,
+      lastQueryResult: {
+        docs: [{ exists: true, data: () => ({ followerIds: [50000010] }) }],
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no doc has any entry in "followerIds" whose source user has cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no prior query result — loud error pointing at the missing When step', async () => {
+    const db = makeUserLookupDb({});
+    const ctx = makeCtx({ db });
+    delete ctx.lastQueryResult;
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no doc has any entry in "followingIds" whose target user has cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/lastQueryResult|query/i);
+  });
+
+  test('empty doc field (no entries) is vacuously ok', async () => {
+    const db = makeUserLookupDb({});
+    const ctx = makeCtx({
+      db,
+      lastQueryResult: { docs: [{ exists: true, data: () => ({ followingIds: [] }) }] },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no doc has any entry in "followingIds" whose target user has cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('referenced user-doc missing — silently skipped (defensive)', async () => {
+    // If a uid points to a non-existent user (data inconsistency), the
+    // matcher can't determine cohort. Treat as "not the disallowed cohort"
+    // rather than fail loudly — the migration this matcher tests is about
+    // cohort containment, not data integrity.
+    const db = makeUserLookupDb({});
+    const ctx = makeCtx({
+      db,
+      lastQueryResult: {
+        docs: [{ exists: true, data: () => ({ followingIds: [99999999] }) }],
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no doc has any entry in "followingIds" whose target user has cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe('Web Arabic-translation matcher (Then <P>\'s Web UI shows Arabic translation of "X")', () => {
+  test('driver verifies translation and returns ok:true', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsTranslationOf: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Layla\'s Web UI shows Arabic translation of "ShyCoins"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ar', 'ShyCoins');
+  });
+
+  test('driver returns false — fails with the key in error', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsTranslationOf: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Layla\'s Web UI shows Arabic translation of "Notifications"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Notifications/);
+    expect(r.error).toMatch(/ar/i);
+  });
+
+  test('missing driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Layla\'s Web UI shows Arabic translation of "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webShowsTranslationOf/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
