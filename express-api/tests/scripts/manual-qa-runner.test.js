@@ -6471,6 +6471,157 @@ describe('Open <pronoun> <screen> generalization (the | his | her | their)', () 
   });
 });
 
+describe('Send gift with coin-cost matcher (j16 economy verification)', () => {
+  test('"Alice on Web sends \\"crown\\" (500 coins) to Selma" → webSendGift', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webSendGift: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web sends "crown" (500 coins) to Selma' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('crown', 500, 'Selma');
+  });
+
+  test('"Theo on Android sends \\"rose\\" (10 coins) to Selma" → androidSendGift', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidSendGift: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android sends "rose" (10 coins) to Selma' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('rose', 10, 'Selma');
+  });
+
+  test('iOS Sim variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosSendGift: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim sends "rose" (10 coins) to Selma' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('rose', 10, 'Selma');
+  });
+});
+
+describe('Picks DOB in picker matcher (j01 Android + j02 iOS Sim)', () => {
+  test('Android: "Adam on Android picks DOB \\"2004-01-01\\" in \\"signup_dobPicker\\"" → androidPickDOB', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidPickDOB: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android picks DOB "2004-01-01" in "signup_dobPicker"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('2004-01-01', 'signup_dobPicker');
+  });
+
+  test('iOS Sim: "Mia on iOS Sim picks DOB \\"2010-08-20\\" in \\"signup_dobPicker\\"" → iosPickDOB', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosPickDOB: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim picks DOB "2010-08-20" in "signup_dobPicker"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('2010-08-20', 'signup_dobPicker');
+  });
+});
+
+describe('Android age-verification matchers (j01 Adam)', () => {
+  test('"picks ID type \\"passport\\"" → androidPickIdType', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidPickIdType: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android picks ID type "passport"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('passport');
+  });
+
+  test('"selects test image \\"X.jpg\\" from the gallery" → androidSelectGalleryImage', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidSelectGalleryImage: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Adam on Android selects test image "test-passport-adult.jpg" from the gallery',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('test-passport-adult.jpg');
+  });
+
+  test('"signs up with DOB \\"X\\" and accepts legal" → androidSignupWithDOB', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidSignupWithDOB: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Adam on Android signs up with DOB "2004-01-01" and accepts legal',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('2004-01-01');
+  });
+});
+
+describe('Web Admin age-verification matchers (j01 Greta)', () => {
+  test('"refreshes the age-verification tab" → webAdminRefreshAgeVerification', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminRefreshAgeVerification: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin refreshes the age-verification tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('"taps \\"approve\\" on the submission for \\"{newUniqueId}\\"" → webAdminActOnSubmission', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmission: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "approve" on the submission for "{newUniqueId}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('approve', '{newUniqueId}');
+  });
+
+  test('"taps \\"reject\\" on the submission for \\"50000010\\"" — literal uid also accepted', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmission: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "reject" on the submission for "50000010"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('reject', '50000010');
+  });
+
+  test('missing driver method for refresh — clear error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin refreshes the age-verification tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminRefreshAgeVerification/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

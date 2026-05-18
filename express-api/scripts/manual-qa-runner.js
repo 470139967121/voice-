@@ -3047,6 +3047,145 @@ const matchers = [
       return { ok: false, error: `unknown platform "${platform}" for confirm step` };
     },
   },
+  {
+    // Send gift with coin cost (j16 economy verification).
+    // Platform-dispatch. Drivers receive gift name, coin cost, recipient
+    // name as separate args. Cost is captured for assertion downstream —
+    // a follow-up step asserts the sender's balance dropped by exactly
+    // this amount, and the catalog-seed matcher (Wake 45) ensures the
+    // gift's actual cost matches what the scenario asserts.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+sends "([^"]+)" \((\d+) coins\) to ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const giftName = m[3];
+      const cost = parseInt(m[4], 10);
+      const recipient = m[5];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webSendGift) {
+          return { ok: false, error: 'ctx.webDriver.webSendGift not configured' };
+        }
+        await ctx.webDriver.webSendGift(giftName, cost, recipient);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidSendGift) {
+          return { ok: false, error: 'ctx.uiDriver.androidSendGift not configured' };
+        }
+        await ctx.uiDriver.androidSendGift(giftName, cost, recipient);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosSendGift) {
+          return { ok: false, error: 'ctx.uiDriver.iosSendGift not configured' };
+        }
+        await ctx.uiDriver.iosSendGift(giftName, cost, recipient);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for send-gift step` };
+    },
+  },
+  {
+    // Pick DOB in a named picker (signup flow). Both Android (j01) and
+    // iOS Sim (j02) use this; the picker tag is the resource-id / a11y
+    // identifier the driver uses to locate the picker widget. Cross-
+    // platform dispatch — Web variant not in the corpus.
+    pattern: /^([A-Z][a-z]+)\s+on (Android|iOS Sim)\s+picks DOB "([^"]+)" in "([^"]+)"$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const dob = m[3];
+      const pickerTag = m[4];
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidPickDOB) {
+          return { ok: false, error: 'ctx.uiDriver.androidPickDOB not configured' };
+        }
+        await ctx.uiDriver.androidPickDOB(dob, pickerTag);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosPickDOB) {
+          return { ok: false, error: 'ctx.uiDriver.iosPickDOB not configured' };
+        }
+        await ctx.uiDriver.iosPickDOB(dob, pickerTag);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for pick-DOB step` };
+    },
+  },
+  {
+    // Android: pick ID type (j01 age verification submission flow).
+    // The value is one of "passport"/"driver-license"/"national-id"
+    // per the production picker — but the matcher accepts any quoted
+    // string so future picker entries don't require a runner change.
+    pattern: /^([A-Z][a-z]+)\s+on Android\s+picks ID type "([^"]+)"$/,
+    async handler(m, ctx) {
+      const idType = m[2];
+      if (!ctx.uiDriver?.androidPickIdType) {
+        return { ok: false, error: 'ctx.uiDriver.androidPickIdType not configured' };
+      }
+      await ctx.uiDriver.androidPickIdType(idType);
+      return { ok: true };
+    },
+  },
+  {
+    // Android: select test image from gallery (j01 age verification —
+    // upload of ID photo). Driver mocks the image picker to return the
+    // named test fixture file from app/src/androidTest/assets/.
+    pattern: /^([A-Z][a-z]+)\s+on Android\s+selects test image "([^"]+)" from the gallery$/,
+    async handler(m, ctx) {
+      const filename = m[2];
+      if (!ctx.uiDriver?.androidSelectGalleryImage) {
+        return { ok: false, error: 'ctx.uiDriver.androidSelectGalleryImage not configured' };
+      }
+      await ctx.uiDriver.androidSelectGalleryImage(filename);
+      return { ok: true };
+    },
+  },
+  {
+    // Android signup composite (j01 Adam). The DOB pick + accept-legal
+    // chain is collapsed into a single step in the corpus when the
+    // scenario doesn't care about intermediate state. Driver chains
+    // androidPickDOB(dob, "signup_dobPicker") + accepts both legal
+    // checkboxes + taps Continue.
+    pattern: /^([A-Z][a-z]+)\s+on Android\s+signs up with DOB "([^"]+)" and accepts legal$/,
+    async handler(m, ctx) {
+      const dob = m[2];
+      if (!ctx.uiDriver?.androidSignupWithDOB) {
+        return { ok: false, error: 'ctx.uiDriver.androidSignupWithDOB not configured' };
+      }
+      await ctx.uiDriver.androidSignupWithDOB(dob);
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin: refresh the age-verification tab. Used by j01 to wait
+    // for a newly-submitted submission to appear in the admin view.
+    pattern: /^([A-Z][a-z]+)\s+on Web Admin\s+refreshes the age-verification tab$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webAdminRefreshAgeVerification) {
+        return { ok: false, error: 'ctx.webDriver.webAdminRefreshAgeVerification not configured' };
+      }
+      await ctx.webDriver.webAdminRefreshAgeVerification();
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin: tap approve/reject/etc. on a specific submission row.
+    // The uid argument may be a literal numeric uniqueId OR a
+    // scenario-var placeholder like "{newUniqueId}". The driver is
+    // responsible for resolving the placeholder against scenario state
+    // — runner-level scenario-var interpolation is a future wake.
+    pattern: /^([A-Z][a-z]+)\s+on Web Admin\s+taps "([^"]+)" on the submission for "([^"]+)"$/,
+    async handler(m, ctx) {
+      const action = m[2];
+      const uid = m[3];
+      if (!ctx.webDriver?.webAdminActOnSubmission) {
+        return { ok: false, error: 'ctx.webDriver.webAdminActOnSubmission not configured' };
+      }
+      await ctx.webDriver.webAdminActOnSubmission(action, uid);
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
