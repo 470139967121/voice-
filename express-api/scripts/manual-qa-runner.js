@@ -444,7 +444,9 @@ const matchers = [
           } catch (e) {
             return { ok: false, error: e.message };
           }
-          await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
+          const docPath = `users/${p.uniqueId}`;
+          await ctx.db.doc(docPath).set(fields, { merge: true });
+          captureSnapshots(ctx, docPath, fields);
         }
       }
       return { ok: true };
@@ -990,6 +992,90 @@ const matchers = [
     },
   },
   {
+    // `unchanged` — assert current field value equals the snapshot captured
+    // at the Given step. Requires `Given <P> has <field>=<value>` (or similar
+    // state-seed step) to have run earlier in the scenario. Without that, the
+    // matcher errors with a clear "no snapshot/baseline" message rather than
+    // silently passing (which would happen if it captured the current value
+    // on first call — see Wake 25 design notes).
+    pattern: /^the database has document "([^"]+)" with field "([^"]+)" unchanged$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const docPath = m[1];
+      const field = m[2];
+      const key = `${docPath}#${field}`;
+      if (!ctx.snapshots || !ctx.snapshots.has(key)) {
+        return {
+          ok: false,
+          error: `no snapshot/baseline captured for "${key}" — add a Given step that initialises this field`,
+        };
+      }
+      const baseline = ctx.snapshots.get(key);
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return {
+          ok: false,
+          error: `document "${docPath}" does not exist (had snapshot ${baseline})`,
+        };
+      }
+      const actual = snap.data()?.[field];
+      if (actual !== baseline) {
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" was ${JSON.stringify(actual)}, expected unchanged from baseline ${JSON.stringify(baseline)}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // `increased by N` — assert current = baseline + N. Requires a Given step
+    // to have captured the baseline. Both baseline and actual must be numeric;
+    // mismatched signs (e.g. baseline 5000, actual 4500, N=500 → delta -500)
+    // are explicitly flagged.
+    pattern: /^the database has document "([^"]+)" with field "([^"]+)" increased by (\d+)$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const docPath = m[1];
+      const field = m[2];
+      const delta = parseInt(m[3], 10);
+      const key = `${docPath}#${field}`;
+      if (!ctx.snapshots || !ctx.snapshots.has(key)) {
+        return {
+          ok: false,
+          error: `no snapshot/baseline captured for "${key}" — add a Given step that initialises this field`,
+        };
+      }
+      const baseline = ctx.snapshots.get(key);
+      if (typeof baseline !== 'number') {
+        return {
+          ok: false,
+          error: `baseline for "${key}" was ${JSON.stringify(baseline)}, expected numeric for delta comparison`,
+        };
+      }
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `document "${docPath}" does not exist` };
+      }
+      const actual = snap.data()?.[field];
+      if (typeof actual !== 'number') {
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" was ${JSON.stringify(actual)}, expected numeric`,
+        };
+      }
+      const observedDelta = actual - baseline;
+      if (observedDelta !== delta) {
+        const direction = observedDelta < 0 ? ' (decreased)' : '';
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" went from ${baseline} to ${actual}, delta=${observedDelta}${direction}, expected delta=+${delta}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
     // Numeric strict-greater-than. Rejects non-numeric actual values rather
     // than relying on JavaScript's lexicographic / NaN coercion semantics
     // (which can silently report "abc > 100" as false and mask real bugs).
@@ -1086,7 +1172,9 @@ const matchers = [
       } catch (e) {
         return { ok: false, error: e.message };
       }
-      await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
+      const docPath = `users/${p.uniqueId}`;
+      await ctx.db.doc(docPath).set(fields, { merge: true });
+      captureSnapshots(ctx, docPath, fields);
       return { ok: true };
     },
   },
@@ -1300,10 +1388,14 @@ const matchers = [
       if (verb === 'exists') {
         // Full-state seed — uniqueId from body if present, else registry.
         const uniqueId = fields.uniqueId !== undefined ? fields.uniqueId : p.uniqueId;
-        await ctx.db.doc(`users/${uniqueId}`).set(fields);
+        const docPath = `users/${uniqueId}`;
+        await ctx.db.doc(docPath).set(fields);
+        captureSnapshots(ctx, docPath, fields);
       } else {
         // has user doc with — merge into existing
-        await ctx.db.doc(`users/${p.uniqueId}`).set(fields, { merge: true });
+        const docPath = `users/${p.uniqueId}`;
+        await ctx.db.doc(docPath).set(fields, { merge: true });
+        captureSnapshots(ctx, docPath, fields);
       }
       return { ok: true };
     },
@@ -1716,6 +1808,7 @@ async function runScenario(scenario, parsed, ctx) {
   ctx.lastResponse = null;
   ctx.lastVisit = null;
   ctx.lastQueryResult = null;
+  ctx.snapshots = new Map();
   ctx.locale = 'en';
 
   const allSteps = [...(parsed.background?.steps || []), ...scenario.steps];
@@ -1872,6 +1965,17 @@ async function probeOsaInvariants(db) {
     };
   }
   return { ok: true };
+}
+
+// Snapshot baseline capture. Records the value of each field at the time of
+// the Given step, keyed by `<docPath>#<field>`. The `unchanged` and
+// `increased by N` matchers compare against these baselines. Per-scenario
+// reset happens in runScenario.
+function captureSnapshots(ctx, docPath, fields) {
+  if (!ctx.snapshots) ctx.snapshots = new Map();
+  for (const [field, value] of Object.entries(fields)) {
+    ctx.snapshots.set(`${docPath}#${field}`, value);
+  }
 }
 
 function parseLiteral(raw) {

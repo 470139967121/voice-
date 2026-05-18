@@ -1697,7 +1697,7 @@ describe('Sign-in with kv-pair state seed (Given <P> is signed in on <Platform> 
     const r = await executeStep(
       {
         kind: 'Given',
-        text: 'Alice [P-02] is signed in on Android with shyCoins=5000',
+        text: 'Lena [P-05] is signed in on Android with shyCoins=5000',
       },
       ctx,
     );
@@ -3665,6 +3665,210 @@ describe('Response status alternation (Then the response status is N or M)', () 
       ctx2,
     );
     expect(alt2.ok).toBe(true);
+  });
+});
+
+describe('Snapshot baseline — `unchanged` matcher (Then the database has document X with field Y unchanged)', () => {
+  test('snapshot captured via Given, field still equal — ok:true', async () => {
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' + Buffer.from(JSON.stringify({ uniqueId: 50000020 })).toString('base64url') + '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const db = makeStatefulFakeDb({ 'users/50000020': {} });
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    // Given captures baseline
+    const given = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Lena [P-05] is signed in on Android with shyCoins=5000',
+      },
+      ctx,
+    );
+    expect(given.ok).toBe(true);
+    // Then asserts unchanged (no When step in between → still 5000)
+    const then = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" unchanged',
+      },
+      ctx,
+    );
+    expect(then.ok).toBe(true);
+  });
+
+  test('snapshot captured, field CHANGED — fails with both values in error', async () => {
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' + Buffer.from(JSON.stringify({ uniqueId: 50000020 })).toString('base64url') + '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const db = makeStatefulFakeDb({ 'users/50000020': {} });
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    await executeStep(
+      { kind: 'Given', text: 'Lena [P-05] is signed in on Android with shyCoins=5000' },
+      ctx,
+    );
+    // Simulate a When step changing the value out from under us
+    await db.doc('users/50000020').set({ shyCoins: 4500 }, { merge: true });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" unchanged',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/5000/);
+    expect(r.error).toMatch(/4500/);
+  });
+
+  test('no snapshot captured — loud error pointing at missing Given baseline', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { shyCoins: 5000 } });
+    const ctx = makeCtx({ db });
+    // No Given step — snapshots stays empty
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" unchanged',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/snapshot|baseline|Given/i);
+  });
+});
+
+describe('Snapshot baseline — `increased by N` matcher (Then the database has document X with field Y increased by N)', () => {
+  test('snapshot=5000, actual=5500, delta=500 — ok:true', async () => {
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' + Buffer.from(JSON.stringify({ uniqueId: 50000020 })).toString('base64url') + '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const db = makeStatefulFakeDb({ 'users/50000020': {} });
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    await executeStep(
+      { kind: 'Given', text: 'Lena [P-05] is signed in on Android with shyCoins=5000' },
+      ctx,
+    );
+    // Simulate a gift being received that bumps coins
+    await db.doc('users/50000020').set({ shyCoins: 5500 }, { merge: true });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" increased by 500',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('snapshot=5000, actual=4500 (DECREASED) — fails because delta is wrong sign', async () => {
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' + Buffer.from(JSON.stringify({ uniqueId: 50000020 })).toString('base64url') + '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const db = makeStatefulFakeDb({ 'users/50000020': {} });
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    await executeStep(
+      { kind: 'Given', text: 'Lena [P-05] is signed in on Android with shyCoins=5000' },
+      ctx,
+    );
+    await db.doc('users/50000020').set({ shyCoins: 4500 }, { merge: true });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" increased by 500',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/-500|decreased|less/i);
+  });
+
+  test('snapshot=5000, actual=5300 (delta=300, not 500) — fails with actual delta in error', async () => {
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' + Buffer.from(JSON.stringify({ uniqueId: 50000020 })).toString('base64url') + '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const db = makeStatefulFakeDb({ 'users/50000020': {} });
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    await executeStep(
+      { kind: 'Given', text: 'Lena [P-05] is signed in on Android with shyCoins=5000' },
+      ctx,
+    );
+    await db.doc('users/50000020').set({ shyCoins: 5300 }, { merge: true });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" increased by 500',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/300/);
+    expect(r.error).toMatch(/500/);
+  });
+
+  test('no snapshot — error mentions snapshot/baseline/Given', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { shyCoins: 5500 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" increased by 500',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/snapshot|baseline|Given/i);
+  });
+
+  test('composes with within-Nms wrapper: poll until delta is reached', async () => {
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.includes('signInWithPassword')) {
+        const idToken =
+          'h.' + Buffer.from(JSON.stringify({ uniqueId: 50000020 })).toString('base64url') + '.s';
+        return { status: 200, json: async () => ({ idToken, refreshToken: 'r', localId: 'f' }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const db = makeStatefulFakeDb({ 'users/50000020': {} });
+    const ctx = makeCtx({ fetch: fetchSpy, db });
+    await executeStep(
+      { kind: 'Given', text: 'Lena [P-05] is signed in on Android with shyCoins=5000' },
+      ctx,
+    );
+    // Defer the change to ~80ms after the Then step starts
+    setTimeout(() => {
+      db.doc('users/50000020').set({ shyCoins: 5500 }, { merge: true });
+    }, 80);
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 500ms the database has document "users/50000020" with field "shyCoins" increased by 500',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
   });
 });
 
