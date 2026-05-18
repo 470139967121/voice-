@@ -2923,6 +2923,112 @@ describe('within-Nms polling wrapper (Then within Nms <inner-assertion>)', () =>
   });
 });
 
+describe('UI driver — Android text-content assertion (Then <P>\'s Android UI shows "<text>")', () => {
+  test('matches a visible text="..." attribute exactly', async () => {
+    const dump = '<node text="Submitted — awaiting review" bounds="[0,0][100,40]" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI shows "Submitted — awaiting review"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('matches a content-desc="..." attribute when text is empty (icon-only view)', async () => {
+    const dump = '<node text="" content-desc="Back" bounds="[0,0][50,50]" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep({ kind: 'Then', text: 'Adam\'s Android UI shows "Back"' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('does NOT silently pass on substring match (text="save as draft" should not satisfy "save")', async () => {
+    const dump = '<node text="save as draft" bounds="[0,0][100,40]" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep({ kind: 'Then', text: 'Adam\'s Android UI shows "save"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/"save"/);
+  });
+
+  test('returns a clear error when neither attribute matches', async () => {
+    const dump = '<node text="Some other label" content-desc="Other" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Vexa\'s Android UI shows "No results found"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/No results found/);
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx(); // no uiDriver
+    const r = await executeStep({ kind: 'Then', text: 'Adam\'s Android UI shows "anything"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('trailing descriptive context after the quoted text is accepted (e.g. ` indicator on his original message`)', async () => {
+    const dump = '<node text="read" bounds="[0,0][50,30]" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI shows "read" indicator on his original message',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('composes with the within-Nms wrapper: polls for the text to appear', async () => {
+    // Text not present at t=0, appears at ~80ms.
+    let visible = false;
+    setTimeout(() => {
+      visible = true;
+    }, 80);
+    const ctx = makeCtx({
+      uiDriver: {
+        androidUiDump: jest.fn(async () =>
+          visible ? '<node text="Ready" />' : '<node text="Loading" />',
+        ),
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 500ms Adam\'s Android UI shows "Ready"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('regex-special characters in the quoted text are escaped (no accidental regex injection)', async () => {
+    const dump = '<node text="Price: $10.00 (USD)" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Android UI shows "Price: $10.00 (USD)"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

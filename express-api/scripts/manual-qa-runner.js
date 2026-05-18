@@ -1377,6 +1377,47 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Android text-content assertion. Scans the UI dump for an exact match
+    // on either `text="<X>"` (visible label) or `content-desc="<X>"`
+    // (accessibility label, used by icon-only views). Trailing descriptive
+    // text after the quoted string is ignored — it's human-readable context
+    // for the test author, not part of the assertion.
+    //
+    // Exact attribute match (not substring) — substring match would silently
+    // pass when "save" matches against a "save as draft" label, which is the
+    // class of false positive that catches teams off-guard during prod.
+    //
+    // Regex is linear: `[^"]+` is a negated char class (one-token consumption),
+    // the optional trailing `(?:\s+.+)?$` is anchored to end-of-string with no
+    // nested quantifiers. Input is author-controlled (feature files), not
+    // untrusted user data. Safe.
+    // eslint-disable-next-line sonarjs/slow-regex
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Android UI shows "([^"]+)"(?:\s+.+)?$/,
+    async handler(m, ctx) {
+      const expected = m[3];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (expected text=${expected})` };
+      }
+      if (!ctx.uiDriver.androidUiDump) {
+        return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+      }
+      const dump = await ctx.uiDriver.androidUiDump();
+      // Look for exact attribute value on EITHER text= or content-desc=.
+      // String.includes with the full attribute fragment is sufficient — no
+      // regex needed because the test author's text is opaque to attribute
+      // parsing (we only care about exact equality of the value).
+      const textHit = dump.includes(`text="${expected}"`);
+      const descHit = dump.includes(`content-desc="${expected}"`);
+      if (!textHit && !descHit) {
+        return {
+          ok: false,
+          error: `Android UI dump has no text="${expected}" or content-desc="${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so
