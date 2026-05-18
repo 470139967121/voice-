@@ -6622,6 +6622,139 @@ describe('Web Admin age-verification matchers (j01 Greta)', () => {
   });
 });
 
+describe('Scenario-var interpolation (runner-level preprocessing)', () => {
+  test('"{varName}" in step text resolves to ctx.scenarioVars value', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmission: spy } });
+    ctx.scenarioVars = new Map([['newUniqueId', '50000010']]);
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "approve" on the submission for "{newUniqueId}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('approve', '50000010');
+  });
+
+  test('multiple "{vars}" in the same step are all resolved', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmission: spy } });
+    ctx.scenarioVars = new Map([
+      ['actionVar', 'reject'],
+      ['uidVar', '50000020'],
+    ]);
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "{actionVar}" on the submission for "{uidVar}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('reject', '50000020');
+  });
+
+  test('unresolved "{var}" left as literal — no interpolation error', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmission: spy } });
+    ctx.scenarioVars = new Map();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "approve" on the submission for "{unknownVar}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('approve', '{unknownVar}');
+  });
+
+  test('ctx.scenarioVars missing — step matches normally without interpolation', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmission: spy } });
+    // no scenarioVars on ctx at all
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "approve" on the submission for "literal-uid"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('approve', 'literal-uid');
+  });
+});
+
+describe('uniqueId capture matcher (writes to ctx.scenarioVars)', () => {
+  test('"X\'s uniqueId is recorded as {newUniqueId}" captures from ctx.sessions', async () => {
+    const ctx = makeCtx();
+    ctx.sessions = new Map([['Adam', { uniqueId: 50000010 }]]);
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Adam's uniqueId is recorded as {newUniqueId} for the rest of this scenario",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.scenarioVars.get('newUniqueId')).toBe('50000010');
+  });
+
+  test('captures from persona registry when no session exists', async () => {
+    const ctx = makeCtx();
+    // Alice P-02 = 50000010 in persona registry
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Alice's uniqueId is recorded as {aliceUid} for the rest of this scenario",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.scenarioVars.get('aliceUid')).toBe('50000010');
+  });
+
+  test('end-to-end: capture then interpolate', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminActOnSubmission: spy } });
+    ctx.sessions = new Map([['Adam', { uniqueId: 50000099 }]]);
+    // Step 1: capture
+    const r1 = await executeStep(
+      {
+        kind: 'Then',
+        text: "Adam's uniqueId is recorded as {newUniqueId} for the rest of this scenario",
+      },
+      ctx,
+    );
+    expect(r1.ok).toBe(true);
+    // Step 2: interpolate
+    const r2 = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "approve" on the submission for "{newUniqueId}"',
+      },
+      ctx,
+    );
+    expect(r2.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('approve', '50000099');
+  });
+
+  test('unknown persona — clear error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Nobody's uniqueId is recorded as {x} for the rest of this scenario",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Nobody/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

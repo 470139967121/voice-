@@ -3186,6 +3186,36 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Capture a persona's uniqueId into a scenario variable. The scenario
+    // var system (interpolation in executeStep) lets later steps reference
+    // the captured value by `{varName}`. Lookup order: an active session
+    // (Wake 4+ persona auth populates ctx.sessions with a `uniqueId`
+    // payload field) first, then the persona registry. This lets j04-style
+    // scenarios capture a *just-signed-up* user's freshly-minted uniqueId
+    // even before any persistent persona row exists.
+    pattern: /^([A-Z][a-z]+)'s uniqueId is recorded as \{(\w+)\} for the rest of this scenario$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const varName = m[2];
+      if (!ctx.scenarioVars) ctx.scenarioVars = new Map();
+      const session = ctx.sessions?.get(name);
+      if (session?.uniqueId !== undefined && session?.uniqueId !== null) {
+        ctx.scenarioVars.set(varName, String(session.uniqueId));
+        return { ok: true };
+      }
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (p?.uniqueId !== undefined && p?.uniqueId !== null) {
+        ctx.scenarioVars.set(varName, String(p.uniqueId));
+        return { ok: true };
+      }
+      return {
+        ok: false,
+        error: `cannot record uniqueId for "${name}" — no active session and not in persona registry`,
+      };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
@@ -3213,8 +3243,22 @@ function stripStepAnnotation(text) {
   return text.replace(/\s+\([^()]*\)$/, '');
 }
 
+// Resolve `{varName}` placeholders against ctx.scenarioVars (a Map populated
+// by capture matchers like "X's uniqueId is recorded as {newUniqueId}").
+// Unresolved placeholders are left as literal — drivers may interpret them,
+// or the step may fail with a clearer error downstream. We never throw here:
+// interpolation is a best-effort transform applied uniformly to every step,
+// and one missing var must not abort an otherwise-valid step.
+function interpolateScenarioVars(text, scenarioVars) {
+  if (!scenarioVars || scenarioVars.size === 0) return text;
+  return text.replace(/\{(\w+)\}/g, (match, name) => {
+    if (scenarioVars.has(name)) return scenarioVars.get(name);
+    return match;
+  });
+}
+
 async function executeStep(step, ctx) {
-  const text = stripStepAnnotation(step.text);
+  const text = interpolateScenarioVars(stripStepAnnotation(step.text), ctx.scenarioVars);
   for (const { pattern, handler } of matchers) {
     const m = pattern.exec(text);
     if (m) {
@@ -3249,6 +3293,7 @@ async function runScenario(scenario, parsed, ctx) {
   ctx.lastQueryResult = null;
   ctx.snapshots = new Map();
   ctx.scenarioStartTime = Date.now();
+  ctx.scenarioVars = new Map();
   ctx.locale = 'en';
 
   const allSteps = [...(parsed.background?.steps || []), ...scenario.steps];
