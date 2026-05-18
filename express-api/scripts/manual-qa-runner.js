@@ -3216,6 +3216,156 @@ const matchers = [
       };
     },
   },
+  {
+    // Reward animation assertion (j01 Adam after daily reward).
+    // Pattern accepts any quoted string in the reward-text slot so
+    // `+{coins}` (interpolated upstream to `+50`) or literal `+10`
+    // both work uniformly. The handler does substring containment on
+    // androidUiDump — looking for the resolved text anywhere.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Android UI shows the "([^"]+)" reward animation$/,
+    async handler(m, ctx) {
+      const expected = m[3];
+      if (!ctx.uiDriver?.androidUiDump) {
+        return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+      }
+      const dump = await ctx.uiDriver.androidUiDump();
+      if (!dump.includes(expected)) {
+        return {
+          ok: false,
+          error: `Android dump did not contain reward-animation text "${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // j01 post-signup invariant: main tabs visible, PM tab hidden until
+    // age verification approves the user. Substring check on the dump
+    // for the three main-tab content-descs AND assertion that "pm"
+    // appears nowhere as a content-desc. Quoted-attribute substring
+    // matching mirrors how the tag matcher (line 1715) works.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Android UI shows main tabs but PM tab is hidden$/,
+    async handler(_m, ctx) {
+      if (!ctx.uiDriver?.androidUiDump) {
+        return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+      }
+      const dump = await ctx.uiDriver.androidUiDump();
+      const mainTabs = ['discover', 'wallet', 'profile'];
+      const missing = mainTabs.filter((t) => !dump.includes(`content-desc="${t}"`));
+      if (missing.length > 0) {
+        return { ok: false, error: `main tabs missing: ${missing.join(', ')}` };
+      }
+      if (dump.includes('content-desc="pm"')) {
+        return { ok: false, error: 'PM tab is present in Android dump but should be hidden' };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Deep-link navigation attempt. Drivers fire the platform's deep-link
+    // intent (adb am start -d <url> on Android; xcrun simctl openurl on
+    // iOS). The "attempts to" wording is intentional — the step doesn't
+    // assert the navigation succeeded, only that the deep link was
+    // dispatched. A follow-up step asserts the resulting UI state.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Android|iOS Sim)\s+attempts to navigate to "([^"]+)" via deep link$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const url = m[4];
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidOpenDeepLink) {
+          return { ok: false, error: 'ctx.uiDriver.androidOpenDeepLink not configured' };
+        }
+        await ctx.uiDriver.androidOpenDeepLink(url);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosOpenDeepLink) {
+          return { ok: false, error: 'ctx.uiDriver.iosOpenDeepLink not configured' };
+        }
+        await ctx.uiDriver.iosOpenDeepLink(url);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for deep-link step` };
+    },
+  },
+  {
+    // "no <X> screen renders" — UI-absence of a named screen on the
+    // current platform. Persona/platform context is implicit (driver
+    // tracks which dump to read internally). The matcher accepts both
+    // uppercase abbreviations ("PM") and lowercase ("pm"), passing the
+    // captured token to the driver verbatim.
+    pattern: /^no ([\w-]+) screen renders$/,
+    async handler(m, ctx) {
+      const screenName = m[1];
+      if (!ctx.uiDriver?.currentPlatformRendersScreen) {
+        return { ok: false, error: 'ctx.uiDriver.currentPlatformRendersScreen not configured' };
+      }
+      const rendered = await ctx.uiDriver.currentPlatformRendersScreen(screenName);
+      if (rendered) {
+        return {
+          ok: false,
+          error: `${screenName} screen should not render but driver reports it does`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Gift selection composite (j01 Adam send-gift flow).
+    // "selects gift X and recipient Y" — driver picks the gift from the
+    // gift wheel/grid AND selects the recipient from the contact list.
+    // Single matcher because the corpus uses the composite form when
+    // intermediate steps aren't relevant.
+    pattern: /^([A-Z][a-z]+)\s+on Android\s+selects gift "([^"]+)" and recipient "([^"]+)"$/,
+    async handler(m, ctx) {
+      const giftName = m[2];
+      const recipient = m[3];
+      if (!ctx.uiDriver?.androidSelectGiftRecipient) {
+        return { ok: false, error: 'ctx.uiDriver.androidSelectGiftRecipient not configured' };
+      }
+      await ctx.uiDriver.androidSelectGiftRecipient(giftName, recipient);
+      return { ok: true };
+    },
+  },
+  {
+    // Sign-in form filler. Two-field composite: "types EMAIL + PASSWORD
+    // and submits". Platform-dispatch — Web is the dominant target
+    // (j03 Lena lapsed-adult flow uses {PERSONAS_PASSWORD} placeholder
+    // which interpolates from process.env), but Android/iOS Sim variants
+    // accepted for symmetry.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+types "([^"]+)" \+ "([^"]+)" and submits$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const email = m[3];
+      const password = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webTypeAndSubmit) {
+          return { ok: false, error: 'ctx.webDriver.webTypeAndSubmit not configured' };
+        }
+        await ctx.webDriver.webTypeAndSubmit(email, password);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidTypeAndSubmit) {
+          return { ok: false, error: 'ctx.uiDriver.androidTypeAndSubmit not configured' };
+        }
+        await ctx.uiDriver.androidTypeAndSubmit(email, password);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosTypeAndSubmit) {
+          return { ok: false, error: 'ctx.uiDriver.iosTypeAndSubmit not configured' };
+        }
+        await ctx.uiDriver.iosTypeAndSubmit(email, password);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for type-and-submit step` };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
@@ -3249,10 +3399,17 @@ function stripStepAnnotation(text) {
 // or the step may fail with a clearer error downstream. We never throw here:
 // interpolation is a best-effort transform applied uniformly to every step,
 // and one missing var must not abort an otherwise-valid step.
+//
+// Env-var fallback: if scenarioVars miss AND the placeholder name is
+// UPPER_SNAKE_CASE (env-var convention), fall back to process.env. Lower-
+// case names like `{coins}` are NEVER resolved from env — guards against
+// leaking arbitrary process environment into step text.
 function interpolateScenarioVars(text, scenarioVars) {
-  if (!scenarioVars || scenarioVars.size === 0) return text;
   return text.replace(/\{(\w+)\}/g, (match, name) => {
-    if (scenarioVars.has(name)) return scenarioVars.get(name);
+    if (scenarioVars && scenarioVars.has(name)) return scenarioVars.get(name);
+    if (/^[A-Z_]+$/.test(name) && process.env[name] !== undefined) {
+      return process.env[name];
+    }
     return match;
   });
 }

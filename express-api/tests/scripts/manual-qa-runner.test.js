@@ -6755,6 +6755,198 @@ describe('uniqueId capture matcher (writes to ctx.scenarioVars)', () => {
   });
 });
 
+describe('Env-var fallback in scenario-var interpolation', () => {
+  const originalEnv = process.env.PERSONAS_PASSWORD;
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env.PERSONAS_PASSWORD;
+    else process.env.PERSONAS_PASSWORD = originalEnv;
+  });
+
+  test('"{PERSONAS_PASSWORD}" resolves from process.env when scenarioVars miss', async () => {
+    process.env.PERSONAS_PASSWORD = 'real-pw';
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTypeAndSubmit: spy } });
+    ctx.scenarioVars = new Map(); // empty — fallback should kick in
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Lena on Web types "lapsed@shytalk.dev" + "{PERSONAS_PASSWORD}" and submits',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('lapsed@shytalk.dev', 'real-pw');
+  });
+
+  test('scenarioVars wins over env when both have the key', async () => {
+    process.env.PERSONAS_PASSWORD = 'env-pw';
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTypeAndSubmit: spy } });
+    ctx.scenarioVars = new Map([['PERSONAS_PASSWORD', 'scenario-pw']]);
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Lena on Web types "x@y.com" + "{PERSONAS_PASSWORD}" and submits',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('x@y.com', 'scenario-pw');
+  });
+
+  test('lower-case "{coins}" does NOT fall through to env (avoids leaking arbitrary env)', async () => {
+    process.env.coins = 'sneaky-leak';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => '<node text="+{coins}"/>') },
+    });
+    ctx.scenarioVars = new Map(); // empty
+    const r = await executeStep(
+      { kind: 'Then', text: 'Adam\'s Android UI shows the "+{coins}" reward animation' },
+      ctx,
+    );
+    // The lowercase placeholder must be left as the literal "{coins}" string
+    // — and since the fake dump intentionally contains literal "{coins}",
+    // the assertion passes. The point of this test is that env didn't leak.
+    expect(r.ok).toBe(true);
+    delete process.env.coins;
+  });
+});
+
+describe('Reward animation matcher (Android, uses interpolation)', () => {
+  test('"+{coins}" interpolated against scenarioVars then asserted in dump', async () => {
+    const dump = '<node text="+50"/>';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    ctx.scenarioVars = new Map([['coins', '50']]);
+    const r = await executeStep(
+      { kind: 'Then', text: 'Adam\'s Android UI shows the "+{coins}" reward animation' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('reward animation NOT in dump — fail', async () => {
+    const dump = '<node text="discover"/>';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    ctx.scenarioVars = new Map([['coins', '50']]);
+    const r = await executeStep(
+      { kind: 'Then', text: 'Adam\'s Android UI shows the "+{coins}" reward animation' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/\+50/);
+  });
+});
+
+describe('Main tabs + PM tab hidden matcher (Android, j01)', () => {
+  test('dump has main tabs but no PM tab — ok', async () => {
+    const dump =
+      '<node content-desc="discover"/><node content-desc="wallet"/><node content-desc="profile"/>';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI shows main tabs but PM tab is hidden" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('dump has main tabs AND PM tab — fail with PM-presence error', async () => {
+    const dump =
+      '<node content-desc="discover"/><node content-desc="wallet"/><node content-desc="profile"/><node content-desc="pm"/>';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI shows main tabs but PM tab is hidden" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/PM/i);
+  });
+});
+
+describe('Deep-link navigation matcher (Android + iOS Sim)', () => {
+  test('Android: "Adam on Android attempts to navigate to \\"/pm\\" via deep link" → androidOpenDeepLink', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidOpenDeepLink: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android attempts to navigate to "/pm" via deep link' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/pm');
+  });
+
+  test('iOS Sim: "Mia on iOS Sim attempts to navigate to \\"/age-verification\\" via deep link" → iosOpenDeepLink', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosOpenDeepLink: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Mia on iOS Sim attempts to navigate to "/age-verification" via deep link',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/age-verification');
+  });
+});
+
+describe('No <X> screen renders matcher (UI-absence)', () => {
+  test('driver returns false (screen NOT rendered) — ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { currentPlatformRendersScreen: spy } });
+    const r = await executeStep({ kind: 'Then', text: 'no PM screen renders' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('PM');
+  });
+
+  test('driver returns true (screen IS rendered) — fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { currentPlatformRendersScreen: spy } });
+    const r = await executeStep({ kind: 'Then', text: 'no PM screen renders' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/PM/);
+  });
+});
+
+describe('Gift selection (Android)', () => {
+  test('"selects gift \\"rose\\" and recipient \\"Alice\\"" → androidSelectGiftRecipient', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidSelectGiftRecipient: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android selects gift "rose" and recipient "Alice"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('rose', 'Alice');
+  });
+});
+
+describe('Sign-in form filler (types email + password and submits)', () => {
+  test('Web: "Lena on Web types \\"X\\" + \\"Y\\" and submits" → webTypeAndSubmit', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTypeAndSubmit: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Lena on Web types "lapsed-adult@shytalk.dev" + "secret" and submits',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('lapsed-adult@shytalk.dev', 'secret');
+  });
+
+  test('Android: "Marcus on Android types \\"X\\" + \\"Y\\" and submits" → androidTypeAndSubmit', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidTypeAndSubmit: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus on Android types "x@y.com" + "secret" and submits' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('x@y.com', 'secret');
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
