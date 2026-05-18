@@ -8917,6 +8917,158 @@ describe('UI banner absence (party-anchored)', () => {
   });
 });
 
+describe('Attempts to start a conversation via POST <api>', () => {
+  test('"X on Android attempts to start a conversation with Y via POST /api/X" → driver', async () => {
+    const spy = jest.fn(async () => ({ status: 403 }));
+    const ctx = makeCtx({ uiDriver: { androidAttemptStartConversation: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Adam on Android attempts to start a conversation with Marcus via POST /api/conversations',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus', '/api/conversations');
+  });
+});
+
+describe('New follower notification absence (party-implicit)', () => {
+  test('"X\'s <plat> UI does not show any new follower notification" → driver', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsNewFollowerNotification: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Marcus's Android UI does not show any new follower notification" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('driver returns true (notification present) — fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNewFollowerNotification: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Marcus's Android UI does not show any new follower notification" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/follower/);
+  });
+});
+
+describe('Profile deep-link attempt', () => {
+  test('"X on Android attempts profile deep-link \\"<url>\\"" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidAttemptProfileDeepLink: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Vexa on Android attempts profile deep-link "/profile/60000010"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/profile/60000010');
+  });
+
+  test('iOS Sim variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosAttemptProfileDeepLink: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim attempts profile deep-link "/profile/50000010"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/profile/50000010');
+  });
+});
+
+describe('Attempts to follow via profile screen', () => {
+  test('"X on Android attempts to follow Y via the profile screen" (after Wake-30 strip)', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidAttemptFollowViaProfile: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Vexa on Android attempts to follow Marcus via the profile screen (via deep-link error path)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus');
+  });
+});
+
+describe('Bare HTTP response status assertion', () => {
+  test('"the request returns status N" reads ctx.lastResponse.status', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = { status: 404, body: null };
+    const r = await executeStep({ kind: 'Then', text: 'the request returns status 404' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('status mismatch — fail with both', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = { status: 200, body: null };
+    const r = await executeStep({ kind: 'Then', text: 'the request returns status 404' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 404.*actual 200/);
+  });
+
+  test('no recorded response — fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = null;
+    const r = await executeStep({ kind: 'Then', text: 'the request returns status 404' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no recorded/);
+  });
+});
+
+describe('Conversation doc field equality assertion', () => {
+  test('"the conversation doc \\"X\\" has field \\"Y\\" equal to Z" — boolean', async () => {
+    const db = makeStatefulFakeDb({
+      'conversations/c1': { frozen: true },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the conversation doc "conversations/c1" has field "frozen" equal to true (set by migration)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('numeric value', async () => {
+    const db = makeStatefulFakeDb({
+      'conversations/c1': { participantCount: 2 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the conversation doc "conversations/c1" has field "participantCount" equal to 2',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('field mismatch — fail', async () => {
+    const db = makeStatefulFakeDb({
+      'conversations/c1': { frozen: false },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the conversation doc "conversations/c1" has field "frozen" equal to true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/frozen/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

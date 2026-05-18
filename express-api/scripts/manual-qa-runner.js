@@ -5254,6 +5254,179 @@ const matchers = [
       return { ok: false, error: `unknown platform "${platform}" for banner-absence step` };
     },
   },
+  {
+    // Attempt to start a conversation via POST <api> (j07 negative path
+    // when cohorts differ). Driver fires the API call and stores result
+    // on ctx.lastResponse (the bare HTTP status matcher below reads it).
+    pattern:
+      /^([A-Z][a-z]+)\s+on Android attempts to start a conversation with ([A-Z][a-z]+) via POST (\/api\/[\w/-]+)$/,
+    async handler(m, ctx) {
+      const target = m[2];
+      const apiPath = m[3];
+      if (!ctx.uiDriver?.androidAttemptStartConversation) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver.androidAttemptStartConversation not configured',
+        };
+      }
+      const result = await ctx.uiDriver.androidAttemptStartConversation(target, apiPath);
+      // Store result on ctx so the bare "the request returns status N"
+      // assertion can read it downstream.
+      if (result && typeof result.status === 'number') {
+        ctx.lastResponse = { status: result.status, body: result.body || null, path: apiPath };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // New-follower notification absence (j08). Distinct from Wake 60's
+    // party-anchored banner — this is a generic "no NEW follower
+    // notification" with NO specific source persona.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show any new follower notification$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webShowsNewFollowerNotification) {
+          return {
+            ok: false,
+            error: 'ctx.webDriver.webShowsNewFollowerNotification not configured',
+          };
+        }
+        const shown = await ctx.webDriver.webShowsNewFollowerNotification();
+        if (shown) {
+          return { ok: false, error: 'Web UI shows a new follower notification' };
+        }
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsNewFollowerNotification) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidShowsNewFollowerNotification not configured',
+          };
+        }
+        const shown = await ctx.uiDriver.androidShowsNewFollowerNotification();
+        if (shown) {
+          return { ok: false, error: 'Android UI shows a new follower notification' };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsNewFollowerNotification) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.iosShowsNewFollowerNotification not configured',
+          };
+        }
+        const shown = await ctx.uiDriver.iosShowsNewFollowerNotification();
+        if (shown) {
+          return { ok: false, error: 'iOS UI shows a new follower notification' };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for follower-notif step` };
+    },
+  },
+  {
+    // Profile deep-link attempt (j08 cross-cohort). Driver fires the
+    // deep-link intent (adb am start -d <url> on Android, xcrun simctl
+    // openurl on iOS). Doesn't assert resulting UI state — a follow-up
+    // step does that.
+    pattern: /^([A-Z][a-z]+)\s+on (Android|iOS Sim)\s+attempts profile deep-link "([^"]+)"$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const url = m[3];
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidAttemptProfileDeepLink) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidAttemptProfileDeepLink not configured',
+          };
+        }
+        await ctx.uiDriver.androidAttemptProfileDeepLink(url);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosAttemptProfileDeepLink) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.iosAttemptProfileDeepLink not configured',
+          };
+        }
+        await ctx.uiDriver.iosAttemptProfileDeepLink(url);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for profile-deep-link step` };
+    },
+  },
+  {
+    // Attempts to follow via the profile screen (j08). Wake 30 strips
+    // trailing parens annotation like "(via deep-link error path)".
+    // Driver taps the follow button on the currently-rendered profile
+    // screen.
+    pattern:
+      /^([A-Z][a-z]+)\s+on Android\s+attempts to follow ([A-Z][a-z]+) via the profile screen$/,
+    async handler(m, ctx) {
+      const target = m[2];
+      if (!ctx.uiDriver?.androidAttemptFollowViaProfile) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver.androidAttemptFollowViaProfile not configured',
+        };
+      }
+      await ctx.uiDriver.androidAttemptFollowViaProfile(target);
+      return { ok: true };
+    },
+  },
+  {
+    // Bare HTTP response status assertion. Reads ctx.lastResponse (set
+    // by the older POSTs matcher at line ~530 and by Wake 61's
+    // attempt-start-conversation matcher above). Fails clearly when no
+    // response is recorded.
+    pattern: /^the request returns status (\d+)$/,
+    async handler(m, ctx) {
+      const expected = parseInt(m[1], 10);
+      if (!ctx.lastResponse) {
+        return { ok: false, error: 'no recorded response — earlier request step is missing' };
+      }
+      const actual = ctx.lastResponse.status;
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `request status mismatch: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Conversation doc field equality assertion (j08 OSA migration
+    // verification). Trailing parens annotation stripped by Wake 30.
+    // Value parsing: `true`/`false`/numeric — keeps it simple; the
+    // corpus only uses these forms today.
+    pattern: /^the conversation doc "([^"]+)" has field "([^"]+)" equal to (true|false|\d+)$/,
+    async handler(m, ctx) {
+      const docPath = m[1];
+      const field = m[2];
+      const rawValue = m[3];
+      const expected =
+        rawValue === 'true' ? true : rawValue === 'false' ? false : parseInt(rawValue, 10);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `document "${docPath}" does not exist` };
+      }
+      const actual = snap.data()?.[field];
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
