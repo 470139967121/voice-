@@ -1724,10 +1724,17 @@ const matchers = [
         return { ok: true };
       }
       if (platform.startsWith('iOS')) {
-        return {
-          ok: false,
-          error: `iOS UI driver (simctl) not yet implemented for tag "${tag}". Add ctx.uiDriver.iosUiDump.`,
-        };
+        if (!ctx.uiDriver.iosUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.iosUiDump not configured' };
+        }
+        const iosDump = await ctx.uiDriver.iosUiDump();
+        // Match exact identifier value in the JSON dump — `"identifier":"X"`.
+        // The trailing `"` is critical: prevents `main_pmTabFooter` from
+        // falsely matching when the test asks about `main_pmTab`.
+        if (!iosDump.includes(`"identifier":"${tag}"`)) {
+          return { ok: false, error: `tag "${tag}" not found in iOS UI dump` };
+        }
+        return { ok: true };
       }
       if (platform.startsWith('Web')) {
         return {
@@ -1775,10 +1782,18 @@ const matchers = [
         return { ok: true };
       }
       if (platform.startsWith('iOS')) {
-        return {
-          ok: false,
-          error: `iOS UI driver (simctl) not yet implemented for tag "${tag}". Add ctx.uiDriver.iosUiDump.`,
-        };
+        if (!ctx.uiDriver.iosUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.iosUiDump not configured' };
+        }
+        const iosDump = await ctx.uiDriver.iosUiDump();
+        // Same exact-identifier check as the positive matcher — `"identifier":"X"`.
+        if (iosDump.includes(`"identifier":"${tag}"`)) {
+          return {
+            ok: false,
+            error: `tag "${tag}" should not be present but was found in iOS UI dump`,
+          };
+        }
+        return { ok: true };
       }
       if (platform.startsWith('Web')) {
         return {
@@ -1959,6 +1974,46 @@ const matchers = [
         };
       }
       await ctx.uiDriver.androidOpenScreen(screenName);
+      return { ok: true };
+    },
+  },
+  {
+    // iOS Sim tap. Unlike the Android tap (which parses adb XML bounds in
+    // the matcher), the iOS variant delegates to `iosTap(identifier)` — the
+    // driver owns coordinate lookup from the accessibility dump. Less
+    // parsing logic in the matcher = more flexibility for the driver to
+    // adapt to xcrun simctl's evolving output format.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on iOS Sim\s+taps "([^"]+)"$/,
+    async handler(m, ctx) {
+      const tag = m[3];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (iOS tap, tag=${tag})` };
+      }
+      if (!ctx.uiDriver.iosTap) {
+        return { ok: false, error: 'ctx.uiDriver.iosTap not configured' };
+      }
+      await ctx.uiDriver.iosTap(tag);
+      return { ok: true };
+    },
+  },
+  {
+    // iOS Sim navigation. Parallel to the Android variant — delegates to
+    // `iosOpenScreen(name)`. Accepts both "screen" and "tab" as the noun,
+    // matching the corpus phrasings.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on iOS Sim\s+opens the "([^"]+)" (?:screen|tab)$/,
+    async handler(m, ctx) {
+      const screenName = m[3];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (iOS open screen, name=${screenName})`,
+        };
+      }
+      if (!ctx.uiDriver.iosOpenScreen) {
+        return { ok: false, error: 'ctx.uiDriver.iosOpenScreen not configured' };
+      }
+      await ctx.uiDriver.iosOpenScreen(screenName);
       return { ok: true };
     },
   },

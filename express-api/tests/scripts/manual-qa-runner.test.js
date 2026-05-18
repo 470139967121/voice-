@@ -5055,6 +5055,184 @@ describe("Android tap-user-card composite (When <P> on Android taps <Y>'s user c
   });
 });
 
+describe('iOS Sim tag-assertion matchers (positive + negation, via iosUiDump)', () => {
+  test('positive `shows the element with tag` — succeeds when identifier present in JSON dump', async () => {
+    const dump =
+      '{"children":[{"identifier":"main_pmTab","frame":{"x":10,"y":20,"width":50,"height":40}}]}';
+    const ctx = makeCtx({
+      uiDriver: { iosUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI shows the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('positive `shows` — fails when identifier absent', async () => {
+    const dump = '{"children":[{"identifier":"other_thing"}]}';
+    const ctx = makeCtx({
+      uiDriver: { iosUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI shows the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/main_pmTab/);
+  });
+
+  test('negation `does not show` — ok when identifier absent', async () => {
+    const dump = '{"children":[{"identifier":"other_thing"}]}';
+    const ctx = makeCtx({
+      uiDriver: { iosUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('negation `does not show` — fails when identifier IS present', async () => {
+    const dump = '{"children":[{"identifier":"main_pmTab"}]}';
+    const ctx = makeCtx({
+      uiDriver: { iosUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  test('substring-trap rejection — `main_pmTabFooter` is not falsely matched as `main_pmTab`', async () => {
+    // The matcher must check the FULL identifier value, not just substring of dump.
+    // `"identifier":"main_pmTabFooter"` is a different identifier from `main_pmTab`.
+    const dump = '{"children":[{"identifier":"main_pmTabFooter"}]}';
+    const ctx = makeCtx({
+      uiDriver: { iosUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('iosUiDump driver method missing — specific error pointing at the missing config', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI shows the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosUiDump/);
+  });
+});
+
+describe('iOS Sim tap matcher (When <P> on iOS Sim taps "X")', () => {
+  test('calls iosTap with the identifier', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { iosTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim taps "signup_createAccountButton"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('signup_createAccountButton');
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'When', text: 'Mia on iOS Sim taps "any_tag"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing iosTap driver method — specific error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep({ kind: 'When', text: 'Mia on iOS Sim taps "any_tag"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosTap/);
+  });
+
+  test('driver throws — bubbles up via executeStep', async () => {
+    const spy = jest.fn(async () => {
+      throw new Error('simctl: element not found');
+    });
+    const ctx = makeCtx({ uiDriver: { iosTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim taps "missing_button"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/simctl: element not found/);
+  });
+});
+
+describe('iOS Sim open-screen matcher (When <P> on iOS Sim opens the "X" screen)', () => {
+  test('calls iosOpenScreen with the screen name', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { iosOpenScreen: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim opens the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('discovery');
+  });
+
+  test('"tab" noun accepted', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { iosOpenScreen: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim opens the "rooms" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('rooms');
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim opens the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing iosOpenScreen driver method — specific error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim opens the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosOpenScreen/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
