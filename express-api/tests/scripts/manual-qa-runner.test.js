@@ -1318,12 +1318,20 @@ function makeStatefulFakeDb(initialDocs = {}, initialCollections = {}) {
       },
     }),
     collection: (colPath) => ({
-      get: async () => ({
-        docs: (initialCollections[colPath] || []).map((d, i) => ({
+      get: async () => {
+        // Two sources of docs: explicit `initialCollections[colPath]` (legacy
+        // pattern) AND scanning `docs` for paths under `colPath/*` (mirrors
+        // real Firestore — a doc at "users/X" lives in the "users" collection).
+        const explicit = (initialCollections[colPath] || []).map((d, i) => ({
           id: d._id || `auto-${i}`,
           data: () => d,
-        })),
-      }),
+        }));
+        const prefix = `${colPath}/`;
+        const scanned = Object.keys(docs)
+          .filter((p) => p.startsWith(prefix) && !p.slice(prefix.length).includes('/'))
+          .map((p) => ({ id: p.slice(prefix.length), data: () => docs[p] }));
+        return { docs: [...explicit, ...scanned] };
+      },
     }),
     _docs: docs, // for test assertions
   };
@@ -7102,6 +7110,196 @@ describe('Legal checkboxes + continue composite (signup)', () => {
     );
     expect(r.ok).toBe(true);
     expect(spy).toHaveBeenCalled();
+  });
+});
+
+describe('Persona "signed in" variants (annotation tolerance + bare form)', () => {
+  test('bare "is on Web Chromium signed in" (no path) records platform only', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] is on Web Chromium signed in' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Alice')).toBe('Web Chromium');
+    expect(ctx.personaPaths.get('Alice')).toBeUndefined();
+  });
+
+  test('"signed in (annotation)" — mid-step annotation tolerated, no path', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] is on Web Chromium signed in (cross-cohort adult)' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Alice')).toBe('Web Chromium');
+    expect(ctx.personaPaths.get('Alice')).toBeUndefined();
+  });
+
+  test('"signed in (annotation) at the \\"<screen>\\" screen" — both', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Marcus [P-04] is on Android signed in (same-cohort minor) at the "discovery" screen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Marcus')).toBe('Android');
+    expect(ctx.personaPaths.get('Marcus')).toBe('discovery');
+  });
+});
+
+describe('Bare "X is on the <screen> screen" (no platform)', () => {
+  test("records persona's current screen as path; leaves platform unset", async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Lena is on the legal acceptance screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPaths.get('Lena')).toBe('legal acceptance');
+  });
+
+  test('multi-word screen names accepted', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Adam is on the age verification submission screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPaths.get('Adam')).toBe('age verification submission');
+  });
+});
+
+describe('API legal versions assertion (Given)', () => {
+  test('"the current privacy version is 4" — fetches and asserts response', async () => {
+    const fetchSpy = jest.fn(async (url) => {
+      if (typeof url === 'string' && url.endsWith('/api/legal/versions')) {
+        return { status: 200, json: async () => ({ privacy: 4, terms: 2, community: 1 }) };
+      }
+      return { status: 500, text: async () => '{}' };
+    });
+    const ctx = makeCtx({ fetch: fetchSpy });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the current privacy version is 4 in /api/legal/versions' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith('https://dev-api.example/api/legal/versions');
+  });
+
+  test('mismatch — fail with both expected and actual', async () => {
+    const fetchSpy = jest.fn(async () => ({
+      status: 200,
+      json: async () => ({ privacy: 3 }),
+    }));
+    const ctx = makeCtx({ fetch: fetchSpy });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the current privacy version is 4 in /api/legal/versions' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 4/);
+    expect(r.error).toMatch(/actual 3/);
+  });
+
+  test('terms variant routes the same way', async () => {
+    const fetchSpy = jest.fn(async () => ({
+      status: 200,
+      json: async () => ({ terms: 7 }),
+    }));
+    const ctx = makeCtx({ fetch: fetchSpy });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the current terms version is 7 in /api/legal/versions' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe('Firestore absence matcher (no submission for X)', () => {
+  test('collection has no doc with userId matching persona — ok', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no submission doc is created in "ageVerificationSubmissions" for Alice',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('collection has a doc with userId matching persona — fail', async () => {
+    // Alice P-02 = 50000010
+    const db = makeStatefulFakeDb({
+      'ageVerificationSubmissions/some-doc': { userId: '50000010', status: 'pending' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no submission doc is created in "ageVerificationSubmissions" for Alice',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/50000010/);
+  });
+});
+
+describe("List-membership UI assertion (X's UI shows Y in the <list> list)", () => {
+  test('dump contains the item text — ok', async () => {
+    const dump = '<list-followed><node text="Alice (P-02 adult power)"/></list-followed>';
+    const ctx = makeCtx({ webDriver: { webUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Lena's Web UI shows Alice (P-02 adult power) in the followed list",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('dump does not contain the item text — fail', async () => {
+    const dump = '<list-followed></list-followed>';
+    const ctx = makeCtx({ webDriver: { webUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Lena's Web UI shows Alice (P-02 adult power) in the followed list",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/followed/);
+  });
+});
+
+describe('Browser notification permission grant', () => {
+  test('"Lena on Web grants the browser notification permission" → webGrantNotificationPermission', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webGrantNotificationPermission: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Lena on Web grants the browser notification permission' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('missing driver method — clear error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web grants the browser notification permission' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webGrantNotificationPermission/);
   });
 });
 

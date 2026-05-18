@@ -3548,6 +3548,176 @@ const matchers = [
       return { ok: false, error: `unknown platform "${platform}" for legal-checkbox step` };
     },
   },
+  {
+    // Persona "signed in" variant with annotation tolerance + optional
+    // trailing screen. Generalises Wake-45's strict signed-in-at-tab
+    // matcher to handle two j02 corpus patterns:
+    //   - "Alice is on Web Chromium signed in (cross-cohort adult)"
+    //     [mid-step annotation, no trailing screen]
+    //   - "Marcus is on Android signed in (same-cohort minor) at the
+    //     \"discovery\" screen" [both annotation and trailing screen]
+    // The annotation is a hint to the human reader, not a directive to
+    // the runner — we capture and discard it. Wake-45's no-annotation
+    // matcher already handles the simple "X signed in at the Y" form
+    // and wins first-match-order; this matcher catches the rest.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on\s+(\w+(?:\s+\w+){0,2})\s+signed in(?:\s+\([^)]*\))?(?:\s+at the "([^"]+)" (?:tab|screen))?$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const urlPath = m[4];
+      if (!ctx.personaPlatforms) ctx.personaPlatforms = new Map();
+      if (!ctx.personaPaths) ctx.personaPaths = new Map();
+      ctx.personaPlatforms.set(name, platform);
+      if (urlPath) ctx.personaPaths.set(name, urlPath);
+      return { ok: true };
+    },
+  },
+  {
+    // Bare "X is on the <multi-word screen> screen" — no platform. Some
+    // scenarios state the screen WITHOUT re-specifying the platform when
+    // it's already been set by an earlier persona-bootstrap step (or is
+    // semantically platform-agnostic like the legal acceptance screen).
+    //
+    // Multi-word screen names accepted ("age verification submission",
+    // "legal acceptance"). Path is recorded without quote-stripping
+    // because the corpus form omits quotes.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on the (.+) screen$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const screenName = m[3];
+      if (!ctx.personaPaths) ctx.personaPaths = new Map();
+      ctx.personaPaths.set(name, screenName);
+      return { ok: true };
+    },
+  },
+  {
+    // API legal-versions assertion (Given precondition for j03 etc.).
+    // Fetches /api/legal/versions and verifies the named version field
+    // equals the expected value. Three named version keys (privacy,
+    // terms, community) cover the corpus surface — each maps to a
+    // matching JSON field in the response.
+    //
+    // The endpoint path is captured even though it's a fixed string in
+    // the corpus — keeps the matcher's intent transparent.
+    pattern: /^the current (privacy|terms|community) version is (\d+) in (\/api\/legal\/versions)$/,
+    async handler(m, ctx) {
+      const versionKey = m[1];
+      const expected = parseInt(m[2], 10);
+      const apiPath = m[3];
+      if (!ctx.fetch) return { ok: false, error: 'ctx.fetch not configured' };
+      const res = await ctx.fetch(`${ctx.apiBase}${apiPath}`);
+      if (res.status !== 200) {
+        return { ok: false, error: `${apiPath} returned ${res.status}` };
+      }
+      const body = await res.json();
+      const actual = body?.[versionKey];
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `${versionKey} version mismatch: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Firestore absence by user-uniqueId. Queries the named collection
+    // for any doc with `userId == <persona uniqueId>` and asserts none.
+    // Persona uniqueId resolution prefers an active session (in case
+    // the persona just signed up and isn't in the registry yet), then
+    // falls back to the static persona registry — same lookup chain
+    // as Wake 47's uniqueId capture matcher.
+    pattern: /^no submission doc is created in "([^"]+)" for ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const collection = m[1];
+      const name = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const session = ctx.sessions?.get(name);
+      let uniqueId =
+        session?.uniqueId !== undefined && session?.uniqueId !== null
+          ? session.uniqueId
+          : undefined;
+      if (uniqueId === undefined) {
+        const personas = loadPersonas();
+        const p = personas.get(name);
+        if (p?.uniqueId !== undefined && p?.uniqueId !== null) uniqueId = p.uniqueId;
+      }
+      if (uniqueId === undefined) {
+        return { ok: false, error: `cannot resolve uniqueId for persona "${name}"` };
+      }
+      const stringUid = String(uniqueId);
+      // In-memory filter rather than `.where()` for consistency with other
+      // collection-scan matchers (line ~2900) which avoid `.where()` because
+      // fake DBs in tests don't implement it.
+      const snap = await ctx.db.collection(collection).get();
+      const matches = snap.docs.filter((d) => d.data()?.userId === stringUid);
+      if (matches.length > 0) {
+        return {
+          ok: false,
+          error: `expected no docs in "${collection}" for userId=${stringUid} but found ${matches.length}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // List-membership UI assertion. Substring-matches the item text in
+    // the platform's UI dump. The "in the <list> list" suffix names the
+    // list semantically — useful for drivers that want to scope the
+    // search to a specific section — but the runner-level substring
+    // check is sufficient for the corpus's correctness requirements.
+    //
+    // Item text is non-greedy `.+?` so trailing "in the <X> list" stays
+    // matched as a literal suffix, not consumed into the item-text
+    // capture group.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows (.+?) in the (\w+) list$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const itemText = m[4];
+      const listType = m[5];
+      let dump;
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webUiDump) {
+          return { ok: false, error: 'ctx.webDriver.webUiDump not configured' };
+        }
+        dump = await ctx.webDriver.webUiDump();
+      } else if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+        }
+        dump = await ctx.uiDriver.androidUiDump();
+      } else if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.iosUiDump not configured' };
+        }
+        dump = await ctx.uiDriver.iosUiDump();
+      } else {
+        return { ok: false, error: `unknown platform "${platform}" for list-membership step` };
+      }
+      if (!dump.includes(itemText)) {
+        return {
+          ok: false,
+          error: `${platform} ${listType} list did not contain "${itemText}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Browser notification permission grant (web only — mobile uses OS
+    // permission dialogs handled separately). Driver invokes the
+    // Playwright MCP's permission-granting API.
+    pattern: /^([A-Z][a-z]+)\s+on Web grants the browser notification permission$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webGrantNotificationPermission) {
+        return { ok: false, error: 'ctx.webDriver.webGrantNotificationPermission not configured' };
+      }
+      await ctx.webDriver.webGrantNotificationPermission();
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
