@@ -5759,6 +5759,142 @@ describe('Web Admin opens-report-and-taps composite (When <P> on Web Admin opens
   });
 });
 
+describe('Web JS console errors assertion (Then no JavaScript console errors are present)', () => {
+  test('console returns empty array — ok:true', async () => {
+    const ctx = makeCtx({
+      webDriver: { webConsoleErrors: jest.fn(async () => []) },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no JavaScript console errors are present' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('console returns errors — fails with the messages in error', async () => {
+    const ctx = makeCtx({
+      webDriver: {
+        webConsoleErrors: jest.fn(async () => [
+          'Uncaught TypeError: x is undefined',
+          'Failed to fetch',
+        ]),
+      },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no JavaScript console errors are present' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Uncaught TypeError/);
+    expect(r.error).toMatch(/Failed to fetch/);
+  });
+
+  test('missing webConsoleErrors driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no JavaScript console errors are present' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webConsoleErrors/);
+  });
+});
+
+describe('Web profile-panel navigation (When <P> on Web opens the "X" panel from his profile)', () => {
+  test('calls webOpenProfilePanel(persona, panelName)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webOpenProfilePanel: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Tariq on Web opens the "event-host" panel from his profile' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Tariq', 'event-host');
+  });
+
+  test('different panel name', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webOpenProfilePanel: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Bao on Web opens the "teaching" panel from his profile' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao', 'teaching');
+  });
+
+  test('missing webOpenProfilePanel driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Tariq on Web opens the "x" panel from his profile' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webOpenProfilePanel/);
+  });
+});
+
+describe('Android event-invite tap matcher (When <P> on Android taps "X" on the event invite)', () => {
+  test('calls androidTapEventInviteAction(persona, action)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidTapEventInviteAction: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Selma on Android taps "Accept" on the event invite' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'Accept');
+  });
+
+  test('Decline action variant', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidTapEventInviteAction: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Selma on Android taps "Decline" on the event invite' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'Decline');
+  });
+
+  test('does not collide with existing Android resource-id tap matcher', async () => {
+    // Existing `Adam on Android taps "main_pmTab"` uses ctx.uiDriver.androidTap;
+    // the new `... taps "Accept" on the event invite` uses
+    // ctx.uiDriver.androidTapEventInviteAction. Different drivers, different
+    // matchers. Regression-guarded.
+    const dump = '<node resource-id="main_pmTab" bounds="[10,10][50,50]" />';
+    const inviteSpy = jest.fn(async () => {});
+    const tapSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: {
+        androidUiDump: jest.fn(async () => dump),
+        androidTap: tapSpy,
+        androidTapEventInviteAction: inviteSpy,
+      },
+    });
+    await executeStep({ kind: 'When', text: 'Adam on Android taps "main_pmTab"' }, ctx);
+    expect(tapSpy).toHaveBeenCalled();
+    expect(inviteSpy).not.toHaveBeenCalled();
+    tapSpy.mockClear();
+    await executeStep(
+      { kind: 'When', text: 'Selma on Android taps "Accept" on the event invite' },
+      ctx,
+    );
+    expect(inviteSpy).toHaveBeenCalledWith('Selma', 'Accept');
+    expect(tapSpy).not.toHaveBeenCalled();
+  });
+
+  test('missing driver method — specific error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Selma on Android taps "Accept" on the event invite' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTapEventInviteAction/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

@@ -2245,6 +2245,77 @@ const matchers = [
     },
   },
   {
+    // Web profile-panel navigation. Persona opens a tabbed panel on their
+    // own profile (e.g. event-host setup, teaching credentials). Driver
+    // navigates to `/profile/me?panel=<name>` or similar.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web\s+opens the "([^"]+)" panel from his profile$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const panel = m[3];
+      if (!ctx.webDriver) {
+        return {
+          ok: false,
+          error: `Web step requires ctx.webDriver (${name} opens "${panel}" panel)`,
+        };
+      }
+      if (!ctx.webDriver.webOpenProfilePanel) {
+        return { ok: false, error: 'ctx.webDriver.webOpenProfilePanel not configured' };
+      }
+      await ctx.webDriver.webOpenProfilePanel(name, panel);
+      return { ok: true };
+    },
+  },
+  {
+    // Browser console errors assertion. Driver returns the array of error
+    // messages captured since the page loaded (Playwright MCP exposes this
+    // via the consoleMessages API). Empty array = ok; non-empty fails with
+    // all messages joined for visibility.
+    pattern: /^no JavaScript console errors are present$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver) {
+        return { ok: false, error: 'Web step requires ctx.webDriver (console errors)' };
+      }
+      if (!ctx.webDriver.webConsoleErrors) {
+        return { ok: false, error: 'ctx.webDriver.webConsoleErrors not configured' };
+      }
+      const errors = await ctx.webDriver.webConsoleErrors();
+      if (Array.isArray(errors) && errors.length > 0) {
+        return {
+          ok: false,
+          error: `${errors.length} JavaScript console error(s) present: ${errors.join('; ')}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Android event-invite tap. Distinct from the generic resource-id
+    // tap matcher because the action ("Accept"/"Decline") is human-readable
+    // text, not a resource-id. Driver locates the event-invite card AND
+    // the named action button within it.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+taps "([^"]+)" on the event invite$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const action = m[3];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (${name} taps "${action}" on event invite)`,
+        };
+      }
+      if (!ctx.uiDriver.androidTapEventInviteAction) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver.androidTapEventInviteAction not configured',
+        };
+      }
+      await ctx.uiDriver.androidTapEventInviteAction(name, action);
+      return { ok: true };
+    },
+  },
+  {
     // Web text-content assertion. Substring match on `webUiDump()` —
     // production driver returns the document.body.innerText or similar
     // text-only view of the page. Trailing descriptive context (e.g.
