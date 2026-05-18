@@ -5490,6 +5490,160 @@ describe('Web matchers (ctx.webDriver namespace — Playwright MCP scope)', () =
   });
 });
 
+describe('Web text-content assertion (Then <P>\'s Web UI shows "X")', () => {
+  test('text present in DOM dump — ok:true', async () => {
+    const ctx = makeCtx({
+      webDriver: { webUiDump: jest.fn(async () => 'No results found') },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Vexa\'s Web UI shows "No results found"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('text absent — fails with the missing text in error', async () => {
+    const ctx = makeCtx({
+      webDriver: { webUiDump: jest.fn(async () => 'something else') },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Vexa\'s Web UI shows "User not found"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/User not found/);
+  });
+
+  test('trailing context allowed (e.g. ` toast in German`, ` indicator on her reply`)', async () => {
+    const ctx = makeCtx({
+      webDriver: { webUiDump: jest.fn(async () => 'Streak reset') },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Lena\'s Web UI shows "Streak reset" toast in German' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no ctx.webDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'Vexa\'s Web UI shows "any"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webDriver/i);
+  });
+
+  test('missing webUiDump driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep({ kind: 'Then', text: 'Vexa\'s Web UI shows "any"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webUiDump/);
+  });
+});
+
+describe('Web document direction assertion (Then <P>\'s Web UI document direction is "X")', () => {
+  test('matches the returned direction (e.g. "ltr")', async () => {
+    const ctx = makeCtx({
+      webDriver: { webDocumentDirection: jest.fn(async () => 'ltr') },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Lena\'s Web UI document direction is "ltr"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('rtl when expected ltr — fails with both values', async () => {
+    const ctx = makeCtx({
+      webDriver: { webDocumentDirection: jest.fn(async () => 'rtl') },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Lena\'s Web UI document direction is "ltr"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/rtl/);
+    expect(r.error).toMatch(/ltr/);
+  });
+
+  test('missing webDocumentDirection driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Lena\'s Web UI document direction is "ltr"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webDocumentDirection/);
+  });
+});
+
+describe('Web Admin tap-with-reason matcher (When <P> on Web Admin taps "X" with reason "Y")', () => {
+  test('calls webAdminTapWithReason(tag, reason)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webAdminTapWithReason: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "Issue warning" with reason "Inappropriate language in voice room"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Issue warning', 'Inappropriate language in voice room');
+  });
+
+  test('does not collide with plain `Web Admin taps` without reason (different matcher when added later, currently STEP_NOT_IMPLEMENTED)', async () => {
+    // The "with reason" form requires the reason suffix; plain `taps "X"` doesn't match.
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webAdminTapWithReason: spy } });
+    await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin taps "review" on Hayato\'s submission' },
+      ctx,
+    );
+    // This shape has "on Y's submission" suffix instead of "with reason" — different matcher.
+    // It should NOT route to webAdminTapWithReason.
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('missing driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "X" with reason "Y"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminTapWithReason/);
+  });
+});
+
+describe('Web Admin confirm-with-reason matcher (When <P> on Web Admin confirms with reason "Y")', () => {
+  test('calls webAdminConfirmWithReason(reason)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webAdminConfirmWithReason: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin confirms with reason "First-strike harassment"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('First-strike harassment');
+  });
+
+  test('missing driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin confirms with reason "Y"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminConfirmWithReason/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

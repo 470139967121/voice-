@@ -2146,6 +2146,90 @@ const matchers = [
     },
   },
   {
+    // Web Admin tap-with-reason. Must come BEFORE the plain `Web taps`
+    // matcher (no — different prefix, no conflict; but order is preserved
+    // for symmetry with the openTab grouping above).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web Admin\s+taps "([^"]+)" with reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const tag = m[3];
+      const reason = m[4];
+      if (!ctx.webDriver) {
+        return { ok: false, error: `Web step requires ctx.webDriver (admin tap+reason)` };
+      }
+      if (!ctx.webDriver.webAdminTapWithReason) {
+        return { ok: false, error: 'ctx.webDriver.webAdminTapWithReason not configured' };
+      }
+      await ctx.webDriver.webAdminTapWithReason(tag, reason);
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin confirm-with-reason. Bare `confirms` matcher (no reason)
+    // is a separate shape and would be a separate matcher when needed.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web Admin\s+confirms with reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const reason = m[3];
+      if (!ctx.webDriver) {
+        return { ok: false, error: 'Web step requires ctx.webDriver (admin confirm)' };
+      }
+      if (!ctx.webDriver.webAdminConfirmWithReason) {
+        return { ok: false, error: 'ctx.webDriver.webAdminConfirmWithReason not configured' };
+      }
+      await ctx.webDriver.webAdminConfirmWithReason(reason);
+      return { ok: true };
+    },
+  },
+  {
+    // Web text-content assertion. Substring match on `webUiDump()` —
+    // production driver returns the document.body.innerText or similar
+    // text-only view of the page. Trailing descriptive context (e.g.
+    // ` toast`, ` indicator on her reply`) accepted and ignored, mirroring
+    // Wake-19 Android pattern.
+    // eslint-disable-next-line sonarjs/slow-regex
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web UI shows "([^"]+)"(?:\s+.+)?$/,
+    async handler(m, ctx) {
+      const expected = m[3];
+      if (!ctx.webDriver) {
+        return { ok: false, error: `Web step requires ctx.webDriver (text=${expected})` };
+      }
+      if (!ctx.webDriver.webUiDump) {
+        return { ok: false, error: 'ctx.webDriver.webUiDump not configured' };
+      }
+      const dump = await ctx.webDriver.webUiDump();
+      if (!dump.includes(expected)) {
+        return {
+          ok: false,
+          error: `Web UI dump did not contain "${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Web document direction. Asserts `<html dir="ltr">` or `dir="rtl"`.
+    // Driver returns the literal string "ltr" or "rtl" (or potentially
+    // "auto", though the corpus only uses ltr/rtl).
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web UI document direction is "(ltr|rtl|auto)"$/,
+    async handler(m, ctx) {
+      const expected = m[3];
+      if (!ctx.webDriver) {
+        return { ok: false, error: 'Web step requires ctx.webDriver (document direction)' };
+      }
+      if (!ctx.webDriver.webDocumentDirection) {
+        return { ok: false, error: 'ctx.webDriver.webDocumentDirection not configured' };
+      }
+      const actual = await ctx.webDriver.webDocumentDirection();
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `Web document direction was "${actual}", expected "${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
     // Android search composites — both phrasings delegate to a single
     // driver method `androidSearchIn(screenOrNull, text)`. The driver
     // owns search-field-tag mapping (e.g. `discovery_searchField`,
