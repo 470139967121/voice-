@@ -2086,6 +2086,65 @@ const matchers = [
       return { ok: true };
     },
   },
+  // ── Web matchers (ctx.webDriver namespace, Playwright MCP scope) ──
+  //
+  // Web matchers use a SEPARATE driver namespace (ctx.webDriver) from
+  // mobile (ctx.uiDriver) because the production implementation routes
+  // through Playwright MCP, which is a different transport from adb/simctl.
+  // Keeping them separate avoids accidental mobile/web cross-pollination
+  // in tests AND lets a future runner skip Web steps entirely if no
+  // webDriver is injected.
+  //
+  // ORDER matters: `on Web Admin` must come BEFORE `on Web` so the more
+  // specific pattern wins. First-match-wins is the runner's semantics.
+  {
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web Admin\s+opens the "([^"]+)" tab$/,
+    async handler(m, ctx) {
+      const tabName = m[3];
+      if (!ctx.webDriver) {
+        return {
+          ok: false,
+          error: `Web step requires ctx.webDriver (admin open tab=${tabName})`,
+        };
+      }
+      if (!ctx.webDriver.webAdminOpenTab) {
+        return { ok: false, error: 'ctx.webDriver.webAdminOpenTab not configured' };
+      }
+      await ctx.webDriver.webAdminOpenTab(tabName);
+      return { ok: true };
+    },
+  },
+  {
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web\s+taps "([^"]+)"$/,
+    async handler(m, ctx) {
+      const tag = m[3];
+      if (!ctx.webDriver) {
+        return { ok: false, error: `Web step requires ctx.webDriver (tap tag=${tag})` };
+      }
+      if (!ctx.webDriver.webTap) {
+        return { ok: false, error: 'ctx.webDriver.webTap not configured' };
+      }
+      await ctx.webDriver.webTap(tag);
+      return { ok: true };
+    },
+  },
+  {
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web\s+opens the "([^"]+)" (?:screen|tab)$/,
+    async handler(m, ctx) {
+      const name = m[3];
+      if (!ctx.webDriver) {
+        return {
+          ok: false,
+          error: `Web step requires ctx.webDriver (open screen=${name})`,
+        };
+      }
+      if (!ctx.webDriver.webOpenScreen) {
+        return { ok: false, error: 'ctx.webDriver.webOpenScreen not configured' };
+      }
+      await ctx.webDriver.webOpenScreen(name);
+      return { ok: true };
+    },
+  },
   {
     // Android search composites — both phrasings delegate to a single
     // driver method `androidSearchIn(screenOrNull, text)`. The driver

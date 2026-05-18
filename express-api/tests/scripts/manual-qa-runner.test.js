@@ -5384,6 +5384,112 @@ describe('iOS Sim type-into-search-field matcher (When <P> on iOS Sim types "X" 
   });
 });
 
+describe('Web matchers (ctx.webDriver namespace — Playwright MCP scope)', () => {
+  test('`on Web taps "X"` — calls webTap(tag)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web taps "wallet_buyCoinsButton"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('wallet_buyCoinsButton');
+  });
+
+  test('`on Web opens the "X" screen` — calls webOpenScreen(name)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webOpenScreen: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Lena on Web opens the "wallet" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('wallet');
+  });
+
+  test('`on Web opens the "X" tab` — calls webOpenScreen(name) (same driver method as screen)', async () => {
+    // The corpus uses "screen" and "tab" interchangeably — same driver call.
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webOpenScreen: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Alice on Web opens the "pm" tab' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('pm');
+  });
+
+  test('`on Web Admin opens the "X" tab` — calls webAdminOpenTab(name)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webAdminOpenTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the "reports" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('reports');
+  });
+
+  test('Web Admin tab does not collide with non-admin tab matcher', async () => {
+    // `Alice on Web opens the "pm" tab` → webOpenScreen
+    // `Greta on Web Admin opens the "reports" tab` → webAdminOpenTab
+    // Different drivers, different handlers. Regression-guarded.
+    const openSpy = jest.fn(async () => {});
+    const adminSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      webDriver: { webOpenScreen: openSpy, webAdminOpenTab: adminSpy },
+    });
+    await executeStep({ kind: 'When', text: 'Alice on Web opens the "pm" tab' }, ctx);
+    expect(openSpy).toHaveBeenCalledWith('pm');
+    expect(adminSpy).not.toHaveBeenCalled();
+    openSpy.mockClear();
+    await executeStep({ kind: 'When', text: 'Greta on Web Admin opens the "reports" tab' }, ctx);
+    expect(adminSpy).toHaveBeenCalledWith('reports');
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  test('no ctx.webDriver — loud error pointing at the missing namespace', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web taps "wallet_buyCoinsButton"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webDriver/i);
+  });
+
+  test('missing webTap driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep({ kind: 'When', text: 'Alice on Web taps "x"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webTap/);
+  });
+
+  test('missing webOpenScreen driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep({ kind: 'When', text: 'Alice on Web opens the "x" screen' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webOpenScreen/);
+  });
+
+  test('missing webAdminOpenTab driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the "x" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminOpenTab/);
+  });
+
+  test('driver throws — bubbles up through executeStep wrapper', async () => {
+    const spy = jest.fn(async () => {
+      throw new Error('Playwright MCP: page not connected');
+    });
+    const ctx = makeCtx({ webDriver: { webTap: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Alice on Web taps "any"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Playwright MCP/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
