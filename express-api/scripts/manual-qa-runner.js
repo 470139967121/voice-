@@ -4054,6 +4054,256 @@ const matchers = [
       return { ok: false, error: `unknown platform "${platform}" for cohort-banner step` };
     },
   },
+  {
+    // Balance comparison Given. "X has shyCoins OP N [trailing explanation]".
+    // The trailing explanation ("after daily reward + a +100 admin top-up")
+    // is descriptive context, NOT in parens, so Wake 30 doesn't strip it.
+    // Matcher accepts and ignores anything after the numeric value.
+    //
+    // Regex is linear: `.+$` is greedy + anchored to end-of-string, no
+    // overlap with preceding tokens. Input is author-controlled (feature
+    // files), not untrusted user data. Safe.
+    // eslint-disable-next-line sonarjs/slow-regex
+    pattern: /^([A-Z][a-z]+)\s+has\s+(\w+)\s+(>=|<=|==|>|<)\s+(\d+)(?:\s+.+)?$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const field = m[2];
+      const op = m[3];
+      const expected = parseInt(m[4], 10);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const snap = await ctx.db.doc(`users/${p.uniqueId}`).get();
+      if (!snap.exists) {
+        return { ok: false, error: `user doc "users/${p.uniqueId}" does not exist` };
+      }
+      const actual = snap.data()?.[field];
+      const pass = (() => {
+        switch (op) {
+          case '<':
+            return actual < expected;
+          case '<=':
+            return actual <= expected;
+          case '==':
+            return actual === expected;
+          case '>=':
+            return actual >= expected;
+          case '>':
+            return actual > expected;
+          default:
+            return false;
+        }
+      })();
+      if (!pass) {
+        return {
+          ok: false,
+          error: `${name}'s ${field} comparison failed: ${actual} ${op} ${expected} is false`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Firestore field-still-containing assertion. Two value shapes:
+    //   [a, b, c]  — expect doc field array to contain ALL these
+    //              elements (non-exhaustive — extras allowed).
+    //   N         — scalar; field equals N OR (if field is array)
+    //              array contains N.
+    // Used by j04 to verify cross-cohort stale-follow scenarios
+    // don't accidentally clean the array.
+    pattern: /^the database has document "([^"]+)" with field "([^"]+)" still containing (.+)$/,
+    async handler(m, ctx) {
+      const docPath = m[1];
+      const field = m[2];
+      const rawValue = m[3].trim();
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `document "${docPath}" does not exist` };
+      }
+      const actual = snap.data()?.[field];
+      if (rawValue.startsWith('[') && rawValue.endsWith(']')) {
+        const inner = rawValue.slice(1, -1).trim();
+        const expected =
+          inner === ''
+            ? []
+            : inner.split(',').map((s) => {
+                const n = parseInt(s.trim(), 10);
+                return Number.isNaN(n) ? s.trim() : n;
+              });
+        if (!Array.isArray(actual)) {
+          return {
+            ok: false,
+            error: `field "${field}" on "${docPath}" is not an array (got ${typeof actual})`,
+          };
+        }
+        const missing = expected.filter((el) => !actual.includes(el));
+        if (missing.length > 0) {
+          return {
+            ok: false,
+            error: `field "${field}" missing expected elements: ${missing.join(', ')}`,
+          };
+        }
+        return { ok: true };
+      }
+      const n = parseInt(rawValue, 10);
+      const expected = Number.isNaN(n) ? rawValue : n;
+      if (Array.isArray(actual)) {
+        if (!actual.includes(expected)) {
+          return {
+            ok: false,
+            error: `field "${field}" array does not contain "${expected}"`,
+          };
+        }
+        return { ok: true };
+      }
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `field "${field}" expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Placeholder UI assertion. Two phrasings:
+    //   "renders the \"X\" placeholder in both|that slot(s)"  (j04)
+    //   "renders the placeholder \"X\" in that slot"           (j02)
+    // Both reduce to driver call (placeholderName, slotHint).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Android|iOS Sim) UI renders the (?:"([^"]+)" placeholder|placeholder "([^"]+)") in (that|both) slots?$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const placeholderName = m[4] || m[5];
+      const slotHint = m[6];
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsPlaceholder) {
+          return { ok: false, error: 'ctx.uiDriver.androidShowsPlaceholder not configured' };
+        }
+        const ok = await ctx.uiDriver.androidShowsPlaceholder(placeholderName, slotHint);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `Android UI did not render placeholder "${placeholderName}" in ${slotHint} slot(s)`,
+          };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsPlaceholder) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsPlaceholder not configured' };
+        }
+        const ok = await ctx.uiDriver.iosShowsPlaceholder(placeholderName, slotHint);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `iOS UI did not render placeholder "${placeholderName}" in ${slotHint} slot(s)`,
+          };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for placeholder step` };
+    },
+  },
+  {
+    // PM-with-badge UI assertion. Driver verifies a PM from the named
+    // sender is rendered AND has the named badge attached. Badge
+    // currently "official" only but matcher accepts any single-word
+    // badge for future expansion.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Android|iOS Sim) UI shows the new PM from ([A-Z][a-z]+) with the (\w+) badge$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const sender = m[4];
+      const badge = m[5];
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsPmWithBadge) {
+          return { ok: false, error: 'ctx.uiDriver.androidShowsPmWithBadge not configured' };
+        }
+        const ok = await ctx.uiDriver.androidShowsPmWithBadge(sender, badge);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `Android UI did not show PM from "${sender}" with "${badge}" badge`,
+          };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsPmWithBadge) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsPmWithBadge not configured' };
+        }
+        const ok = await ctx.uiDriver.iosShowsPmWithBadge(sender, badge);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `iOS UI did not show PM from "${sender}" with "${badge}" badge`,
+          };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for PM-with-badge step` };
+    },
+  },
+  {
+    // Followers/following list nav. "X on Y opens his|her|their <LIST>
+    // list" where LIST is one of "followers" or "following". Distinct
+    // from Wake 45's pronoun-screen matcher because the noun is "list"
+    // not "screen".
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+opens (?:his|her|their) (followers|following) list$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const listName = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webOpenListView) {
+          return { ok: false, error: 'ctx.webDriver.webOpenListView not configured' };
+        }
+        await ctx.webDriver.webOpenListView(listName);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidOpenListView) {
+          return { ok: false, error: 'ctx.uiDriver.androidOpenListView not configured' };
+        }
+        await ctx.uiDriver.androidOpenListView(listName);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosOpenListView) {
+          return { ok: false, error: 'ctx.uiDriver.iosOpenListView not configured' };
+        }
+        await ctx.uiDriver.iosOpenListView(listName);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for list-nav step` };
+    },
+  },
+  {
+    // Performance budget assertion. Driver records timing from the most
+    // recent "submit" step to the target tag rendering, returns the
+    // elapsed milliseconds. Matcher compares against the budget.
+    pattern: /^the time from submit to "([^"]+)" rendering is less than (\d+)ms$/,
+    async handler(m, ctx) {
+      const target = m[1];
+      const budget = parseInt(m[2], 10);
+      if (!ctx.uiDriver?.measureRenderingTimeFromSubmit) {
+        return { ok: false, error: 'ctx.uiDriver.measureRenderingTimeFromSubmit not configured' };
+      }
+      const actual = await ctx.uiDriver.measureRenderingTimeFromSubmit(target);
+      if (actual >= budget) {
+        return {
+          ok: false,
+          error: `rendering time exceeded budget for "${target}": ${actual}ms >= ${budget}ms`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

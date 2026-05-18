@@ -7657,6 +7657,259 @@ describe('In-app banner about cohort change in <locale>', () => {
   });
 });
 
+describe('Balance comparison Given (X has shyCoins OP N [after explanation])', () => {
+  test('"Adam has shyCoins >= 10" verifies user doc field', async () => {
+    // Adam (P-01, ephemeral) uniqueId is 90000001 per EPHEMERAL_PERSONAS.
+    // The trailing "after daily reward + a +100 admin top-up" has no
+    // parens so Wake 30 doesn't strip it — matcher must tolerate it.
+    const db = makeStatefulFakeDb({ 'users/90000001': { shyCoins: 110 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam has shyCoins >= 10 after daily reward + a +100 admin top-up',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatch — fail', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { shyCoins: 5 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice has shyCoins >= 10 after daily reward' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/5/);
+    expect(r.error).toMatch(/10/);
+  });
+
+  test('all comparison operators supported', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { shyCoins: 50 } });
+    const ctx = makeCtx({ db });
+    const ops = [
+      ['<', 100, true],
+      ['<=', 50, true],
+      ['==', 50, true],
+      ['>=', 50, true],
+      ['>', 49, true],
+      ['<', 1, false],
+    ];
+    for (const [op, val, expectedOk] of ops) {
+      const r = await executeStep({ kind: 'Given', text: `Alice has shyCoins ${op} ${val}` }, ctx);
+      expect(r.ok).toBe(expectedOk);
+    }
+  });
+});
+
+describe('Firestore field-still-containing assertion', () => {
+  test('field contains expected array — ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000030': { followingIds: [50000010, 50000060] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000030" with field "followingIds" still containing [50000010, 50000060]',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('scalar value (not array) — ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000060': { followerIds: 50000030 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000060" with field "followerIds" still containing 50000030',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('array contains expected scalar element — ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000060': { followerIds: [50000030, 50000040] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000060" with field "followerIds" still containing 50000030',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('missing doc — fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000030" with field "followingIds" still containing [50000010]',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/users\/50000030/);
+  });
+
+  test('field array missing an expected element — fail', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000030': { followingIds: [50000010] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000030" with field "followingIds" still containing [50000010, 50000060]',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/50000060/);
+  });
+});
+
+describe('Placeholder UI assertion (renders the "X" placeholder)', () => {
+  test('"in both slots" variant — driver receives slotCount=both', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsPlaceholder: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Hayato\'s Android UI renders the "age_seg_user_unavailable" placeholder in both slots',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('age_seg_user_unavailable', 'both');
+  });
+
+  test('"in that slot" variant — driver receives slotCount=that', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsPlaceholder: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI renders the placeholder "age_seg_user_unavailable" in that slot',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('age_seg_user_unavailable', 'that');
+  });
+
+  test('driver returns false — fail with placeholder name in error', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsPlaceholder: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Hayato\'s Android UI renders the "X_placeholder" placeholder in both slots',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/X_placeholder/);
+  });
+});
+
+describe('PM-with-badge UI assertion', () => {
+  test('"X\'s Android UI shows the new PM from Y with the official badge" → driver', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsPmWithBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Hayato's Android UI shows the new PM from Officia with the official badge",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Officia', 'official');
+  });
+
+  test('iOS Sim variant routes correctly', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsPmWithBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Mia's iOS Sim UI shows the new PM from Officia with the official badge",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Officia', 'official');
+  });
+});
+
+describe('Followers/following list nav matcher', () => {
+  test('Android: "Theo on Android opens his followers list" → androidOpenListView("followers")', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidOpenListView: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android opens his followers list' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('followers');
+  });
+
+  test('Web variant + her pronoun', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webOpenListView: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web opens her following list' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('following');
+  });
+});
+
+describe('Performance budget matcher', () => {
+  test('"the time from submit to \\"X\\" rendering is less than Nms" → driver check', async () => {
+    const spy = jest.fn(async () => 1500);
+    const ctx = makeCtx({ uiDriver: { measureRenderingTimeFromSubmit: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the time from submit to "main_roomsTab" rendering is less than 3000ms',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('main_roomsTab');
+  });
+
+  test('actual exceeds budget — fail with both numbers', async () => {
+    const spy = jest.fn(async () => 5000);
+    const ctx = makeCtx({ uiDriver: { measureRenderingTimeFromSubmit: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the time from submit to "main_roomsTab" rendering is less than 3000ms',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/3000/);
+    expect(r.error).toMatch(/5000/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
