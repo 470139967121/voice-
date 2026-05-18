@@ -719,6 +719,26 @@ const matchers = [
     },
   },
   {
+    // Two-way alternation: `the response status is 405 or 403`. Used when
+    // the server can legitimately respond with either code depending on
+    // which authz layer fires first — over-specifying would force the test
+    // to update every time the order of checks shifts in unrelated code.
+    pattern: /^the response status is (\d{3}) or (\d{3})$/,
+    async handler(m, ctx) {
+      if (!ctx.lastResponse) return { ok: false, error: 'no prior request — When step missing?' };
+      const a = parseInt(m[1], 10);
+      const b = parseInt(m[2], 10);
+      const actual = ctx.lastResponse.status;
+      if (actual !== a && actual !== b) {
+        return {
+          ok: false,
+          error: `response status was ${actual}, expected ${a} or ${b}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
     pattern: /^the response body has field "([^"]+)" of type "(\w+)"$/,
     async handler(m, ctx) {
       if (!ctx.lastResponse?.body)

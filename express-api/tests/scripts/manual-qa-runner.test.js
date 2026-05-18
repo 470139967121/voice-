@@ -3621,6 +3621,53 @@ describe('Firestore doc-field `not containing` — `has document X with field Y 
   });
 });
 
+describe('Response status alternation (Then the response status is N or M)', () => {
+  test('actual matches first option — ok:true', async () => {
+    const ctx = makeCtx({ lastResponse: { status: 405 } });
+    const r = await executeStep({ kind: 'Then', text: 'the response status is 405 or 403' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('actual matches second option — ok:true', async () => {
+    const ctx = makeCtx({ lastResponse: { status: 403 } });
+    const r = await executeStep({ kind: 'Then', text: 'the response status is 405 or 403' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('actual matches neither — clear error showing actual + both expected', async () => {
+    const ctx = makeCtx({ lastResponse: { status: 200 } });
+    const r = await executeStep({ kind: 'Then', text: 'the response status is 405 or 403' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/200/);
+    expect(r.error).toMatch(/405/);
+    expect(r.error).toMatch(/403/);
+  });
+
+  test('no prior response — loud error pointing at missing When step', async () => {
+    const ctx = makeCtx(); // no lastResponse
+    const r = await executeStep({ kind: 'Then', text: 'the response status is 405 or 403' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/prior request|missing|no.*request/i);
+  });
+
+  test('does not collide with the exact-match matcher (different pattern shape)', async () => {
+    // Regression guard: the exact `^the response status is (\d{3})$` pattern must not
+    // match `... is 405 or 403` (would silently report "expected 405, got 405-or-403").
+    const ctx = makeCtx({ lastResponse: { status: 405 } });
+    const exact = await executeStep({ kind: 'Then', text: 'the response status is 405' }, ctx);
+    expect(exact.ok).toBe(true);
+    const alt = await executeStep({ kind: 'Then', text: 'the response status is 405 or 403' }, ctx);
+    expect(alt.ok).toBe(true);
+    // And actual=403 must match the alternation (going through the right handler).
+    const ctx2 = makeCtx({ lastResponse: { status: 403 } });
+    const alt2 = await executeStep(
+      { kind: 'Then', text: 'the response status is 405 or 403' },
+      ctx2,
+    );
+    expect(alt2.ok).toBe(true);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
