@@ -6287,6 +6287,190 @@ describe("Taps room card / Taps <Owner>'s room matcher", () => {
   });
 });
 
+describe('Bare persona-on-platform matcher (no URL, no sign-in clause)', () => {
+  test('"Greta [P-12] is on Web Admin" records the platform association', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Given', text: 'Greta [P-12] is on Web Admin' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Greta')).toBe('Web Admin');
+  });
+
+  test('"Alice is on Android" also records the platform association (no P-NN)', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Given', text: 'Alice is on Android' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Alice')).toBe('Android');
+  });
+
+  test('does not shadow "is on X at \\"<url>\\"" — URL-anchored matcher still wins', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Greta [P-12] is on Web Admin at "/admin#users"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Greta')).toBe('Web Admin');
+    expect(ctx.personaPaths.get('Greta')).toBe('/admin#users');
+  });
+});
+
+describe('Persona "signed in at the <path> tab" matcher (j01 j04 etc.)', () => {
+  test('"Greta is on Web Admin signed in at the \\"/admin#age-verification\\" tab" records both', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Greta [P-12] is on Web Admin signed in at the "/admin#age-verification" tab',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Greta')).toBe('Web Admin');
+    expect(ctx.personaPaths.get('Greta')).toBe('/admin#age-verification');
+  });
+
+  test('"signed in at the \\"discovery\\" screen" variant also works', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is on Web Chromium signed in at the "discovery" screen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Alice')).toBe('Web Chromium');
+    expect(ctx.personaPaths.get('Alice')).toBe('discovery');
+  });
+});
+
+describe('Gift catalog state-seed matcher', () => {
+  test('"the gift X costs N coins and awards M beans" writes a doc with cost+award', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the gift "rose" costs 10 coins and awards 5 beans' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['gifts/rose']).toEqual({
+      id: 'rose',
+      costCoins: 10,
+      awardBeans: 5,
+    });
+  });
+
+  test('"crown" with larger amounts is handled the same way', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the gift "crown" costs 500 coins and awards 250 beans' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['gifts/crown']).toEqual({
+      id: 'crown',
+      costCoins: 500,
+      awardBeans: 250,
+    });
+  });
+
+  test('missing ctx.db errors out clearly', async () => {
+    const ctx = makeCtx();
+    delete ctx.db;
+    const r = await executeStep(
+      { kind: 'Given', text: 'the gift "rose" costs 10 coins and awards 5 beans' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/i);
+  });
+});
+
+describe('Web Admin issues a warning matcher', () => {
+  test('"Greta on Web Admin issues a warning to Theo" delegates to driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminIssueWarning: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin issues a warning to Theo' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo');
+  });
+
+  test('missing driver method — clear error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin issues a warning to Marcus' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminIssueWarning/);
+  });
+});
+
+describe('Confirms action matcher', () => {
+  test('"Alice on Web confirms" → webDriver.webConfirm()', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webConfirm: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Alice on Web confirms' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('"Selma on Android confirms" → uiDriver.androidConfirm()', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidConfirm: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Selma on Android confirms' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('"Nora on iOS Sim confirms" → uiDriver.iosConfirm()', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosConfirm: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Nora on iOS Sim confirms' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+});
+
+describe('Open <pronoun> <screen> generalization (the | his | her | their)', () => {
+  test('"Alice on Web opens her \\"gift_wall\\" screen" matches', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webOpenScreen: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web opens her "gift_wall" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('gift_wall');
+  });
+
+  test('"Selma on Android opens her \\"gift_wall\\" screen" matches', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidOpenScreen: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Selma on Android opens her "gift_wall" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('gift_wall');
+  });
+
+  test('existing "the" form still works (regression-guard)', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webOpenScreen: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web opens the "wallet" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('wallet');
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

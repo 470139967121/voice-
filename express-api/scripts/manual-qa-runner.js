@@ -1958,7 +1958,7 @@ const matchers = [
     // them interchangeably (pm/rooms tab vs discovery/wallet screen).
     // Driver implementation chooses between adb deeplink and UI-tap nav.
     pattern:
-      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+opens the "([^"]+)" (?:screen|tab)$/,
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+opens (?:the|his|her|their) "([^"]+)" (?:screen|tab)$/,
     async handler(m, ctx) {
       const screenName = m[3];
       if (!ctx.uiDriver) {
@@ -2001,7 +2001,7 @@ const matchers = [
     // `iosOpenScreen(name)`. Accepts both "screen" and "tab" as the noun,
     // matching the corpus phrasings.
     pattern:
-      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on iOS Sim\s+opens the "([^"]+)" (?:screen|tab)$/,
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on iOS Sim\s+opens (?:the|his|her|their) "([^"]+)" (?:screen|tab)$/,
     async handler(m, ctx) {
       const screenName = m[3];
       if (!ctx.uiDriver) {
@@ -2129,7 +2129,8 @@ const matchers = [
     },
   },
   {
-    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web\s+opens the "([^"]+)" (?:screen|tab)$/,
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web\s+opens (?:the|his|her|their) "([^"]+)" (?:screen|tab)$/,
     async handler(m, ctx) {
       const name = m[3];
       if (!ctx.webDriver) {
@@ -2946,6 +2947,104 @@ const matchers = [
     pattern: /^the migration script is executed with --dry-run against (?:dev|local|prod)$/,
     async handler(_m, _ctx) {
       return { ok: true };
+    },
+  },
+  {
+    // Bare persona-on-platform matcher. Records the persona→platform
+    // association without requiring a URL path, sign-in clause, browser
+    // locale, or other modifier. Comes after the URL-anchored and
+    // signed-in matchers in matcher order so those win for their richer
+    // variants. The `$` anchor prevents shadowing.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on\s+(\w+(?:\s+\w+){0,2})$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      if (!ctx.personaPlatforms) ctx.personaPlatforms = new Map();
+      ctx.personaPlatforms.set(name, platform);
+      return { ok: true };
+    },
+  },
+  {
+    // Persona signed-in-at-tab/screen variant. Like the URL-anchored
+    // "is on X at \"Y\"" but with a "signed in at the \"Y\" tab" suffix
+    // that asserts the persona is already authenticated on that tab.
+    // Records both platform and path; sign-in proof itself is the
+    // scenario author's responsibility (typically a separate Given that
+    // populates ctx.sessions earlier in the feature file).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on\s+(\w+(?:\s+\w+){0,2})\s+signed in at the "([^"]+)" (?:tab|screen)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const urlPath = m[4];
+      if (!ctx.personaPlatforms) ctx.personaPlatforms = new Map();
+      if (!ctx.personaPaths) ctx.personaPaths = new Map();
+      ctx.personaPlatforms.set(name, platform);
+      ctx.personaPaths.set(name, urlPath);
+      return { ok: true };
+    },
+  },
+  {
+    // Gift catalog state-seed. Writes a `gifts/<name>` Firestore doc with
+    // `costCoins` and `awardBeans`. This is a state-seed step — the gift
+    // catalog is a real Firestore collection in prod, and scenarios that
+    // exercise gift-send behavior need the catalog populated to validate
+    // cost/award math.
+    pattern: /^the gift "([^"]+)" costs (\d+) coins and awards (\d+) beans$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const id = m[1];
+      const costCoins = parseInt(m[2], 10);
+      const awardBeans = parseInt(m[3], 10);
+      await ctx.db.doc(`gifts/${id}`).set({ id, costCoins, awardBeans });
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin: issue warning to a user. Delegates to driver method
+    // `webAdminIssueWarning(targetName)` — the driver locates the target
+    // row in the admin user-table, opens the warn dialog, fills any
+    // required reason field, and submits.
+    pattern: /^([A-Z][a-z]+)\s+on Web Admin\s+issues a warning to\s+([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const target = m[2];
+      if (!ctx.webDriver?.webAdminIssueWarning) {
+        return { ok: false, error: 'ctx.webDriver.webAdminIssueWarning not configured' };
+      }
+      await ctx.webDriver.webAdminIssueWarning(target);
+      return { ok: true };
+    },
+  },
+  {
+    // Generic confirm action. Platform-dispatch. Drivers decide whether to
+    // press a "Confirm" button, tap an OK dialog button, or hit Enter —
+    // implementation detail behind the abstraction.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+confirms$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webConfirm) {
+          return { ok: false, error: 'ctx.webDriver.webConfirm not configured' };
+        }
+        await ctx.webDriver.webConfirm();
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidConfirm) {
+          return { ok: false, error: 'ctx.uiDriver.androidConfirm not configured' };
+        }
+        await ctx.uiDriver.androidConfirm();
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosConfirm) {
+          return { ok: false, error: 'ctx.uiDriver.iosConfirm not configured' };
+        }
+        await ctx.uiDriver.iosConfirm();
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for confirm step` };
     },
   },
 ];
