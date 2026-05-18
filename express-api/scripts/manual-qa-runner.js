@@ -1962,6 +1962,51 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Android search composites — both phrasings delegate to a single
+    // driver method `androidSearchIn(screenOrNull, text)`. The driver
+    // owns search-field-tag mapping (e.g. `discovery_searchField`,
+    // `users_searchField`) and the navigate-tap-type-submit sequence.
+    // Matchers stay thin.
+    //
+    // Two phrasings:
+    //   `<P> on Android searches "X" in <screen>` → screen-scoped
+    //   `<P> on Android types "X" into the search field` → active-screen
+    //
+    // The "types ... into the search field" form does not collide with the
+    // existing `types "X" into "Y"` resource-id matcher because the former
+    // expects literal `the search field` after `into ` and the latter
+    // expects an opening `"`.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+searches "([^"]+)" in (\w+)$/,
+    async handler(m, ctx) {
+      const text = m[3];
+      const screen = m[4];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (search in ${screen})` };
+      }
+      if (!ctx.uiDriver.androidSearchIn) {
+        return { ok: false, error: 'ctx.uiDriver.androidSearchIn not configured' };
+      }
+      await ctx.uiDriver.androidSearchIn(screen, text);
+      return { ok: true };
+    },
+  },
+  {
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+types "([^"]+)" into the search field$/,
+    async handler(m, ctx) {
+      const text = m[3];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: 'UI step requires ctx.uiDriver (search field)' };
+      }
+      if (!ctx.uiDriver.androidSearchIn) {
+        return { ok: false, error: 'ctx.uiDriver.androidSearchIn not configured' };
+      }
+      // null screen = "active screen" — driver decides which search field.
+      await ctx.uiDriver.androidSearchIn(null, text);
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so

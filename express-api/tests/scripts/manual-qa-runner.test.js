@@ -4577,6 +4577,116 @@ describe('Response status-or-body-signal alternation (Then the response has stat
   });
 });
 
+describe('Android search composite matchers (searches "X" in screen / types "X" into the search field)', () => {
+  test('`searches "Marcus" in discovery` — calls androidSearchIn("discovery", "Marcus")', async () => {
+    const searchSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidSearchIn: searchSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Vexa on Android searches "Marcus" in discovery' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(searchSpy).toHaveBeenCalledWith('discovery', 'Marcus');
+  });
+
+  test('`types "Alice" into the search field` — calls androidSearchIn(null, "Alice") (null screen = active)', async () => {
+    const searchSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidSearchIn: searchSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "Alice" into the search field' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(searchSpy).toHaveBeenCalledWith(null, 'Alice');
+  });
+
+  test('search text with special chars passes through verbatim', async () => {
+    const searchSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidSearchIn: searchSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "adult-power" into the search field' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(searchSpy).toHaveBeenCalledWith(null, 'adult-power');
+  });
+
+  test('no ctx.uiDriver — loud error for both matcher forms', async () => {
+    const ctx = makeCtx();
+    const r1 = await executeStep(
+      { kind: 'When', text: 'Vexa on Android searches "Marcus" in discovery' },
+      ctx,
+    );
+    expect(r1.ok).toBe(false);
+    expect(r1.error).toMatch(/uiDriver/i);
+    const r2 = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "Alice" into the search field' },
+      ctx,
+    );
+    expect(r2.ok).toBe(false);
+    expect(r2.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing androidSearchIn driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Vexa on Android searches "Marcus" in discovery' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidSearchIn/);
+  });
+
+  test('driver throws — bubbles up through executeStep wrapper as structured finding', async () => {
+    const searchSpy = jest.fn(async () => {
+      throw new Error('adb: search field tag not found');
+    });
+    const ctx = makeCtx({ uiDriver: { androidSearchIn: searchSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Vexa on Android searches "Marcus" in discovery' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/adb: search field tag not found/);
+  });
+
+  test('does not collide with the existing `types "X" into "Y"` resource-id matcher', async () => {
+    // Regression guard: the existing tap+type matcher uses the pattern
+    // `types "X" into "Y"` (Y is a resource-id). The new "into the search
+    // field" form (no quoted Y) is a separate matcher; must not be swallowed
+    // by greedy regex on the existing one.
+    const dump = '<node resource-id="signup_emailField" bounds="[200,20][320,80]" />';
+    const tapSpy = jest.fn(async () => {});
+    const typeSpy = jest.fn(async () => {});
+    const searchSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: {
+        androidUiDump: jest.fn(async () => dump),
+        androidTap: tapSpy,
+        androidTypeText: typeSpy,
+        androidSearchIn: searchSpy,
+      },
+    });
+    // Existing resource-id form should hit tap+typeText.
+    const existing = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "test@x.com" into "signup_emailField"' },
+      ctx,
+    );
+    expect(existing.ok).toBe(true);
+    expect(typeSpy).toHaveBeenCalledWith('test@x.com');
+    expect(searchSpy).not.toHaveBeenCalled();
+    // New search-field form should hit androidSearchIn.
+    typeSpy.mockClear();
+    const newForm = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "query" into the search field' },
+      ctx,
+    );
+    expect(newForm.ok).toBe(true);
+    expect(searchSpy).toHaveBeenCalledWith(null, 'query');
+    expect(typeSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
