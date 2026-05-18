@@ -4864,6 +4864,77 @@ describe('Android auth/token-refresh matchers (force-refresh + performs authenti
   });
 });
 
+describe('Android long-press-and-tap composite (When <P> on Android long-presses the message and taps "X")', () => {
+  test('Edit menu item — calls androidLongPressMessageAndTap with persona + menu item', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidLongPressMessageAndTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android long-presses the message and taps "Edit"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Edit');
+  });
+
+  test('Delete menu item — driver receives correct menu label', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidLongPressMessageAndTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android long-presses the message and taps "Delete"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Delete');
+  });
+
+  test('P-NN annotation form handled', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidLongPressMessageAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Adam [P-01] on Android long-presses the message and taps "Report"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Report');
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android long-presses the message and taps "Edit"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android long-presses the message and taps "Edit"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidLongPressMessageAndTap/);
+  });
+
+  test('driver throws — bubbles up via executeStep', async () => {
+    const spy = jest.fn(async () => {
+      throw new Error('no message in chat history');
+    });
+    const ctx = makeCtx({ uiDriver: { androidLongPressMessageAndTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android long-presses the message and taps "Edit"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no message in chat history/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

@@ -2096,6 +2096,36 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Android long-press-on-latest-message + tap a context-menu item.
+    // Two-step UI composite delegated to a single driver method that
+    // owns the long-press gesture timing AND the menu-tap. Used in j11
+    // for the harassment-moderation Report flow and message Edit/Delete.
+    //
+    // "the message" is implicit context — the most recent message in
+    // the active chat thread. Driver locates the latest message bubble
+    // by widget hierarchy or by the recyclerview's last visible item.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+long-presses the message and taps "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const menuItem = m[3];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (long-press for ${name}, menu="${menuItem}")`,
+        };
+      }
+      if (!ctx.uiDriver.androidLongPressMessageAndTap) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver.androidLongPressMessageAndTap not configured',
+        };
+      }
+      await ctx.uiDriver.androidLongPressMessageAndTap(name, menuItem);
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so
