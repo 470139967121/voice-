@@ -232,6 +232,38 @@ function loadPersonas() {
  * with ^ and $ so accidental substring matches don't hide bugs.
  */
 const matchers = [
+  // ── Meta-matchers (compose over other matchers) ──
+  {
+    // Polling wrapper. Re-runs the inner step every ~50ms until it returns
+    // ok:true OR the budget elapses. On timeout, surfaces the inner's last
+    // error (not a generic "timed out") so the failure report points at the
+    // actual assertion that didn't converge.
+    //
+    // Short-circuits on STEP_NOT_IMPLEMENTED — there's no point polling for
+    // 5s when the issue is "no matcher exists for the inner step", which is
+    // a contract problem, not a timing problem.
+    //
+    // Intended for `Then` assertions; using this with a `When` mutation would
+    // re-run the mutation on every poll. The runner doesn't enforce this —
+    // the feature-file author is responsible for using it with idempotent
+    // steps only.
+    pattern: /^within (\d+)ms (.+)$/,
+    async handler(m, ctx) {
+      const budgetMs = parseInt(m[1], 10);
+      const innerText = m[2];
+      const innerStep = { kind: 'Then', text: innerText };
+      const deadline = Date.now() + budgetMs;
+      // Loop runs at least once even when budgetMs === 0, then exits if the
+      // deadline has already passed.
+      for (;;) {
+        const result = await executeStep(innerStep, ctx);
+        if (result.ok) return result;
+        if (result.code === 'STEP_NOT_IMPLEMENTED') return result;
+        if (Date.now() >= deadline) return result;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    },
+  },
   // ── Environment setup ──
   {
     pattern: /^the local stack is healthy$/i,

@@ -2812,6 +2812,117 @@ describe('UI driver — Android type text into element (When <P> on Android type
   });
 });
 
+describe('within-Nms polling wrapper (Then within Nms <inner-assertion>)', () => {
+  test('inner succeeds on first poll — returns ok immediately, well under the budget', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { ageVerified: true } });
+    const ctx = makeCtx({ db });
+    const start = Date.now();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 5000ms the database has document "users/50000010" with field "ageVerified" equal to true',
+      },
+      ctx,
+    );
+    const elapsed = Date.now() - start;
+    expect(r.ok).toBe(true);
+    // Should be near-instant since the inner already matches on the first poll.
+    expect(elapsed).toBeLessThan(200);
+  });
+
+  test('inner succeeds after a delay — returns ok within the window', async () => {
+    // Doc starts wrong, flips to expected value after ~80ms.
+    let flipped = false;
+    setTimeout(() => {
+      flipped = true;
+    }, 80);
+    const db = {
+      doc: (p) => ({
+        get: async () => ({
+          exists: true,
+          data: () => ({ status: flipped ? 'ready' : 'pending' }),
+        }),
+        path: p,
+      }),
+    };
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 1000ms the database has document "things/abc" with field "status" equal to "ready"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test("inner never succeeds — wrapper returns the inner's last error after timeout", async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { status: 'pending' } });
+    const ctx = makeCtx({ db });
+    const start = Date.now();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 100ms the database has document "users/50000010" with field "status" equal to "ready"',
+      },
+      ctx,
+    );
+    const elapsed = Date.now() - start;
+    expect(r.ok).toBe(false);
+    // Wrapper surfaces the underlying assertion failure, not a generic "timed out".
+    expect(r.error).toMatch(/status/);
+    expect(r.error).toMatch(/expected "ready"/);
+    // Should have polled for at least the budget (give some slack for jitter).
+    expect(elapsed).toBeGreaterThanOrEqual(95);
+    // Should not have polled for much longer than the budget.
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  test('inner step has no matcher — short-circuits, does not poll for the full window', async () => {
+    const ctx = makeCtx();
+    const start = Date.now();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 5000ms there is some completely unknown step here',
+      },
+      ctx,
+    );
+    const elapsed = Date.now() - start;
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/STEP_NOT_IMPLEMENTED/);
+    // Critical: should NOT have waited 5s — a missing matcher is a contract problem, not a timing problem.
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  test('zero-ms budget — runs inner exactly once then returns its result', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { x: 1 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 0ms the database has document "users/50000010" with field "x" equal to 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('wrapper composes over the array-containing matcher (high-leverage proof)', async () => {
+    // Demonstrates the pareto-justifying claim: same wrapper, different inner matcher → free win.
+    const db = makeStatefulFakeDb({ 'users/50000010': { roles: ['member', 'moderator'] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 100ms the database has document "users/50000010" with field "roles" containing "moderator"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
