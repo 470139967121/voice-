@@ -4935,6 +4935,126 @@ describe('Android long-press-and-tap composite (When <P> on Android long-presses
   });
 });
 
+describe('Android send-message-to-recipient composite (When <P> on Android sends "X" to <Y>)', () => {
+  test('simple text message — calls androidSendMessageTo with persona, recipient, content', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidSendMessageTo: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Raul on Android sends "offensive content #1" to Nora',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'Nora', 'offensive content #1');
+  });
+
+  test('simple gift identifier — works without cost annotation', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidSendMessageTo: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android sends "crown" to Selma' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'Selma', 'crown');
+  });
+
+  test('P-NN annotation form handled', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidSendMessageTo: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul [P-08] on Android sends "msg" to Nora' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'Nora', 'msg');
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'When', text: 'Raul on Android sends "msg" to Nora' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep({ kind: 'When', text: 'Raul on Android sends "msg" to Nora' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidSendMessageTo/);
+  });
+});
+
+describe("Android tap-user-card composite (When <P> on Android taps <Y>'s user card)", () => {
+  test("Alice's user card — calls androidTapUserCard with persona + target name", async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidTapUserCard: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Adam on Android taps Alice's user card" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Alice');
+  });
+
+  test('P-NN annotation form handled on both persona and target side', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidTapUserCard: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Adam [P-01] on Android taps Marcus's user card" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Marcus');
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: "Adam on Android taps Alice's user card" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: "Adam on Android taps Alice's user card" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTapUserCard/);
+  });
+
+  test('does not collide with existing `taps "X"` (quoted resource-id) matcher', async () => {
+    // Regression guard: `taps Alice's user card` is unquoted; existing
+    // pattern requires `taps "..."`. They must route to different handlers.
+    const tapUserCardSpy = jest.fn(async () => {});
+    const dump = '<node resource-id="some_button" bounds="[10,10][50,50]" />';
+    const tapSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: {
+        androidTapUserCard: tapUserCardSpy,
+        androidUiDump: jest.fn(async () => dump),
+        androidTap: tapSpy,
+      },
+    });
+    // Resource-id form → existing matcher
+    await executeStep({ kind: 'When', text: 'Adam on Android taps "some_button"' }, ctx);
+    expect(tapSpy).toHaveBeenCalled();
+    expect(tapUserCardSpy).not.toHaveBeenCalled();
+    // User-card form → new matcher
+    tapSpy.mockClear();
+    await executeStep({ kind: 'When', text: "Adam on Android taps Alice's user card" }, ctx);
+    expect(tapUserCardSpy).toHaveBeenCalledWith('Adam', 'Alice');
+    expect(tapSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

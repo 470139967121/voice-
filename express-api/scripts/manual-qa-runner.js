@@ -2126,6 +2126,58 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // `<P> on Android sends "X" to <Y>` — send a text message (or simple
+    // gift identifier) to recipient Y. Composite delegated to single
+    // driver method `androidSendMessageTo(persona, recipient, content)`.
+    // Driver owns: open conversation with Y (or start new), focus the
+    // message input, type the content, tap send.
+    //
+    // Simple shape only — does NOT match `sends "X" (10 coins) to Y`
+    // (mid-text parens prevent the trailing recipient capture) or
+    // `sends "X" gift to Y`. Those variants get separate matchers.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+sends "([^"]+)" to ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const content = m[3];
+      const recipient = m[4];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (send "${content}" from ${name} to ${recipient})`,
+        };
+      }
+      if (!ctx.uiDriver.androidSendMessageTo) {
+        return { ok: false, error: 'ctx.uiDriver.androidSendMessageTo not configured' };
+      }
+      await ctx.uiDriver.androidSendMessageTo(name, recipient, content);
+      return { ok: true };
+    },
+  },
+  {
+    // `<P> on Android taps <Y>'s user card` — tap a user-card UI element
+    // identified by display name rather than resource-id. Driver locates
+    // the card via the recyclerview's children + display-name match.
+    //
+    // Doesn't collide with the existing `taps "X"` (quoted resource-id)
+    // matcher because this form is unquoted. Regression-guarded.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+taps ([A-Z][a-z]+)'s user card$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const target = m[3];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (${name} taps ${target}'s user card)`,
+        };
+      }
+      if (!ctx.uiDriver.androidTapUserCard) {
+        return { ok: false, error: 'ctx.uiDriver.androidTapUserCard not configured' };
+      }
+      await ctx.uiDriver.androidTapUserCard(name, target);
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so
