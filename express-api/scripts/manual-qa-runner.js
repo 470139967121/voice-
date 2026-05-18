@@ -1185,6 +1185,42 @@ const matchers = [
     },
   },
   {
+    // `no conversation doc is created` — convenience shorthand for the
+    // cross-cohort PM-wall scenarios. Equivalent to
+    // `no entry is added to "conversations" since "{ts}"` but matches the
+    // natural English phrasing the test authors actually wrote.
+    pattern: /^no conversation doc is created$/,
+    async handler(_m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      if (ctx.scenarioStartTime === undefined) {
+        return {
+          ok: false,
+          error:
+            'ctx.scenarioStartTime not set (baseline missing) — runScenario should set it on each scenario start',
+        };
+      }
+      const sinceTs = ctx.scenarioStartTime;
+      const snap = await ctx.db.collection('conversations').get();
+      const offenders = [];
+      for (const docRef of snap.docs) {
+        const data = docRef.data();
+        const createdAt = data?.createdAt;
+        if (typeof createdAt !== 'number') continue;
+        if (createdAt > sinceTs) {
+          offenders.push({ id: docRef.id, createdAt });
+        }
+      }
+      if (offenders.length > 0) {
+        const summary = offenders.map((o) => `${o.id} (createdAt=${o.createdAt})`).join(', ');
+        return {
+          ok: false,
+          error: `conversations collection has ${offenders.length} doc(s) created after scenario start: ${summary}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
     // Numeric strict-greater-than. Rejects non-numeric actual values rather
     // than relying on JavaScript's lexicographic / NaN coercion semantics
     // (which can silently report "abc > 100" as false and mask real bugs).

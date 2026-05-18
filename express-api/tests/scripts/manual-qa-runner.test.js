@@ -4160,6 +4160,58 @@ describe('Response-from-path in-every-row matcher (Then the response from <path>
   });
 });
 
+describe('No conversation doc created — `no conversation doc is created` matcher (cross-cohort PM wall)', () => {
+  test('conversations collection empty — assertion holds', async () => {
+    const db = makeStatefulFakeDb({}, { conversations: [] });
+    const ctx = makeCtx({ db, scenarioStartTime: 1_700_000_000_000 });
+    const r = await executeStep({ kind: 'Then', text: 'no conversation doc is created' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('conversations collection has only pre-scenario docs — assertion holds', async () => {
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        conversations: [{ _id: 'old', participantIds: [1, 2], createdAt: 1_699_999_000_000 }],
+      },
+    );
+    const ctx = makeCtx({ db, scenarioStartTime: 1_700_000_000_000 });
+    const r = await executeStep({ kind: 'Then', text: 'no conversation doc is created' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('conversations collection has a doc created AFTER scenarioStartTime — fails', async () => {
+    const db = makeStatefulFakeDb(
+      {},
+      {
+        conversations: [
+          { _id: 'leaked', participantIds: [50000040, 60000010], createdAt: 1_700_000_500_000 },
+        ],
+      },
+    );
+    const ctx = makeCtx({ db, scenarioStartTime: 1_700_000_000_000 });
+    const r = await executeStep({ kind: 'Then', text: 'no conversation doc is created' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/leaked|conversations/);
+  });
+
+  test('no ctx.db — loud error', async () => {
+    const ctx = makeCtx({ db: undefined, scenarioStartTime: 1 });
+    const r = await executeStep({ kind: 'Then', text: 'no conversation doc is created' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+
+  test('scenarioStartTime missing — loud error so a missing reset is loud not silent', async () => {
+    const db = makeStatefulFakeDb({}, { conversations: [] });
+    const ctx = makeCtx({ db });
+    delete ctx.scenarioStartTime;
+    const r = await executeStep({ kind: 'Then', text: 'no conversation doc is created' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/scenarioStartTime|baseline/i);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
