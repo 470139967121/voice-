@@ -5644,6 +5644,121 @@ describe('Web Admin confirm-with-reason matcher (When <P> on Web Admin confirms 
   });
 });
 
+describe('Web sign-in matcher (When <P> on Web signs in with valid credentials)', () => {
+  test('calls webSignIn(persona)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webSignIn: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Lena on Web signs in with valid credentials' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Lena');
+  });
+
+  test('P-NN annotation', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webSignIn: spy } });
+    await executeStep(
+      { kind: 'When', text: 'Ines [P-10] on Web signs in with valid credentials' },
+      ctx,
+    );
+    expect(spy).toHaveBeenCalledWith('Ines');
+  });
+
+  test('missing webSignIn driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Lena on Web signs in with valid credentials' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webSignIn/);
+  });
+});
+
+describe("Web open-user-profile matcher (When <P> on Web opens <Y>'s profile)", () => {
+  test('calls webOpenUserProfile(persona, target)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webOpenUserProfile: spy } });
+    const r = await executeStep({ kind: 'When', text: "Layla on Web opens Alice's profile" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'Alice');
+  });
+
+  test('different persona target', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webOpenUserProfile: spy } });
+    const r = await executeStep({ kind: 'When', text: "Kenji on Web opens Marcus's profile" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Kenji', 'Marcus');
+  });
+
+  test('missing webOpenUserProfile driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep({ kind: 'When', text: "Layla on Web opens Alice's profile" }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webOpenUserProfile/);
+  });
+});
+
+describe('Web Admin opens-report-and-taps composite (When <P> on Web Admin opens the {first|second|new} report and taps "X" [with reason "Y"])', () => {
+  test('first report, no reason — calls webAdminOpenReportAndTap(ordinal, menuItem, null)', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webAdminOpenReportAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin opens the first report and taps "Issue warning"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('first', 'Issue warning', null);
+  });
+
+  test('second report with reason — driver receives the reason', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webAdminOpenReportAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin opens the second report and taps "Dismiss" with reason "No violation observed"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('second', 'Dismiss', 'No violation observed');
+  });
+
+  test('new report (non-ordinal keyword) accepted', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ webDriver: { webAdminOpenReportAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin opens the new report and taps "Suspend for 3 days"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('new', 'Suspend for 3 days', null);
+  });
+
+  test('missing driver method — specific error', async () => {
+    const ctx = makeCtx({ webDriver: {} });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin opens the first report and taps "X"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminOpenReportAndTap/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

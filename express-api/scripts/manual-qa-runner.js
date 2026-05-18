@@ -2181,6 +2181,70 @@ const matchers = [
     },
   },
   {
+    // Web Admin open-report-and-tap composite. Ordinal/keyword (first |
+    // second | new) selects which pending report to open; menu item is
+    // tapped after open. Optional `with reason "Y"` suffix is captured
+    // as the third arg (null when omitted).
+    //
+    // Driver method: webAdminOpenReportAndTap(ordinal, menuItem, reasonOrNull)
+    // owns: scroll-to-report by ordinal, click-to-open, await modal,
+    // click menu item, optionally fill reason input.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web Admin\s+opens the (first|second|new) report and taps "([^"]+)"(?: with reason "([^"]+)")?$/,
+    async handler(m, ctx) {
+      const ordinal = m[3];
+      const menuItem = m[4];
+      const reason = m[5] || null;
+      if (!ctx.webDriver) {
+        return { ok: false, error: `Web step requires ctx.webDriver (open-report-and-tap)` };
+      }
+      if (!ctx.webDriver.webAdminOpenReportAndTap) {
+        return {
+          ok: false,
+          error: 'ctx.webDriver.webAdminOpenReportAndTap not configured',
+        };
+      }
+      await ctx.webDriver.webAdminOpenReportAndTap(ordinal, menuItem, reason);
+      return { ok: true };
+    },
+  },
+  {
+    // Web sign-in. Persona-scoped. Driver looks up credentials by persona
+    // name and submits the Web sign-in form.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web\s+signs in with valid credentials$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.webDriver) {
+        return { ok: false, error: `Web step requires ctx.webDriver (sign in for ${name})` };
+      }
+      if (!ctx.webDriver.webSignIn) {
+        return { ok: false, error: 'ctx.webDriver.webSignIn not configured' };
+      }
+      await ctx.webDriver.webSignIn(name);
+      return { ok: true };
+    },
+  },
+  {
+    // Web open-user-profile. Persona-scoped navigation to another user's
+    // profile page (e.g. /users/<targetUniqueId>).
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web\s+opens ([A-Z][a-z]+)'s profile$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const target = m[3];
+      if (!ctx.webDriver) {
+        return {
+          ok: false,
+          error: `Web step requires ctx.webDriver (${name} opens ${target}'s profile)`,
+        };
+      }
+      if (!ctx.webDriver.webOpenUserProfile) {
+        return { ok: false, error: 'ctx.webDriver.webOpenUserProfile not configured' };
+      }
+      await ctx.webDriver.webOpenUserProfile(name, target);
+      return { ok: true };
+    },
+  },
+  {
     // Web text-content assertion. Substring match on `webUiDump()` —
     // production driver returns the document.body.innerText or similar
     // text-only view of the page. Trailing descriptive context (e.g.
