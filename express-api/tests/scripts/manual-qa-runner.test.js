@@ -6947,6 +6947,164 @@ describe('Sign-in form filler (types email + password and submits)', () => {
   });
 });
 
+describe('Current screen Given (X on <plat> is on the "Y" screen)', () => {
+  test("records the persona's current screen", async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Adam on Android is on the "age_verification" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Adam')).toBe('Android');
+    expect(ctx.personaPaths.get('Adam')).toBe('age_verification');
+  });
+
+  test('iOS Sim variant works', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Mia on iOS Sim is on the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaPlatforms.get('Mia')).toBe('iOS Sim');
+    expect(ctx.personaPaths.get('Mia')).toBe('discovery');
+  });
+});
+
+describe("Cross-persona displayName assertion (UI shows X's displayName)", () => {
+  test("Web dump contains target persona's displayName — ok", async () => {
+    // Alice P-02 displayName is "Alice (P-02 adult power)" per persona registry
+    const dump = 'Discover\nAlice (P-02 adult power)\nWallet';
+    const ctx = makeCtx({ webDriver: { webUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Web UI shows Alice's displayName" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('Web dump does NOT contain target displayName — fail', async () => {
+    const dump = 'Discover\nWallet';
+    const ctx = makeCtx({ webDriver: { webUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Web UI shows Alice's displayName" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Alice/);
+  });
+
+  test('qualified variant: "X\'s displayName \\"<expected>\\"" — checks dump contains the literal', async () => {
+    const dump = 'Discover\nAlice (P-02 adult power)\nWallet';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI shows Alice\'s displayName "Alice (P-02 adult power)"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('unknown target persona — clear error', async () => {
+    const ctx = makeCtx({ webDriver: { webUiDump: jest.fn(async () => '') } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Web UI shows Nonexistent's displayName" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Nonexistent/);
+  });
+});
+
+describe('Quoted-string UI absence matcher (different from name-absence)', () => {
+  test('iOS dump does not contain the quoted string — ok', async () => {
+    const dump = '{"label":"Discover"}{"label":"Wallet"}';
+    const ctx = makeCtx({ uiDriver: { iosUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Mia\'s iOS Sim UI does not show "Alice"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('Android dump contains a literal resource-id-shaped string — fail', async () => {
+    const dump = '<node resource-id="main_roomsTab"/>';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Raul\'s Android UI does not show "main_roomsTab"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/main_roomsTab/);
+  });
+});
+
+describe('Bare-name button tap matcher (taps the X button)', () => {
+  test('Web: "Lena on Web taps the claim button" → webTapNamedButton', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTapNamedButton: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Lena on Web taps the claim button' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('claim');
+  });
+
+  test('Web: "Alice on Web taps the send button" → webTapNamedButton', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTapNamedButton: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Alice on Web taps the send button' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('send');
+  });
+
+  test('Android variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidTapNamedButton: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android taps the claim button' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('claim');
+  });
+});
+
+describe('Legal checkboxes + continue composite (signup)', () => {
+  test('Web: "Lena on Web checks both legal checkboxes and continues" → webAcceptLegalAndContinue', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAcceptLegalAndContinue: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Lena on Web checks both legal checkboxes and continues' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('iOS Sim: "Mia on iOS Sim accepts both legal checkboxes and continues" → iosAcceptLegalAndContinue', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosAcceptLegalAndContinue: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim accepts both legal checkboxes and continues' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('Android variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidAcceptLegalAndContinue: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Hayato on Android accepts both legal checkboxes and continues' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

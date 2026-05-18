@@ -3366,6 +3366,188 @@ const matchers = [
       return { ok: false, error: `unknown platform "${platform}" for type-and-submit step` };
     },
   },
+  {
+    // Current screen Given. Records platform + screen-name on the persona
+    // tracking maps (same shape as the URL-anchored persona-bootstrap
+    // matcher at line 1565). Screen names are platform-internal — Android
+    // / iOS use route names ("age_verification"), Web uses path or
+    // top-level component names.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+is on the "([^"]+)" screen$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const screenName = m[4];
+      if (!ctx.personaPlatforms) ctx.personaPlatforms = new Map();
+      if (!ctx.personaPaths) ctx.personaPaths = new Map();
+      ctx.personaPlatforms.set(name, platform);
+      ctx.personaPaths.set(name, screenName);
+      return { ok: true };
+    },
+  },
+  {
+    // Cross-persona displayName assertion. Looks up the target persona's
+    // displayName from the registry, then asserts the platform UI dump
+    // contains it. Optional `"<expected>"` literal overrides the registry
+    // lookup — useful when the corpus wants to be explicit about which
+    // displayName variant should be visible (some scenarios may use
+    // shortened forms or aliases).
+    //
+    // Same alternation order as elsewhere: longest Web variants first.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows ([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s displayName(?: "([^"]+)")?$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const target = m[4];
+      const explicit = m[6];
+      let expected = explicit;
+      if (!expected) {
+        const personas = loadPersonas();
+        const p = personas.get(target);
+        if (!p) {
+          return {
+            ok: false,
+            error: `target persona "${target}" not in registry — cannot resolve displayName`,
+          };
+        }
+        expected = p.displayName;
+      }
+      let dump;
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webUiDump) {
+          return { ok: false, error: 'ctx.webDriver.webUiDump not configured' };
+        }
+        dump = await ctx.webDriver.webUiDump();
+      } else if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+        }
+        dump = await ctx.uiDriver.androidUiDump();
+      } else if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.iosUiDump not configured' };
+        }
+        dump = await ctx.uiDriver.iosUiDump();
+      } else {
+        return { ok: false, error: `unknown platform "${platform}" for displayName step` };
+      }
+      if (!dump.includes(expected)) {
+        return {
+          ok: false,
+          error: `${platform} UI dump did not contain ${target}'s displayName "${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Quoted-string UI absence — like the Wake-44 person-absence matcher
+    // but takes a LITERAL quoted string instead of a capitalized name.
+    // Used for resource-id-shaped tags (`"main_roomsTab"`) and persona
+    // names that the corpus author specifically quoted to mark as a UI
+    // string rather than a persona reference.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show "([^"]+)"$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const target = m[4];
+      let dump;
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webUiDump) {
+          return { ok: false, error: 'ctx.webDriver.webUiDump not configured' };
+        }
+        dump = await ctx.webDriver.webUiDump();
+      } else if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+        }
+        dump = await ctx.uiDriver.androidUiDump();
+      } else if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.iosUiDump not configured' };
+        }
+        dump = await ctx.uiDriver.iosUiDump();
+      } else {
+        return { ok: false, error: `unknown platform "${platform}" for absence step` };
+      }
+      if (typeof dump === 'string' && dump.includes(target)) {
+        return {
+          ok: false,
+          error: `${platform} UI dump should not contain "${target}" but it does`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Bare-name button tap. The corpus uses "taps the X button" for
+    // single-word button names where the quoted-form would be visually
+    // noisy (e.g. "the claim button" reads more naturally than
+    // "the \"claim\" button"). Driver receives the bare name and decides
+    // which selector to use.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+taps the (\w+) button$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const buttonName = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webTapNamedButton) {
+          return { ok: false, error: 'ctx.webDriver.webTapNamedButton not configured' };
+        }
+        await ctx.webDriver.webTapNamedButton(buttonName);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidTapNamedButton) {
+          return { ok: false, error: 'ctx.uiDriver.androidTapNamedButton not configured' };
+        }
+        await ctx.uiDriver.androidTapNamedButton(buttonName);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosTapNamedButton) {
+          return { ok: false, error: 'ctx.uiDriver.iosTapNamedButton not configured' };
+        }
+        await ctx.uiDriver.iosTapNamedButton(buttonName);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for button-tap step` };
+    },
+  },
+  {
+    // Legal checkboxes + continue composite (signup flow).
+    // "accepts both legal checkboxes and continues" (j02 Mia iOS)
+    // "checks both legal checkboxes and continues" (j03 Lena Web)
+    // Both verbs route to the same driver method — the lexical
+    // difference is corpus-author preference, not a behavior split.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+(?:accepts|checks) both legal checkboxes and continues$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webAcceptLegalAndContinue) {
+          return { ok: false, error: 'ctx.webDriver.webAcceptLegalAndContinue not configured' };
+        }
+        await ctx.webDriver.webAcceptLegalAndContinue();
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidAcceptLegalAndContinue) {
+          return { ok: false, error: 'ctx.uiDriver.androidAcceptLegalAndContinue not configured' };
+        }
+        await ctx.uiDriver.androidAcceptLegalAndContinue();
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosAcceptLegalAndContinue) {
+          return { ok: false, error: 'ctx.uiDriver.iosAcceptLegalAndContinue not configured' };
+        }
+        await ctx.uiDriver.iosAcceptLegalAndContinue();
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for legal-checkbox step` };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
