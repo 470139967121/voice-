@@ -1965,9 +1965,33 @@ const matchers = [
 
 // ── Step execution ──────────────────────────────────────────────────
 
+// Strip trailing `(human commentary)` from a step's text so matchers can
+// regex-match the bare assertion. Regex constraints:
+//   - Requires `\s+` before `(` (so a quoted string ending in `)` doesn't get
+//     truncated mid-token).
+//   - Requires `)` to be the LAST char (`$` anchor) — preserves quoted
+//     strings like `"Price: $10 (USD)"` where `"` is the trailing char.
+//   - `[^()]*` inside disallows nested parens (would be ambiguous re: greedy
+//     vs lazy matching — explicit refusal beats undefined behavior).
+//
+// STEP_NOT_IMPLEMENTED errors still echo the ORIGINAL step text (with
+// annotation), so the operator sees what they actually wrote — not the
+// stripped form, which could be confusing.
+//
+// Regex is linear: `\s+` is a simple bounded quantifier; `[^()]*` is a
+// negated character class with no overlap with surrounding tokens
+// (`\s+` requires whitespace not in the class, `\)` is in the class
+// — so backtracking can't recurse). Author-controlled input (Gherkin
+// step text), not untrusted user data. Safe.
+function stripStepAnnotation(text) {
+  // eslint-disable-next-line sonarjs/slow-regex
+  return text.replace(/\s+\([^()]*\)$/, '');
+}
+
 async function executeStep(step, ctx) {
+  const text = stripStepAnnotation(step.text);
   for (const { pattern, handler } of matchers) {
-    const m = pattern.exec(step.text);
+    const m = pattern.exec(text);
     if (m) {
       // Wrap handler invocation so a thrown exception (fetch network error,
       // Firestore RPC failure, JSON.parse on a binary body, etc.) becomes a

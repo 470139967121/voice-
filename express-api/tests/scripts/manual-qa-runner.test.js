@@ -4310,6 +4310,118 @@ describe('Per-persona JWT custom-claim matcher (Then <P>\'s Android JWT custom c
   });
 });
 
+describe('Trailing-annotation preprocessing — `Then ... (human commentary)` is ignored uniformly', () => {
+  test('equal-to matcher accepts `(unchanged)` annotation — value 6000 still parses cleanly', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { shyCoins: 6000 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000010" with field "shyCoins" equal to 6000 (only one credit)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('equal-to matcher accepts `(NOT 7000)` annotation — runner verifies 6000, ignores commentary', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { shyCoins: 6000 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000010" with field "shyCoins" equal to 6000 (NOT 7000)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('response status accepts `(idempotent re-credit prevented)` annotation', async () => {
+    const ctx = makeCtx({ lastResponse: { status: 409 } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response status is 409 (idempotent re-credit prevented)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('greater-than matcher accepts annotation', async () => {
+    const db = makeStatefulFakeDb({ 'users/X': { shyCoins: 900 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/X" with field "shyCoins" greater than 800 (after gift received)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('step WITHOUT annotation — preprocessing is a no-op (no regression)', async () => {
+    const db = makeStatefulFakeDb({ 'users/X': { shyCoins: 5000 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/X" with field "shyCoins" equal to 5000',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('quoted string with parens inside is preserved (preprocessing only strips trailing `(...)` at end-of-string)', async () => {
+    // Critical: must not falsely strip `(USD)` from within a quoted text-content assertion.
+    // The regex `\s+\([^()]*\)$` requires `)` to be the LAST char; here the line ends with `"`,
+    // so no stripping happens.
+    const dump = '<node text="Price: $10.00 (USD)" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Alice\'s Android UI shows "Price: $10.00 (USD)"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('unmatched annotated step still includes ORIGINAL text (with annotation) in STEP_NOT_IMPLEMENTED error', async () => {
+    // Helps the operator see what they actually wrote, not the stripped form.
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'something nonexistent happens (with annotation)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/STEP_NOT_IMPLEMENTED/);
+    expect(r.error).toMatch(/\(with annotation\)/);
+  });
+
+  test('containing matcher accepts annotation', async () => {
+    const db = makeStatefulFakeDb({ 'users/X': { roles: ['admin', 'mod'] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/X" with field "roles" containing "admin" (after promotion)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
