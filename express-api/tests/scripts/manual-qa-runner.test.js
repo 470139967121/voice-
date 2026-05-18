@@ -4212,6 +4212,104 @@ describe('No conversation doc created — `no conversation doc is created` match
   });
 });
 
+describe('Per-persona JWT custom-claim matcher (Then <P>\'s Android JWT custom claim "X" equals "Y")', () => {
+  function makeJwt(payload) {
+    const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    return `${header}.${body}.signature`;
+  }
+
+  test('real Firebase JWT — claim equals expected (ok:true)', async () => {
+    const idToken = makeJwt({ uniqueId: 50000060, cohort: 'minor', iat: 1, exp: 9999999999 });
+    const sessions = new Map();
+    sessions.set('Hayato', { idToken });
+    const ctx = makeCtx({ sessions });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Hayato\'s Android JWT custom claim "cohort" equals "minor"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('real Firebase JWT — claim mismatches expected (fail with both values)', async () => {
+    const idToken = makeJwt({ uniqueId: 50000060, cohort: 'minor' });
+    const sessions = new Map();
+    sessions.set('Hayato', { idToken });
+    const ctx = makeCtx({ sessions });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Hayato\'s Android JWT custom claim "cohort" equals "adult"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/cohort/);
+    expect(r.error).toMatch(/minor/);
+    expect(r.error).toMatch(/adult/);
+  });
+
+  test('synthetic/ephemeral persona — uses session.customClaims directly (no JWT decode)', async () => {
+    const sessions = new Map();
+    sessions.set('Adam', {
+      idToken: 'synthetic:Adam:50000001',
+      customClaims: { uniqueId: 50000001, cohort: 'adult', ephemeral: true },
+    });
+    const ctx = makeCtx({ sessions });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Adam\'s Android JWT custom claim "cohort" equals "adult"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('synthetic/ephemeral persona — claim mismatch fails', async () => {
+    const sessions = new Map();
+    sessions.set('Adam', {
+      idToken: 'synthetic:Adam:50000001',
+      customClaims: { cohort: 'adult' },
+    });
+    const ctx = makeCtx({ sessions });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Adam\'s Android JWT custom claim "cohort" equals "minor"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  test('claim missing from payload — clear error pointing at the missing claim', async () => {
+    const idToken = makeJwt({ uniqueId: 1, iat: 1 });
+    const sessions = new Map();
+    sessions.set('Hayato', { idToken });
+    const ctx = makeCtx({ sessions });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Hayato\'s Android JWT custom claim "cohort" equals "minor"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/cohort/);
+  });
+
+  test('no session for persona — loud error pointing at missing Given sign-in', async () => {
+    const ctx = makeCtx({ sessions: new Map() }); // no sessions
+    const r = await executeStep(
+      { kind: 'Then', text: 'Hayato\'s Android JWT custom claim "cohort" equals "minor"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/session|Hayato/i);
+  });
+
+  test('P-NN persona annotation form — handled (Hayato [P-06])', async () => {
+    const idToken = makeJwt({ cohort: 'adult' });
+    const sessions = new Map();
+    sessions.set('Hayato', { idToken });
+    const ctx = makeCtx({ sessions });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Hayato [P-06]\'s Android JWT custom claim "cohort" equals "adult"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

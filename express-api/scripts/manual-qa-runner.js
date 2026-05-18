@@ -1286,6 +1286,51 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Per-persona JWT custom-claim assertion. Reads the persona's session
+    // from ctx.sessions (populated by sign-in matchers), decodes the JWT
+    // payload, and compares the named custom claim against expected.
+    //
+    // Ephemeral personas have a `synthetic:...` token sentinel rather than
+    // a real JWT — for those, the customClaims live directly on the session
+    // object. The matcher branches on token shape rather than always
+    // attempting to decode.
+    //
+    // "Android" in the step text is descriptive — JWTs are platform-agnostic.
+    // The runner doesn't enforce that the persona is on Android.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Android JWT custom claim "([^"]+)" equals "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const claim = m[3];
+      const expected = m[4];
+      const sess = ctx.sessions?.get(name);
+      if (!sess) {
+        return {
+          ok: false,
+          error: `no session for "${name}" — Given sign-in step missing?`,
+        };
+      }
+      // Branch on token shape: synthetic ephemeral tokens carry claims
+      // directly on the session; real Firebase JWTs need decoding.
+      let payload;
+      if (typeof sess.idToken === 'string' && sess.idToken.startsWith('synthetic:')) {
+        payload = sess.customClaims || {};
+      } else if (sess.idToken) {
+        payload = decodeJwtPayload(sess.idToken);
+      } else {
+        return { ok: false, error: `session for "${name}" has no idToken` };
+      }
+      const actual = payload[claim];
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `JWT custom claim "${claim}" for "${name}" was ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 
   // ── State-seed (mutating) ──
   // Writes a single field on the persona's user doc. Used in Background steps
