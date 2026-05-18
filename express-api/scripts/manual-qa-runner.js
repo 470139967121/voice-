@@ -1271,6 +1271,57 @@ const matchers = [
     },
   },
   {
+    // Negation of the tag-assertion above. Asserts that the element with
+    // the given resource-id is ABSENT from the UI. Same platform-dispatch
+    // shape as the positive matcher — Android is implemented, iOS/Web
+    // return the same "not yet implemented" / "out of scope" errors.
+    //
+    // De Morgan: positive matcher uses OR over short and qualified forms
+    // ("present in either form"). Negation must check that NEITHER form
+    // is present — both negated and ANDed — otherwise a qualified-form
+    // dump would slip past a naive short-only negation.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (\w+(?:\s+\w+){0,2}) UI does not show the element with tag "([^"]+)"$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const tag = m[4];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (platform=${platform}, tag=${tag}).`,
+        };
+      }
+      if (platform.startsWith('Android')) {
+        if (!ctx.uiDriver.androidUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+        }
+        const dump = await ctx.uiDriver.androidUiDump();
+        const shortMatch = dump.includes(`resource-id="${tag}"`);
+        const qualifiedMatch = dump.includes(`:id/${tag}"`);
+        if (shortMatch || qualifiedMatch) {
+          return {
+            ok: false,
+            error: `tag "${tag}" should not be present but was found in Android UI dump`,
+          };
+        }
+        return { ok: true };
+      }
+      if (platform.startsWith('iOS')) {
+        return {
+          ok: false,
+          error: `iOS UI driver (simctl) not yet implemented for tag "${tag}". Add ctx.uiDriver.iosUiDump.`,
+        };
+      }
+      if (platform.startsWith('Web')) {
+        return {
+          ok: false,
+          error: `Web UI driver delegated to Playwright MCP — out of Node-runner scope. Tag "${tag}" cannot be asserted here.`,
+        };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for UI step` };
+    },
+  },
+  {
     // Android tap on element with the given resource-id tag. Reads the UI
     // dump, locates the element's bounds=`[x1,y1][x2,y2]` attribute,
     // computes the centre, and calls ctx.uiDriver.androidTap(x, y).

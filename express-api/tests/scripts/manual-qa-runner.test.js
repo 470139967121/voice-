@@ -3029,6 +3029,139 @@ describe('UI driver — Android text-content assertion (Then <P>\'s Android UI s
   });
 });
 
+describe('UI driver — Android tag-negation (Then <P>\'s Android UI does not show the element with tag "<X>")', () => {
+  test('tag absent — assertion succeeds (ok:true)', async () => {
+    const dump = '<node resource-id="other_button" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('tag present in short form — assertion fails with clear error', async () => {
+    const dump = '<node resource-id="main_pmTab" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/main_pmTab/);
+    // Error must say the tag IS present, not that it isn't (don't confuse the operator).
+    expect(r.error).toMatch(/present|found|exists|shown|should not/i);
+  });
+
+  test('tag present in fully-qualified form — assertion fails (handles adb pkg-prefixed dumps)', async () => {
+    const dump = '<node resource-id="com.shyden.shytalk.dev:id/main_pmTab" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/main_pmTab/);
+  });
+
+  test('iOS Sim variant — returns "not yet implemented" error pointing at iosUiDump', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iOS|simctl|iosUiDump/i);
+  });
+
+  test('Web variant — explicit Playwright-MCP-out-of-scope error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Lena\'s Web UI does not show the element with tag "main_roomsTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Playwright|Web/i);
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI does not show the element with tag "anything"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('composes with within-Nms wrapper: polls for tag to disappear', async () => {
+    // Tag present at t=0, disappears at ~80ms.
+    let still = true;
+    setTimeout(() => {
+      still = false;
+    }, 80);
+    const ctx = makeCtx({
+      uiDriver: {
+        androidUiDump: jest.fn(async () =>
+          still
+            ? '<node resource-id="main_pmTab" /><node resource-id="other" />'
+            : '<node resource-id="other" />',
+        ),
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 500ms Hayato\'s Android UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('short-form vs qualified-form: short tag string in unrelated content does NOT cause false fail (e.g. "ab" must not match resource-id="cab")', async () => {
+    // De Morgan trap — a naive substring check could match `resource-id="some_main_pmTab_suffix"` as containing `main_pmTab`.
+    // Wake-15 uses an exact-attribute or :id/ suffix match; the negation must mirror that exactness.
+    const dump = '<node resource-id="some_other_widget" /><node resource-id="main_pmTabFooter" />';
+    const ctx = makeCtx({
+      uiDriver: { androidUiDump: jest.fn(async () => dump) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI does not show the element with tag "main_pmTab"',
+      },
+      ctx,
+    );
+    // Tag `main_pmTab` is NOT present (the closest is `main_pmTabFooter` which is a different resource-id).
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
