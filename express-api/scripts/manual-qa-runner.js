@@ -4304,6 +4304,128 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Package state-seed (j05/j06 IAP catalog). Writes packages/<id>
+    // with coinValue (required) and optional price. Price stays as the
+    // raw string with `$` so display tests can verify formatting.
+    pattern: /^the package "([^"]+)" exists with coinValue=(\d+)(?: and price="([^"]+)")?$/,
+    async handler(m, ctx) {
+      const id = m[1];
+      const coinValue = parseInt(m[2], 10);
+      const price = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const doc = { id, coinValue };
+      if (price !== undefined) doc.price = price;
+      await ctx.db.doc(`packages/${id}`).set(doc);
+      return { ok: true };
+    },
+  },
+  {
+    // Package selection (j05 — Alice selects coins-1000). Driver navigates
+    // to the catalog screen if needed and taps the named package card.
+    pattern: /^([A-Z][a-z]+)\s+on Web selects package "([^"]+)"$/,
+    async handler(m, ctx) {
+      const packageId = m[2];
+      if (!ctx.webDriver?.webSelectPackage) {
+        return { ok: false, error: 'ctx.webDriver.webSelectPackage not configured' };
+      }
+      await ctx.webDriver.webSelectPackage(packageId);
+      return { ok: true };
+    },
+  },
+  {
+    // Sandbox receipt submission (j05). The receipt ID is opaque to the
+    // runner — Wake 47 interpolation resolves any `{ts}` / `{var}`
+    // placeholders before this matcher sees the text. Driver POSTs the
+    // receipt to the IAP-verify endpoint.
+    pattern: /^([A-Z][a-z]+)\s+on Web submits a sandbox receipt "([^"]+)"$/,
+    async handler(m, ctx) {
+      const receiptId = m[2];
+      if (!ctx.webDriver?.webSubmitSandboxReceipt) {
+        return { ok: false, error: 'ctx.webDriver.webSubmitSandboxReceipt not configured' };
+      }
+      await ctx.webDriver.webSubmitSandboxReceipt(receiptId);
+      return { ok: true };
+    },
+  },
+  {
+    // Collection-entries-added-since assertion. Counts docs in the named
+    // collection (sub-collection paths supported) whose `createdAt` field
+    // is >= the given timestamp. The timestamp arrives as a quoted string
+    // because the corpus uses `"{ts}"` form — runner-level interpolation
+    // already resolved it to the literal value.
+    pattern: /^the database has (\d+) entries in "([^"]+)" added since "(\d+)"$/,
+    async handler(m, ctx) {
+      const expectedCount = parseInt(m[1], 10);
+      const collection = m[2];
+      const sinceTs = parseInt(m[3], 10);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.collection(collection).get();
+      const matches = snap.docs.filter((d) => {
+        const ts = d.data()?.createdAt;
+        return typeof ts === 'number' && ts >= sinceTs;
+      });
+      if (matches.length !== expectedCount) {
+        return {
+          ok: false,
+          error: `${collection} count mismatch since ${sinceTs}: expected ${expectedCount}, actual ${matches.length}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Firestore "no <collection> has field=value" assertion. Scans the
+    // implied collection (rooms by default; the noun in "on any X"
+    // becomes the collection name) and asserts no doc has the field
+    // containing the value (either scalar equality or array-includes).
+    pattern: /^the database does not have field "([^"]+)" containing (\d+) on any (\w+)$/,
+    async handler(m, ctx) {
+      const field = m[1];
+      const value = parseInt(m[2], 10);
+      // "on any room" → collection "rooms"
+      const collection = `${m[3]}s`;
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.collection(collection).get();
+      const offenders = snap.docs.filter((d) => {
+        const f = d.data()?.[field];
+        if (Array.isArray(f)) return f.includes(value);
+        return f === value;
+      });
+      if (offenders.length > 0) {
+        const ids = offenders.map((d) => d.id).join(', ');
+        return {
+          ok: false,
+          error: `${collection} docs [${ids}] have field "${field}" containing ${value}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Received system PM bare assertion. Bare form (no UI step prefix):
+    // "X received the <key> system PM from <sender>". Driver verifies
+    // the messages collection has a doc keyed by `<key>` addressed to
+    // X's uniqueId, from the named sender persona. Driver receives
+    // (recipientName, key, senderName).
+    pattern: /^([A-Z][a-z]+)\s+received the ([\w-]+) system PM from ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const recipient = m[1];
+      const key = m[2];
+      const sender = m[3];
+      if (!ctx.webDriver?.receivedSystemPm) {
+        return { ok: false, error: 'ctx.webDriver.receivedSystemPm not configured' };
+      }
+      const ok = await ctx.webDriver.receivedSystemPm(recipient, key, sender);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${recipient} did not receive the "${key}" system PM from ${sender}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
@@ -4389,6 +4511,12 @@ async function runScenario(scenario, parsed, ctx) {
   ctx.snapshots = new Map();
   ctx.scenarioStartTime = Date.now();
   ctx.scenarioVars = new Map();
+  // Auto-populate `{ts}` placeholder with scenarioStartTime. Corpus uses
+  // `{ts}` widely (sandbox receipts, email-username suffixes, timestamp
+  // filters) but never explicitly captures it — convention is that `{ts}`
+  // means "scenario start time". Auto-populating it here lets scenarios
+  // use the placeholder without writing a separate capture step.
+  ctx.scenarioVars.set('ts', String(ctx.scenarioStartTime));
   ctx.locale = 'en';
 
   const allSteps = [...(parsed.background?.steps || []), ...scenario.steps];

@@ -22,6 +22,7 @@ const {
   parseKvPairs,
   parseJsonishPredicate,
   executeStep,
+  runScenario,
   runFeatureFile,
 } = require('../../scripts/manual-qa-runner');
 
@@ -7907,6 +7908,190 @@ describe('Performance budget matcher', () => {
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/3000/);
     expect(r.error).toMatch(/5000/);
+  });
+});
+
+describe('Package state-seed (j05 IAP catalog)', () => {
+  test('"the package \\"X\\" exists with coinValue=N and price=\\"$Y\\"" writes packages/<id>', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the package "coins-1000" exists with coinValue=1000 and price="$9.99"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['packages/coins-1000']).toEqual({
+      id: 'coins-1000',
+      coinValue: 1000,
+      price: '$9.99',
+    });
+  });
+
+  test('bare form without price (j06): writes only coinValue', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the package "coins-1000" exists with coinValue=1000' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['packages/coins-1000']).toEqual({ id: 'coins-1000', coinValue: 1000 });
+  });
+});
+
+describe('Package selection (Web)', () => {
+  test('"Alice on Web selects package \\"coins-1000\\"" → webSelectPackage', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webSelectPackage: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web selects package "coins-1000"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('coins-1000');
+  });
+});
+
+describe('Sandbox receipt submission (Web)', () => {
+  test('"Alice on Web submits a sandbox receipt \\"<id>\\"" → webSubmitSandboxReceipt', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webSubmitSandboxReceipt: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web submits a sandbox receipt "sandbox-receipt-abc-A"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('sandbox-receipt-abc-A');
+  });
+
+  test('"{ts}" placeholder interpolates from scenarioVars', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webSubmitSandboxReceipt: spy } });
+    ctx.scenarioVars = new Map([['ts', '1700000000000']]);
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web submits a sandbox receipt "sandbox-receipt-{ts}-A"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('sandbox-receipt-1700000000000-A');
+  });
+});
+
+describe('Collection-entries-added-since-timestamp assertion', () => {
+  test('exactly N docs added since the recorded timestamp — ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000010/gifts/g1': { createdAt: 500 },
+      'users/50000010/gifts/g2': { createdAt: 800 },
+      'users/50000010/gifts/g3': { createdAt: 1500 },
+      'users/50000010/gifts/g4': { createdAt: 2000 },
+      'users/50000010/gifts/g5': { createdAt: 3000 },
+    });
+    const ctx = makeCtx({ db });
+    ctx.scenarioVars = new Map([['ts', '1000']]);
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 3 entries in "users/50000010/gifts" added since "{ts}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('wrong count — fail with both expected and actual', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000010/gifts/g1': { createdAt: 1500 },
+    });
+    const ctx = makeCtx({ db });
+    ctx.scenarioVars = new Map([['ts', '1000']]);
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 3 entries in "users/50000010/gifts" added since "{ts}"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 3.*actual 1/);
+  });
+});
+
+describe('Firestore array-not-contains on any-of-collection assertion', () => {
+  test('no room has the participant in participantIds — ok', async () => {
+    const db = makeStatefulFakeDb({
+      'rooms/r1': { participantIds: [50000010, 50000020] },
+      'rooms/r2': { participantIds: [50000040, 50000050] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have field "participantIds" containing 50000030 on any room',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('some room has the participant — fail with offending doc', async () => {
+    const db = makeStatefulFakeDb({
+      'rooms/r1': { participantIds: [50000010, 50000030] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have field "participantIds" containing 50000030 on any room',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/r1/);
+    expect(r.error).toMatch(/50000030/);
+  });
+});
+
+describe('Received system PM bare assertion', () => {
+  test('"X received the <key> system PM from <sender>" → driver call', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { receivedSystemPm: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Hayato received the age-down system PM from Officia' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato', 'age-down', 'Officia');
+  });
+
+  test('driver returns false — fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { receivedSystemPm: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Hayato received the age-down system PM from Officia' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/age-down/);
+  });
+});
+
+describe('runScenario auto-populates {ts} scenarioVar from scenarioStartTime', () => {
+  test('scenarioVars has "ts" key matching scenarioStartTime', async () => {
+    const fakeFetch = jest.fn(async () => ({ status: 200, json: async () => ({}) }));
+    const ctx = makeCtx({ fetch: fakeFetch });
+    const parsed = { background: { steps: [] }, scenarios: [] };
+    const scenario = {
+      tags: [],
+      name: 'minimal',
+      steps: [{ kind: 'Given', text: 'the local stack is healthy' }],
+    };
+    const before = Date.now();
+    await runScenario(scenario, parsed, ctx);
+    expect(ctx.scenarioVars.get('ts')).toBeDefined();
+    expect(parseInt(ctx.scenarioVars.get('ts'), 10)).toBeGreaterThanOrEqual(before);
   });
 });
 
