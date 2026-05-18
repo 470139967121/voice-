@@ -8772,6 +8772,151 @@ describe('Bare persona-exists Given', () => {
   });
 });
 
+describe('Types into search field (platform-dispatch)', () => {
+  test('"X on Web types \\"Y\\" into the search field" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTypeIntoSearch: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Vexa on Web types "Marcus" into the search field' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus');
+  });
+
+  test('Android: pre-existing matcher (line ~2698) wins by first-match-wins, calls androidSearchIn(null, text)', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidSearchIn: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android types "Alice" into the search field' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Existing matcher passes (null = "active screen") + text.
+    expect(spy).toHaveBeenCalledWith(null, 'Alice');
+  });
+
+  test('iOS Sim: pre-existing matcher (line ~2076) wins, calls iosSearchIn(null, text)', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosSearchIn: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim types "adult-power" into the search field' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(null, 'adult-power');
+  });
+});
+
+describe('Voice room state-seed', () => {
+  test('"X created a voice room \\"Y\\"" writes the room doc', async () => {
+    // Vexa is P-07 per persona registry — uniqueId 50000040
+    const { personas } = require('../../scripts/provision-test-personas');
+    const vexa = personas.find((p) => p.id === 'P-07');
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'Vexa created a voice room "rv1"' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/rv1']).toBeDefined();
+    expect(db._docs['rooms/rv1'].ownerUniqueId).toBe(vexa.uniqueId);
+    expect(db._docs['rooms/rv1'].id).toBe('rv1');
+  });
+});
+
+describe('FCM dispatcher attempts to send notification (action)', () => {
+  test('"FCM dispatcher attempts to send a notification from X to Y" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { simulateFcmDispatcherAttempt: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the FCM dispatcher attempts to send a notification from Vexa (50000040) to Marcus (60000010)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Vexa', 'Marcus');
+  });
+});
+
+describe("No FCM payload is sent to <X>'s tokens (negative assertion)", () => {
+  test('driver returns 0 payloads → ok', async () => {
+    const spy = jest.fn(async () => 0);
+    const ctx = makeCtx({ webDriver: { countFcmPayloadsToUser: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "no FCM payload is sent to Marcus's tokens" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus');
+  });
+
+  test('driver returns >0 → fail', async () => {
+    const spy = jest.fn(async () => 1);
+    const ctx = makeCtx({ webDriver: { countFcmPayloadsToUser: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "no FCM payload is sent to Marcus's tokens" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Marcus/);
+  });
+});
+
+describe('Dispatcher audit log records X with reason Y', () => {
+  test('"... records \\"X\\" with reason \\"Y\\"" → driver', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { auditLogContains: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the dispatcher audit log records "skipped" with reason "cohort_mismatch"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('skipped', 'cohort_mismatch');
+  });
+
+  test('driver returns false — fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { auditLogContains: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the dispatcher audit log records "skipped" with reason "cohort_mismatch"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/cohort_mismatch/);
+  });
+});
+
+describe('UI banner absence (party-anchored)', () => {
+  test('"X\'s Android UI does not show any in-app banner from Y" → driver', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsBannerFromUser: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Marcus's Android UI does not show any in-app banner from Vexa" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Vexa');
+  });
+
+  test('driver returns true (banner present) — fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsBannerFromUser: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Marcus's Android UI does not show any in-app banner from Vexa" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Vexa/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

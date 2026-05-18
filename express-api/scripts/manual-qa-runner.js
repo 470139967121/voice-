@@ -5107,6 +5107,153 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Types into search field — Web variant only. Pre-existing matchers
+    // already handle Android (androidSearchIn(null, text), line ~2698)
+    // and iOS Sim (iosSearchIn(null, text), line ~2076). This matcher
+    // fills the Web gap that the corpus (j08 Vexa) needs.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web)\s+types "([^"]+)" into the search field$/,
+    async handler(m, ctx) {
+      const body = m[3];
+      if (!ctx.webDriver?.webTypeIntoSearch) {
+        return { ok: false, error: 'ctx.webDriver.webTypeIntoSearch not configured' };
+      }
+      await ctx.webDriver.webTypeIntoSearch(body);
+      return { ok: true };
+    },
+  },
+  {
+    // Voice room state-seed (j08). Writes a `rooms/<id>` doc owned by
+    // the named persona. Owner uniqueId resolved via the persona
+    // registry. Other room fields (participants, etc.) initialised
+    // empty — scenarios that need them seed via other matchers.
+    pattern: /^([A-Z][a-z]+)\s+created a voice room "([^"]+)"$/,
+    async handler(m, ctx) {
+      const ownerName = m[1];
+      const roomId = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const owner = personas.get(ownerName);
+      if (!owner?.uniqueId) {
+        return { ok: false, error: `persona "${ownerName}" not in registry` };
+      }
+      await ctx.db.doc(`rooms/${roomId}`).set({
+        id: roomId,
+        ownerUniqueId: owner.uniqueId,
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // FCM dispatcher attempts to send a notification (j08). Wake 30
+    // strips ONLY the trailing parens — so the step has parens
+    // remaining mid-step around the sender's uniqueId. Allow optional
+    // `(<digits>)` after each name to absorb that residual.
+    pattern:
+      /^the FCM dispatcher attempts to send a notification from ([A-Z][a-z]+)(?:\s+\(\d+\))?\s+to ([A-Z][a-z]+)(?:\s+\(\d+\))?$/,
+    async handler(m, ctx) {
+      const sender = m[1];
+      const recipient = m[2];
+      if (!ctx.webDriver?.simulateFcmDispatcherAttempt) {
+        return {
+          ok: false,
+          error: 'ctx.webDriver.simulateFcmDispatcherAttempt not configured',
+        };
+      }
+      await ctx.webDriver.simulateFcmDispatcherAttempt(sender, recipient);
+      return { ok: true };
+    },
+  },
+  {
+    // No FCM payload is sent to <X>'s tokens (j08 cross-cohort wall).
+    // Negative assertion — driver counts payloads delivered to the
+    // persona's FCM tokens since the most recent dispatcher attempt.
+    pattern: /^no FCM payload is sent to ([A-Z][a-z]+)'s tokens$/,
+    async handler(m, ctx) {
+      const recipient = m[1];
+      if (!ctx.webDriver?.countFcmPayloadsToUser) {
+        return { ok: false, error: 'ctx.webDriver.countFcmPayloadsToUser not configured' };
+      }
+      const count = await ctx.webDriver.countFcmPayloadsToUser(recipient);
+      if (count > 0) {
+        return {
+          ok: false,
+          error: `expected 0 FCM payloads to ${recipient} but driver found ${count}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Dispatcher audit log records <X> with reason <Y> (j08). Driver
+    // verifies the audit log contains an entry with the named action
+    // AND named reason.
+    pattern: /^the dispatcher audit log records "([^"]+)" with reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const action = m[1];
+      const reason = m[2];
+      if (!ctx.webDriver?.auditLogContains) {
+        return { ok: false, error: 'ctx.webDriver.auditLogContains not configured' };
+      }
+      const ok = await ctx.webDriver.auditLogContains(action, reason);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `audit log has no entry "${action}" with reason "${reason}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // UI banner absence (party-anchored). Distinct from Wake 52's
+    // generic "cohort change banner" — this one is party-anchored:
+    // "X's UI does not show any in-app banner FROM Y". Platform-
+    // dispatch; driver returns truthy iff a banner from the named
+    // sender is currently rendered. Truthy = banner present = fail.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show any in-app banner from ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const sender = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webShowsBannerFromUser) {
+          return { ok: false, error: 'ctx.webDriver.webShowsBannerFromUser not configured' };
+        }
+        const shown = await ctx.webDriver.webShowsBannerFromUser(sender);
+        if (shown) {
+          return { ok: false, error: `Web UI shows an in-app banner from "${sender}"` };
+        }
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsBannerFromUser) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidShowsBannerFromUser not configured',
+          };
+        }
+        const shown = await ctx.uiDriver.androidShowsBannerFromUser(sender);
+        if (shown) {
+          return { ok: false, error: `Android UI shows an in-app banner from "${sender}"` };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsBannerFromUser) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsBannerFromUser not configured' };
+        }
+        const shown = await ctx.uiDriver.iosShowsBannerFromUser(sender);
+        if (shown) {
+          return { ok: false, error: `iOS UI shows an in-app banner from "${sender}"` };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for banner-absence step` };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
