@@ -2018,6 +2018,75 @@ const matchers = [
     },
   },
   {
+    // iOS Sim text-content assertion. Scans the accessibility JSON dump
+    // for either `"label":"X"` (accessibilityLabel) or `"value":"X"`
+    // (accessibilityValue). Mirrors Android's dual-check on `text=` and
+    // `content-desc=`.
+    //
+    // Exact-match on the attribute value (no substring) — same rationale
+    // as Wake 19's Android matcher: substring would let "save" silently
+    // pass against "save as draft".
+    //
+    // Trailing descriptive text accepted (e.g. ` toast`, ` banner`) and
+    // ignored — matches the corpus phrasings without forcing rewrites.
+    // eslint-disable-next-line sonarjs/slow-regex
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s iOS Sim UI shows "([^"]+)"(?:\s+.+)?$/,
+    async handler(m, ctx) {
+      const expected = m[3];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (iOS text=${expected})` };
+      }
+      if (!ctx.uiDriver.iosUiDump) {
+        return { ok: false, error: 'ctx.uiDriver.iosUiDump not configured' };
+      }
+      const dump = await ctx.uiDriver.iosUiDump();
+      const labelHit = dump.includes(`"label":"${expected}"`);
+      const valueHit = dump.includes(`"value":"${expected}"`);
+      if (!labelHit && !valueHit) {
+        return {
+          ok: false,
+          error: `iOS UI dump has no label="${expected}" or value="${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // iOS Sim type-into-element. Delegates entirely to
+    // `iosTypeText(tag, text)` — driver owns identifier→coordinate
+    // lookup and the focus-then-type sequence. Less parsing in matcher.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on iOS Sim\s+types "([^"]+)" into "([^"]+)"$/,
+    async handler(m, ctx) {
+      const text = m[3];
+      const tag = m[4];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: `UI step requires ctx.uiDriver (iOS type into ${tag})` };
+      }
+      if (!ctx.uiDriver.iosTypeText) {
+        return { ok: false, error: 'ctx.uiDriver.iosTypeText not configured' };
+      }
+      await ctx.uiDriver.iosTypeText(tag, text);
+      return { ok: true };
+    },
+  },
+  {
+    // iOS Sim type-into-search-field. Active-screen search — driver decides
+    // which search field. Parallel to Wake 32's androidSearchIn(null, text).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on iOS Sim\s+types "([^"]+)" into the search field$/,
+    async handler(m, ctx) {
+      const text = m[3];
+      if (!ctx.uiDriver) {
+        return { ok: false, error: 'UI step requires ctx.uiDriver (iOS search field)' };
+      }
+      if (!ctx.uiDriver.iosSearchIn) {
+        return { ok: false, error: 'ctx.uiDriver.iosSearchIn not configured' };
+      }
+      await ctx.uiDriver.iosSearchIn(null, text);
+      return { ok: true };
+    },
+  },
+  {
     // Android search composites — both phrasings delegate to a single
     // driver method `androidSearchIn(screenOrNull, text)`. The driver
     // owns search-field-tag mapping (e.g. `discovery_searchField`,

@@ -5233,6 +5233,157 @@ describe('iOS Sim open-screen matcher (When <P> on iOS Sim opens the "X" screen)
   });
 });
 
+describe('iOS Sim text-content assertion (Then <P>\'s iOS Sim UI shows "X")', () => {
+  test('matches a "label":"..." attribute in JSON dump', async () => {
+    const dump =
+      '{"children":[{"identifier":"banner","label":"You must be 18 or older to use this feature"}]}';
+    const ctx = makeCtx({ uiDriver: { iosUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI shows "You must be 18 or older to use this feature"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('matches a "value":"..." attribute when label is absent', async () => {
+    const dump = '{"children":[{"identifier":"toast","value":"Report submitted"}]}';
+    const ctx = makeCtx({ uiDriver: { iosUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Nora\'s iOS Sim UI shows "Report submitted"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('substring rejection: "save" must not match "save as draft"', async () => {
+    const dump = '{"children":[{"label":"save as draft"}]}';
+    const ctx = makeCtx({ uiDriver: { iosUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep({ kind: 'Then', text: 'Mia\'s iOS Sim UI shows "save"' }, ctx);
+    expect(r.ok).toBe(false);
+  });
+
+  test('trailing descriptive context allowed (e.g. ` toast`)', async () => {
+    const dump = '{"children":[{"label":"Report submitted"}]}';
+    const ctx = makeCtx({ uiDriver: { iosUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Nora\'s iOS Sim UI shows "Report submitted" toast' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'Mia\'s iOS Sim UI shows "anything"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing iosUiDump driver method — specific error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep({ kind: 'Then', text: 'Mia\'s iOS Sim UI shows "anything"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosUiDump/);
+  });
+});
+
+describe('iOS Sim type-into-element matcher (When <P> on iOS Sim types "X" into "Y")', () => {
+  test('calls iosTypeText with tag + content', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { iosTypeText: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Mia on iOS Sim types "mia@shytalk.dev" into "signup_emailField"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('signup_emailField', 'mia@shytalk.dev');
+  });
+
+  test('special chars in text passed through verbatim', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { iosTypeText: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim types "TestPassw0rd!" into "signup_passwordField"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('signup_passwordField', 'TestPassw0rd!');
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'When', text: 'Mia on iOS Sim types "x" into "y"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing iosTypeText driver method — specific error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep({ kind: 'When', text: 'Mia on iOS Sim types "x" into "y"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosTypeText/);
+  });
+});
+
+describe('iOS Sim type-into-search-field matcher (When <P> on iOS Sim types "X" into the search field)', () => {
+  test('calls iosSearchIn(null, text) — active-screen search', async () => {
+    const spy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { iosSearchIn: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim types "minor-power" into the search field' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(null, 'minor-power');
+  });
+
+  test('no ctx.uiDriver — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim types "x" into the search field' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing iosSearchIn driver method — specific error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim types "x" into the search field' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosSearchIn/);
+  });
+
+  test('does not collide with iOS Sim type-into-element matcher', async () => {
+    // Regression guard: `types "X" into "Y"` and `types "X" into the search field`
+    // must route to different driver methods.
+    const typeSpy = jest.fn(async () => {});
+    const searchSpy = jest.fn(async () => {});
+    const ctx = makeCtx({
+      uiDriver: { iosTypeText: typeSpy, iosSearchIn: searchSpy },
+    });
+    await executeStep({ kind: 'When', text: 'Mia on iOS Sim types "x" into "emailField"' }, ctx);
+    expect(typeSpy).toHaveBeenCalled();
+    expect(searchSpy).not.toHaveBeenCalled();
+    typeSpy.mockClear();
+    await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim types "q" into the search field' },
+      ctx,
+    );
+    expect(searchSpy).toHaveBeenCalledWith(null, 'q');
+    expect(typeSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
