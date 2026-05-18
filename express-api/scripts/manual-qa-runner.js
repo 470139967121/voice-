@@ -1469,6 +1469,31 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Android navigation. Thin matcher — delegates to ctx.uiDriver.androidOpenScreen(name).
+    // Accepts both "screen" and "tab" as the noun because the corpus uses
+    // them interchangeably (pm/rooms tab vs discovery/wallet screen).
+    // Driver implementation chooses between adb deeplink and UI-tap nav.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+opens the "([^"]+)" (?:screen|tab)$/,
+    async handler(m, ctx) {
+      const screenName = m[3];
+      if (!ctx.uiDriver) {
+        return {
+          ok: false,
+          error: `UI step requires ctx.uiDriver (screen=${screenName})`,
+        };
+      }
+      if (!ctx.uiDriver.androidOpenScreen) {
+        return {
+          ok: false,
+          error: 'ctx.uiDriver.androidOpenScreen not configured',
+        };
+      }
+      await ctx.uiDriver.androidOpenScreen(screenName);
+      return { ok: true };
+    },
+  },
   // ── j19 migration query verbs ──
   {
     // Single-doc query. Stores `{exists, data}` on ctx.lastQueryResult so

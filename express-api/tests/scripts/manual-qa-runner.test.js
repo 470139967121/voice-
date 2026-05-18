@@ -3162,6 +3162,87 @@ describe('UI driver — Android tag-negation (Then <P>\'s Android UI does not sh
   });
 });
 
+describe('UI driver — Android navigation (When <P> on Android opens the "<X>" screen|tab)', () => {
+  test('"screen" noun — calls androidOpenScreen with the exact screen name', async () => {
+    const openSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidOpenScreen: openSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android opens the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(openSpy).toHaveBeenCalledWith('discovery');
+  });
+
+  test('"tab" noun — same matcher works (semantically equivalent navigation target)', async () => {
+    const openSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidOpenScreen: openSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Selma on Android opens the "rooms" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(openSpy).toHaveBeenCalledWith('rooms');
+  });
+
+  test('P-NN persona annotation — handled without polluting the screen name', async () => {
+    const openSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidOpenScreen: openSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam [P-01] on Android opens the "wallet" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(openSpy).toHaveBeenCalledWith('wallet');
+  });
+
+  test('multi-word screen names with underscores pass through verbatim', async () => {
+    // Important: don't accidentally strip or transform the name — drivers may need
+    // exact case/separator for deeplinks (e.g. shytalk://daily_reward).
+    const openSpy = jest.fn(async () => {});
+    const ctx = makeCtx({ uiDriver: { androidOpenScreen: openSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android opens the "daily_reward" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(openSpy).toHaveBeenCalledWith('daily_reward');
+  });
+
+  test('no ctx.uiDriver — loud error before any driver call', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android opens the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/uiDriver/i);
+  });
+
+  test('missing androidOpenScreen driver method — specific actionable error', async () => {
+    const ctx = makeCtx({ uiDriver: {} }); // uiDriver present, method missing
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android opens the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidOpenScreen/);
+  });
+
+  test('driver throws — bubbles up through executeStep wrapper as structured finding', async () => {
+    const openSpy = jest.fn(async () => {
+      throw new Error('adb: device not found');
+    });
+    const ctx = makeCtx({ uiDriver: { androidOpenScreen: openSpy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam on Android opens the "discovery" screen' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/adb: device not found/);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
