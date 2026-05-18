@@ -910,6 +910,43 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Numeric strict-greater-than. Rejects non-numeric actual values rather
+    // than relying on JavaScript's lexicographic / NaN coercion semantics
+    // (which can silently report "abc > 100" as false and mask real bugs).
+    // Strict `>` — `>=` is a separate assertion the corpus doesn't use.
+    pattern: /^the database has document "([^"]+)" with field "([^"]+)" greater than (.+)$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const docPath = m[1];
+      const field = m[2];
+      const expected = parseLiteral(m[3].trim());
+      if (typeof expected !== 'number') {
+        return {
+          ok: false,
+          error: `greater-than threshold must be numeric, got ${JSON.stringify(m[3].trim())}`,
+        };
+      }
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `document "${docPath}" does not exist` };
+      }
+      const actual = snap.data()?.[field];
+      if (typeof actual !== 'number') {
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" was ${JSON.stringify(actual)}, expected a numeric value to compare against ${expected}`,
+        };
+      }
+      if (!(actual > expected)) {
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" was ${actual}, expected greater than ${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
   // ── JWT payload introspection ──
   // Decodes the `token` field of the most-recent response body and asserts on
   // a dotted-path field within the payload. Used for verifying LiveKit access

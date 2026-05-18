@@ -3243,6 +3243,159 @@ describe('UI driver — Android navigation (When <P> on Android opens the "<X>" 
   });
 });
 
+describe('Firestore doc-field greater-than matcher (Then the database has document X with field Y greater than N)', () => {
+  test('actual > expected → ok:true', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { shyCoins: 900 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" greater than 800',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('actual === expected → fails (strict greater, NOT >=)', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { shyCoins: 800 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" greater than 800',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/800/);
+  });
+
+  test('actual < expected → fails with informative error', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { shyCoins: 500 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" greater than 800',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/shyCoins/);
+    expect(r.error).toMatch(/500/);
+    expect(r.error).toMatch(/800/);
+  });
+
+  test('field missing — clear error pointing at the missing field', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { otherField: 1 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" greater than 0',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/shyCoins/);
+  });
+
+  test('doc does not exist — error mentions the doc path', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" greater than 0',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/users\/50000020/);
+  });
+
+  test('non-numeric actual field — rejects rather than doing JS lexicographic comparison', async () => {
+    // Critical: `"abc" > 100` returns false in JS via NaN coercion, which would
+    // silently report the assertion as "fails as expected" — but the actual bug
+    // is "the field is wrongly typed". Explicit type rejection avoids that trap.
+    const db = makeStatefulFakeDb({ 'users/50000020': { shyCoins: 'not-a-number' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" greater than 0',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/numeric|number/i);
+  });
+
+  test('non-numeric expected literal — rejects with parse error', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { shyCoins: 900 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" greater than foo',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/foo|numeric|number/i);
+  });
+
+  test('no ctx.db — loud error before any work', async () => {
+    const ctx = makeCtx({ db: undefined });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "shyCoins" greater than 800',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+
+  test('composes with the within-Nms wrapper — polls until the value crosses the threshold', async () => {
+    // shyCoins starts at 500, increments to 1000 at ~80ms.
+    let count = 500;
+    setTimeout(() => {
+      count = 1000;
+    }, 80);
+    const ctx = makeCtx({
+      db: {
+        doc: () => ({
+          get: async () => ({ exists: true, data: () => ({ shyCoins: count }) }),
+        }),
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 500ms the database has document "users/50000020" with field "shyCoins" greater than 800',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('floating-point comparison works (privacyVersion > 0 with non-integer values)', async () => {
+    const db = makeStatefulFakeDb({ 'usersAcceptedPolicies/u1': { privacyVersion: 1.5 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "usersAcceptedPolicies/u1" with field "privacyVersion" greater than 0',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
