@@ -8260,6 +8260,141 @@ describe('Reverse-order gift selection (recipient first, then gift)', () => {
   });
 });
 
+describe('Double-tap with same receipt within Nms (idempotency test)', () => {
+  test('"X on Web double-taps \\"tag\\" with the same receipt \\"R\\" within Nms" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webDoubleTapWithSameReceipt: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Alice on Web double-taps "wallet_buyCoinsButton" with the same receipt "receipt-X" within 200ms',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('wallet_buyCoinsButton', 'receipt-X', 200);
+  });
+});
+
+describe('API request count + status assertion', () => {
+  test('"exactly N requests to /api/X succeeds with status N" — driver returns matching counts → ok', async () => {
+    const spy = jest.fn(async () => ({ succeeded: 1, status: 200 }));
+    const ctx = makeCtx({ webDriver: { apiRequestStats: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'exactly 1 request to /api/economy/purchase succeeds with status 200' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/api/economy/purchase', 200);
+  });
+
+  test('count mismatch — fail', async () => {
+    const spy = jest.fn(async () => ({ succeeded: 2, status: 200 }));
+    const ctx = makeCtx({ webDriver: { apiRequestStats: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'exactly 1 request to /api/economy/purchase succeeds with status 200' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 1.*actual 2/);
+  });
+});
+
+describe('Sequential request status assertion', () => {
+  test('"the second request returns status N" → driver returns matching status', async () => {
+    const spy = jest.fn(async () => 409);
+    const ctx = makeCtx({ webDriver: { sequentialRequestStatus: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the second request returns status 409' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(2);
+  });
+
+  test('"the third request returns status N" routes correctly', async () => {
+    const spy = jest.fn(async () => 200);
+    const ctx = makeCtx({ webDriver: { sequentialRequestStatus: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the third request returns status 200' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(3);
+  });
+
+  test('status mismatch — fail with both expected and actual', async () => {
+    const spy = jest.fn(async () => 500);
+    const ctx = makeCtx({ webDriver: { sequentialRequestStatus: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the second request returns status 409' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 409.*actual 500/);
+  });
+});
+
+describe('Composite purchase action (sandbox receipt)', () => {
+  test('"X on Web purchases \\"Y\\" with sandbox receipt" → driver call', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webPurchaseWithSandboxReceipt: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web purchases "coins-1000" with sandbox receipt' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('coins-1000');
+  });
+});
+
+describe('Past-tense purchase assertion (post-Wake-30 strip)', () => {
+  test('"X purchased \\"Y\\" with receipt \\"Z\\" successfully" → driver verify', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { hasPurchasedSuccessfully: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        // Trailing "(shyCoins now 6000)" stripped by Wake 30.
+        text: 'Alice purchased "coins-1000" with receipt "receipt-R1" successfully (shyCoins now 6000)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'coins-1000', 'receipt-R1');
+  });
+
+  test('driver returns false — fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { hasPurchasedSuccessfully: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice purchased "coins-1000" with receipt "receipt-R1" successfully',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/coins-1000/);
+  });
+});
+
+describe('Network drop simulation', () => {
+  test('"X\'s network drops before the 200 OK reaches the client" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { simulateNetworkDropBeforeResponse: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: "Alice's network drops before the 200 OK reaches the client",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

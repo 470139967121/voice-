@@ -4570,6 +4570,141 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Double-tap with same receipt within Nms (idempotency test).
+    // Driver fires two taps in quick succession on the same element with
+    // the same receipt ID — used to verify the server rejects the
+    // duplicate (typically status 409 from /api/economy/purchase).
+    pattern:
+      /^([A-Z][a-z]+)\s+on Web double-taps "([^"]+)" with the same receipt "([^"]+)" within (\d+)ms$/,
+    async handler(m, ctx) {
+      const tag = m[2];
+      const receipt = m[3];
+      const withinMs = parseInt(m[4], 10);
+      if (!ctx.webDriver?.webDoubleTapWithSameReceipt) {
+        return { ok: false, error: 'ctx.webDriver.webDoubleTapWithSameReceipt not configured' };
+      }
+      await ctx.webDriver.webDoubleTapWithSameReceipt(tag, receipt, withinMs);
+      return { ok: true };
+    },
+  },
+  {
+    // API request count + status assertion. Driver returns { succeeded,
+    // status } summary for the named endpoint at the named status code.
+    // Used by j05 double-tap idempotency to verify exactly 1 of 2 taps
+    // hit /api/economy/purchase with status 200.
+    pattern: /^exactly (\d+) requests? to (\/api\/[\w/-]+) succeeds with status (\d+)$/,
+    async handler(m, ctx) {
+      const expectedCount = parseInt(m[1], 10);
+      const endpoint = m[2];
+      const expectedStatus = parseInt(m[3], 10);
+      if (!ctx.webDriver?.apiRequestStats) {
+        return { ok: false, error: 'ctx.webDriver.apiRequestStats not configured' };
+      }
+      const stats = await ctx.webDriver.apiRequestStats(endpoint, expectedStatus);
+      if (stats.succeeded !== expectedCount) {
+        return {
+          ok: false,
+          error: `${endpoint} status ${expectedStatus} count mismatch: expected ${expectedCount}, actual ${stats.succeeded}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Sequential request status assertion. "the second/third/Nth
+    // request returns status N". Ordinal words mapped to 1-indexed
+    // positions; driver returns the HTTP status of that request from
+    // the most recent batch.
+    pattern: /^the (\w+) request returns status (\d+)$/,
+    async handler(m, ctx) {
+      const ORDINAL_TO_INDEX = {
+        first: 1,
+        second: 2,
+        third: 3,
+        fourth: 4,
+        fifth: 5,
+        sixth: 6,
+        seventh: 7,
+        eighth: 8,
+        ninth: 9,
+        tenth: 10,
+      };
+      const ordinal = m[1];
+      const expectedStatus = parseInt(m[2], 10);
+      const idx = ORDINAL_TO_INDEX[ordinal];
+      if (!idx) {
+        return { ok: false, error: `unknown ordinal "${ordinal}"` };
+      }
+      if (!ctx.webDriver?.sequentialRequestStatus) {
+        return { ok: false, error: 'ctx.webDriver.sequentialRequestStatus not configured' };
+      }
+      const actual = await ctx.webDriver.sequentialRequestStatus(idx);
+      if (actual !== expectedStatus) {
+        return {
+          ok: false,
+          error: `request #${idx} status mismatch: expected ${expectedStatus}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Composite purchase (j05). "X on Web purchases \"Y\" with sandbox
+    // receipt" — driver selects the package, generates a fresh sandbox
+    // receipt, and POSTs to /api/economy/purchase. The receipt ID is
+    // driver-managed and not visible to the runner.
+    pattern: /^([A-Z][a-z]+)\s+on Web purchases "([^"]+)" with sandbox receipt$/,
+    async handler(m, ctx) {
+      const packageId = m[2];
+      if (!ctx.webDriver?.webPurchaseWithSandboxReceipt) {
+        return { ok: false, error: 'ctx.webDriver.webPurchaseWithSandboxReceipt not configured' };
+      }
+      await ctx.webDriver.webPurchaseWithSandboxReceipt(packageId);
+      return { ok: true };
+    },
+  },
+  {
+    // Past-tense purchase Given (j06 — state set up by a prior
+    // successful purchase). Trailing parens "(shyCoins now N)"
+    // stripped by Wake 30. Driver verifies the persona's purchase
+    // history has a successful entry with the given receipt ID.
+    pattern: /^([A-Z][a-z]+)\s+purchased "([^"]+)" with receipt "([^"]+)" successfully$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const packageId = m[2];
+      const receipt = m[3];
+      if (!ctx.webDriver?.hasPurchasedSuccessfully) {
+        return { ok: false, error: 'ctx.webDriver.hasPurchasedSuccessfully not configured' };
+      }
+      const ok = await ctx.webDriver.hasPurchasedSuccessfully(name, packageId, receipt);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name} has no successful purchase for "${packageId}" with receipt "${receipt}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Network drop simulation (j06 recovery flow). Driver intercepts the
+    // next outgoing request (typically /api/economy/purchase) and
+    // returns failure BEFORE the response is delivered, simulating the
+    // "lost ACK" scenario the retry logic needs to handle correctly.
+    pattern: /^([A-Z][a-z]+)'s network drops before the 200 OK reaches the client$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.webDriver?.simulateNetworkDropBeforeResponse) {
+        return {
+          ok: false,
+          error: 'ctx.webDriver.simulateNetworkDropBeforeResponse not configured',
+        };
+      }
+      await ctx.webDriver.simulateNetworkDropBeforeResponse(name);
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
