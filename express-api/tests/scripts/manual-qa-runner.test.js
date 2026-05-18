@@ -4422,6 +4422,161 @@ describe('Trailing-annotation preprocessing — `Then ... (human commentary)` is
   });
 });
 
+describe('Response-body array-length matcher (Then the response body has field "X" array length N)', () => {
+  test('array length matches — ok:true', async () => {
+    const ctx = makeCtx({
+      lastResponse: { status: 200, body: { gifts: [{ a: 1 }, { a: 2 }, { a: 3 }] } },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body has field "gifts" array length 3' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('array length mismatches — fails with actual + expected', async () => {
+    const ctx = makeCtx({ lastResponse: { status: 200, body: { gifts: [1, 2] } } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body has field "gifts" array length 5' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/2/);
+    expect(r.error).toMatch(/5/);
+  });
+
+  test('field is not an array — clear error', async () => {
+    const ctx = makeCtx({ lastResponse: { status: 200, body: { gifts: 'oops' } } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body has field "gifts" array length 0' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/array/i);
+  });
+
+  test('field missing — error mentions the missing field', async () => {
+    const ctx = makeCtx({ lastResponse: { status: 200, body: {} } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body has field "gifts" array length 0' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/gifts/);
+  });
+
+  test('no prior response — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body has field "gifts" array length 3' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/response/i);
+  });
+});
+
+describe('Response-body contains alternation (Then the response body contains "X" or "Y")', () => {
+  test('first option present — ok:true', async () => {
+    const ctx = makeCtx({
+      lastResponse: { status: 409, body: { error: 'duplicate request' } },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body contains "duplicate" or "already_consumed"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('second option present — ok:true', async () => {
+    const ctx = makeCtx({
+      lastResponse: { status: 409, body: { error: 'order already_consumed' } },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body contains "duplicate" or "already_consumed"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('neither option present — fails with both expected', async () => {
+    const ctx = makeCtx({
+      lastResponse: { status: 500, body: { error: 'something else' } },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body contains "duplicate" or "already_consumed"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/duplicate/);
+    expect(r.error).toMatch(/already_consumed/);
+  });
+
+  test('does not collide with single-needle contains matcher', async () => {
+    // Regression guard: existing `contains "X"$` must still work after adding
+    // `contains "X" or "Y"$`. First-match wins ordering must not swap.
+    const ctx = makeCtx({ lastResponse: { status: 200, body: { error: 'duplicate' } } });
+    const single = await executeStep(
+      { kind: 'Then', text: 'the response body contains "duplicate"' },
+      ctx,
+    );
+    expect(single.ok).toBe(true);
+    const both = await executeStep(
+      { kind: 'Then', text: 'the response body contains "duplicate" or "fallback"' },
+      ctx,
+    );
+    expect(both.ok).toBe(true);
+  });
+});
+
+describe('Response status-or-body-signal alternation (Then the response has status N or signals "X")', () => {
+  test('status matches — ok:true (no need to inspect body signal)', async () => {
+    const ctx = makeCtx({ lastResponse: { status: 401, body: {} } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response has status 401 or signals "auth/user-token-expired"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('status mismatches but body contains signal — ok:true (signal serves as fallback)', async () => {
+    const ctx = makeCtx({
+      lastResponse: {
+        status: 500,
+        body: { code: 'auth/user-token-expired', message: 'token expired' },
+      },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response has status 401 or signals "auth/user-token-expired"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('neither status nor signal matches — fails with both observable values', async () => {
+    const ctx = makeCtx({
+      lastResponse: { status: 500, body: { code: 'something/else' } },
+    });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response has status 401 or signals "auth/user-token-expired"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/500/);
+    expect(r.error).toMatch(/401|auth\/user-token-expired/);
+  });
+
+  test('no prior response — loud error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response has status 401 or signals "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no prior request|response/i);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {

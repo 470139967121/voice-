@@ -707,6 +707,31 @@ const matchers = [
 
   // ── Response assertions ──
   {
+    // `the response has status N or signals "X"` — status code OR body
+    // signal string. Used when client-side error handling routes off
+    // either the HTTP status code OR a body field (e.g. Firebase Auth's
+    // `auth/user-token-expired` is sometimes a 401 status, sometimes 500
+    // with the code in the body).
+    pattern: /^the response has status (\d{3}) or signals "([^"]+)"$/,
+    async handler(m, ctx) {
+      if (!ctx.lastResponse) return { ok: false, error: 'no prior request — When step missing?' };
+      const expectedStatus = parseInt(m[1], 10);
+      const signal = m[2];
+      if (ctx.lastResponse.status === expectedStatus) return { ok: true };
+      // Search body (stringified) for the signal — handles either top-level
+      // code field, error.message, or any nested string field.
+      const body = ctx.lastResponse.body;
+      if (body) {
+        const haystack = JSON.stringify(body);
+        if (haystack.includes(signal)) return { ok: true };
+      }
+      return {
+        ok: false,
+        error: `response status was ${ctx.lastResponse.status} and body did not signal "${signal}", expected status ${expectedStatus} or signal "${signal}"`,
+      };
+    },
+  },
+  {
     pattern: /^the response status is (\d{3})$/,
     async handler(m, ctx) {
       if (!ctx.lastResponse) return { ok: false, error: 'no prior request — When step missing?' };
@@ -753,6 +778,51 @@ const matchers = [
         return { ok: false, error: `field "${field}" was ${actualType}, expected ${expectedType}` };
       }
       return { ok: true };
+    },
+  },
+  {
+    // Array length on a specific field. Distinct from `of type "array"` which
+    // only checks the type; this checks the exact length.
+    pattern: /^the response body has field "([^"]+)" array length (\d+)$/,
+    async handler(m, ctx) {
+      if (!ctx.lastResponse?.body)
+        return { ok: false, error: 'no parsed response body to inspect' };
+      const field = m[1];
+      const expected = parseInt(m[2], 10);
+      const value = pickField(ctx.lastResponse.body, field);
+      if (value === undefined) {
+        return { ok: false, error: `response body has no field "${field}"` };
+      }
+      if (!Array.isArray(value)) {
+        return {
+          ok: false,
+          error: `field "${field}" was ${typeof value}, expected an array of length ${expected}`,
+        };
+      }
+      if (value.length !== expected) {
+        return {
+          ok: false,
+          error: `field "${field}" array length was ${value.length}, expected ${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Alternation form of `contains "X"` — passes when EITHER needle is in
+    // the stringified body. Used when the API can legitimately respond with
+    // either error string depending on race-condition path.
+    pattern: /^the response body contains "([^"]+)" or "([^"]+)"$/,
+    async handler(m, ctx) {
+      if (!ctx.lastResponse?.body) return { ok: false, error: 'no response body' };
+      const haystack = JSON.stringify(ctx.lastResponse.body);
+      const a = m[1];
+      const b = m[2];
+      if (haystack.includes(a) || haystack.includes(b)) return { ok: true };
+      return {
+        ok: false,
+        error: `response body did not contain "${a}" or "${b}"`,
+      };
     },
   },
   {
