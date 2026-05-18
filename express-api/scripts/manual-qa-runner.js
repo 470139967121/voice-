@@ -911,6 +911,65 @@ const matchers = [
     },
   },
   {
+    // "does not have document X with field Y containing N" — vacuous-true
+    // when the doc is missing or the field doesn't exist (author is asserting
+    // the ABSENCE of a containment relationship, which holds when there's
+    // nothing to contain). Distinct from `not containing` below which
+    // requires the doc to exist.
+    pattern: /^the database does not have document "([^"]+)" with field "([^"]+)" containing (.+)$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const docPath = m[1];
+      const field = m[2];
+      const needle = parseLiteral(m[3].trim());
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) return { ok: true }; // vacuous-true
+      const actual = snap.data()?.[field];
+      if (!Array.isArray(actual)) return { ok: true }; // no array to contain N
+      if (actual.includes(needle)) {
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" (=${JSON.stringify(actual)}) contains ${JSON.stringify(needle)} — expected absence`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // "has document X with field Y not containing N" — requires the doc AND
+    // the field to exist as an array; asserts that N is NOT in the array.
+    // Distinct from `does not have ... containing` above which is vacuously
+    // true when the doc is missing.
+    pattern: /^the database has document "([^"]+)" with field "([^"]+)" not containing (.+)$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db (firebase-admin Firestore) not initialised' };
+      const docPath = m[1];
+      const field = m[2];
+      const needle = parseLiteral(m[3].trim());
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `document "${docPath}" does not exist` };
+      }
+      const actual = snap.data()?.[field];
+      if (actual === undefined) {
+        return { ok: false, error: `field "${field}" on "${docPath}" is missing` };
+      }
+      if (!Array.isArray(actual)) {
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" was ${JSON.stringify(actual)}, expected an array`,
+        };
+      }
+      if (actual.includes(needle)) {
+        return {
+          ok: false,
+          error: `field "${field}" on "${docPath}" (=${JSON.stringify(actual)}) contains ${JSON.stringify(needle)} — expected NOT containing`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
     // Numeric strict-greater-than. Rejects non-numeric actual values rather
     // than relying on JavaScript's lexicographic / NaN coercion semantics
     // (which can silently report "abc > 100" as false and mask real bugs).

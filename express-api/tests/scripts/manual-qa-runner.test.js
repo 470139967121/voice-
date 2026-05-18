@@ -3396,6 +3396,231 @@ describe('Firestore doc-field greater-than matcher (Then the database has docume
   });
 });
 
+describe('Firestore doc-field NEGATED-containing — `does not have document X with field Y containing N` (vacuous-true on missing doc)', () => {
+  test('doc missing — assertion holds vacuously (ok:true)', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have document "users/50000030" with field "blockedIds" containing 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('doc exists, field missing — assertion holds (no array to contain N)', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': { name: 'X' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have document "users/50000030" with field "blockedIds" containing 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('doc exists, field is array but does NOT contain N — assertion holds', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': { blockedIds: [2, 3] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have document "users/50000030" with field "blockedIds" containing 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('doc exists, field is array and DOES contain N — assertion FAILS', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': { blockedIds: [1, 2, 3] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have document "users/50000030" with field "blockedIds" containing 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/blockedIds/);
+    expect(r.error).toMatch(/1/);
+  });
+
+  test('doc exists, field is scalar (non-array) — assertion holds (no array can contain N)', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': { blockedIds: 'not-an-array' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have document "users/50000030" with field "blockedIds" containing 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no ctx.db — loud error', async () => {
+    const ctx = makeCtx({ db: undefined });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database does not have document "users/X" with field "Y" containing 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+});
+
+describe('Firestore doc-field `not containing` — `has document X with field Y not containing N` (requires doc to exist)', () => {
+  test('doc exists, array does not contain N — assertion holds (ok:true)', async () => {
+    const db = makeStatefulFakeDb({ 'users/60000010': { followerIds: [1, 2, 3] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/60000010" with field "followerIds" not containing 50000040',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('doc exists, array CONTAINS N — assertion fails', async () => {
+    const db = makeStatefulFakeDb({ 'users/60000010': { followerIds: [50000040, 1, 2] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/60000010" with field "followerIds" not containing 50000040',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/followerIds/);
+    expect(r.error).toMatch(/50000040/);
+  });
+
+  test('doc missing — assertion fails (must exist; "has document" is part of the contract)', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/60000010" with field "followerIds" not containing 50000040',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/users\/60000010/);
+  });
+
+  test('field missing — assertion fails (positive contract requires field present)', async () => {
+    const db = makeStatefulFakeDb({ 'users/60000010': { otherField: 'x' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/60000010" with field "followerIds" not containing 50000040',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/followerIds/);
+  });
+
+  test('field is scalar (non-array) — assertion fails (can\'t reason about "containing" in a non-array)', async () => {
+    const db = makeStatefulFakeDb({ 'users/60000010': { followerIds: 'oops' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/60000010" with field "followerIds" not containing 50000040',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/array/i);
+  });
+
+  test('composes with within-Nms wrapper (poll until array no longer contains N)', async () => {
+    // followerIds starts with N in it, evicts at ~80ms.
+    let containsN = true;
+    setTimeout(() => {
+      containsN = false;
+    }, 80);
+    const ctx = makeCtx({
+      db: {
+        doc: () => ({
+          get: async () => ({
+            exists: true,
+            data: () => ({ followerIds: containsN ? [50000040, 1] : [1] }),
+          }),
+        }),
+      },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'within 500ms the database has document "users/60000010" with field "followerIds" not containing 50000040',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no ctx.db — loud error', async () => {
+    const ctx = makeCtx({ db: undefined });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/X" with field "Y" not containing 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db|firestore/i);
+  });
+
+  test('does not accidentally match the positive containing matcher (different semantics)', async () => {
+    // Critical: regression guard. If a future refactor of the positive
+    // matcher accidentally consumed "not containing", the negation would
+    // route to the wrong handler and silently invert the assertion.
+    const db = makeStatefulFakeDb({ 'users/X': { ids: [1, 2] } });
+    const ctx = makeCtx({ db });
+    // Containing 1 → positive matcher (should pass).
+    const positive = await executeStep(
+      { kind: 'Then', text: 'the database has document "users/X" with field "ids" containing 1' },
+      ctx,
+    );
+    expect(positive.ok).toBe(true);
+    // Not containing 99 → negation matcher (also should pass, but via different handler).
+    const negation = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/X" with field "ids" not containing 99',
+      },
+      ctx,
+    );
+    expect(negation.ok).toBe(true);
+    // Not containing 1 → negation matcher (should fail because array DOES contain 1).
+    const negationFail = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/X" with field "ids" not containing 1',
+      },
+      ctx,
+    );
+    expect(negationFail.ok).toBe(false);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
