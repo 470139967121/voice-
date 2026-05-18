@@ -2365,32 +2365,253 @@ const matchers = [
     },
   },
   {
-    // Web translation assertion. Driver method
-    // webShowsTranslationOf(locale, englishKey) returns truthy/falsy
-    // after looking up the translation file AND checking the DOM
-    // contains the translated string. Locale is hardcoded to 'ar' for
-    // this matcher; future locale-parametric form can be added if the
-    // corpus expands.
-    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web UI shows Arabic translation of "([^"]+)"$/,
+    // Locale-parametric translation assertion across all three platforms.
+    // Covers six corpus variants: optional `the` prefix, optional `in the
+    // page heading` suffix, and Web/Android/iOS Sim platforms. Locale
+    // name → ISO-639 mapping covers all 20 ShyTalk locales. Driver
+    // methods (per-platform) accept `(localeCode, englishKey)` and return
+    // truthy iff the rendered UI contains the translated string.
+    //
+    // Web alternation lists longest forms first (Web Chromium, Web Safari)
+    // so the bare `Web` alternative doesn't greedily eat the `Chromium`/
+    // `Safari` discriminator. Same trick used elsewhere in this file.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows (?:the )?([A-Z][a-z]+) translation of "([^"]+)"(?: in the page heading)?$/,
     async handler(m, ctx) {
-      const englishKey = m[3];
-      if (!ctx.webDriver) {
+      const platform = m[3];
+      const localeName = m[4];
+      const englishKey = m[5];
+      const LOCALE_NAME_TO_CODE = {
+        Arabic: 'ar',
+        German: 'de',
+        Spanish: 'es',
+        French: 'fr',
+        Hindi: 'hi',
+        Indonesian: 'id',
+        Italian: 'it',
+        Japanese: 'ja',
+        Khmer: 'km',
+        Korean: 'ko',
+        Dutch: 'nl',
+        Polish: 'pl',
+        Portuguese: 'pt',
+        Russian: 'ru',
+        Swedish: 'sv',
+        Thai: 'th',
+        Turkish: 'tr',
+        Ukrainian: 'uk',
+        Vietnamese: 'vi',
+        Chinese: 'zh',
+      };
+      const code = LOCALE_NAME_TO_CODE[localeName];
+      if (!code) {
         return {
           ok: false,
-          error: `Web step requires ctx.webDriver (translation of "${englishKey}")`,
+          error: `unknown locale name "${localeName}" — not one of the 20 ShyTalk locales`,
         };
       }
-      if (!ctx.webDriver.webShowsTranslationOf) {
-        return { ok: false, error: 'ctx.webDriver.webShowsTranslationOf not configured' };
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver) {
+          return {
+            ok: false,
+            error: `Web step requires ctx.webDriver (translation of "${englishKey}")`,
+          };
+        }
+        if (!ctx.webDriver.webShowsTranslationOf) {
+          return { ok: false, error: 'ctx.webDriver.webShowsTranslationOf not configured' };
+        }
+        const ok = await ctx.webDriver.webShowsTranslationOf(code, englishKey);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `Web UI did not show the ${localeName} (${code}) translation of "${englishKey}"`,
+          };
+        }
+        return { ok: true };
       }
-      const ok = await ctx.webDriver.webShowsTranslationOf('ar', englishKey);
-      if (!ok) {
+      if (platform === 'Android') {
+        if (!ctx.uiDriver) {
+          return {
+            ok: false,
+            error: `Android step requires ctx.uiDriver (translation of "${englishKey}")`,
+          };
+        }
+        if (!ctx.uiDriver.androidShowsTranslationOf) {
+          return { ok: false, error: 'ctx.uiDriver.androidShowsTranslationOf not configured' };
+        }
+        const ok = await ctx.uiDriver.androidShowsTranslationOf(code, englishKey);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `Android UI did not show the ${localeName} (${code}) translation of "${englishKey}"`,
+          };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver) {
+          return {
+            ok: false,
+            error: `iOS step requires ctx.uiDriver (translation of "${englishKey}")`,
+          };
+        }
+        if (!ctx.uiDriver.iosShowsTranslationOf) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsTranslationOf not configured' };
+        }
+        const ok = await ctx.uiDriver.iosShowsTranslationOf(code, englishKey);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `iOS UI did not show the ${localeName} (${code}) translation of "${englishKey}"`,
+          };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for translation step` };
+    },
+  },
+  {
+    // UI absence of person. Substring check on the dump per platform.
+    // Also covers "does not show <Name>'s [lesson ]room" — if the name
+    // is absent from the dump, the name's room can't be either, so this
+    // matcher reduces both phrasings to one check. The optional " anywhere"
+    // suffix is purely emphatic and ignored.
+    //
+    // Message-input absence is NOT this matcher (lowercase `the` doesn't
+    // match the [A-Z] capture for the target name, so the two are disjoint).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show ([A-Z][a-z]+)(?:'s (?:lesson )?room)?(?: anywhere)?$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const target = m[4];
+      let dump;
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webUiDump) {
+          return { ok: false, error: 'ctx.webDriver.webUiDump not configured' };
+        }
+        dump = await ctx.webDriver.webUiDump();
+      } else if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.androidUiDump not configured' };
+        }
+        dump = await ctx.uiDriver.androidUiDump();
+      } else if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosUiDump) {
+          return { ok: false, error: 'ctx.uiDriver.iosUiDump not configured' };
+        }
+        dump = await ctx.uiDriver.iosUiDump();
+      } else {
+        return { ok: false, error: `unknown platform "${platform}" for absence step` };
+      }
+      if (typeof dump === 'string' && dump.includes(target)) {
         return {
           ok: false,
-          error: `Web UI did not show the Arabic (ar) translation of "${englishKey}"`,
+          error: `${platform} UI should not show "${target}" but the dump contains that name`,
         };
       }
       return { ok: true };
+    },
+  },
+  {
+    // UI absence of the message-input field. Per-platform driver method
+    // `<plat>ShowsMessageInput()` returns truthy iff the field is currently
+    // rendered. Step asserts the field is NOT shown (returns ok when the
+    // driver returns falsy).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show the message-input field$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      let shown;
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webShowsMessageInput) {
+          return { ok: false, error: 'ctx.webDriver.webShowsMessageInput not configured' };
+        }
+        shown = await ctx.webDriver.webShowsMessageInput();
+      } else if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsMessageInput) {
+          return { ok: false, error: 'ctx.uiDriver.androidShowsMessageInput not configured' };
+        }
+        shown = await ctx.uiDriver.androidShowsMessageInput();
+      } else if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsMessageInput) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsMessageInput not configured' };
+        }
+        shown = await ctx.uiDriver.iosShowsMessageInput();
+      } else {
+        return { ok: false, error: `unknown platform "${platform}" for message-input step` };
+      }
+      if (shown) {
+        return {
+          ok: false,
+          error: `${platform} UI should not show the message-input field but driver reported it is visible`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Refresh rooms list. Pure action — delegates to per-platform driver.
+    // Drivers decide whether to pull-to-refresh (mobile) or invoke a
+    // refresh button / location reload (web).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+refreshes the rooms list$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webRefreshRoomsList) {
+          return { ok: false, error: 'ctx.webDriver.webRefreshRoomsList not configured' };
+        }
+        await ctx.webDriver.webRefreshRoomsList();
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidRefreshRoomsList) {
+          return { ok: false, error: 'ctx.uiDriver.androidRefreshRoomsList not configured' };
+        }
+        await ctx.uiDriver.androidRefreshRoomsList();
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosRefreshRoomsList) {
+          return { ok: false, error: 'ctx.uiDriver.iosRefreshRoomsList not configured' };
+        }
+        await ctx.uiDriver.iosRefreshRoomsList();
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for refresh-rooms step` };
+    },
+  },
+  {
+    // Tap a room card. Two shapes: "taps the room card" (no owner arg) and
+    // "taps <Owner>'s room [card]" (owner name passed). The driver method
+    // accepts an optional owner name and figures out which card to tap.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+taps (?:the room card|([A-Z][a-z]+)'s room(?: card)?)$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const owner = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webTapRoomCard) {
+          return { ok: false, error: 'ctx.webDriver.webTapRoomCard not configured' };
+        }
+        await ctx.webDriver.webTapRoomCard(owner);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidTapRoomCard) {
+          return { ok: false, error: 'ctx.uiDriver.androidTapRoomCard not configured' };
+        }
+        await ctx.uiDriver.androidTapRoomCard(owner);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosTapRoomCard) {
+          return { ok: false, error: 'ctx.uiDriver.iosTapRoomCard not configured' };
+        }
+        await ctx.uiDriver.iosTapRoomCard(owner);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for tap-room step` };
     },
   },
   {

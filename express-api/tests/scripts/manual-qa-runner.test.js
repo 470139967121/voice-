@@ -6064,6 +6064,229 @@ describe('Web Arabic-translation matcher (Then <P>\'s Web UI shows Arabic transl
   });
 });
 
+describe('Translation matcher generalized (locale × platform × optional "the" + suffixes)', () => {
+  test('Web + German + "the" prefix dispatches with "de"', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsTranslationOf: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Lena\'s Web UI shows the German translation of "Sign in" in the page heading',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('de', 'Sign in');
+  });
+
+  test('Web + Japanese without "the" dispatches with "ja"', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsTranslationOf: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Kenji\'s Web UI shows Japanese translation of "Notifications"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ja', 'Notifications');
+  });
+
+  test('Android + Arabic + "the" dispatches to uiDriver.androidShowsTranslationOf', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsTranslationOf: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Layla\'s Android UI shows the Arabic translation of "Wallet"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ar', 'Wallet');
+  });
+
+  test('iOS Sim + Korean dispatches to uiDriver.iosShowsTranslationOf', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsTranslationOf: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Soo\'s iOS Sim UI shows the Korean translation of "Discover"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ko', 'Discover');
+  });
+
+  test('unknown locale name fails with a clear error before calling driver', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsTranslationOf: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Layla\'s Web UI shows Klingon translation of "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Klingon/);
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('UI-absence-of-person matcher (does not show <Name>)', () => {
+  test('Android dump without the name — ok', async () => {
+    const dump = '<node text="Hayato"/><node text="Bao"/>';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Hayato's Android UI does not show Alice" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('Android dump containing the name — fail with name in error', async () => {
+    const dump = '<node text="Alice"/><node content-desc="Discover"/>';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Hayato's Android UI does not show Alice" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Alice/);
+  });
+
+  test('Web dump without the name — ok', async () => {
+    const dump = 'Discover\nWallet\nNotifications';
+    const ctx = makeCtx({ webDriver: { webUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Vexa's Web UI does not show Marcus anywhere" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('iOS Sim dump without the name — ok', async () => {
+    const dump = '{"label":"Hayato"}';
+    const ctx = makeCtx({ uiDriver: { iosUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI does not show Alice anywhere" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('"X does not show Y\'s room" reads as Y-not-in-dump', async () => {
+    const dump = '<node text="Marcus"/>';
+    const ctx = makeCtx({ uiDriver: { androidUiDump: jest.fn(async () => dump) } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Marcus's Android UI does not show Selma's room" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe('UI does not show the message-input field matcher', () => {
+  test('Web driver returns false (not shown) — ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsMessageInput: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Vexa's Web UI does not show the message-input field" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('Web driver returns true (shown) — fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsMessageInput: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Vexa's Web UI does not show the message-input field" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/message-input/);
+  });
+
+  test('Android dispatches to uiDriver.androidShowsMessageInput', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsMessageInput: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Marcus's Android UI does not show the message-input field" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+});
+
+describe('Refreshes the rooms list matcher', () => {
+  test('Web → webDriver.webRefreshRoomsList', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webRefreshRoomsList: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web refreshes the rooms list' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('Android → uiDriver.androidRefreshRoomsList', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidRefreshRoomsList: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus on Android refreshes the rooms list' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('missing driver method — clear error', async () => {
+    const ctx = makeCtx({ uiDriver: {} });
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus on Android refreshes the rooms list' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidRefreshRoomsList/);
+  });
+});
+
+describe("Taps room card / Taps <Owner>'s room matcher", () => {
+  test('Web + "taps the room card" → webDriver.webTapRoomCard(undefined)', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webTapRoomCard: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Alice on Web taps the room card' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(undefined);
+  });
+
+  test('Android + "taps Selma\'s room" → uiDriver.androidTapRoomCard("Selma")', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidTapRoomCard: spy } });
+    const r = await executeStep({ kind: 'When', text: "Theo on Android taps Selma's room" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma');
+  });
+
+  test('iOS Sim + "taps Bao\'s room card" → uiDriver.iosTapRoomCard("Bao")', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosTapRoomCard: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Yuki on iOS Sim taps Bao's room card" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao');
+  });
+
+  test('Android + "taps the room card" → androidTapRoomCard(undefined)', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidTapRoomCard: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus on Android taps the room card' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(undefined);
+  });
+});
+
 describe('Array-of-quoted-strings in signed-in `with` clause (j17 Bao teaching languages)', () => {
   test('teachingLanguages=["zh", "en"] writes a string-array to user doc', async () => {
     const fetchSpy = jest.fn(async (url) => {
