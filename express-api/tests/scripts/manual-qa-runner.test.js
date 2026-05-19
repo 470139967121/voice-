@@ -11426,3 +11426,277 @@ describe('Wake 67 — Greta on Web Admin confirms the <name> dialog', () => {
     expect(r.error).toMatch(/webAdminConfirmDialog/);
   });
 });
+
+// ── Wake 68 ──────────────────────────────────────────────────────────
+
+describe('Wake 68 — bare-verb single-word tap (taps <verb>)', () => {
+  // j10-mid-room-warning.feature:89
+  //   When Theo on Android taps acknowledge
+  // Distinct from the existing `taps "X"` (quoted-string) matcher and
+  // `taps the room card` (multi-word). This catches a single lowercase
+  // verb/noun like `acknowledge`, `cancel`, `retry`. Driver receives the
+  // bare verb so it can resolve to the right UI element (e.g., the
+  // acknowledge button on the warning screen).
+  test('android bare-verb tap → driver receives verb', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapBareVerb: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Theo on Android taps acknowledge' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'acknowledge');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosTapBareVerb: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Ines on iOS Sim taps retry' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'retry');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'When', text: 'Theo on Android taps acknowledge' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTapBareVerb/);
+  });
+});
+
+describe('Wake 68 — tap the quoted target (taps the "<id>" / taps the room "<id>" card)', () => {
+  // j09-voice-room-host.feature:101
+  //   When Theo on Android taps the "room_endRoomButton"
+  // j10-mid-room-warning.feature:76
+  //   When Theo on Android taps the room "r1" card
+  // Two related shapes share one matcher: the "the" prefix + a quoted
+  // identifier (test tag or room ID). The optional `room\s+` and trailing
+  // `\s+card` accommodate the room-card variant.
+  test('quoted test-tag (no "room", no "card")', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapQuotedTarget: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android taps the "room_endRoomButton"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'room_endRoomButton', false);
+  });
+
+  test('room "<id>" card form → isRoomCard=true', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapQuotedTarget: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android taps the room "r1" card' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'r1', true);
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosTapQuotedTarget: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on iOS Sim taps the "messageBubble"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'messageBubble', false);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android taps the "room_endRoomButton"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTapQuotedTarget/);
+  });
+});
+
+describe('Wake 68 — persona is in voice room as a <role> (state-seed)', () => {
+  // j10-mid-room-warning.feature:84
+  //   Given Theo is in voice room "r2" as a NON-seated listener
+  // State-seed that records the persona's role in a room. Doesn't take a
+  // platform — the platform comes from a separate "signed-in on <plat>"
+  // step. The role is a 2-3-word phrase (NON-seated listener, seated host).
+  // Writes to Firestore: appends persona to participantIds, records role
+  // in a `roles` map keyed by stringified uniqueId (mirror of the existing
+  // micStates pattern).
+  test('writes participantIds and roles map', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Theo is in voice room "r2" as a NON-seated listener' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Theo = 50000060
+    expect(db._docs['rooms/r2'].participantIds).toContain(50000060);
+    expect(db._docs['rooms/r2'].roles['50000060']).toBe('NON-seated listener');
+  });
+
+  test('seated host role', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice is in voice room "r3" as a seated host' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r3'].roles['50000010']).toBe('seated host');
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost is in voice room "r9" as a listener' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Theo is in voice room "r2" as a NON-seated listener' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 68 — the room "<id>" is still <STATE>', () => {
+  // j10-mid-room-warning.feature:75
+  //   Given the room "r1" is still OPEN (was not auto-closed)
+  // The trailing `(was not auto-closed)` is stripped by stripStepAnnotation.
+  // Asserts the room doc's `state` field. Three states observed in corpus:
+  // OPEN, CLOSED, FROZEN — uppercase by convention.
+  test('matching state → ok', async () => {
+    const db = makeStatefulFakeDb({ 'rooms/r1': { state: 'OPEN' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'the room "r1" is still OPEN' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatched state → fail with both states', async () => {
+    const db = makeStatefulFakeDb({ 'rooms/r1': { state: 'CLOSED' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'the room "r1" is still OPEN' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/OPEN/);
+    expect(r.error).toMatch(/CLOSED/);
+  });
+
+  test('no such room doc → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'the room "r1" is still OPEN' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/rooms\/r1|does not exist/);
+  });
+});
+
+describe('Wake 68 — LiveKit publish permission/track is enabled/disabled (platform-optional)', () => {
+  // j10-mid-room-warning.feature:29
+  //   Then Theo's Android LiveKit publish track for room "r1" is enabled
+  // j10-mid-room-warning.feature:44 (via within Nms wrapper)
+  //   Then within 5000ms Theo's LiveKit publish permission for room "r1" is disabled
+  // Platform is optional — j10:44 has no platform between "Theo's" and
+  // "LiveKit"; j10:29 has Android. Driver receives (name, kind, roomId,
+  // expectedState); returns boolean truthy iff state matches.
+  test('with platform + enabled state', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ liveKitDriver: { publishStateMatches: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android LiveKit publish track for room "r1" is enabled' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'track', 'r1', 'enabled');
+  });
+
+  test('without platform + disabled state', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ liveKitDriver: { publishStateMatches: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s LiveKit publish permission for room "r1" is disabled' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'permission', 'r1', 'disabled');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ liveKitDriver: { publishStateMatches: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s LiveKit publish track for room "r1" is enabled' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/track/);
+    expect(r.error).toMatch(/enabled/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s LiveKit publish track for room "r1" is enabled' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/liveKitDriver|publishStateMatches/);
+  });
+});
+
+describe('Wake 68 — UI mic indicator shows "<state>"', () => {
+  // j10-mid-room-warning.feature:80
+  //   Then Theo's Android UI mic indicator shows "muted"
+  // The mic indicator is the visual badge on the seat that reflects
+  // server-side mic state (muted/active). Driver returns the current
+  // displayed state; matcher does exact string compare.
+  test('matching state → ok', async () => {
+    const spy = jest.fn(async () => 'muted');
+    const ctx = makeCtx({ uiDriver: { androidGetMicIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI mic indicator shows "muted"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatched state → fail with both', async () => {
+    const spy = jest.fn(async () => 'active');
+    const ctx = makeCtx({ uiDriver: { androidGetMicIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI mic indicator shows "muted"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/muted/);
+    expect(r.error).toMatch(/active/);
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => 'active');
+    const ctx = makeCtx({ uiDriver: { iosGetMicIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Ines\'s iOS Sim UI mic indicator shows "active"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI mic indicator shows "muted"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidGetMicIndicator/);
+  });
+});

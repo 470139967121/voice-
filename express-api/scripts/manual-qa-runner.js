@@ -6464,6 +6464,196 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 68 — bare-verb single-word tap (`taps acknowledge`).
+    // Single lowercase-starting word so it can't collide with the quoted-
+    // string tap matcher (`taps "X"`) or the room-card matcher (`taps the
+    // room card`). Earlier specific matchers fire first via first-match-
+    // wins; this catches the bare verbs.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+taps ([a-z][\w-]*)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const verb = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webTapBareVerb) {
+          return { ok: false, error: 'ctx.webDriver.webTapBareVerb not configured' };
+        }
+        await ctx.webDriver.webTapBareVerb(name, verb);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidTapBareVerb) {
+          return { ok: false, error: 'ctx.uiDriver.androidTapBareVerb not configured' };
+        }
+        await ctx.uiDriver.androidTapBareVerb(name, verb);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosTapBareVerb) {
+          return { ok: false, error: 'ctx.uiDriver.iosTapBareVerb not configured' };
+        }
+        await ctx.uiDriver.iosTapBareVerb(name, verb);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for bare-verb tap` };
+    },
+  },
+  {
+    // Wake 68 — tap the quoted target (`taps the "<id>"` /
+    // `taps the room "<id>" card`). One pattern covers both: optional
+    // `room\s+` prefix and optional trailing `\s+card`. The boolean
+    // `isRoomCard` flag tells the driver which UI element to target.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+taps the (room\s+)?"([^"]+)"(\s+card)?$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const isRoomPrefix = !!m[4];
+      const targetId = m[5];
+      const isCardSuffix = !!m[6];
+      // "the room "X" card" semantic = isRoomCard. Plain `the "X"` = not.
+      const isRoomCard = isRoomPrefix && isCardSuffix;
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webTapQuotedTarget) {
+          return { ok: false, error: 'ctx.webDriver.webTapQuotedTarget not configured' };
+        }
+        await ctx.webDriver.webTapQuotedTarget(name, targetId, isRoomCard);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidTapQuotedTarget) {
+          return { ok: false, error: 'ctx.uiDriver.androidTapQuotedTarget not configured' };
+        }
+        await ctx.uiDriver.androidTapQuotedTarget(name, targetId, isRoomCard);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosTapQuotedTarget) {
+          return { ok: false, error: 'ctx.uiDriver.iosTapQuotedTarget not configured' };
+        }
+        await ctx.uiDriver.iosTapQuotedTarget(name, targetId, isRoomCard);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for quoted-target tap` };
+    },
+  },
+  {
+    // Wake 68 — persona is in voice room as a <role> (state-seed).
+    // Mirrors the existing `with mic <state>` state-seed (line ~5480) but
+    // for the role dimension. Writes participantIds + roles map (parallel
+    // to existing micStates) so the runner has a consistent shape.
+    pattern: /^([A-Z][a-z]+)\s+is in voice room "([^"]+)" as a ([\w-]+(?:\s+[\w-]+)*)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const roomId = m[2];
+      const role = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const docPath = `rooms/${roomId}`;
+      const snap = await ctx.db.doc(docPath).get();
+      const existing = snap.exists ? snap.data() : { id: roomId, participantIds: [] };
+      const participantIds = Array.isArray(existing.participantIds)
+        ? [...existing.participantIds]
+        : [];
+      if (!participantIds.includes(p.uniqueId)) participantIds.push(p.uniqueId);
+      const roles = { ...(existing.roles || {}) };
+      roles[String(p.uniqueId)] = role;
+      await ctx.db.doc(docPath).set({ ...existing, participantIds, roles }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 68 — room state assertion (`the room "<id>" is still <STATE>`).
+    // Reads `rooms/<id>.state` from Firestore. Three states observed in
+    // corpus: OPEN, CLOSED, FROZEN — uppercase by convention.
+    pattern: /^the room "([^"]+)" is still (OPEN|CLOSED|FROZEN)$/,
+    async handler(m, ctx) {
+      const roomId = m[1];
+      const expected = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(`rooms/${roomId}`).get();
+      if (!snap.exists) {
+        return { ok: false, error: `rooms/${roomId} does not exist` };
+      }
+      const actual = snap.data().state;
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `room state mismatch: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 68 — LiveKit publish permission/track is enabled/disabled.
+    // Platform is OPTIONAL: j10:29 has `<Name>'s Android LiveKit ...`
+    // (with platform); j10:44 has `<Name>'s LiveKit ...` (without).
+    // Driver receives (name, kind, roomId, expectedState) where kind is
+    // `permission` or `track`. The non-capturing platform group makes the
+    // match flexible at zero regex cost.
+    pattern:
+      /^([A-Z][a-z]+)'s (?:(Web Chromium|Web Safari|Web|Android|iOS Sim)\s+)?LiveKit publish (permission|track) for room "([^"]+)" is (enabled|disabled)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const kind = m[3];
+      const roomId = m[4];
+      const expectedState = m[5];
+      if (!ctx.liveKitDriver?.publishStateMatches) {
+        return { ok: false, error: 'ctx.liveKitDriver.publishStateMatches not configured' };
+      }
+      const matches = await ctx.liveKitDriver.publishStateMatches(
+        name,
+        kind,
+        roomId,
+        expectedState,
+      );
+      if (!matches) {
+        return {
+          ok: false,
+          error: `${name}'s LiveKit publish ${kind} for "${roomId}" is not ${expectedState}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 68 — UI mic indicator shows "<state>".
+    // j10:80 — the seat's mic badge reflects server-side mic state.
+    // Driver returns current displayed state; matcher does exact string
+    // compare so a typo (corpus vs UI) surfaces in the error.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI mic indicator shows "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const expected = m[3];
+      const methodName =
+        platform === 'Android'
+          ? 'androidGetMicIndicator'
+          : platform === 'iOS Sim'
+            ? 'iosGetMicIndicator'
+            : 'webGetMicIndicator';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const actual = await driver[methodName](name);
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `mic indicator mismatch: expected "${expected}", actual "${actual}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
