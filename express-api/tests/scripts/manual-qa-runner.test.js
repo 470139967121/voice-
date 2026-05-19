@@ -11128,3 +11128,301 @@ describe('Wake 66 — response from /api/X as <persona> has N results and "k=v" 
     expect(r.error).toMatch(/no recorded/);
   });
 });
+
+// ── Wake 67 ──────────────────────────────────────────────────────────
+
+describe('Wake 67 — generic "attempts to <action>" navigation/persistence', () => {
+  // j10-mid-room-warning.feature:61
+  //   When Theo on Android attempts to navigate via the back button
+  // j10-mid-room-warning.feature:64
+  //   When Theo on Android attempts to kill and relaunch the app
+  // The "attempts to <verb-phrase>" form drives navigation-lock testing.
+  // Driver receives the bare action description and decides how to perform
+  // it (back-button on Android = `adb shell input keyevent KEYCODE_BACK`;
+  // app kill+relaunch = `am force-stop` + `am start`). Earlier specific
+  // matchers (`attempts to navigate to "X" via deep link`,
+  // `attempts to start a conversation`, `attempts to follow`,
+  // `attempts to block`) all run BEFORE this generic one — first-match-wins
+  // means the narrow ones still win.
+  test('android back-button attempt → driver receives action', async () => {
+    const spy = jest.fn(async () => ({ ok: true }));
+    const ctx = makeCtx({ uiDriver: { androidAttemptAction: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android attempts to navigate via the back button' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'navigate via the back button');
+  });
+
+  test('android kill+relaunch attempt', async () => {
+    const spy = jest.fn(async () => ({ ok: true }));
+    const ctx = makeCtx({ uiDriver: { androidAttemptAction: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android attempts to kill and relaunch the app' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'kill and relaunch the app');
+  });
+
+  test('iOS Sim action', async () => {
+    const spy = jest.fn(async () => ({ ok: true }));
+    const ctx = makeCtx({ uiDriver: { iosAttemptAction: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on iOS Sim attempts to swipe down to dismiss' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'swipe down to dismiss');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android attempts to navigate via the back button' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidAttemptAction/);
+  });
+});
+
+describe('Wake 67 — UI shows the warning reason "<text>"', () => {
+  // j10-mid-room-warning.feature:48
+  //   Then Theo's Android UI shows the warning reason "Inappropriate language in voice room"
+  // Asserts the warning screen displays a SPECIFIC reason string. Driver
+  // returns the current displayed reason (or null); the matcher does an
+  // exact string compare against the corpus value.
+  test('matches displayed reason → ok', async () => {
+    const spy = jest.fn(async () => 'Inappropriate language in voice room');
+    const ctx = makeCtx({ uiDriver: { androidGetWarningReason: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo\'s Android UI shows the warning reason "Inappropriate language in voice room"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('displayed reason differs → fail with both values', async () => {
+    const spy = jest.fn(async () => 'Some other reason');
+    const ctx = makeCtx({ uiDriver: { androidGetWarningReason: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo\'s Android UI shows the warning reason "Inappropriate language in voice room"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Inappropriate/);
+    expect(r.error).toMatch(/Some other reason/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI shows the warning reason "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidGetWarningReason/);
+  });
+});
+
+describe('Wake 67 — UI shows the <noun-phrase> image', () => {
+  // j10-mid-room-warning.feature:49
+  //   Then Theo's Android UI shows the police duck image
+  // Bare-noun named-image assertion. The image identifier is a free-form
+  // noun phrase (`police duck`, `daily reward`, etc.) — driver maps to
+  // its UI introspection layer (Compose semantics for Android, Inspector
+  // tags for iOS).
+  test('android shows named image → driver true → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedImage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the police duck image" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'police duck');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedImage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the police duck image" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/police duck/);
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsNamedImage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's iOS Sim UI shows the daily reward image" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'daily reward');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the police duck image" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsNamedImage/);
+  });
+});
+
+describe('Wake 67 — UI does not show the <bare-noun>', () => {
+  // j10-mid-room-warning.feature:50
+  //   Then Theo's Android UI does not show the voice room UI
+  // Bare-noun absence assertion. The noun phrase is freeform — it could
+  // be `voice room UI`, `warning screen`, `confirmation banner`. This is
+  // narrower than the existing `element with tag "X"` matcher (which
+  // takes a quoted test tag) and the `"X" button` matcher (which requires
+  // both quotes and a "button" suffix). First-match-wins keeps those
+  // narrow matchers winning when their forms apply.
+  test('android: driver returns false (not shown) → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedUi: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI does not show the voice room UI" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'voice room UI');
+  });
+
+  test('driver returns true (still shown) → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedUi: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI does not show the voice room UI" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/voice room UI/);
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosShowsNamedUi: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's iOS Sim UI does not show the confirmation banner" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'confirmation banner');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI does not show the voice room UI" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsNamedUi/);
+  });
+});
+
+describe('Wake 67 — Greta on Web Admin searches "<text>"', () => {
+  // j10-mid-room-warning.feature:33
+  //   When Greta on Web Admin searches "50000060"
+  // Bare admin-search action (no `in <screen>` suffix — that variant is
+  // the older Android-search matcher at line ~2682). Driver types the
+  // query into the admin panel's universal search field and waits for
+  // results.
+  test('admin search query → driver receives text', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminSearch: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin searches "50000060"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('50000060');
+  });
+
+  test('search with text query', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminSearch: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin searches "harassment"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('harassment');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin searches "50000060"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminSearch/);
+  });
+});
+
+describe('Wake 67 — Greta on Web Admin confirms the <name> dialog', () => {
+  // j10-mid-room-warning.feature:35
+  //   When Greta on Web Admin confirms the warning dialog
+  // Admin modal-confirmation. Driver clicks the confirm button in the
+  // named modal. Dialog name is a multi-word noun (`warning`, `delete
+  // user`, `revoke session`).
+  test('confirms named dialog → driver receives name', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminConfirmDialog: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin confirms the warning dialog' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('warning');
+  });
+
+  test('multi-word dialog name', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminConfirmDialog: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin confirms the delete user dialog' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('delete user');
+  });
+
+  test('driver returns false (no such dialog) → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webAdminConfirmDialog: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin confirms the warning dialog' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/warning|no.*dialog/i);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin confirms the warning dialog' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminConfirmDialog/);
+  });
+});

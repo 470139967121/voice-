@@ -6291,6 +6291,179 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 67 — generic "<Name> on <Plat> attempts to <action>".
+    // Catches navigation-lock + persistence test actions (j10): back-button
+    // press, app kill+relaunch, swipe gestures. Earlier specific "attempts
+    // to" matchers (navigate-via-deep-link, start-a-conversation, follow,
+    // block) all sit ABOVE this in the array — first-match-wins keeps them
+    // narrowly scoped while this catches the remainder.
+    pattern: /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) attempts to (.+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const action = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webAttemptAction) {
+          return { ok: false, error: 'ctx.webDriver.webAttemptAction not configured' };
+        }
+        const result = await ctx.webDriver.webAttemptAction(name, action);
+        if (result === false || result?.ok === false) {
+          return { ok: false, error: `web action "${action}" failed for ${name}` };
+        }
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidAttemptAction) {
+          return { ok: false, error: 'ctx.uiDriver.androidAttemptAction not configured' };
+        }
+        const result = await ctx.uiDriver.androidAttemptAction(name, action);
+        if (result === false || result?.ok === false) {
+          return { ok: false, error: `android action "${action}" failed for ${name}` };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosAttemptAction) {
+          return { ok: false, error: 'ctx.uiDriver.iosAttemptAction not configured' };
+        }
+        const result = await ctx.uiDriver.iosAttemptAction(name, action);
+        if (result === false || result?.ok === false) {
+          return { ok: false, error: `ios action "${action}" failed for ${name}` };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for attempts-to step` };
+    },
+  },
+  {
+    // Wake 67 — UI shows the warning reason "<text>".
+    // j10:48 asserts the warning screen displays a specific reason string.
+    // Driver returns the current reason text; matcher does exact string
+    // compare so a typo (corpus vs. live UI) surfaces in the error.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the warning reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const expected = m[3];
+      const methodName =
+        platform === 'Android'
+          ? 'androidGetWarningReason'
+          : platform === 'iOS Sim'
+            ? 'iosGetWarningReason'
+            : 'webGetWarningReason';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const actual = await driver[methodName](name);
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `warning reason mismatch: expected "${expected}", actual "${actual}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 67 — UI shows the <noun-phrase> image.
+    // j10:49 — `the police duck image`. Bare-noun named-image assertion.
+    // The named image's lookup key is freeform ("police duck", "daily
+    // reward", "splash"); driver maps via Compose semantics on Android
+    // or Inspector tags on iOS.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the ([\w ]+) image$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const imageName = m[3].trim();
+      const methodName =
+        platform === 'Android'
+          ? 'androidShowsNamedImage'
+          : platform === 'iOS Sim'
+            ? 'iosShowsNamedImage'
+            : 'webShowsNamedImage';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, imageName);
+      if (!shown) {
+        return { ok: false, error: `${platform} UI does not show "${imageName}" image` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 67 — UI does not show the <bare-noun>.
+    // j10:50 — `does not show the voice room UI`. Narrower than the
+    // existing `element with tag "X"` matcher (which requires quoted
+    // test tag) and the `"X" button` matcher (which requires quotes +
+    // "button" suffix) — those run first via first-match-wins.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show the ([\w ]+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const nounPhrase = m[3].trim();
+      const methodName =
+        platform === 'Android'
+          ? 'androidShowsNamedUi'
+          : platform === 'iOS Sim'
+            ? 'iosShowsNamedUi'
+            : 'webShowsNamedUi';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, nounPhrase);
+      if (shown) {
+        return {
+          ok: false,
+          error: `${platform} UI still shows "${nounPhrase}" but should not`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 67 — Greta on Web Admin searches "<text>".
+    // j10:33 / j12 reports tab. Bare admin-search (no `in <screen>`
+    // suffix — that variant is the older Android-search matcher).
+    // Driver types into the admin panel's universal search field.
+    pattern: /^Greta on Web Admin searches "([^"]+)"$/,
+    async handler(m, ctx) {
+      const query = m[1];
+      if (!ctx.webDriver?.webAdminSearch) {
+        return { ok: false, error: 'ctx.webDriver.webAdminSearch not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminSearch(query);
+      if (!ok) {
+        return { ok: false, error: `admin search for "${query}" returned no UI confirmation` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 67 — Greta on Web Admin confirms the <name> dialog.
+    // j10:35 — `confirms the warning dialog`. Modal-confirmation step;
+    // driver clicks the confirm button in the named modal. Dialog name
+    // is freeform multi-word (`warning`, `delete user`, `revoke session`).
+    pattern: /^Greta on Web Admin confirms the ([\w]+(?: [\w]+)*) dialog$/,
+    async handler(m, ctx) {
+      const dialogName = m[1];
+      if (!ctx.webDriver?.webAdminConfirmDialog) {
+        return { ok: false, error: 'ctx.webDriver.webAdminConfirmDialog not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminConfirmDialog(dialogName);
+      if (!ok) {
+        return { ok: false, error: `no "${dialogName}" dialog was open to confirm` };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
