@@ -11720,6 +11720,201 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 101 — "<Name>'s <Plat> UI shows <Other>'s seat with <X>
+    // indicator". j09 (mic-on) / j10 (mic-off). Generic per-seat
+    // indicator assertion; <X> describes the indicator type.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows ([A-Z][a-z]+)'s seat with ([\w-]+) indicator$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const indicator = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsSeatWithIndicator'
+        : platform === 'Android'
+          ? 'androidShowsSeatWithIndicator'
+          : 'iosShowsSeatWithIndicator';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, target, indicator);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} UI does not show ${target}'s seat with ${indicator} indicator`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 101 — "<Name>'s <Plat> UI navigates to the warning screen".
+    // j10 first half. Second half (relaunch) uses a different verb.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI navigates to the warning screen$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webNavigatesToWarningScreen'
+        : platform === 'Android'
+          ? 'androidNavigatesToWarningScreen'
+          : 'iosNavigatesToWarningScreen';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, false);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: ${platform} did not navigate to the warning screen`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 101 — "<Name>'s <Plat> UI shows the warning screen again on
+    // next launch". j10 — verifies persistence of the warning gate
+    // across app relaunch.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the warning screen again on next launch$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsWarningScreenOnRelaunch'
+        : platform === 'Android'
+          ? 'androidShowsWarningScreenOnRelaunch'
+          : 'iosShowsWarningScreenOnRelaunch';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: ${platform} did not show the warning screen again after relaunch`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 101 — "(either )?<Name>'s <Plat> UI is still in the room
+    // <suffix>". j10, 2 corpus rows. The "either " prefix indicates
+    // alternative-outcome semantics; matcher absorbs it without
+    // dispatch logic (the alternative is in the test plan author's
+    // mental model, not the runner's).
+    pattern:
+      /^(?:either )?([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI is still in the room (.+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const suffix = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webIsStillInRoom'
+        : platform === 'Android'
+          ? 'androidIsStillInRoom'
+          : 'iosIsStillInRoom';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, suffix);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: ${platform} not still in the room (${suffix})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 101 — `<Name>'s <Plat> UI shows a seat-request notification
+    // with "<X>" + approve/deny`. j09 — host receives notification
+    // when a participant requests a seat.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a seat-request notification with "([^"]+)" \+ approve\/deny$/,
+    async handler(m, ctx) {
+      const host = m[1];
+      const platform = m[2];
+      const requester = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsSeatRequestNotification'
+        : platform === 'Android'
+          ? 'androidShowsSeatRequestNotification'
+          : 'iosShowsSeatRequestNotification';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](host, requester);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${host}'s ${platform} UI does not show seat-request notification with "${requester}" + approve/deny`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 101 — `<Name>'s <Plat> UI seat indicator transitions from
+    // "<X>" to "<Y>"`. j09 — visual state transition assertion.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI seat indicator transitions from "([^"]+)" to "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const from = m[3];
+      const to = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webSeatIndicatorTransitions'
+        : platform === 'Android'
+          ? 'androidSeatIndicatorTransitions'
+          : 'iosSeatIndicatorTransitions';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, from, to);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: seat indicator did not transition from "${from}" to "${to}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 101 — "<Name>'s LiveKit publish for that room is
+    // <enabled|disabled>". j10 — LiveKit-layer publish-state
+    // assertion via ctx.liveKitDriver.
+    pattern: /^([A-Z][a-z]+)'s LiveKit publish for that room is (enabled|disabled)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const state = m[2];
+      if (!ctx.liveKitDriver?.publishStateIs) {
+        return { ok: false, error: 'ctx.liveKitDriver.publishStateIs not configured' };
+      }
+      const ok = await ctx.liveKitDriver.publishStateIs(name, state);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s LiveKit publish state is not "${state}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

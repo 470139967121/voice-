@@ -19636,3 +19636,144 @@ describe('Wake 100 — `<Name>\'s <Plat> UI shows the new "<X>" balance via Fire
     expect(r.error).toMatch(/Alice|balance|1,234/);
   });
 });
+
+// ── Wake 101 — j09/j10 voice-room cluster ───────────────────────────
+
+describe('Wake 101 — "<Name>\'s <Plat> UI shows <Other>\'s seat with <X> indicator"', () => {
+  test('mic-on indicator (Android)', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsSeatWithIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows Ines's seat with mic-on indicator" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'Ines', 'mic-on');
+  });
+
+  test('mic-off (iOS)', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsSeatWithIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's iOS Sim UI shows Theo's seat with mic-off indicator" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Theo', 'mic-off');
+  });
+});
+
+describe('Wake 101 — "<Name>\'s <Plat> UI navigates to the warning screen[ again on next launch]"', () => {
+  test('bare navigates to warning screen', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidNavigatesToWarningScreen: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI navigates to the warning screen" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', false);
+  });
+
+  test('with relaunch suffix → onRelaunch=true', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsWarningScreenOnRelaunch: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the warning screen again on next launch" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo');
+  });
+});
+
+describe('Wake 101 — "(either )?<Name>\'s <Plat> UI is still in the room <suffix>"', () => {
+  test('with-host-muted suffix', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosIsStillInRoom: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "either Ines's iOS Sim UI is still in the room with host muted" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'with host muted');
+  });
+
+  test('but-unable-to-interact', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidIsStillInRoom: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI is still in the room but unable to interact" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'but unable to interact');
+  });
+});
+
+describe('Wake 101 — `<Name>\'s <Plat> UI shows a seat-request notification with "<X>" + approve/deny`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsSeatRequestNotification: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo\'s Android UI shows a seat-request notification with "Ines" + approve/deny',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'Ines');
+  });
+});
+
+describe('Wake 101 — `<Name>\'s <Plat> UI seat indicator transitions from "<X>" to "<Y>"`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosSeatIndicatorTransitions: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Ines\'s iOS Sim UI seat indicator transitions from "request pending" to "seated"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'request pending', 'seated');
+  });
+});
+
+describe('Wake 101 — "<Name>\'s LiveKit publish for that room is <enabled|disabled>"', () => {
+  test('disabled → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ liveKitDriver: { publishStateIs: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Marcus's LiveKit publish for that room is disabled" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus', 'disabled');
+  });
+
+  test('enabled variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ liveKitDriver: { publishStateIs: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's LiveKit publish for that room is enabled" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'enabled');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ liveKitDriver: { publishStateIs: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Marcus's LiveKit publish for that room is disabled" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Marcus|publish|disabled/);
+  });
+});
