@@ -207,30 +207,44 @@ async function createWebDriver({ baseURL = 'http://localhost:8888', headless = t
   // homepage-translations.js dictionary loaded by the public web app.
   driver.webShowsTranslationOf = async (code, englishKey) => {
     const page = await pageFor('default');
-    if (!page.url() || page.url() === 'about:blank') {
-      await page.goto(`/?lang=${code}`);
-    }
-    // Switch language preference via the homepage's language-selector API.
     await page.evaluate((lang) => {
       try {
         localStorage.setItem('shytalk_language', lang);
       } catch (_) {
-        /* localStorage may be blocked — fall back to lang query param */
+        /* sandboxed */
       }
     }, code);
-    await page.reload({ waitUntil: 'networkidle' });
-    // Look up the translation in the loaded translations object the page
-    // exposes (homepage-translations.js attaches to window). If the key
-    // isn't found, the test surface needs the dictionary updated — that's
-    // a real finding worth surfacing.
+    if (!page.url() || page.url() === 'about:blank') await page.goto('/');
+    else await page.reload({ waitUntil: 'networkidle' });
+    // KNOWN LIMITATION: HOMEPAGE_T only covers homepage strings
+    // (tagline/coming_soon/app_store/roadmap_cta). In-app strings like
+    // "Discover"/"Wallet"/"ShyCoins" live in compose strings.xml and
+    // only render post-sign-in on the app's screens, which the public
+    // web at :8888 doesn't serve. Returns false with a clear reason
+    // for those — operator surfaces it as a driver-coverage finding.
     const result = await page.evaluate(
-      ({ lang, key }) => {
-        const dict = window.homepageTranslations || window.shytalkTranslations || {};
-        const langDict = dict[lang] || {};
-        const translated = langDict[key];
-        if (!translated) return { ok: false, reason: `no translation for key "${key}" in ${lang}` };
+      ({ lang, src }) => {
+        const dict = window.HOMEPAGE_T || {};
+        const enDict = dict.en || {};
+        let key = null;
+        for (const k of Object.keys(enDict)) {
+          if (enDict[k] === src) {
+            key = k;
+            break;
+          }
+        }
+        if (!key) {
+          return {
+            ok: false,
+            reason: `"${src}" not in homepage namespace — likely in-app (post-sign-in driver flow not wired)`,
+          };
+        }
+        const translated = (dict[lang] || {})[key];
+        if (!translated) {
+          return { ok: false, reason: `no ${lang} translation for "${key}"` };
+        }
         const bodyText = document.body.innerText || '';
-        return { ok: bodyText.includes(translated), translated };
+        return { ok: bodyText.includes(translated), translated, key };
       },
       { lang: code, key: englishKey },
     );

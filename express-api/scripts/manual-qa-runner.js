@@ -13517,7 +13517,7 @@ async function main() {
   // Default `stub` produces "not configured" findings — matches the
   // pre-driver behaviour so existing CI doesn't break.
   let webDriver = null;
-  const uiDriver = null;
+  let uiDriver = null;
   const liveKitDriver = null;
   const testerDriver = null;
   let driverCleanup = async () => {};
@@ -13532,6 +13532,19 @@ async function main() {
       await prevCleanup();
       await webDriver.close();
     };
+  }
+  if (opts.driver === 'adb' || opts.driver === 'all') {
+    try {
+      const { createAndroidDriver } = require('./drivers/android-adb-driver');
+      uiDriver = await createAndroidDriver({});
+      const prevCleanup = driverCleanup;
+      driverCleanup = async () => {
+        await prevCleanup();
+        await uiDriver.close();
+      };
+    } catch (e) {
+      console.error(`[runner] Android driver init failed: ${e.message}`);
+    }
   }
 
   const ctx = {
