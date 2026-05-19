@@ -13854,3 +13854,224 @@ describe('Wake 76 — "no string has the value of the en/strings.xml fallback wh
     expect(r.error).toMatch(/no.*scan|scannedStrings/);
   });
 });
+
+// ── Wake 77 ──────────────────────────────────────────────────────────
+
+describe('Wake 77 — "<Name> on <Plat> opens "<path>" on <NetworkProfile>"', () => {
+  // j14-low-bandwidth-degraded.feature:23
+  //   When Ines on Web opens "/discovery" on Slow 3G
+  // Composite: navigate to path while emulating a network profile.
+  test('Slow 3G profile → driver receives both', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webOpenWithNetwork: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web opens "/discovery" on Slow 3G' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', '/discovery', 'Slow 3G');
+  });
+
+  test('Offline profile', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webOpenWithNetwork: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web opens "/wallet" on Offline' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', '/wallet', 'Offline');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web opens "/discovery" on Slow 3G' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webOpenWithNetwork/);
+  });
+});
+
+describe('Wake 77 — "<Name> is in a conversation with <Other>" (state-seed)', () => {
+  // j14-low-bandwidth-degraded.feature:62
+  //   Given Ines is in a conversation with Theo
+  // Predicate state-seed — ensures a conversation doc exists between the
+  // two personas. Conv id synthesised from sorted uniqueIds (idempotent).
+  test('writes conversation doc with both participants', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    // Ines = P-11 = 50000061, Theo = P-10 = 50000060
+    const r = await executeStep(
+      { kind: 'Given', text: 'Ines is in a conversation with Theo' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const convKeys = Object.keys(db._docs).filter((k) => k.startsWith('conversations/'));
+    expect(convKeys).toHaveLength(1);
+    const conv = db._docs[convKeys[0]];
+    expect(conv.participantIds.sort()).toEqual([50000060, 50000061]);
+  });
+
+  test('idempotent — same pair → same conv id', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    await executeStep({ kind: 'Given', text: 'Ines is in a conversation with Theo' }, ctx);
+    await executeStep({ kind: 'Given', text: 'Theo is in a conversation with Ines' }, ctx);
+    const convKeys = Object.keys(db._docs).filter((k) => k.startsWith('conversations/'));
+    expect(convKeys).toHaveLength(1);
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost is in a conversation with Ines' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
+
+describe('Wake 77 — "<Name> on <Plat> sets the network to "<X>" via DevTools"', () => {
+  // j14-low-bandwidth-degraded.feature:35
+  //   When Ines on Web sets the network to "Offline" via DevTools
+  // DevTools network throttle control — mid-scenario state change without
+  // navigation (vs `opens "X" on <Profile>`).
+  test('Offline → driver receives profile name', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSetNetwork: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web sets the network to "Offline" via DevTools' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Offline');
+  });
+
+  test('Fast 3G', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSetNetwork: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web sets the network to "Fast 3G" via DevTools' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Fast 3G');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web sets the network to "Offline" via DevTools' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webSetNetwork/);
+  });
+});
+
+describe('Wake 77 — "<Name> on <Plat> types "<text>" and taps send"', () => {
+  // j14-low-bandwidth-degraded.feature:36
+  //   When Ines on Web types "queued message" and taps send
+  // Composite: type message text in the current conversation, click send.
+  test('captures text → driver receives it', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webTypeAndSend: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web types "queued message" and taps send' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'queued message');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTypeAndSend: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul on Android types "hello" and taps send' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'hello');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web types "hello" and taps send' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webTypeAndSend/);
+  });
+});
+
+describe('Wake 77 — "no XHR returns <status>"', () => {
+  // j14-low-bandwidth-degraded.feature:42
+  //   Then no XHR returns 408
+  // Network log assertion (no request with the named status code).
+  test('no matching status → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webNetworkLogHasStatus: spy } });
+    const r = await executeStep({ kind: 'Then', text: 'no XHR returns 408' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(408);
+  });
+
+  test('matching status found → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webNetworkLogHasStatus: spy } });
+    const r = await executeStep({ kind: 'Then', text: 'no XHR returns 408' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/408/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'no XHR returns 408' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webNetworkLogHasStatus/);
+  });
+});
+
+describe('Wake 77 — "the network log shows N attempts to <path>"', () => {
+  // j14-low-bandwidth-degraded.feature:88
+  //   Then the network log shows 3 attempts to /api/economy/balance
+  // Retry-count assertion for fault-injection tests.
+  test('count matches → ok', async () => {
+    const spy = jest.fn(async () => 3);
+    const ctx = makeCtx({ webDriver: { webNetworkLogCountAttempts: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the network log shows 3 attempts to /api/economy/balance' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/api/economy/balance');
+  });
+
+  test('count mismatch → fail with both', async () => {
+    const spy = jest.fn(async () => 1);
+    const ctx = makeCtx({ webDriver: { webNetworkLogCountAttempts: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the network log shows 3 attempts to /api/economy/balance' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/3/);
+    expect(r.error).toMatch(/1/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'the network log shows 3 attempts to /api/economy/balance' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webNetworkLogCountAttempts/);
+  });
+});

@@ -7829,6 +7829,149 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 77 — "<Name> on <Plat> opens "<path>" on <NetworkProfile>".
+    // j14:23 — composite navigation with network throttling. Driver wires
+    // CDP `Network.emulateNetworkConditions` (Web) or equivalent for the
+    // named profile (Slow 3G, Fast 3G, 4G, Offline, WiFi).
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) opens "([^"]+)" on (Slow 3G|Fast 3G|4G|Offline|WiFi)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const urlPath = m[3];
+      const profile = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webOpenWithNetwork'
+        : platform === 'Android'
+          ? 'androidOpenWithNetwork'
+          : 'iosOpenWithNetwork';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, urlPath, profile);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name} on ${platform}: open "${urlPath}" on ${profile} did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 77 — "<Name> is in a conversation with <Other>" (state-seed).
+    // j14:62 — ensures a conversation doc exists between two personas.
+    // Conv id is synthesised from sorted uniqueIds → idempotent across
+    // orderings ("X is in conv with Y" and "Y is in conv with X" yield
+    // the same doc).
+    pattern: /^([A-Z][a-z]+) is in a conversation with ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const nameA = m[1];
+      const nameB = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const a = personas.get(nameA);
+      const b = personas.get(nameB);
+      if (!a?.uniqueId) return { ok: false, error: `persona "${nameA}" not in registry` };
+      if (!b?.uniqueId) return { ok: false, error: `persona "${nameB}" not in registry` };
+      const sortedIds = [a.uniqueId, b.uniqueId].sort((x, y) => x - y);
+      const convId = `conv-${sortedIds[0]}-${sortedIds[1]}`;
+      await ctx.db.doc(`conversations/${convId}`).set({
+        id: convId,
+        participantIds: sortedIds,
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 77 — "<Name> on <Plat> sets the network to "<X>" via DevTools".
+    // j14:35 — mid-scenario throttle change without navigation. Distinct
+    // from `opens "X" on <Profile>` which combines nav + throttle.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web) sets the network to "([^"]+)" via DevTools$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const profile = m[3];
+      if (!ctx.webDriver?.webSetNetwork) {
+        return { ok: false, error: 'ctx.webDriver.webSetNetwork not configured' };
+      }
+      const ok = await ctx.webDriver.webSetNetwork(name, profile);
+      if (!ok) {
+        return { ok: false, error: `${name}: set network to "${profile}" did not complete` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 77 — "<Name> on <Plat> types "<text>" and taps send".
+    // j14:36 — type-then-send in the current conversation. Distinct from
+    // `types "X" into the search field` (different target field) and
+    // `sends "X" gift to Y` (gift flow). Targets the message input.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) types "([^"]+)" and taps send$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const text = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webTypeAndSend'
+        : platform === 'Android'
+          ? 'androidTypeAndSend'
+          : 'iosTypeAndSend';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, text);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name} on ${platform}: type + send "${text}" did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 77 — "no XHR returns <status>".
+    // j14:42 — network log assertion. Driver checks the recorded network
+    // log for any request with the named status code.
+    pattern: /^no XHR returns (\d+)$/,
+    async handler(m, ctx) {
+      const status = parseInt(m[1], 10);
+      if (!ctx.webDriver?.webNetworkLogHasStatus) {
+        return { ok: false, error: 'ctx.webDriver.webNetworkLogHasStatus not configured' };
+      }
+      const hasStatus = await ctx.webDriver.webNetworkLogHasStatus(status);
+      if (hasStatus) {
+        return { ok: false, error: `at least one XHR returned ${status}` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 77 — "the network log shows N attempts to <path>".
+    // j14:88 — retry-count assertion for fault-injection tests.
+    pattern: /^the network log shows (\d+) attempts to (\/api\/[\w/-]+)$/,
+    async handler(m, ctx) {
+      const expected = parseInt(m[1], 10);
+      const apiPath = m[2];
+      if (!ctx.webDriver?.webNetworkLogCountAttempts) {
+        return { ok: false, error: 'ctx.webDriver.webNetworkLogCountAttempts not configured' };
+      }
+      const actual = await ctx.webDriver.webNetworkLogCountAttempts(apiPath);
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `network log attempt count for ${apiPath}: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
