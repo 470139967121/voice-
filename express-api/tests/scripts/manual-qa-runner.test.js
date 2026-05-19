@@ -11700,3 +11700,351 @@ describe('Wake 68 — UI mic indicator shows "<state>"', () => {
     expect(r.error).toMatch(/androidGetMicIndicator/);
   });
 });
+
+// ── Wake 69 ──────────────────────────────────────────────────────────
+
+describe('Wake 69 — persona-cohort-room state-seed (no room id, abstract)', () => {
+  // j10-mid-room-warning.feature:94
+  //   Given Marcus [P-04] is on iOS Sim seated in a minor-cohort room with mic open
+  // Differs from the existing `is in voice room "X" with mic <state>` matcher
+  // because there's NO room id — the corpus author is saying "any minor-cohort
+  // room is fine, just create one and seat Marcus in it." Handler synthesises
+  // a room id, writes the cohort + mic state + seat assignment.
+  test('writes ephemeral room with cohort and seated persona', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Marcus [P-04] is on iOS Sim seated in a minor-cohort room with mic open',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const roomKeys = Object.keys(db._docs).filter((k) => k.startsWith('rooms/'));
+    expect(roomKeys).toHaveLength(1);
+    const room = db._docs[roomKeys[0]];
+    expect(room.cohort).toBe('minor');
+    expect(room.participantIds).toContain(60000010);
+    expect(room.micStates['60000010']).toBe('open');
+    expect(room.seats[0]).toEqual(expect.objectContaining({ userId: 60000010 }));
+  });
+
+  test('adult-cohort variant + muted mic', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice [P-02] is on Web seated in an adult-cohort room with mic muted',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const roomKeys = Object.keys(db._docs).filter((k) => k.startsWith('rooms/'));
+    expect(roomKeys).toHaveLength(1);
+    const room = db._docs[roomKeys[0]];
+    expect(room.cohort).toBe('adult');
+    expect(room.micStates['50000010']).toBe('muted');
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Zzzghost is on Android seated in a minor-cohort room with mic open',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Marcus [P-04] is on iOS Sim seated in a minor-cohort room with mic open',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 69 — long-press + tap composite', () => {
+  // j11-harassment-moderation-cycle.feature:31
+  //   When Nora on iOS Sim long-presses the offensive message and taps "Report"
+  // Two-step gesture: long-press the message bubble (opens context menu),
+  // then tap the named menu item. One matcher to keep the corpus author's
+  // intent atomic — driver runs both gestures and reports the result.
+  test('iOS Sim → driver receives action label', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosLongPressMessageAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Nora on iOS Sim long-presses the offensive message and taps "Report"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Nora', 'Report');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidLongPressMessageAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Raul on Android long-presses the offensive message and taps "Block"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'Block');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosLongPressMessageAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Nora on iOS Sim long-presses the offensive message and taps "Report"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Report/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Nora on iOS Sim long-presses the offensive message and taps "Report"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosLongPressMessageAndTap/);
+  });
+});
+
+describe('Wake 69 — selects reason "<text>" and confirms', () => {
+  // j11-harassment-moderation-cycle.feature:32
+  //   When Nora on iOS Sim selects reason "Harassment" and confirms
+  // Picker-then-confirm composite. Used for report-reason flow; could also
+  // serve for block-reason, delete-reason, etc. — the matcher captures the
+  // reason as a free-form quoted string.
+  test('iOS Sim → driver receives reason', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosSelectReasonAndConfirm: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Nora on iOS Sim selects reason "Harassment" and confirms' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Nora', 'Harassment');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidSelectReasonAndConfirm: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul on Android selects reason "Spam" and confirms' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'Spam');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Nora on iOS Sim selects reason "Harassment" and confirms' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosSelectReasonAndConfirm/);
+  });
+});
+
+describe('Wake 69 — Greta on Web Admin refreshes the <name> tab', () => {
+  // j11-harassment-moderation-cycle.feature:37
+  //   When Greta on Web Admin refreshes the reports tab
+  // Admin panel tab-refresh. Driver clicks the refresh control inside the
+  // named tab (vs reloading the whole page).
+  test('refreshes named tab → driver receives tab', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminRefreshTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin refreshes the reports tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('reports');
+  });
+
+  test('different tab name', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminRefreshTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin refreshes the appeals tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('appeals');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin refreshes the reports tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminRefreshTab/);
+  });
+});
+
+describe('Wake 69 — UI shows the <name> <kind> (button|screen|banner|dialog|panel|tab)', () => {
+  // j11-harassment-moderation-cycle.feature:86
+  //   Then Raul's Android UI shows the appeal button
+  // Positive complement to Wake 65's quoted-button negative matcher and
+  // Wake 67's named-image matcher. Distinguishable by the terminal kind
+  // (button, screen, banner, dialog, panel, tab). Earlier specific matchers
+  // (warning reason "X", element with tag "Y") still fire first.
+  test('android: appeal button → driver receives both', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedKind: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI shows the appeal button" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'appeal', 'button');
+  });
+
+  test('multi-word noun → "voice room banner"', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedKind: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the voice room banner" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'voice room', 'banner');
+  });
+
+  test('iOS Sim screen variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsNamedKind: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI shows the wallet screen" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia', 'wallet', 'screen');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedKind: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI shows the appeal button" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/appeal/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI shows the appeal button" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsNamedKind/);
+  });
+});
+
+describe('Wake 69 — admin shows report row (reporter + reportedId + reason)', () => {
+  // j11-harassment-moderation-cycle.feature:39
+  //   Then Greta's Web Admin UI shows reporter Nora + reportedId Raul + reason "Harassment"
+  // Composite admin-table-row assertion. Three-way conjunction: reporter
+  // name, reported persona, free-form reason string. Driver checks the
+  // currently rendered reports table for a row matching all three fields.
+  test('matching row → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsReportRow: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Greta\'s Web Admin UI shows reporter Nora + reportedId Raul + reason "Harassment"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith({
+      reporter: 'Nora',
+      reportedId: 'Raul',
+      reason: 'Harassment',
+    });
+  });
+
+  test('different reason — driver receives it', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsReportRow: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Greta\'s Web Admin UI shows reporter Alice + reportedId Bob + reason "Spam"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith({
+      reporter: 'Alice',
+      reportedId: 'Bob',
+      reason: 'Spam',
+    });
+  });
+
+  test('driver returns false → fail with all 3 fields in error', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webAdminShowsReportRow: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Greta\'s Web Admin UI shows reporter Nora + reportedId Raul + reason "Harassment"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Nora/);
+    expect(r.error).toMatch(/Raul/);
+    expect(r.error).toMatch(/Harassment/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Greta\'s Web Admin UI shows reporter Nora + reportedId Raul + reason "Harassment"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminShowsReportRow/);
+  });
+});

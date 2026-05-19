@@ -6654,6 +6654,178 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 69 — persona-cohort-room state-seed (abstract, no room id).
+    // j10:94 — `Marcus [P-04] is on iOS Sim seated in a minor-cohort room with mic open`.
+    // Differs from the older `is in voice room "X" with mic <state>` matcher
+    // because there's NO room id — the author is saying "any minor-cohort
+    // room is fine, just make one." Handler synthesises a room id, writes
+    // cohort + mic state + seat assignment in a single doc.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+seated in an? ([\w-]+)-cohort room with mic (open|muted)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const cohort = m[4];
+      const micState = m[5];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      // Synthetic deterministic id from cohort + uniqueId so subsequent
+      // assertions reading "the latest room" can find it; not the same
+      // as a real LiveKit room id but stable for runner state.
+      const roomId = `ephemeral-${cohort}-${p.uniqueId}-${ctx.scenarioStartTime || Date.now()}`;
+      await ctx.db.doc(`rooms/${roomId}`).set({
+        id: roomId,
+        cohort,
+        participantIds: [p.uniqueId],
+        micStates: { [String(p.uniqueId)]: micState },
+        seats: [{ userId: p.uniqueId, muted: micState === 'muted' }],
+        state: 'OPEN',
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 69 — long-press + tap composite gesture.
+    // j11:31 — `Nora on iOS Sim long-presses the offensive message and taps "Report"`.
+    // Two-step gesture (long-press to open context menu, then tap a named
+    // menu item). One matcher keeps the corpus author's intent atomic.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+long-presses the offensive message and taps "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const action = m[3];
+      const methodName =
+        platform === 'Android'
+          ? 'androidLongPressMessageAndTap'
+          : platform === 'iOS Sim'
+            ? 'iosLongPressMessageAndTap'
+            : 'webLongPressMessageAndTap';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, action);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `long-press + tap "${action}" did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 69 — selects reason "<text>" and confirms.
+    // j11:32 — `Nora on iOS Sim selects reason "Harassment" and confirms`.
+    // Picker-then-confirm composite. Reusable for report-reason, block-
+    // reason, delete-reason flows.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+selects reason "([^"]+)" and confirms$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const reason = m[3];
+      const methodName =
+        platform === 'Android'
+          ? 'androidSelectReasonAndConfirm'
+          : platform === 'iOS Sim'
+            ? 'iosSelectReasonAndConfirm'
+            : 'webSelectReasonAndConfirm';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, reason);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `select-reason + confirm "${reason}" did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 69 — Greta on Web Admin refreshes the <name> tab.
+    // j11:37 — `refreshes the reports tab`. Tab-scoped refresh (vs full
+    // page reload). Tab name is a single word (`reports`, `appeals`,
+    // `users`, etc.).
+    pattern: /^Greta on Web Admin refreshes the (\w+) tab$/,
+    async handler(m, ctx) {
+      const tab = m[1];
+      if (!ctx.webDriver?.webAdminRefreshTab) {
+        return { ok: false, error: 'ctx.webDriver.webAdminRefreshTab not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminRefreshTab(tab);
+      if (!ok) {
+        return { ok: false, error: `admin tab "${tab}" did not refresh` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 69 — UI shows the <name> <kind> (positive).
+    // j11:86 — `Raul's Android UI shows the appeal button`.
+    // Positive complement to Wake 65's quoted-button negative matcher.
+    // The terminal `<kind>` (button|screen|banner|dialog|panel|tab)
+    // distinguishes this from `shows the X image` (Wake 67) and
+    // `shows the element with tag "X"` (existing). Earlier specific
+    // matchers (warning reason, element with tag) still fire first.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the ([\w ]+) (button|screen|banner|dialog|panel|tab)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const noun = m[3].trim();
+      const kind = m[4];
+      const methodName =
+        platform === 'Android'
+          ? 'androidShowsNamedKind'
+          : platform === 'iOS Sim'
+            ? 'iosShowsNamedKind'
+            : 'webShowsNamedKind';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, noun, kind);
+      if (!shown) {
+        return { ok: false, error: `${platform} UI does not show the "${noun}" ${kind}` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 69 — admin shows report row (reporter + reportedId + reason).
+    // j11:39 — `Greta's Web Admin UI shows reporter Nora + reportedId Raul + reason "Harassment"`.
+    // Composite three-way conjunction asserting a row in the admin reports
+    // table. Driver receives a struct so the driver decides how to match
+    // (column index, data-test id, etc.).
+    pattern:
+      /^Greta's Web Admin UI shows reporter ([A-Z][a-z]+) \+ reportedId ([A-Z][a-z]+) \+ reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const reporter = m[1];
+      const reportedId = m[2];
+      const reason = m[3];
+      if (!ctx.webDriver?.webAdminShowsReportRow) {
+        return { ok: false, error: 'ctx.webDriver.webAdminShowsReportRow not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminShowsReportRow({ reporter, reportedId, reason });
+      if (!ok) {
+        return {
+          ok: false,
+          error: `admin reports table missing row: reporter=${reporter}, reportedId=${reportedId}, reason="${reason}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
