@@ -11205,6 +11205,186 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 98 — `<Name>'s <Plat> UI shows a +N in the "<X>" count`.
+    // Generic delta-badge assertion: a numeric counter (Followers,
+    // Likes, etc.) shows a +N increment. Driver receives (name, n,
+    // label). j01/j02/j07 hits.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a \+(\d+) in the "([^"]+)" count$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const delta = Number(m[3]);
+      const label = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsCountBadge'
+        : platform === 'Android'
+          ? 'androidShowsCountBadge'
+          : 'iosShowsCountBadge';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, delta, label);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show +${delta} in "${label}" count`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 98 — `<Name>'s <Plat> Admin UI shows N row for "<X>" with
+    // status "<Y>"`. j01/j04 admin-queue row presence. The N is a
+    // count (typically 1) — the assertion is "there's a row matching
+    // {target=X, status=Y}". Driver receives (viewer, n, targetId,
+    // status).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) Admin UI shows (\d+) row for "([^"]+)" with status "([^"]+)"$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const count = Number(m[3]);
+      const targetId = m[4];
+      const status = m[5];
+      const methodName = platform.startsWith('Web')
+        ? 'webAdminShowsRowForWithStatus'
+        : platform === 'Android'
+          ? 'androidAdminShowsRowForWithStatus'
+          : 'iosAdminShowsRowForWithStatus';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, count, targetId, status);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s Admin UI does not show ${count} row(s) for "${targetId}" with status "${status}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 98 — `the database has document "<X>" with field "<Y>"
+    // decreased by N`. j01/j15 wallet-decrement. Reads
+    // ctx.snapshots[`<X>#<Y>`] (set by a prior baseline-capture step)
+    // and asserts current = baseline - N.
+    pattern: /^the database has document "([^"]+)" with field "([^"]+)" decreased by (\d+)$/,
+    async handler(m, ctx) {
+      const docPath = m[1];
+      const field = m[2];
+      const delta = Number(m[3]);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const baseline = ctx.snapshots?.get(`${docPath}#${field}`);
+      if (baseline === undefined) {
+        return {
+          ok: false,
+          error: `no baseline snapshot for ${docPath}#${field} — capture it in a prior Given step`,
+        };
+      }
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `doc "${docPath}" does not exist` };
+      }
+      const current = snap.data()?.[field];
+      const expected = baseline - delta;
+      if (current !== expected) {
+        return {
+          ok: false,
+          error: `${docPath}.${field} is ${current}, expected ${expected} (baseline ${baseline} − ${delta})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 98 — `the database has document "<X>" with field "<Y>" of
+    // type "<Z>"`. j01 type-check (uniqueId must be a number, not a
+    // stringified number). Uses JavaScript's typeof.
+    pattern: /^the database has document "([^"]+)" with field "([^"]+)" of type "([^"]+)"$/,
+    async handler(m, ctx) {
+      const docPath = m[1];
+      const field = m[2];
+      const expected = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `doc "${docPath}" does not exist` };
+      }
+      const actual = typeof snap.data()?.[field];
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `${docPath}.${field} is of type "${actual}", expected "${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 98 — `the database has document "<X>" with field "<Y>"
+    // array length N`. j03 fcmTokens count.
+    pattern: /^the database has document "([^"]+)" with field "([^"]+)" array length (\d+)$/,
+    async handler(m, ctx) {
+      const docPath = m[1];
+      const field = m[2];
+      const expectedLen = Number(m[3]);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `doc "${docPath}" does not exist` };
+      }
+      const value = snap.data()?.[field];
+      if (!Array.isArray(value)) {
+        return {
+          ok: false,
+          error: `${docPath}.${field} is not an array (typeof = ${typeof value})`,
+        };
+      }
+      if (value.length !== expectedLen) {
+        return {
+          ok: false,
+          error: `${docPath}.${field} array length is ${value.length}, expected ${expectedLen}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 98 — `<Name>'s <Plat> UI shows <Other> in the results[ with
+    // displayName "<X>"]`. j01/j02 discovery list. Optional displayName
+    // suffix lets the driver also verify the rendered string.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows ([A-Z][a-z]+) in the results(?: with displayName "([^"]+)")?$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const displayName = m[4] || null;
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsInResults'
+        : platform === 'Android'
+          ? 'androidShowsInResults'
+          : 'iosShowsInResults';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, target, displayName);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} UI does not show ${target} in results${displayName ? ` with displayName "${displayName}"` : ''}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

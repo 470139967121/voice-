@@ -19038,3 +19038,229 @@ describe('Wake 97 — "<Name>\'s LiveKit track is not disconnected"', () => {
     expect(r.error).toMatch(/Ines|disconnected/);
   });
 });
+
+// ── Wake 98 — high-yield repeat shapes + reusable singletons ────────
+
+describe('Wake 98 — `<Name>\'s <Plat> UI shows a +N in the "<X>" count`', () => {
+  // Catches 3 corpus rows (Alice/Web ×2 + Marcus/Android ×1).
+  test('Web Followers +1', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsCountBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Web UI shows a +1 in the "Followers" count' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 1, 'Followers');
+  });
+
+  test('Android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsCountBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Marcus\'s Android UI shows a +1 in the "Followers" count' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus', 1, 'Followers');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsCountBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Web UI shows a +5 in the "Likes" count' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Alice|Likes/);
+  });
+});
+
+describe('Wake 98 — `<Name>\'s <Plat> Admin UI shows N row for "<X>" with status "<Y>"`', () => {
+  // j01/j04 admin-queue row-presence assertion. Catches 2 corpus rows.
+  test('one row with PENDING status', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsRowForWithStatus: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Greta\'s Web Admin UI shows 1 row for "50000030" with status "PENDING"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Greta', 1, '50000030', 'PENDING');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webAdminShowsRowForWithStatus: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Greta\'s Web Admin UI shows 0 row for "X" with status "APPROVED"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/X|APPROVED/);
+  });
+});
+
+describe('Wake 98 — `the database has document "<X>" with field "<Y>" decreased by N`', () => {
+  // j01/j15 wallet-decrement assertion. Reads ctx.snapshots (set by a
+  // prior baseline-capture step) and asserts current value === baseline - N.
+  test('matching decrement → ok', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { shyCoins: 990 } });
+    const ctx = makeCtx({ db });
+    ctx.snapshots = new Map([['users/50000010#shyCoins', 1000]]);
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000010" with field "shyCoins" decreased by 10',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('wrong decrement → fail', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { shyCoins: 995 } });
+    const ctx = makeCtx({ db });
+    ctx.snapshots = new Map([['users/50000010#shyCoins', 1000]]);
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000010" with field "shyCoins" decreased by 10',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/shyCoins|10|5/);
+  });
+
+  test('no baseline → fail', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': { shyCoins: 990 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000010" with field "shyCoins" decreased by 10',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/baseline|snapshot/);
+  });
+});
+
+describe('Wake 98 — `the database has document "<X>" with field "<Y>" of type "<Z>"`', () => {
+  // j01: identityMap.uniqueId must be a number type.
+  test('correct type → ok', async () => {
+    const db = makeStatefulFakeDb({ 'identityMap/x': { uniqueId: 50000010 } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "identityMap/x" with field "uniqueId" of type "number"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('wrong type → fail', async () => {
+    const db = makeStatefulFakeDb({ 'identityMap/x': { uniqueId: '50000010' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "identityMap/x" with field "uniqueId" of type "number"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/string|number/);
+  });
+});
+
+describe('Wake 98 — `the database has document "<X>" with field "<Y>" array length N`', () => {
+  // j03: users/50000020.fcmTokens.length === 1
+  test('matching length → ok', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { fcmTokens: ['t1'] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "fcmTokens" array length 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('wrong length → fail', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { fcmTokens: ['t1', 't2'] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "fcmTokens" array length 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/2|1|length/);
+  });
+
+  test('field is not array → fail', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000020': { fcmTokens: 'not-array' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000020" with field "fcmTokens" array length 1',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/array|not.*array/i);
+  });
+});
+
+describe('Wake 98 — `<Name>\'s <Plat> UI shows <Other> in the results[ with displayName "<X>"]`', () => {
+  // j01: Adam's Android UI shows Alice in the results with displayName "Alice (P-02 adult power)"
+  // j02: Mia's iOS Sim UI shows Marcus in the results
+  test('bare form → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsInResults: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI shows Marcus in the results" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia', 'Marcus', null);
+  });
+
+  test('with displayName suffix', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsInResults: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI shows Alice in the results with displayName "Alice (P-02 adult power)"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Alice', 'Alice (P-02 adult power)');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI shows Marcus in the results" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosShowsInResults/);
+  });
+});
