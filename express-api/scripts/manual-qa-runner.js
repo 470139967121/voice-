@@ -10426,6 +10426,191 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 93 — `OR within Nms <Name>'s <Plat> UI shows a "<X>" toast
+    // and navigates back to "<Y>"`. j10:36. Alternate-outcome step
+    // (the "OR" prefix declares this acceptable as an alternative to
+    // a preceding step). Runner treats it as a normal Then; if THIS
+    // condition holds within the timeout, the alternate is satisfied.
+    pattern:
+      /^OR within (\d+)ms ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a "([^"]+)" toast and navigates back to "([^"]+)"$/,
+    async handler(m, ctx) {
+      const timeout = Number(m[1]);
+      const name = m[2];
+      const platform = m[3];
+      const toast = m[4];
+      const route = m[5];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsToastAndNavigates'
+        : platform === 'Android'
+          ? 'androidShowsToastAndNavigates'
+          : 'iosShowsToastAndNavigates';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, toast, route, timeout);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: "${toast}" toast + nav to "${route}" did not happen within ${timeout}ms`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 93 — "the PM does NOT render in English even if <Sender>'s
+    // locale is en". j13:38. Negative-render assertion: catches the
+    // bug where sender-locale leaks into recipient view. Driver returns
+    // true iff the visible PM body is NOT in English script (regardless
+    // of the named sender's locale being en).
+    pattern: /^the PM does NOT render in English even if ([A-Z][a-z]+)'s locale is en$/,
+    async handler(m, ctx) {
+      const sender = m[1];
+      if (!ctx.webDriver?.webPmDoesNotRenderInEnglish) {
+        return { ok: false, error: 'ctx.webDriver.webPmDoesNotRenderInEnglish not configured' };
+      }
+      const ok = await ctx.webDriver.webPmDoesNotRenderInEnglish(sender);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `PM renders in English despite ${sender}'s locale=en (recipient locale should dictate)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 93 — "<Name1> on <Plat1> and <Name2> on <Plat2> both join
+    // the event room". j16:38. Dual-actor concurrent join. Both drivers
+    // fire in parallel via Promise.all so the test can probe race
+    // conditions (mic/AV negotiation, host detection, LiveKit token
+    // exhaustion).
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) and ([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) both join the event room$/,
+    async handler(m, ctx) {
+      const name1 = m[1];
+      const plat1 = m[2];
+      const name2 = m[3];
+      const plat2 = m[4];
+      const methodFor = (p) =>
+        p.startsWith('Web')
+          ? 'webJoinEventRoom'
+          : p === 'Android'
+            ? 'androidJoinEventRoom'
+            : 'iosJoinEventRoom';
+      const driverFor = (p) => (p.startsWith('Web') ? ctx.webDriver : ctx.uiDriver);
+      const m1 = methodFor(plat1);
+      const m2 = methodFor(plat2);
+      const d1 = driverFor(plat1);
+      const d2 = driverFor(plat2);
+      if (!d1?.[m1]) return { ok: false, error: `${plat1} driver.${m1} not configured` };
+      if (!d2?.[m2]) return { ok: false, error: `${plat2} driver.${m2} not configured` };
+      const [r1, r2] = await Promise.all([d1[m1](name1), d2[m2](name2)]);
+      if (!r1)
+        return { ok: false, error: `${name1}: join event room on ${plat1} did not complete` };
+      if (!r2)
+        return { ok: false, error: `${name2}: join event room on ${plat2} did not complete` };
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 93 — "the tester hears <Speaker>'s voice on <Listener>'s
+    // <Plat> speakers". j16:41. Single-listener tester-hears variant.
+    // Uses ctx.testerDriver — established in Wake 80's multi-listener
+    // variants for audio probes that bypass UI.
+    pattern:
+      /^the tester hears ([A-Z][a-z]+)'s voice on ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) speakers$/,
+    async handler(m, ctx) {
+      const speaker = m[1];
+      const listener = m[2];
+      const platform = m[3];
+      if (!ctx.testerDriver?.hearsVoiceOnListener) {
+        return { ok: false, error: 'ctx.testerDriver.hearsVoiceOnListener not configured' };
+      }
+      const audible = await ctx.testerDriver.hearsVoiceOnListener(speaker, listener, platform);
+      if (!audible) {
+        return {
+          ok: false,
+          error: `${speaker}'s voice not audible on ${listener}'s ${platform} speakers`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 93 — "<Name>'s <Plat> UI (paired session) also shows the
+    // same totals". j16:48. Paired-session parity. Mid-step `(paired
+    // session)` paren — NOT end-anchored. Driver compares visible
+    // totals on the paired session against ctx.lastTotals (set by a
+    // prior step that recorded the primary session's totals).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI \(paired session\) also shows the same totals$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      if (!ctx.lastTotals) {
+        return {
+          ok: false,
+          error: 'ctx.lastTotals missing — record primary totals in a prior step',
+        };
+      }
+      const methodName = platform.startsWith('Web')
+        ? 'webPairedSessionShowsSameTotals'
+        : platform === 'Android'
+          ? 'androidPairedSessionShowsSameTotals'
+          : 'iosPairedSessionShowsSameTotals';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, ctx.lastTotals);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s paired session totals do not match recorded ${JSON.stringify(ctx.lastTotals)}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 93 — bidirectional "the tester hears X on Y's P1 speakers
+    // AND Z on W's P2 speakers". j17:46. Each speaker must be audible
+    // on the other's listener device. Both directions checked; both
+    // must pass.
+    pattern:
+      /^the tester hears ([A-Z][a-z]+) on ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) speakers AND ([A-Z][a-z]+) on ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) speakers$/,
+    async handler(m, ctx) {
+      const speaker1 = m[1];
+      const listener1 = m[2];
+      const plat1 = m[3];
+      const speaker2 = m[4];
+      const listener2 = m[5];
+      const plat2 = m[6];
+      if (!ctx.testerDriver?.hearsOnListener) {
+        return { ok: false, error: 'ctx.testerDriver.hearsOnListener not configured' };
+      }
+      const [a1, a2] = await Promise.all([
+        ctx.testerDriver.hearsOnListener(speaker1, listener1, plat1),
+        ctx.testerDriver.hearsOnListener(speaker2, listener2, plat2),
+      ]);
+      if (!a1) {
+        return {
+          ok: false,
+          error: `${speaker1} inaudible on ${listener1}'s ${plat1} speakers`,
+        };
+      }
+      if (!a2) {
+        return {
+          ok: false,
+          error: `${speaker2} inaudible on ${listener2}'s ${plat2} speakers`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

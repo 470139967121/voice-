@@ -18012,3 +18012,240 @@ describe('Wake 92 — `no audit row records "<X>" with reason "<Y>" for this del
     expect(r.error).toMatch(/blocked|cohort_mismatch/);
   });
 });
+
+// ── Wake 93 ──────────────────────────────────────────────────────────
+
+describe('Wake 93 — `OR within Nms <Name>\'s <Plat> UI shows a "<X>" toast and navigates back to "<Y>"`', () => {
+  // j10-mid-room-warning.feature:36
+  //   OR within 6000ms Ines's iOS Sim UI shows a "Room closed by host warning" toast and navigates back to "/rooms"
+  // Alternate-outcome step (the "OR" prefix indicates this is acceptable
+  // as an alternative to a preceding step). The runner treats it as a
+  // normal Then with the OR prefix; if THIS condition holds within the
+  // timeout, the alternate is satisfied.
+  test('toast + nav within timeout → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsToastAndNavigates: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'OR within 6000ms Ines\'s iOS Sim UI shows a "Room closed by host warning" toast and navigates back to "/rooms"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Room closed by host warning', '/rooms', 6000);
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosShowsToastAndNavigates: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'OR within 3000ms Bao\'s iOS Sim UI shows a "X" toast and navigates back to "/y"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/toast|nav/);
+  });
+});
+
+describe('Wake 93 — "the PM does NOT render in English even if <Sender>\'s locale is en"', () => {
+  // j13-locales-rtl-cjk.feature:38
+  //   Then the PM does NOT render in English even if Officia's locale is en
+  // Negative-render assertion: the visible PM body must NOT be in
+  // English script, regardless of the named sender's locale being en.
+  // (Recipient's locale should dictate render — this catches the bug
+  // where sender-locale leaks into recipient view.)
+  test('non-English render → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webPmDoesNotRenderInEnglish: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "the PM does NOT render in English even if Officia's locale is en" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Officia');
+  });
+
+  test('English-rendered PM → fail (would be a bug)', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webPmDoesNotRenderInEnglish: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "the PM does NOT render in English even if Officia's locale is en" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/English|Officia/);
+  });
+});
+
+describe('Wake 93 — "<Name1> on <Plat1> and <Name2> on <Plat2> both join the event room"', () => {
+  // j16-event-host-team-leader.feature:38
+  //   When Alice on Web and Theo on Android both join the event room
+  // Dual-actor concurrent join. Both drivers fire in parallel so the
+  // test can probe race conditions (mic/AV negotiation, host detection).
+  test('both succeed → ok, both drivers called concurrently', async () => {
+    const webSpy = jest.fn(async () => true);
+    const androidSpy = jest.fn(async () => true);
+    const ctx = makeCtx({
+      webDriver: { webJoinEventRoom: webSpy },
+      uiDriver: { androidJoinEventRoom: androidSpy },
+    });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Alice on Web and Theo on Android both join the event room',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(webSpy).toHaveBeenCalledWith('Alice');
+    expect(androidSpy).toHaveBeenCalledWith('Theo');
+  });
+
+  test('one driver fails → fail', async () => {
+    const ctx = makeCtx({
+      webDriver: { webJoinEventRoom: jest.fn(async () => true) },
+      uiDriver: { androidJoinEventRoom: jest.fn(async () => false) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Alice on Web and Theo on Android both join the event room',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Theo|Android|join/);
+  });
+});
+
+describe('Wake 93 — "the tester hears <Speaker>\'s voice on <Listener>\'s <Plat> speakers"', () => {
+  // j16-event-host-team-leader.feature:41
+  //   Then the tester hears Selma's voice on Alice's Web speakers
+  // Single-listener tester-hears variant. Uses ctx.testerDriver
+  // (established in Wake 80 multi-listener variants) so the audio
+  // assertion is consistent across journeys.
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ testerDriver: { hearsVoiceOnListener: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "the tester hears Selma's voice on Alice's Web speakers" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'Alice', 'Web');
+  });
+
+  test('Android speakers variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ testerDriver: { hearsVoiceOnListener: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "the tester hears Bao's voice on Yuki's Android speakers" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao', 'Yuki', 'Android');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ testerDriver: { hearsVoiceOnListener: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "the tester hears Selma's voice on Alice's Web speakers" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Selma|Alice|audible/);
+  });
+});
+
+describe('Wake 93 — "<Name>\'s <Plat> UI (paired session) also shows the same totals"', () => {
+  // j16-event-host-team-leader.feature:48
+  //   Then Tariq's Web UI (paired session) also shows the same totals
+  // Paired-session parity. Mid-step `(paired session)` paren is NOT
+  // end-anchored — same trap as Wake 88's bracket-cohort sign-in.
+  // The driver compares visible totals on Tariq's session against the
+  // most-recent recorded totals (set on ctx.lastTotals by a prior step).
+  test('matching totals → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webPairedSessionShowsSameTotals: spy } });
+    ctx.lastTotals = { beans: 100, gifts: 5 };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Tariq's Web UI (paired session) also shows the same totals",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Tariq', { beans: 100, gifts: 5 });
+  });
+
+  test('no prior totals → fail', async () => {
+    const ctx = makeCtx({
+      webDriver: { webPairedSessionShowsSameTotals: jest.fn(async () => true) },
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Tariq's Web UI (paired session) also shows the same totals",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/lastTotals|totals/);
+  });
+
+  test('mismatch → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webPairedSessionShowsSameTotals: spy } });
+    ctx.lastTotals = { beans: 100 };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Tariq's Web UI (paired session) also shows the same totals",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Tariq|totals/);
+  });
+});
+
+describe('Wake 93 — bidirectional "the tester hears X on Y\'s P1 speakers AND Z on W\'s P2 speakers"', () => {
+  // j17-teacher-classroom.feature:46
+  //   Then the tester hears Yuki on Bao's Android speakers AND Bao on Yuki's iOS Sim speakers
+  // Bidirectional audio: each speaker is heard by the other's listener.
+  // Fires the listener check in BOTH directions; both must pass.
+  test('both directions audible → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ testerDriver: { hearsOnListener: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Yuki on Bao's Android speakers AND Bao on Yuki's iOS Sim speakers",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 'Bao', 'Android');
+    expect(spy).toHaveBeenCalledWith('Bao', 'Yuki', 'iOS Sim');
+  });
+
+  test('one direction inaudible → fail', async () => {
+    const spy = jest.fn(async (speaker) => speaker === 'Yuki');
+    const ctx = makeCtx({ testerDriver: { hearsOnListener: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Yuki on Bao's Android speakers AND Bao on Yuki's iOS Sim speakers",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Bao|inaudible/);
+  });
+});
