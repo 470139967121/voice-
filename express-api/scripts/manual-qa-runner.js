@@ -7685,6 +7685,150 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 76 — "<Name> (locale=<X>) is age-verified and Greta downgrades
+    // <him|her|them> to minor".
+    // j13:91 — composite state-seed writing post-downgrade state in one
+    // shot (locale, isAgeVerified=true, cohort=minor).
+    pattern:
+      /^([A-Z][a-z]+) \(locale=([a-z]+)\) is age-verified and Greta downgrades (?:him|her|them) to minor$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const locale = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      await ctx.db
+        .doc(`users/${p.uniqueId}`)
+        .set({ locale, isAgeVerified: true, cohort: 'minor' }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 76 — "<Name>'s <Plat> UI shows <Language> labels" (bare).
+    // j13:48 — distinct from Wake 75's "shows X labels for A, B, C"
+    // (which requires the quoted list). Bare form asserts overall UI
+    // is in the named language. Driver receives empty labels array as
+    // the discriminator.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows (\w+) labels$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const language = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsLocaleLabels'
+        : platform === 'Android'
+          ? 'androidShowsLocaleLabels'
+          : 'iosShowsLocaleLabels';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, language, []);
+      if (!ok) {
+        return { ok: false, error: `${platform} UI does not show ${language} labels overall` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 76 — "no rendered character is the replacement glyph U+FFFD".
+    // j13:54 — third corpus variant ("is the X" wording). Wake 74's
+    // matcher covered "contains the X" and "has the X"; this is the
+    // remaining shape. Same driver, same semantic.
+    pattern: /^no rendered character is the replacement glyph U\+FFFD$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webHasReplacementGlyph) {
+        return { ok: false, error: 'ctx.webDriver.webHasReplacementGlyph not configured' };
+      }
+      const hasGlyph = await ctx.webDriver.webHasReplacementGlyph();
+      if (hasGlyph) {
+        return {
+          ok: false,
+          error: 'rendered text contains the U+FFFD replacement glyph (font fallback failed)',
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 76 — "any system PM template renders with the <Language> variant".
+    // j13:43 — every system-PM template (welcome, cohort-flip, suspension
+    // notice, etc.) must render in the target language for the current
+    // persona's locale.
+    pattern: /^any system PM template renders with the (\w+) variant$/,
+    async handler(m, ctx) {
+      const language = m[1];
+      if (!ctx.webDriver?.webSystemPmRendersInLanguage) {
+        return { ok: false, error: 'ctx.webDriver.webSystemPmRendersInLanguage not configured' };
+      }
+      const ok = await ctx.webDriver.webSystemPmRendersInLanguage(language);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `at least one system PM template did not render in ${language}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 76 — "the test runner scans all rendered strings on <Name>'s
+    // <Plat> UI across N screens".
+    // j13:60 — meta state-seed. Instructs runner to navigate N screens
+    // and collect all rendered strings into ctx.scannedStrings.
+    pattern:
+      /^the test runner scans all rendered strings on ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI across (\d+) screens$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const screens = parseInt(m[3], 10);
+      const methodName = platform.startsWith('Web')
+        ? 'webScanAllRenderedStrings'
+        : platform === 'Android'
+          ? 'androidScanAllRenderedStrings'
+          : 'iosScanAllRenderedStrings';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      ctx.scannedStrings = await driver[methodName](name, screens);
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 76 — "no string has the value of the en/strings.xml fallback
+    // when the locale is <X>".
+    // j13:61 — follow-up assertion on ctx.scannedStrings (produced by the
+    // scan step). Driver returns the array of strings that still look
+    // like English fallback values (i.e., the localisation didn't pick up).
+    pattern:
+      /^no string has the value of the en\/strings\.xml fallback when the locale is ([a-z]{2})$/,
+    async handler(m, ctx) {
+      const locale = m[1];
+      if (!ctx.scannedStrings) {
+        return {
+          ok: false,
+          error: 'no scannedStrings recorded — earlier scan step is missing',
+        };
+      }
+      if (!ctx.webDriver?.webFallbackEnStrings) {
+        return { ok: false, error: 'ctx.webDriver.webFallbackEnStrings not configured' };
+      }
+      const fallbacks = await ctx.webDriver.webFallbackEnStrings(locale, ctx.scannedStrings);
+      if (Array.isArray(fallbacks) && fallbacks.length > 0) {
+        return {
+          ok: false,
+          error: `${fallbacks.length} string(s) still use en fallback in locale=${locale}: ${fallbacks.slice(0, 3).join(', ')}${fallbacks.length > 3 ? '...' : ''}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

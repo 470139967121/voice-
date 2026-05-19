@@ -13565,3 +13565,292 @@ describe('Wake 75 — "<Name> on <Plat> sends a/an "<gift>" gift to <Recipient>"
     expect(r.error).toMatch(/webSendGiftTo/);
   });
 });
+
+// ── Wake 76 ──────────────────────────────────────────────────────────
+
+describe('Wake 76 — "Layla (locale=ar) is age-verified and Greta downgrades her to minor"', () => {
+  // j13-locales-rtl-cjk.feature:91
+  //   Given Layla (locale=ar) is age-verified and Greta downgrades her to minor
+  // Composite state-seed: write the post-downgrade state in one shot
+  // (locale=ar, isAgeVerified=true, cohort=minor). Pronoun is optional
+  // since corpus may use her/him/them.
+  test('writes locale, isAgeVerified, cohort=minor', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000070': {} });
+    const ctx = makeCtx({ db });
+    // Layla = P-13 = 50000070
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Layla (locale=ar) is age-verified and Greta downgrades her to minor',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000070'].locale).toBe('ar');
+    expect(db._docs['users/50000070'].isAgeVerified).toBe(true);
+    expect(db._docs['users/50000070'].cohort).toBe('minor');
+  });
+
+  test('different persona + pronoun', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    // Hayato = P-06 = 50000030
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato (locale=ja) is age-verified and Greta downgrades him to minor',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].locale).toBe('ja');
+    expect(db._docs['users/50000030'].cohort).toBe('minor');
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Zzzghost (locale=en) is age-verified and Greta downgrades her to minor',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Layla (locale=ar) is age-verified and Greta downgrades her to minor',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 76 — "UI shows <Language> labels" (bare)', () => {
+  // j13-locales-rtl-cjk.feature:48
+  //   Then Kenji's Web UI shows Japanese labels
+  // Bare positive — distinct from Wake 75's "shows X labels for A, B, C"
+  // (which requires the quoted list). Driver returns truthy iff overall
+  // UI is in the named language.
+  test('matching language → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsLocaleLabels: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Kenji's Web UI shows Japanese labels" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // For the bare form, labels array is empty — driver decides how to
+    // verify overall labels are in the named language.
+    expect(spy).toHaveBeenCalledWith('Kenji', 'Japanese', []);
+  });
+
+  test('different language', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsLocaleLabels: spy } });
+    const r = await executeStep({ kind: 'Then', text: "Layla's Web UI shows Arabic labels" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'Arabic', []);
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsLocaleLabels: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Kenji's Web UI shows Japanese labels" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Japanese/);
+  });
+});
+
+describe('Wake 76 — "no rendered character is the replacement glyph U+FFFD" (third variant)', () => {
+  // j13-locales-rtl-cjk.feature:54
+  //   Then no rendered character is the replacement glyph U+FFFD
+  // Third corpus variant — "is the X" vs Wake 74's "contains/has the
+  // Unicode X". Different wording but same semantic.
+  test('no glyph found → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webHasReplacementGlyph: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no rendered character is the replacement glyph U+FFFD' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('glyph found → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webHasReplacementGlyph: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no rendered character is the replacement glyph U+FFFD' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/U\+FFFD/);
+  });
+});
+
+describe('Wake 76 — "any system PM template renders with the <Language> variant"', () => {
+  // j13-locales-rtl-cjk.feature:43
+  //   Then any system PM template renders with the Arabic variant
+  // Asserts every system-PM template (welcome message, cohort-flip
+  // notification, etc.) renders in the target language for the current
+  // persona's locale.
+  test('matching variant → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSystemPmRendersInLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'any system PM template renders with the Arabic variant' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Arabic');
+  });
+
+  test('different language', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSystemPmRendersInLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'any system PM template renders with the Japanese variant' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Japanese');
+  });
+
+  test('mismatch → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webSystemPmRendersInLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'any system PM template renders with the Arabic variant' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Arabic/);
+  });
+});
+
+describe('Wake 76 — "the test runner scans all rendered strings on <Name>\'s <Plat> UI across N screens"', () => {
+  // j13-locales-rtl-cjk.feature:60
+  //   Given the test runner scans all rendered strings on Layla's Web UI across 10 screens
+  // Meta state-seed: instructs the runner to navigate N screens and
+  // collect all rendered strings into ctx.scannedStrings for later
+  // assertions (e.g., the en/strings.xml fallback check).
+  test('records scan plan into ctx.scannedStrings', async () => {
+    const spy = jest.fn(async () => ['hello', 'world', 'مرحبا']);
+    const ctx = makeCtx({ webDriver: { webScanAllRenderedStrings: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: "the test runner scans all rendered strings on Layla's Web UI across 10 screens",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 10);
+    expect(ctx.scannedStrings).toEqual(['hello', 'world', 'مرحبا']);
+  });
+
+  test('different persona + screen count', async () => {
+    const spy = jest.fn(async () => ['こんにちは']);
+    const ctx = makeCtx({ webDriver: { webScanAllRenderedStrings: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: "the test runner scans all rendered strings on Kenji's Web UI across 5 screens",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Kenji', 5);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: "the test runner scans all rendered strings on Layla's Web UI across 10 screens",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webScanAllRenderedStrings/);
+  });
+});
+
+describe('Wake 76 — "no string has the value of the en/strings.xml fallback when the locale is <X>"', () => {
+  // j13-locales-rtl-cjk.feature:61
+  //   Then no string has the value of the en/strings.xml fallback when the locale is ar
+  // Follow-up to the scan step (Wake 76 matcher above). Driver receives
+  // the locale + scanned strings; returns array of strings that still
+  // look like English fallback values.
+  test('no fallback values found → ok', async () => {
+    const ctx = makeCtx({ webDriver: { webFallbackEnStrings: jest.fn(async () => []) } });
+    ctx.scannedStrings = ['مرحبا', 'تابع'];
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no string has the value of the en/strings.xml fallback when the locale is ar',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.webDriver.webFallbackEnStrings).toHaveBeenCalledWith('ar', ['مرحبا', 'تابع']);
+  });
+
+  test('fallback values present → fail with examples', async () => {
+    const ctx = makeCtx({
+      webDriver: { webFallbackEnStrings: jest.fn(async () => ['Hello', 'Followers']) },
+    });
+    ctx.scannedStrings = ['Hello', 'Followers'];
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no string has the value of the en/strings.xml fallback when the locale is ar',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Hello|Followers/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    ctx.scannedStrings = ['x'];
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no string has the value of the en/strings.xml fallback when the locale is ar',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webFallbackEnStrings/);
+  });
+
+  test('no scan recorded → fail with clear hint', async () => {
+    const spy = jest.fn();
+    const ctx = makeCtx({ webDriver: { webFallbackEnStrings: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no string has the value of the en/strings.xml fallback when the locale is ar',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no.*scan|scannedStrings/);
+  });
+});
