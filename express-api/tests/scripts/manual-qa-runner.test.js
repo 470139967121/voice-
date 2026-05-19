@@ -18531,3 +18531,159 @@ describe('Wake 94 — `the doc has at most N entries in "<X>" matching {action: 
     expect(r.ok).toBe(true);
   });
 });
+
+// ── Wake 95 — Background-step coverage gap (post-100% audit) ─────────
+// The pareto scan that drove Wakes 86-94 only iterated scenario.steps.
+// Background.steps were never measured. This wake adds the matchers
+// for the 13 unmatched Background shapes (8 corpus rows; the other 5
+// shapes will land in Wake 96).
+
+describe('Wake 95 — "the <queue> queue has N pending <noun>"', () => {
+  // j12-admin-daily-routine.feature Background:
+  //   Given the reports queue has 3 pending reports
+  //   Given the age-verification queue has 5 pending submissions
+  //   Given the suspension-appeals queue has 2 pending appeals
+  test('reports queue → sets ctx.adminQueues', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'the reports queue has 3 pending reports' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.adminQueues?.reports).toEqual({ count: 3, noun: 'reports' });
+  });
+
+  test('age-verification queue (hyphenated)', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'the age-verification queue has 5 pending submissions' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.adminQueues?.['age-verification']).toEqual({ count: 5, noun: 'submissions' });
+  });
+
+  test('suspension-appeals queue', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'the suspension-appeals queue has 2 pending appeals' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.adminQueues?.['suspension-appeals']).toEqual({ count: 2, noun: 'appeals' });
+  });
+});
+
+describe('Wake 95 — "the audit log has at least N recent entries"', () => {
+  // j12-admin-daily-routine.feature Background:
+  //   Given the audit log has at least 50 recent entries
+  test('records lower-bound count', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'the audit log has at least 50 recent entries' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.auditLogMinEntries).toBe(50);
+  });
+});
+
+describe('Wake 95 — "<Name> [P-NN] is signed in on <Plat> and hosting voice room "<X>" with mic open + seated"', () => {
+  // j10-mid-room-warning.feature Background:
+  //   Given Theo [P-10] is signed in on Android and hosting voice room "r1" with mic open + seated
+  // Composite state-seed: sign-in + voice room ownership + mic/seat state.
+  test('plants session + room ownership', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Theo [P-10] is signed in on Android and hosting voice room "r1" with mic open + seated',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Theo = P-10 = 50000060
+    expect(ctx.sessions.get('Theo')?.customClaims.uniqueId).toBe(50000060);
+    expect(db._docs['rooms/r1']).toBeDefined();
+    expect(db._docs['rooms/r1'].hostUid).toBe(50000060);
+    expect(db._docs['rooms/r1'].state).toBe('OPEN');
+    expect(db._docs['rooms/r1'].participantIds).toContain(50000060);
+  });
+});
+
+describe('Wake 95 — "<Name> [P-NN] is signed in on <Plat> and joined to "<X>" as a non-seated participant"', () => {
+  // j10-mid-room-warning.feature Background:
+  //   Given Ines [P-11] is signed in on iOS Sim and joined to "r1" as a non-seated participant
+  test('plants session + room participation', async () => {
+    const db = makeStatefulFakeDb({
+      'rooms/r1': { hostUid: 50000060, state: 'OPEN', participantIds: [50000060] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Ines [P-11] is signed in on iOS Sim and joined to "r1" as a non-seated participant',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Ines = P-11 = 50000061
+    expect(ctx.sessions.get('Ines')?.customClaims.uniqueId).toBe(50000061);
+    expect(db._docs['rooms/r1'].participantIds).toContain(50000061);
+  });
+});
+
+describe('Wake 95 — "<Name> has a pre-existing direct conversation with <Other>"', () => {
+  // j11-harassment-moderation-cycle.feature Background:
+  //   Given Raul has a pre-existing direct conversation with Nora
+  // State-seed: plants a conversations/<id> doc with the two-persona pair.
+  test('plants a 2-person direct conv doc', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Raul has a pre-existing direct conversation with Nora' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Raul = P-08 = 50000050, Nora = P-09 = 50000051
+    const conv = Object.entries(db._docs).find(([k]) => k.startsWith('conversations/'));
+    expect(conv).toBeDefined();
+    const data = conv[1];
+    expect(data.participantIds).toEqual(expect.arrayContaining([50000050, 50000051]));
+  });
+});
+
+describe('Wake 95 — `the gifts "<X>" (Nc coins / Nb beans), "<Y>" (..), "<Z>" (..) exist`', () => {
+  // j15-mc-performance.feature Background:
+  //   Given the gifts "rose" (10 coins / 5 beans), "crown" (500 coins / 250 beans), "diamond" (1000 coins / 500 beans) exist
+  // State-seed: plants 3 gift docs with coin price + bean payout.
+  test('plants 3 gift docs', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the gifts "rose" (10 coins / 5 beans), "crown" (500 coins / 250 beans), "diamond" (1000 coins / 500 beans) exist',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['gifts/rose']).toEqual({ id: 'rose', coins: 10, beans: 5 });
+    expect(db._docs['gifts/crown']).toEqual({ id: 'crown', coins: 500, beans: 250 });
+    expect(db._docs['gifts/diamond']).toEqual({ id: 'diamond', coins: 1000, beans: 500 });
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the gifts "rose" (10 coins / 5 beans), "crown" (500 coins / 250 beans), "diamond" (1000 coins / 500 beans) exist',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});

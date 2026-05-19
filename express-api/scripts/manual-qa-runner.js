@@ -10792,6 +10792,140 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 95 — "the <queue> queue has N pending <noun>". j12 Background.
+    // Records queue depth on ctx.adminQueues. Downstream "Greta opens
+    // the X queue" steps could read this to validate the count is
+    // shown in the UI. MVP just persists for inspection.
+    pattern: /^the ([\w-]+) queue has (\d+) pending (\w+)$/,
+    async handler(m, ctx) {
+      const queueName = m[1];
+      const count = Number(m[2]);
+      const noun = m[3];
+      if (!ctx.adminQueues) ctx.adminQueues = {};
+      ctx.adminQueues[queueName] = { count, noun };
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 95 — "the audit log has at least N recent entries".
+    // j12 Background. Lower-bound rather than equality — "at least"
+    // because the dev DB accumulates entries over time.
+    pattern: /^the audit log has at least (\d+) recent entries$/,
+    async handler(m, ctx) {
+      ctx.auditLogMinEntries = Number(m[1]);
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 95 — `<Name> [P-NN] is signed in on <Plat> and hosting voice
+    // room "<X>" with mic open + seated`. j10 Background. Composite:
+    // session + room ownership + mic/seat state. Plants a `rooms/<X>`
+    // doc with hostUid + initial participantIds containing the host.
+    pattern:
+      /^([A-Z][a-z]+)\s*\[(P-\d{2})\]\s+is signed in on (Web Chromium|Web Safari|Web|Android|iOS Sim) and hosting voice room "([^"]+)" with mic open \+ seated$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const pCode = m[2];
+      const roomId = m[4];
+      const personas = loadPersonas();
+      const p = personas.get(pCode) || personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      ctx.sessions.set(name, {
+        persona: p,
+        idToken: `synthetic:${name}:${p.uniqueId}`,
+        refreshToken: null,
+        localId: String(p.uniqueId),
+        customClaims: { uniqueId: p.uniqueId, cohort: p.cohort, ephemeral: !!p.ephemeral },
+      });
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      await ctx.db.doc(`rooms/${roomId}`).set({
+        id: roomId,
+        hostUid: p.uniqueId,
+        state: 'OPEN',
+        participantIds: [p.uniqueId],
+        seatedIds: [p.uniqueId],
+        micOpenIds: [p.uniqueId],
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 95 — `<Name> [P-NN] is signed in on <Plat> and joined to
+    // "<X>" as a non-seated participant`. j10 Background. Adds the
+    // persona's uniqueId to the room's participantIds (without
+    // seating). Assumes the room doc already exists.
+    pattern:
+      /^([A-Z][a-z]+)\s*\[(P-\d{2})\]\s+is signed in on (Web Chromium|Web Safari|Web|Android|iOS Sim) and joined to "([^"]+)" as a non-seated participant$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const pCode = m[2];
+      const roomId = m[4];
+      const personas = loadPersonas();
+      const p = personas.get(pCode) || personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      ctx.sessions.set(name, {
+        persona: p,
+        idToken: `synthetic:${name}:${p.uniqueId}`,
+        refreshToken: null,
+        localId: String(p.uniqueId),
+        customClaims: { uniqueId: p.uniqueId, cohort: p.cohort, ephemeral: !!p.ephemeral },
+      });
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const roomRef = ctx.db.doc(`rooms/${roomId}`);
+      const snap = await roomRef.get();
+      const current = snap.exists ? snap.data() : { participantIds: [] };
+      const participantIds = Array.from(new Set([...(current.participantIds || []), p.uniqueId]));
+      await roomRef.set({ participantIds }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 95 — "<Name> has a pre-existing direct conversation with
+    // <Other>". j11 Background. Plants a 2-person conversations/<id>
+    // doc with deterministic id derived from sorted uniqueIds so the
+    // conv is locatable across scenarios.
+    pattern: /^([A-Z][a-z]+) has a pre-existing direct conversation with ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const a = m[1];
+      const b = m[2];
+      const personas = loadPersonas();
+      const pa = personas.get(a);
+      const pb = personas.get(b);
+      if (!pa) return { ok: false, error: `persona "${a}" not in registry` };
+      if (!pb) return { ok: false, error: `persona "${b}" not in registry` };
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const ids = [pa.uniqueId, pb.uniqueId].sort((x, y) => x - y);
+      const convId = `direct-${ids[0]}-${ids[1]}`;
+      await ctx.db.doc(`conversations/${convId}`).set({
+        id: convId,
+        type: 'direct',
+        participantIds: ids,
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 95 — `the gifts "<X>" (Nc coins / Nb beans), "<Y>" (..),
+    // "<Z>" (..) exist`. j15 Background. Plants 3 gift catalogue docs.
+    // Mid-step `(N coins / N beans)` parens are NOT end-anchored — the
+    // final `exist` word lets stripStepAnnotation skip them.
+    pattern:
+      /^the gifts "([^"]+)" \((\d+) coins \/ (\d+) beans\), "([^"]+)" \((\d+) coins \/ (\d+) beans\), "([^"]+)" \((\d+) coins \/ (\d+) beans\) exist$/,
+    async handler(m, ctx) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const gifts = [
+        { id: m[1], coins: Number(m[2]), beans: Number(m[3]) },
+        { id: m[4], coins: Number(m[5]), beans: Number(m[6]) },
+        { id: m[7], coins: Number(m[8]), beans: Number(m[9]) },
+      ];
+      for (const g of gifts) {
+        await ctx.db.doc(`gifts/${g.id}`).set(g);
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
