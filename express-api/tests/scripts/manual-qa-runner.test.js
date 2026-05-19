@@ -15030,3 +15030,315 @@ describe('Wake 81 — "<Name> on <Plat> taps the gift icon and selects "<X>" wit
     expect(r.error).toMatch(/iosGiftIconSelectAndRecipient/);
   });
 });
+
+// ── Wake 82 ──────────────────────────────────────────────────────────
+
+describe('Wake 82 — "<Name> [P-NN] exists with uniqueId=N, userType=X, isOfficial=B, isUnblockable=B"', () => {
+  // j18-official-system-pms.feature:19
+  //   Given Officia [P-19] exists with uniqueId=1, userType=SHYTALK_OFFICIAL, isOfficial=true, isUnblockable=true
+  // Complex multi-field state-seed for the Officia system account.
+  test('writes all four fields', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Officia [P-19] exists with uniqueId=1, userType=SHYTALK_OFFICIAL, isOfficial=true, isUnblockable=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/1']).toEqual({
+      uniqueId: 1,
+      userType: 'SHYTALK_OFFICIAL',
+      isOfficial: true,
+      isUnblockable: true,
+    });
+  });
+
+  test('isOfficial=false → boolean parsed correctly', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Vexa exists with uniqueId=42, userType=MEMBER, isOfficial=false, isUnblockable=false',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/42'].isOfficial).toBe(false);
+    expect(db._docs['users/42'].isUnblockable).toBe(false);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Officia exists with uniqueId=1, userType=X, isOfficial=true, isUnblockable=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 82 — "<Name> was just age-verified by admin (cohort flipped from <X> to <Y>)"', () => {
+  // j18-official-system-pms.feature:27
+  //   Given Adam was just age-verified by admin (cohort flipped from minor to adult)
+  // Past-tense state-seed: writes cohort + ageVerificationFlippedAt
+  // timestamp.
+  test('writes post-flip cohort + timestamp', async () => {
+    // Adam = P-01 = 90000001 (ephemeral)
+    const db = makeStatefulFakeDb({ 'users/90000001': {} });
+    const ctx = makeCtx({ db });
+    const before = Date.now();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam was just age-verified by admin (cohort flipped from minor to adult)',
+      },
+      ctx,
+    );
+    const after = Date.now();
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/90000001'].cohort).toBe('adult');
+    expect(db._docs['users/90000001'].ageVerificationFlippedAt).toBeGreaterThanOrEqual(before);
+    expect(db._docs['users/90000001'].ageVerificationFlippedAt).toBeLessThanOrEqual(after);
+  });
+
+  test('different persona name', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    // Alice = P-02 = 50000010
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice was just age-verified by admin (cohort flipped from minor to adult)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Handler always sets cohort='adult' since corpus only documents upgrade.
+    expect(db._docs['users/50000010'].cohort).toBe('adult');
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Zzzghost was just age-verified by admin (cohort flipped from minor to adult)',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
+
+describe('Wake 82 — "the <name> webhook fires sendSystemPm with key="<X>" recipient=<Y>"', () => {
+  // j18-official-system-pms.feature:28
+  //   When the post-approval webhook fires sendSystemPm with key="age_seg_age_up_welcome_pm" recipient=Adam
+  // Webhook trigger step. Driver fires the named webhook with the
+  // resolved recipient uniqueId.
+  test('captures webhook name, key, recipient', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the post-approval webhook fires sendSystemPm with key="age_seg_age_up_welcome_pm" recipient=Adam',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Adam = P-01 = 90000001
+    expect(spy).toHaveBeenCalledWith('post-approval', 'age_seg_age_up_welcome_pm', 90000001);
+  });
+
+  test('different webhook name + recipient', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the rejection webhook fires sendSystemPm with key="age_seg_age_down_admin_pm" recipient=Hayato',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Hayato = P-06 = 50000030
+    expect(spy).toHaveBeenCalledWith('rejection', 'age_seg_age_down_admin_pm', 50000030);
+  });
+
+  test('unknown recipient → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the post-approval webhook fires sendSystemPm with key="x" recipient=Zzzghost',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the post-approval webhook fires sendSystemPm with key="x" recipient=Adam',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/fireSystemPmWebhook/);
+  });
+});
+
+describe('Wake 82 — "the message body is the <Language> translation of the <X> template"', () => {
+  // j18-official-system-pms.feature:31, 41
+  //   Then the message body is the English translation of the age-up template
+  // Distinct from existing `the PM body is the X translation` (line 3903)
+  // by the noun ("message body" vs "PM body"). Same driver method.
+  test('matching translation → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { pmBodyIsTranslationOfTemplate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the message body is the English translation of the age-up template' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('en', 'age-up');
+  });
+
+  test('Japanese translation', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { pmBodyIsTranslationOfTemplate: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the message body is the Japanese translation of the age-down template',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ja', 'age-down');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { pmBodyIsTranslationOfTemplate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the message body is the English translation of the age-up template' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/English|age-up/);
+  });
+});
+
+describe('Wake 82 — "<Name>\'s <Plat> UI shows a new PM thread with sender "<X>""', () => {
+  // j18-official-system-pms.feature:32
+  //   Then within 5000ms Adam's Android UI shows a new PM thread with sender "ShyTalk Official"
+  // Tested bare (after `within` peels off).
+  test('matching sender → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNewPmThreadWithSender: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI shows a new PM thread with sender "ShyTalk Official"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'ShyTalk Official');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsNewPmThreadWithSender: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Hayato\'s iOS Sim UI shows a new PM thread with sender "ShyTalk Official"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato', 'ShyTalk Official');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI shows a new PM thread with sender "ShyTalk Official"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsNewPmThreadWithSender/);
+  });
+});
+
+describe('Wake 82 — "<X> (locale=<a>) is being downgraded by <Y> (locale=<b>) via age verification"', () => {
+  // j18-official-system-pms.feature:38
+  //   Given Hayato (locale=ja) is being downgraded by Greta (locale=en) via age verification
+  // Composite admin-action state-seed (present-progressive tense).
+  // Distinct from Wake 76's `is age-verified and Greta downgrades her
+  // to minor` — different tense + double-locale annotation.
+  test('writes target.cohort=minor + records locales', async () => {
+    // Hayato = P-06 = 50000030
+    const db = makeStatefulFakeDb({ 'users/50000030': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato (locale=ja) is being downgraded by Greta (locale=en) via age verification',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000030'].cohort).toBe('minor');
+    expect(db._docs['users/50000030'].locale).toBe('ja');
+    expect(ctx.personaLocales.get('Hayato')).toEqual({ platform: null, locale: 'ja' });
+    expect(ctx.personaLocales.get('Greta')).toEqual({ platform: null, locale: 'en' });
+  });
+
+  test('unknown target → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Zzzghost (locale=en) is being downgraded by Greta (locale=en) via age verification',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato (locale=ja) is being downgraded by Greta (locale=en) via age verification',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});

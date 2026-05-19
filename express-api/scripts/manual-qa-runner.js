@@ -8561,6 +8561,176 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 82 — "<Name> [P-NN] exists with uniqueId=N, userType=X,
+    // isOfficial=B, isUnblockable=B". j18:19 — multi-field state-seed
+    // for the Officia system account. Booleans parsed from text.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+exists with uniqueId=(\d+), userType=(\w+), isOfficial=(true|false), isUnblockable=(true|false)$/,
+    async handler(m, ctx) {
+      const uniqueId = parseInt(m[3], 10);
+      const userType = m[4];
+      const isOfficial = m[5] === 'true';
+      const isUnblockable = m[6] === 'true';
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      await ctx.db.doc(`users/${uniqueId}`).set({ uniqueId, userType, isOfficial, isUnblockable });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 82 — "<Name> was just age-verified by admin". j18:27 — past-
+    // tense state-seed. The trailing `(cohort flipped from minor to
+    // adult)` parenthetical is stripped by stripStepAnnotation before
+    // matchers run, so the cohort direction is implicit: always upgrade
+    // (corpus only uses this step for the post-approval flow).
+    pattern: /^([A-Z][a-z]+) was just age-verified by admin$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      await ctx.db
+        .doc(`users/${p.uniqueId}`)
+        .set({ cohort: 'adult', ageVerificationFlippedAt: Date.now() }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 82 — "the <name> webhook fires sendSystemPm with key="<X>"
+    // recipient=<Y>". j18:28 — webhook trigger. Resolves recipient name
+    // to uniqueId via persona registry.
+    pattern:
+      /^the (\w+(?:-\w+)*) webhook fires sendSystemPm with key="([^"]+)" recipient=([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const webhookName = m[1];
+      const key = m[2];
+      const recipientName = m[3];
+      const personas = loadPersonas();
+      const p = personas.get(recipientName);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `recipient "${recipientName}" not in registry` };
+      }
+      if (!ctx.webDriver?.fireSystemPmWebhook) {
+        return { ok: false, error: 'ctx.webDriver.fireSystemPmWebhook not configured' };
+      }
+      const ok = await ctx.webDriver.fireSystemPmWebhook(webhookName, key, p.uniqueId);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${webhookName} webhook failed to fire sendSystemPm key=${key}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 82 — "the message body is the <Language> translation of the
+    // <X> template". j18:31, 41. Reuses the existing `pmBodyIsTranslation
+    // OfTemplate` driver (Wake 30) with a different noun phrase.
+    pattern: /^the message body is the ([A-Z][a-z]+) translation of the ([\w-]+) template$/,
+    async handler(m, ctx) {
+      const LOCALE_NAME_TO_CODE = {
+        Arabic: 'ar',
+        German: 'de',
+        Spanish: 'es',
+        French: 'fr',
+        Hindi: 'hi',
+        Indonesian: 'id',
+        Italian: 'it',
+        Japanese: 'ja',
+        Khmer: 'km',
+        Korean: 'ko',
+        Dutch: 'nl',
+        Polish: 'pl',
+        Portuguese: 'pt',
+        Russian: 'ru',
+        Swedish: 'sv',
+        Thai: 'th',
+        Turkish: 'tr',
+        Ukrainian: 'uk',
+        Vietnamese: 'vi',
+        Chinese: 'zh',
+        English: 'en',
+      };
+      const languageName = m[1];
+      const templateName = m[2];
+      const code = LOCALE_NAME_TO_CODE[languageName];
+      if (!code) {
+        return { ok: false, error: `unknown language name "${languageName}"` };
+      }
+      if (!ctx.webDriver?.pmBodyIsTranslationOfTemplate) {
+        return { ok: false, error: 'ctx.webDriver.pmBodyIsTranslationOfTemplate not configured' };
+      }
+      const ok = await ctx.webDriver.pmBodyIsTranslationOfTemplate(code, templateName);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `message body is not the ${languageName} translation of ${templateName}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 82 — "<Name>'s <Plat> UI shows a new PM thread with sender
+    // "<X>"". j18:32. Driver verifies a PM thread with the named sender
+    // appears in the persona's inbox.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a new PM thread with sender "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const sender = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsNewPmThreadWithSender'
+        : platform === 'Android'
+          ? 'androidShowsNewPmThreadWithSender'
+          : 'iosShowsNewPmThreadWithSender';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, sender);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show a new PM thread with sender "${sender}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 82 — "<X> (locale=<a>) is being downgraded by <Y> (locale=<b>)
+    // via age verification". j18:38 — composite admin-action state-seed
+    // (present-progressive tense). Writes target.cohort=minor +
+    // target.locale, and records BOTH personas' locales in
+    // ctx.personaLocales.
+    pattern:
+      /^([A-Z][a-z]+) \(locale=([a-z]+)\) is being downgraded by ([A-Z][a-z]+) \(locale=([a-z]+)\) via age verification$/,
+    async handler(m, ctx) {
+      const targetName = m[1];
+      const targetLocale = m[2];
+      const adminName = m[3];
+      const adminLocale = m[4];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const target = personas.get(targetName);
+      if (!target?.uniqueId) {
+        return { ok: false, error: `persona "${targetName}" not in registry` };
+      }
+      await ctx.db
+        .doc(`users/${target.uniqueId}`)
+        .set({ cohort: 'minor', locale: targetLocale }, { merge: true });
+      if (!ctx.personaLocales) ctx.personaLocales = new Map();
+      ctx.personaLocales.set(targetName, { platform: null, locale: targetLocale });
+      ctx.personaLocales.set(adminName, { platform: null, locale: adminLocale });
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
