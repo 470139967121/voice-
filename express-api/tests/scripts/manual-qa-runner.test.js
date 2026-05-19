@@ -14075,3 +14075,257 @@ describe('Wake 77 — "the network log shows N attempts to <path>"', () => {
     expect(r.error).toMatch(/webNetworkLogCountAttempts/);
   });
 });
+
+// ── Wake 78 ──────────────────────────────────────────────────────────
+
+describe('Wake 78 — "<Name> on <Plat> restores the network to "<X>""', () => {
+  // j14-low-bandwidth-degraded.feature:39
+  //   When Ines on Web restores the network to "Slow 3G"
+  // Mid-scenario throttle restoration after Offline. Same driver as
+  // Wake 77's `sets the network`.
+  test('restores → driver receives profile', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSetNetwork: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web restores the network to "Slow 3G"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Slow 3G');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web restores the network to "Slow 3G"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webSetNetwork/);
+  });
+});
+
+describe('Wake 78 — "Express API <path> has a N second latency injected"', () => {
+  // j14-low-bandwidth-degraded.feature:96
+  //   Given the Express API /api/users/me has a 6 second latency injected
+  // Fault-injection state-seed. Driver enables server-side latency for
+  // the named endpoint.
+  test('injects latency → driver receives both', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { injectApiLatency: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the Express API /api/users/me has a 6 second latency injected' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/api/users/me', 6);
+  });
+
+  test('different latency value', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { injectApiLatency: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the Express API /api/economy/balance has a 12 second latency injected',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/api/economy/balance', 12);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'the Express API /api/users/me has a 6 second latency injected' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/injectApiLatency/);
+  });
+});
+
+describe('Wake 78 — "Express API <path> fails twice with N, succeeds on Nth try"', () => {
+  // j14-low-bandwidth-degraded.feature:85
+  //   Given the Express API /api/economy/balance fails twice with 503, succeeds on 3rd try
+  // Fault-injection with retry-success pattern. Driver receives the path,
+  // failure status code, and the ordinal of the successful attempt.
+  test('injects failure-then-success pattern', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { injectApiFailureThenSuccess: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the Express API /api/economy/balance fails twice with 503, succeeds on 3rd try',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/api/economy/balance', 503, '3rd');
+  });
+
+  test('different status + ordinal', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { injectApiFailureThenSuccess: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the Express API /api/messages fails twice with 502, succeeds on 4th try',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/api/messages', 502, '4th');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the Express API /api/economy/balance fails twice with 503, succeeds on 3rd try',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/injectApiFailureThenSuccess/);
+  });
+});
+
+describe('Wake 78 — "Network Link Conditioner injects N% packet loss"', () => {
+  // j14-low-bandwidth-degraded.feature:64
+  //   Given Network Link Conditioner injects 30% packet loss
+  // iOS-specific network fault tool. Driver enables NLC packet-loss
+  // injection at the named percentage.
+  test('injects packet loss', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosNetworkLinkConditioner: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Network Link Conditioner injects 30% packet loss' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(30);
+  });
+
+  test('different percentage', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosNetworkLinkConditioner: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Network Link Conditioner injects 75% packet loss' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(75);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Network Link Conditioner injects 30% packet loss' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosNetworkLinkConditioner/);
+  });
+});
+
+describe('Wake 78 — "<Name>\'s <Plat> UI shows the message in the conversation"', () => {
+  // j14-low-bandwidth-degraded.feature:41
+  //   Then Theo's Android UI shows the message in the conversation
+  // Asserts the most-recently-sent message (from a sibling persona's
+  // perspective) appears in the open conversation. Driver returns
+  // truthy iff the message is rendered.
+  test('android: message visible → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsLastMessage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the message in the conversation" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsLastMessage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI shows the message in the conversation" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsLastMessage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the message in the conversation" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/message/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the message in the conversation" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsLastMessage/);
+  });
+});
+
+describe('Wake 78 — "<Name>\'s <Plat> UI shows a "<X>" indicator"', () => {
+  // j14-low-bandwidth-degraded.feature:79
+  //   Then Ines's iOS Sim UI shows a "Poor connection" indicator
+  // Named-indicator presence assertion (different from `<X> tab` or
+  // `<X> button` matchers). Driver checks for the visual badge.
+  test('iOS Sim: indicator present → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsNamedIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Ines\'s iOS Sim UI shows a "Poor connection" indicator' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Poor connection');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI shows a "Recording" indicator' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'Recording');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosShowsNamedIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Ines\'s iOS Sim UI shows a "Poor connection" indicator' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Poor connection/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Ines\'s iOS Sim UI shows a "Poor connection" indicator' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosShowsNamedIndicator/);
+  });
+});

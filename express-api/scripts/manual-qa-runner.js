@@ -7972,6 +7972,146 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 78 — "<Name> on <Plat> restores the network to "<X>"".
+    // j14:39 — restoration variant of Wake 77's `sets the network`.
+    // Same driver — `restores` is just author wording for "set back to
+    // the previous profile after Offline".
+    pattern: /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web) restores the network to "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const profile = m[3];
+      if (!ctx.webDriver?.webSetNetwork) {
+        return { ok: false, error: 'ctx.webDriver.webSetNetwork not configured' };
+      }
+      const ok = await ctx.webDriver.webSetNetwork(name, profile);
+      if (!ok) {
+        return { ok: false, error: `${name}: restore network to "${profile}" did not complete` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 78 — "Express API <path> has a N second latency injected".
+    // j14:96 — fault-injection state-seed. Driver enables server-side
+    // latency for the named endpoint.
+    pattern: /^the Express API (\/api\/[\w/-]+) has a (\d+) second latency injected$/,
+    async handler(m, ctx) {
+      const apiPath = m[1];
+      const seconds = parseInt(m[2], 10);
+      if (!ctx.webDriver?.injectApiLatency) {
+        return { ok: false, error: 'ctx.webDriver.injectApiLatency not configured' };
+      }
+      const ok = await ctx.webDriver.injectApiLatency(apiPath, seconds);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `failed to inject ${seconds}s latency on ${apiPath}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 78 — "Express API <path> fails twice with N, succeeds on Nth try".
+    // j14:85 — fault-injection with retry-success pattern. Driver receives
+    // path, failure status code, success ordinal (3rd, 4th, etc.).
+    pattern: /^the Express API (\/api\/[\w/-]+) fails twice with (\d+), succeeds on (\w+) try$/,
+    async handler(m, ctx) {
+      const apiPath = m[1];
+      const failureStatus = parseInt(m[2], 10);
+      const successOrdinal = m[3];
+      if (!ctx.webDriver?.injectApiFailureThenSuccess) {
+        return { ok: false, error: 'ctx.webDriver.injectApiFailureThenSuccess not configured' };
+      }
+      const ok = await ctx.webDriver.injectApiFailureThenSuccess(
+        apiPath,
+        failureStatus,
+        successOrdinal,
+      );
+      if (!ok) {
+        return {
+          ok: false,
+          error: `failed to inject failure-twice-then-${successOrdinal}-success on ${apiPath}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 78 — "Network Link Conditioner injects N% packet loss".
+    // j14:64 — iOS-specific network fault tool. Driver enables NLC at
+    // the named packet-loss percentage.
+    pattern: /^Network Link Conditioner injects (\d+)% packet loss$/,
+    async handler(m, ctx) {
+      const percent = parseInt(m[1], 10);
+      if (!ctx.uiDriver?.iosNetworkLinkConditioner) {
+        return { ok: false, error: 'ctx.uiDriver.iosNetworkLinkConditioner not configured' };
+      }
+      const ok = await ctx.uiDriver.iosNetworkLinkConditioner(percent);
+      if (!ok) {
+        return { ok: false, error: `failed to enable NLC at ${percent}% packet loss` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 78 — "<Name>'s <Plat> UI shows the message in the conversation".
+    // j14:41 — assert the most-recently-sent message (from a sibling
+    // persona's perspective) appears in the currently-open conversation.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the message in the conversation$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsLastMessage'
+        : platform === 'Android'
+          ? 'androidShowsLastMessage'
+          : 'iosShowsLastMessage';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${name} on ${platform}: most recent message not visible in conversation`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 78 — "<Name>'s <Plat> UI shows a "<X>" indicator".
+    // j14:79 — named-indicator presence assertion. Distinct from `<X>
+    // button` / `<X> tab` matchers (different terminal kind word).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a "([^"]+)" indicator$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const indicatorName = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsNamedIndicator'
+        : platform === 'Android'
+          ? 'androidShowsNamedIndicator'
+          : 'iosShowsNamedIndicator';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, indicatorName);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show "${indicatorName}" indicator`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
