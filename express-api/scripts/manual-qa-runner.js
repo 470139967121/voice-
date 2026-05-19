@@ -9016,6 +9016,170 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 85 — "<Name> [P-NN] is on <Plat> joined to voice room "<X>"
+    // with mic <state>" (state-seed, non-seated). j14:46. Writes
+    // participantIds + micStates (no seat assignment).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+(?:is\s+)?on (?:Web Chromium|Web Safari|Web|Android|iOS Sim)\s+(?:is\s+)?joined to voice room "([^"]+)" with mic (open|muted)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const roomId = m[3];
+      const micState = m[4];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const docPath = `rooms/${roomId}`;
+      const snap = await ctx.db.doc(docPath).get();
+      const existing = snap.exists ? snap.data() : { id: roomId, participantIds: [] };
+      const participantIds = Array.isArray(existing.participantIds)
+        ? [...existing.participantIds]
+        : [];
+      if (!participantIds.includes(p.uniqueId)) participantIds.push(p.uniqueId);
+      const micStates = { ...(existing.micStates || {}) };
+      micStates[String(p.uniqueId)] = micState;
+      await ctx.db.doc(docPath).set({ ...existing, participantIds, micStates }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 85 — "<Name> is on <Plat> joined to room "<X>" seated with mic
+    // <state>" (state-seed, seated). j14:62. Writes participantIds +
+    // seats[] + micStates.
+    pattern:
+      /^([A-Z][a-z]+)\s+(?:is\s+)?on (?:Web Chromium|Web Safari|Web|Android|iOS Sim)\s+joined to room "([^"]+)" seated with mic (open|muted)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const roomId = m[2];
+      const micState = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const docPath = `rooms/${roomId}`;
+      const snap = await ctx.db.doc(docPath).get();
+      const existing = snap.exists ? snap.data() : { id: roomId, participantIds: [] };
+      const participantIds = Array.isArray(existing.participantIds)
+        ? [...existing.participantIds]
+        : [];
+      if (!participantIds.includes(p.uniqueId)) participantIds.push(p.uniqueId);
+      const micStates = { ...(existing.micStates || {}) };
+      micStates[String(p.uniqueId)] = micState;
+      await ctx.db.doc(docPath).set(
+        {
+          ...existing,
+          participantIds,
+          micStates,
+          seats: [{ userId: p.uniqueId, muted: micState === 'muted' }],
+        },
+        { merge: true },
+      );
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 85 — "the tester hears <X>'s audio with <quality>". j14:77 —
+    // manual-only. Extends Wake 66 with a quality descriptor.
+    pattern: /^the tester hears ([A-Z][a-z]+)'s audio with (.+)$/,
+    async handler(m, ctx) {
+      const fromName = m[1];
+      const quality = m[2];
+      if (!ctx.testerDriver?.confirmHearsAudioWithQuality) {
+        return {
+          ok: false,
+          error:
+            'manual-only assertion — no testerDriver. Tag scenario @manual or wire ctx.testerDriver.confirmHearsAudioWithQuality.',
+        };
+      }
+      const ok = await ctx.testerDriver.confirmHearsAudioWithQuality(fromName, quality);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `tester did not confirm ${fromName}'s audio with quality "${quality}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 85 — "<Name>'s <Plat> UI shows the room screen with host seat
+    // occupied + "<X>" badge". j15:34 — composite: room screen + seat-
+    // occupied + named tier badge.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the room screen with host seat occupied \+ "([^"]+)" badge$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const badge = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsRoomScreenWithHostBadge'
+        : platform === 'Android'
+          ? 'androidShowsRoomScreenWithHostBadge'
+          : 'iosShowsRoomScreenWithHostBadge';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, badge);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show room screen with host seat occupied + "${badge}" badge`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 85 — "<Name> on <Plat> sends "<X>" to <Y>" (Web/iOS variant).
+    // j15:43 — Web/iOS variant of the Android-specific matcher (line
+    // ~2841). Routes to platform-specific driver method; driver decides
+    // whether to interpret as message or gift based on UI context.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|iOS Sim) sends "([^"]+)" to ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const item = m[3];
+      const recipient = m[4];
+      const methodName = platform.startsWith('Web') ? 'webSendItemTo' : 'iosSendItemTo';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, item, recipient);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: send "${item}" to ${recipient} did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 85 — "<Name> [P-NN] is a <minor|adult> with userType=<X>"
+    // (state-seed). j16:55 — composite cohort + userType.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is a (minor|adult) with userType=(\w+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const cohort = m[3];
+      const userType = m[4];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      await ctx.db.doc(`users/${p.uniqueId}`).set({ cohort, userType }, { merge: true });
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

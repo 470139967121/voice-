@@ -15803,3 +15803,250 @@ describe('Wake 84 — "<Name>\'s <Plat> network restores"', () => {
     expect(r.error).toMatch(/iosNetworkRestores/);
   });
 });
+
+// ── Wake 85 ──────────────────────────────────────────────────────────
+
+describe('Wake 85 — "<Name> [P-NN] is on <Plat> joined to voice room "<X>" with mic <state>" (state-seed)', () => {
+  // j14-low-bandwidth-degraded.feature:46
+  //   Given Ines [P-11] is on iOS Sim joined to voice room "r1" with mic open
+  test('writes participantIds and mic state', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    // Ines = P-11 = 50000061
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Ines [P-11] is on iOS Sim joined to voice room "r1" with mic open',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r1'].participantIds).toContain(50000061);
+    expect(db._docs['rooms/r1'].micStates['50000061']).toBe('open');
+  });
+
+  test('muted variant', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Theo on Android joined to voice room "r2" with mic muted',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r2'].micStates['50000060']).toBe('muted');
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Zzzghost is on iOS Sim joined to voice room "rX" with mic open',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
+
+describe('Wake 85 — "<Name> is on <Plat> joined to room "<X>" seated with mic <state>" (state-seed)', () => {
+  // j14-low-bandwidth-degraded.feature:62
+  //   Given Ines is on iOS Sim joined to room "r1" seated with mic open
+  // Seated variant — also seats the persona.
+  test('writes participantIds + seated + mic', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    // Ines = P-11 = 50000061
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Ines is on iOS Sim joined to room "r1" seated with mic open',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r1'].participantIds).toContain(50000061);
+    expect(db._docs['rooms/r1'].seats[0]).toEqual(expect.objectContaining({ userId: 50000061 }));
+    expect(db._docs['rooms/r1'].micStates['50000061']).toBe('open');
+  });
+
+  test('muted variant', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice is on Web joined to room "r9" seated with mic muted',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r9'].micStates['50000010']).toBe('muted');
+  });
+});
+
+describe('Wake 85 — "the tester hears <X>\'s audio with <quality>"', () => {
+  // j14-low-bandwidth-degraded.feature:77
+  //   Then the tester hears Ines's audio with occasional dropouts but recognizable speech
+  // Manual-only — extends Wake 66's tester-hears-audio with quality descriptor.
+  test('testerDriver returns true → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ testerDriver: { confirmHearsAudioWithQuality: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Ines's audio with occasional dropouts but recognizable speech",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'occasional dropouts but recognizable speech');
+  });
+
+  test('different quality descriptor', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ testerDriver: { confirmHearsAudioWithQuality: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "the tester hears Selma's audio with crystal clear quality" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'crystal clear quality');
+  });
+
+  test('no testerDriver → manual hint', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "the tester hears Ines's audio with occasional dropouts" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/manual/i);
+  });
+});
+
+describe('Wake 85 — "<Name>\'s <Plat> UI shows the room screen with host seat occupied + "<X>" badge"', () => {
+  // j15-mc-performance.feature:34
+  //   Then Selma's Android UI shows the room screen with host seat occupied + "MC Singer" badge
+  test('matching badge → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsRoomScreenWithHostBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Selma\'s Android UI shows the room screen with host seat occupied + "MC Singer" badge',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'MC Singer');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsRoomScreenWithHostBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Selma\'s Android UI shows the room screen with host seat occupied + "MC Singer" badge',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/MC Singer/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Selma\'s Android UI shows the room screen with host seat occupied + "X" badge',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsRoomScreenWithHostBadge/);
+  });
+});
+
+describe('Wake 85 — "<Name> on <Plat> sends "<X>" to <Y>" (Web/iOS variant)', () => {
+  // j15-mc-performance.feature:43
+  //   When Alice on Web sends "diamond" to Selma
+  // Web/iOS variant of existing Android `sends "X" to Y` (line ~2841).
+  test('Web variant → driver called', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSendItemTo: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web sends "diamond" to Selma' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'diamond', 'Selma');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosSendItemTo: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Mia on iOS Sim sends "rose" to Bao' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia', 'rose', 'Bao');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web sends "diamond" to Selma' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webSendItemTo/);
+  });
+});
+
+describe('Wake 85 — "<Name> [P-NN] is a <minor|adult> with userType=<X>" (state-seed)', () => {
+  // j16-event-host-team-leader.feature:55
+  //   Given Marcus [P-04] is a minor with userType=MC_SINGER
+  // Composite state-seed: cohort + userType.
+  test('writes both cohort and userType', async () => {
+    // Marcus = P-04 = 60000010
+    const db = makeStatefulFakeDb({ 'users/60000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Marcus [P-04] is a minor with userType=MC_SINGER' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/60000010'].cohort).toBe('minor');
+    expect(db._docs['users/60000010'].userType).toBe('MC_SINGER');
+  });
+
+  test('adult variant', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000080': {} });
+    const ctx = makeCtx({ db });
+    // Selma = P-14 = 50000080
+    const r = await executeStep(
+      { kind: 'Given', text: 'Selma is a adult with userType=MC_SINGER' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000080'].cohort).toBe('adult');
+    expect(db._docs['users/50000080'].userType).toBe('MC_SINGER');
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost is a minor with userType=MC_SINGER' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
