@@ -6826,6 +6826,165 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 70 — admin "opens the report and taps <action>".
+    // j11:42 — `Greta on Web Admin opens the report and taps "Warn Raul"`.
+    // Two-step composite: expand the report row into detail panel, then
+    // click a named action button.
+    pattern: /^Greta on Web Admin opens the report and taps "([^"]+)"$/,
+    async handler(m, ctx) {
+      const action = m[1];
+      if (!ctx.webDriver?.webAdminOpenReportAndTap) {
+        return { ok: false, error: 'ctx.webDriver.webAdminOpenReportAndTap not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminOpenReportAndTap(action);
+      if (!ok) {
+        return { ok: false, error: `admin report-open + tap "${action}" did not complete` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 70 — "<Name> on <Plat> reports it for "<reason>"".
+    // j11:34 — `Nora on iOS Sim reports it for "Harassment"`. "It" is the
+    // contextually-selected entity (message or user the persona just
+    // long-pressed). Driver wires the reason into the open report flow.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+reports it for "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const reason = m[3];
+      const methodName =
+        platform === 'Android'
+          ? 'androidReportItFor'
+          : platform === 'iOS Sim'
+            ? 'iosReportItFor'
+            : 'webReportItFor';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, reason);
+      if (!ok) {
+        return { ok: false, error: `report-for "${reason}" did not complete on ${platform}` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 70 — "<Name> is currently in a voice room "<id>" with mic <state>".
+    // j11:69 — sibling of the existing `is in voice room "X" ... with mic
+    // <state>` matcher; corpus authors mix "is in" and "is currently in"
+    // forms. Same Firestore effect (participantIds + micStates).
+    pattern: /^([A-Z][a-z]+)\s+is currently in a voice room "([^"]+)" with mic (open|muted)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const roomId = m[2];
+      const micState = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const docPath = `rooms/${roomId}`;
+      const snap = await ctx.db.doc(docPath).get();
+      const existing = snap.exists ? snap.data() : { id: roomId, participantIds: [] };
+      const participantIds = Array.isArray(existing.participantIds)
+        ? [...existing.participantIds]
+        : [];
+      if (!participantIds.includes(p.uniqueId)) participantIds.push(p.uniqueId);
+      const micStates = { ...(existing.micStates || {}) };
+      micStates[String(p.uniqueId)] = micState;
+      await ctx.db.doc(docPath).set({ ...existing, participantIds, micStates }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 70 — UI shows reason "<text>" (bare positive, no "warning").
+    // j11:51 — `Raul's Android UI shows reason "Repeat harassment"`. The
+    // suspension screen displays the suspension reason. Distinct from Wake
+    // 67's `shows the warning reason "X"` (has `the` and `warning`).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const expected = m[3];
+      const methodName =
+        platform === 'Android'
+          ? 'androidGetDisplayedReason'
+          : platform === 'iOS Sim'
+            ? 'iosGetDisplayedReason'
+            : 'webGetDisplayedReason';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const actual = await driver[methodName](name);
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `displayed reason mismatch: expected "${expected}", actual "${actual}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 70 — UI shows an end date N days from now (relative-date).
+    // j11:60 — `Raul's Android UI shows an end date 3 days from now`.
+    // Driver returns the displayed end-date in milliseconds; matcher
+    // accepts a 24h tolerance (date may be rendered as start-of-day or
+    // now+Nd exactly, both acceptable).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows an end date (\d+) days from now$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const days = parseInt(m[3], 10);
+      const methodName =
+        platform === 'Android'
+          ? 'androidGetDisplayedEndDate'
+          : platform === 'iOS Sim'
+            ? 'iosGetDisplayedEndDate'
+            : 'webGetDisplayedEndDate';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const actualMs = await driver[methodName](name);
+      const expectedMs = Date.now() + days * 24 * 60 * 60 * 1000;
+      const toleranceMs = 24 * 60 * 60 * 1000;
+      if (Math.abs(actualMs - expectedMs) > toleranceMs) {
+        const actualDays = (actualMs - Date.now()) / (24 * 60 * 60 * 1000);
+        return {
+          ok: false,
+          error: `end date mismatch: expected ${days} days from now, actual ~${actualDays.toFixed(1)} days`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 70 — "<Name> is suspended until N days from now" (state-seed).
+    // j11:67 — writes users/<uniqueId>.suspendedUntil = Date.now() + N days.
+    pattern: /^([A-Z][a-z]+) is suspended until (\d+) days from now$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const days = parseInt(m[2], 10);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const suspendedUntil = Date.now() + days * 24 * 60 * 60 * 1000;
+      await ctx.db.doc(`users/${p.uniqueId}`).set({ suspendedUntil }, { merge: true });
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

@@ -12048,3 +12048,257 @@ describe('Wake 69 — admin shows report row (reporter + reportedId + reason)', 
     expect(r.error).toMatch(/webAdminShowsReportRow/);
   });
 });
+
+// ── Wake 70 ──────────────────────────────────────────────────────────
+
+describe('Wake 70 — admin "opens the report and taps <action>"', () => {
+  // j11-harassment-moderation-cycle.feature:42
+  //   When Greta on Web Admin opens the report and taps "Warn Raul"
+  // Two-step composite: open the report row (expands into detail panel),
+  // then tap a named action button. Driver atom; keeps the corpus intent.
+  test('action label is passed → driver receives it', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminOpenReportAndTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the report and taps "Warn Raul"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Warn Raul');
+  });
+
+  test('different action label', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminOpenReportAndTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the report and taps "Suspend Raul"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Suspend Raul');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the report and taps "Warn Raul"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminOpenReportAndTap/);
+  });
+});
+
+describe('Wake 70 — "<Name> on <Plat> reports it for "<reason>""', () => {
+  // j11-harassment-moderation-cycle.feature:34
+  //   When Nora on iOS Sim reports it for "Harassment"
+  // Compact report action — "it" refers to the contextually-selected
+  // entity (typically a message or user the persona just long-pressed).
+  // Driver wires the reason into the open report flow.
+  test('iOS Sim → driver receives reason', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosReportItFor: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Nora on iOS Sim reports it for "Harassment"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Nora', 'Harassment');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidReportItFor: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul on Android reports it for "Spam"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'Spam');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Nora on iOS Sim reports it for "Harassment"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosReportItFor/);
+  });
+});
+
+describe('Wake 70 — "<Name> is currently in a voice room "<id>" with mic <state>"', () => {
+  // j11-harassment-moderation-cycle.feature:69
+  //   Given Raul is currently in a voice room "r-test" with mic open
+  // Sibling of the existing `is in voice room "X" with mic <state>` matcher
+  // (line ~5480) — corpus authors mix "is in" and "is currently in" forms.
+  // Same Firestore effect.
+  test('writes participantIds and micStates', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    // Raul = P-08 = 50000050
+    const r = await executeStep(
+      { kind: 'Given', text: 'Raul is currently in a voice room "r-test" with mic open' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r-test'].participantIds).toContain(50000050);
+    expect(db._docs['rooms/r-test'].micStates['50000050']).toBe('open');
+  });
+
+  test('muted variant', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice is currently in a voice room "r9" with mic muted' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r9'].micStates['50000010']).toBe('muted');
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost is currently in a voice room "rX" with mic open' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
+
+describe('Wake 70 — UI shows reason "<text>" (bare, no "warning")', () => {
+  // j11-harassment-moderation-cycle.feature:51
+  //   Then Raul's Android UI shows reason "Repeat harassment"
+  // Distinct from Wake 67's `shows the warning reason "X"` — this one has
+  // NO "the" and NO "warning", so it doesn't shadow. Used on the
+  // suspension screen which displays the suspension reason inline.
+  test('matching reason → ok', async () => {
+    const spy = jest.fn(async () => 'Repeat harassment');
+    const ctx = makeCtx({ uiDriver: { androidGetDisplayedReason: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Raul\'s Android UI shows reason "Repeat harassment"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatch → fail with both', async () => {
+    const spy = jest.fn(async () => 'Something else');
+    const ctx = makeCtx({ uiDriver: { androidGetDisplayedReason: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Raul\'s Android UI shows reason "Repeat harassment"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Repeat harassment/);
+    expect(r.error).toMatch(/Something else/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'Raul\'s Android UI shows reason "X"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidGetDisplayedReason/);
+  });
+});
+
+describe('Wake 70 — UI shows an end date N days from now', () => {
+  // j11-harassment-moderation-cycle.feature:60
+  //   Then Raul's Android UI shows an end date 3 days from now
+  // Relative-date UI assertion. Driver returns the displayed end-date in
+  // milliseconds; matcher accepts a 24h tolerance (date may be rendered
+  // as "midnight on day N" or "now + N days exactly", both acceptable).
+  test('matching date → ok', async () => {
+    const expectedMs = Date.now() + 3 * 24 * 60 * 60 * 1000;
+    const spy = jest.fn(async () => expectedMs);
+    const ctx = makeCtx({ uiDriver: { androidGetDisplayedEndDate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI shows an end date 3 days from now" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('within 24h tolerance → ok (midnight rounding)', async () => {
+    // Date rendered as start-of-day rather than now+3d exactly. Should
+    // still pass because driver date - now is between 2*24h and 4*24h.
+    const expectedMs = Date.now() + 3 * 24 * 60 * 60 * 1000 - 12 * 60 * 60 * 1000;
+    const spy = jest.fn(async () => expectedMs);
+    const ctx = makeCtx({ uiDriver: { androidGetDisplayedEndDate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI shows an end date 3 days from now" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('outside tolerance → fail', async () => {
+    // Date is 10 days off — way outside tolerance.
+    const expectedMs = Date.now() + 10 * 24 * 60 * 60 * 1000;
+    const spy = jest.fn(async () => expectedMs);
+    const ctx = makeCtx({ uiDriver: { androidGetDisplayedEndDate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI shows an end date 3 days from now" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/3 days|3d/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI shows an end date 3 days from now" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidGetDisplayedEndDate/);
+  });
+});
+
+describe('Wake 70 — "<Name> is suspended until N days from now" (state-seed)', () => {
+  // j11-harassment-moderation-cycle.feature:67
+  //   Given Raul is suspended until 2 days from now
+  // Writes a relative-date field to users/<uniqueId>.suspendedUntil. The
+  // resolved timestamp is computed at runner time (Date.now() + N days).
+  test('writes suspendedUntil ~ N days ahead', async () => {
+    // Raul = P-08 = 50000050
+    const db = makeStatefulFakeDb({ 'users/50000050': {} });
+    const ctx = makeCtx({ db });
+    const before = Date.now();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Raul is suspended until 2 days from now' },
+      ctx,
+    );
+    const after = Date.now();
+    expect(r.ok).toBe(true);
+    const susUntil = db._docs['users/50000050'].suspendedUntil;
+    expect(susUntil).toBeGreaterThanOrEqual(before + 2 * 24 * 60 * 60 * 1000);
+    expect(susUntil).toBeLessThanOrEqual(after + 2 * 24 * 60 * 60 * 1000);
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost is suspended until 5 days from now' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Raul is suspended until 2 days from now' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
