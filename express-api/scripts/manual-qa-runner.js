@@ -8290,6 +8290,165 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 80 — multi-listener tester-hears audio.
+    // j15:48 — `the tester hears <X>'s voice on <Y>'s <Plat> speakers
+    // AND <Z>'s <Plat> speakers`. Two-listener extension of Wake 66's
+    // tester-hears matcher. Manual-only.
+    pattern:
+      /^the tester hears ([A-Z][a-z]+)'s voice on ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) speakers AND ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) speakers$/,
+    async handler(m, ctx) {
+      const speaker = m[1];
+      const listenerA = { name: m[2], platform: m[3] };
+      const listenerB = { name: m[4], platform: m[5] };
+      if (!ctx.testerDriver?.confirmHearsAudioMulti) {
+        return {
+          ok: false,
+          error: `manual-only assertion — no testerDriver. Tag scenario @manual or wire ctx.testerDriver.confirmHearsAudioMulti.`,
+        };
+      }
+      const heard = await ctx.testerDriver.confirmHearsAudioMulti(speaker, [listenerA, listenerB]);
+      if (!heard) {
+        return {
+          ok: false,
+          error: `tester did not confirm hearing ${speaker}'s voice on ${listenerA.name} AND ${listenerB.name} speakers`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 80 — "Greta on Web Admin opens the economy stats".
+    // j15:60 — bare admin nav (no quoted tab / no ordinal).
+    pattern: /^Greta on Web Admin opens the economy stats$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webAdminOpenEconomyStats) {
+        return { ok: false, error: 'ctx.webDriver.webAdminOpenEconomyStats not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminOpenEconomyStats();
+      if (!ok) {
+        return { ok: false, error: 'admin failed to open the economy stats view' };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 80 — "<Name> on <Plat> taps the gift icon in the room".
+    // j15:41 — composite: open the gift modal from within a voice room.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) taps the gift icon in the room$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webTapGiftIconInRoom'
+        : platform === 'Android'
+          ? 'androidTapGiftIconInRoom'
+          : 'iosTapGiftIconInRoom';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return { ok: false, error: `${name}: tap gift icon in room did not complete` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 80 — "<Name>'s room "<X>" is OPEN" (possessive variant).
+    // j15:67 — possessive form of Wake 68's `the room "<X>" is still
+    // OPEN`. Same Firestore check, different scoping intent.
+    pattern: /^([A-Z][a-z]+)'s room "([^"]+)" is (OPEN|CLOSED|FROZEN)$/,
+    async handler(m, ctx) {
+      const roomId = m[2];
+      const expected = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(`rooms/${roomId}`).get();
+      if (!snap.exists) {
+        return { ok: false, error: `rooms/${roomId} does not exist` };
+      }
+      const actual = snap.data().state;
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `room state mismatch: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 80 — "the response from <path>?<query> includes <Name>".
+    // j15:62 — checks ctx.lastResponse.results[] for an entry matching
+    // the named persona (by displayName or uniqueId).
+    pattern: /^the response from (\/api\/[\w/-]+)\?[\w=&-]+ includes ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const apiPath = m[1];
+      const name = m[2];
+      if (!ctx.lastResponse) {
+        return { ok: false, error: 'no recorded response — earlier request step is missing' };
+      }
+      if (ctx.lastResponse.path && ctx.lastResponse.path !== apiPath) {
+        return {
+          ok: false,
+          error: `response path mismatch: expected ${apiPath}, last was ${ctx.lastResponse.path}`,
+        };
+      }
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      const rows = ctx.lastResponse.body?.results || [];
+      const found = rows.some((row) => row.displayName === name || row.uniqueId === p?.uniqueId);
+      if (!found) {
+        return {
+          ok: false,
+          error: `response from ${apiPath} does not include ${name} (got ${rows.length} row(s))`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 80 — "<Name>'s <Plat> UI shows total beans earned this
+    // session = (N + N + N) = N" (arithmetic verification).
+    // j15:54 — two-level check: (a) sum of addends equals claimed
+    // total (corpus-bug detector), (b) driver returns the same total
+    // (UI-drift detector).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows total beans earned this session = \(([\d\s+]+)\) = (\d+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const addendsExpr = m[3];
+      const claimedTotal = parseInt(m[4], 10);
+      const addends = addendsExpr.split('+').map((s) => parseInt(s.trim(), 10));
+      const sum = addends.reduce((acc, n) => acc + n, 0);
+      if (sum !== claimedTotal) {
+        return {
+          ok: false,
+          error: `corpus arithmetic mismatch: addends sum to ${sum}, claimed total ${claimedTotal}`,
+        };
+      }
+      const methodName = platform.startsWith('Web')
+        ? 'webGetTotalBeansThisSession'
+        : platform === 'Android'
+          ? 'androidGetTotalBeansThisSession'
+          : 'iosGetTotalBeansThisSession';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const actual = await driver[methodName](name);
+      if (actual !== claimedTotal) {
+        return {
+          ok: false,
+          error: `total beans mismatch: expected ${claimedTotal}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

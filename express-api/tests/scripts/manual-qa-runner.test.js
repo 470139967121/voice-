@@ -14590,3 +14590,281 @@ describe('Wake 79 — "<Name>\'s <Plat> UI shows his/her/their seat as <state>"'
     expect(r.error).toMatch(/androidGetSeatState/);
   });
 });
+
+// ── Wake 80 ──────────────────────────────────────────────────────────
+
+describe("Wake 80 — \"the tester hears <X>'s voice on <Y>'s <Plat> speakers AND <Z>'s <Plat> speakers\"", () => {
+  // j15-mc-performance.feature:48
+  //   Then the tester hears Selma's voice on Alice's Web speakers AND Theo's Android speakers
+  // Two-listener variant of Wake 66's tester-hears-audio. Manual-only —
+  // gated on ctx.testerDriver.confirmHearsAudioMulti.
+  test('testerDriver returns true → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ testerDriver: { confirmHearsAudioMulti: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Selma's voice on Alice's Web speakers AND Theo's Android speakers",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', [
+      { name: 'Alice', platform: 'Web' },
+      { name: 'Theo', platform: 'Android' },
+    ]);
+  });
+
+  test('testerDriver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ testerDriver: { confirmHearsAudioMulti: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Selma's voice on Alice's Web speakers AND Theo's Android speakers",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/tester did not confirm/i);
+  });
+
+  test('no testerDriver → manual hint', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Selma's voice on Alice's Web speakers AND Theo's Android speakers",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/manual/i);
+  });
+});
+
+describe('Wake 80 — "Greta on Web Admin opens the economy stats"', () => {
+  // j15-mc-performance.feature:60
+  //   When Greta on Web Admin opens the economy stats
+  // Bare admin-navigation (no quoted tab — distinct from subtab/report
+  // ordinal matchers).
+  test('opens economy stats → driver called', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminOpenEconomyStats: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the economy stats' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webAdminOpenEconomyStats: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the economy stats' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/economy stats/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the economy stats' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminOpenEconomyStats/);
+  });
+});
+
+describe('Wake 80 — "<Name> on <Plat> taps the gift icon in the room"', () => {
+  // j15-mc-performance.feature:41
+  //   When Alice on Web taps the gift icon in the room
+  // Composite: open the gift modal from within a voice room.
+  test('taps gift icon → driver called', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webTapGiftIconInRoom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web taps the gift icon in the room' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapGiftIconInRoom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android taps the gift icon in the room' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web taps the gift icon in the room' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webTapGiftIconInRoom/);
+  });
+});
+
+describe('Wake 80 — "<Name>\'s room "<X>" is OPEN" (possessive variant)', () => {
+  // j15-mc-performance.feature:67
+  //   Then Selma's room "Selma's Saturday Sing-along" is OPEN
+  // Possessive variant of Wake 68's `the room "<X>" is still OPEN`.
+  test('matching state → ok', async () => {
+    const db = makeStatefulFakeDb({
+      "rooms/Selma's Saturday Sing-along": { state: 'OPEN' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Selma\'s room "Selma\'s Saturday Sing-along" is OPEN' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatched state → fail', async () => {
+    const db = makeStatefulFakeDb({ 'rooms/r1': { state: 'CLOSED' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Then', text: 'Theo\'s room "r1" is OPEN' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/OPEN/);
+    expect(r.error).toMatch(/CLOSED/);
+  });
+
+  test('no such room → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Then', text: 'Theo\'s room "r1" is OPEN' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/r1|does not exist/);
+  });
+});
+
+describe('Wake 80 — "the response from <path>?<query> includes <Name>"', () => {
+  // j15-mc-performance.feature:62
+  //   Then the response from /api/economy/leaderboards?segment=mc-singer includes Selma
+  test('persona present in response → ok', async () => {
+    const ctx = makeCtx();
+    // Selma = P-14 = 50000080
+    ctx.lastResponse = {
+      status: 200,
+      path: '/api/economy/leaderboards',
+      body: { results: [{ uniqueId: 50000080, displayName: 'Selma' }] },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards?segment=mc-singer includes Selma',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('persona absent → fail with hint', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = {
+      status: 200,
+      path: '/api/economy/leaderboards',
+      body: { results: [{ uniqueId: 50000010, displayName: 'Alice' }] },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards?segment=mc-singer includes Selma',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Selma/);
+  });
+
+  test('no recorded response → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/economy/leaderboards?segment=mc-singer includes Selma',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no recorded/);
+  });
+});
+
+describe('Wake 80 — "<Name>\'s <Plat> UI shows total beans earned this session = (N + N + N) = N" (arithmetic)', () => {
+  // j15-mc-performance.feature:54
+  //   Then Selma's Android UI shows total beans earned this session = (5 + 250 + 500) = 755
+  // Arithmetic-verified UI assertion. Matcher: (a) sums the addends,
+  // (b) checks they equal the claimed total (corpus-bug detector),
+  // (c) asserts the driver returns the same total (UI-drift detector).
+  test('addends sum to claimed total + driver matches → ok', async () => {
+    const spy = jest.fn(async () => 755);
+    const ctx = makeCtx({ uiDriver: { androidGetTotalBeansThisSession: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Selma's Android UI shows total beans earned this session = (5 + 250 + 500) = 755",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma');
+  });
+
+  test('corpus arithmetic mismatch → fail (author typo)', async () => {
+    const ctx = makeCtx({ uiDriver: { androidGetTotalBeansThisSession: jest.fn() } });
+    // 5 + 250 + 500 = 755, but author wrote 999
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Selma's Android UI shows total beans earned this session = (5 + 250 + 500) = 999",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/sum.*to 755/i);
+    expect(r.error).toMatch(/999/);
+  });
+
+  test('driver returns different total → fail (UI drift)', async () => {
+    const spy = jest.fn(async () => 600);
+    const ctx = makeCtx({ uiDriver: { androidGetTotalBeansThisSession: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Selma's Android UI shows total beans earned this session = (5 + 250 + 500) = 755",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/755/);
+    expect(r.error).toMatch(/600/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Selma's Android UI shows total beans earned this session = (5 + 250 + 500) = 755",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidGetTotalBeansThisSession/);
+  });
+});
