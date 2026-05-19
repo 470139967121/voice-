@@ -5427,6 +5427,163 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Abstract cohort UI absence (j02 minor visibility test). Driver
+    // returns truthy iff any user with the "adult" cohort is currently
+    // rendered in the UI. Platform-dispatch.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show any adult-cohort visitor$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webShowsAdultCohortVisitor) {
+          return {
+            ok: false,
+            error: 'ctx.webDriver.webShowsAdultCohortVisitor not configured',
+          };
+        }
+        const shown = await ctx.webDriver.webShowsAdultCohortVisitor();
+        if (shown) return { ok: false, error: 'Web UI shows an adult-cohort visitor' };
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsAdultCohortVisitor) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidShowsAdultCohortVisitor not configured',
+          };
+        }
+        const shown = await ctx.uiDriver.androidShowsAdultCohortVisitor();
+        if (shown) return { ok: false, error: 'Android UI shows an adult-cohort visitor' };
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsAdultCohortVisitor) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.iosShowsAdultCohortVisitor not configured',
+          };
+        }
+        const shown = await ctx.uiDriver.iosShowsAdultCohortVisitor();
+        if (shown) return { ok: false, error: 'iOS UI shows an adult-cohort visitor' };
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for cohort-visitor step` };
+    },
+  },
+  {
+    // Voice room state-seed with mic state (multi-field). Wake 30's
+    // strip is end-anchored so `(an adult-cohort room)` mid-step isn't
+    // removed — allow optional mid-step parens between the room id and
+    // "with mic". Updates the room's participantIds + micStates map.
+    pattern:
+      /^([A-Z][a-z]+)\s+is in voice room "([^"]+)"(?:\s+\([^()]*\))?\s+with mic (open|muted)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const roomId = m[2];
+      const micState = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const docPath = `rooms/${roomId}`;
+      const snap = await ctx.db.doc(docPath).get();
+      const existing = snap.exists ? snap.data() : { id: roomId, participantIds: [] };
+      const participantIds = Array.isArray(existing.participantIds)
+        ? [...existing.participantIds]
+        : [];
+      if (!participantIds.includes(p.uniqueId)) participantIds.push(p.uniqueId);
+      const micStates = { ...(existing.micStates || {}) };
+      micStates[String(p.uniqueId)] = micState;
+      await ctx.db.doc(docPath).set({ ...existing, participantIds, micStates }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Web Admin age-down flow composite (j04). Driver runs the full
+    // admin-side age-down sequence: open submission, set override DOB,
+    // tap reject_and_dob_down, confirm reason. Single matcher because
+    // the corpus uses the composite when the individual steps aren't
+    // load-bearing for the scenario being tested.
+    pattern: /^([A-Z][a-z]+)\s+on Web Admin executes the age-down flow$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webAdminExecuteAgeDownFlow) {
+        return { ok: false, error: 'ctx.webDriver.webAdminExecuteAgeDownFlow not configured' };
+      }
+      await ctx.webDriver.webAdminExecuteAgeDownFlow();
+      return { ok: true };
+    },
+  },
+  {
+    // Concurrent N follow attempts (j08 cross-cohort wall concurrency
+    // probe). Driver fires N requests in parallel and returns an array
+    // of { status, latencyMs } per attempt. Results stored on
+    // ctx.lastConcurrentResults for downstream assertions.
+    pattern: /^(\d+) cross-cohort follow attempts hit (\/api\/[\w/-]+) concurrently$/,
+    async handler(m, ctx) {
+      const count = parseInt(m[1], 10);
+      const endpoint = m[2];
+      if (!ctx.webDriver?.simulateConcurrentFollowAttempts) {
+        return {
+          ok: false,
+          error: 'ctx.webDriver.simulateConcurrentFollowAttempts not configured',
+        };
+      }
+      const results = await ctx.webDriver.simulateConcurrentFollowAttempts(count, endpoint);
+      ctx.lastConcurrentResults = results;
+      return { ok: true };
+    },
+  },
+  {
+    // Each-response-status assertion. Reads ctx.lastConcurrentResults
+    // (set by the concurrent-batch matcher above) and asserts every
+    // entry has the named status.
+    pattern: /^each response status is (\d+)$/,
+    async handler(m, ctx) {
+      const expected = parseInt(m[1], 10);
+      if (!ctx.lastConcurrentResults || !Array.isArray(ctx.lastConcurrentResults)) {
+        return {
+          ok: false,
+          error: 'no recorded concurrent results — earlier batch step missing',
+        };
+      }
+      const offenders = ctx.lastConcurrentResults
+        .map((r, i) => ({ i, status: r.status }))
+        .filter((r) => r.status !== expected);
+      if (offenders.length > 0) {
+        const summary = offenders
+          .slice(0, 3)
+          .map((o) => `#${o.i}=${o.status}`)
+          .join(', ');
+        return {
+          ok: false,
+          error: `expected all status ${expected}, but ${offenders.length} differ: ${summary}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Audit row count assertion. Counts docs in the auditLog
+    // collection. Used by j08 after concurrent-batch + per-response
+    // status checks to verify the audit log captured all attempts.
+    pattern: /^(\d+) audit rows are written$/,
+    async handler(m, ctx) {
+      const expected = parseInt(m[1], 10);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.collection('auditLog').get();
+      const actual = snap.docs.length;
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `auditLog count mismatch: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

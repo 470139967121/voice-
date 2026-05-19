@@ -9021,6 +9021,149 @@ describe('Bare HTTP response status assertion', () => {
   });
 });
 
+describe('Abstract cohort UI absence (any adult-cohort visitor)', () => {
+  test('"Mia\'s iOS Sim UI does not show any adult-cohort visitor" → driver returns false → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosShowsAdultCohortVisitor: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI does not show any adult-cohort visitor" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('driver returns true (adult visitor present) → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsAdultCohortVisitor: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI does not show any adult-cohort visitor" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/adult-cohort/);
+  });
+});
+
+describe('Voice room state-seed with mic state (multi-field)', () => {
+  test('"X is in voice room \\"Y\\" (annotation) with mic open" — state-seed', async () => {
+    // Hayato is P-06 in registry — uniqueId 50000030
+    const { personas } = require('../../scripts/provision-test-personas');
+    const hayato = personas.find((p) => p.id === 'P-06');
+    const db = makeStatefulFakeDb({ [`rooms/r1`]: { id: 'r1', participantIds: [] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato is in voice room "r1" (an adult-cohort room) with mic open',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r1'].participantIds).toContain(hayato.uniqueId);
+    expect(db._docs['rooms/r1'].micStates?.[String(hayato.uniqueId)]).toBe('open');
+  });
+
+  test('"with mic muted" variant', async () => {
+    const { personas } = require('../../scripts/provision-test-personas');
+    const hayato = personas.find((p) => p.id === 'P-06');
+    const db = makeStatefulFakeDb({ 'rooms/r1': { id: 'r1', participantIds: [] } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Hayato is in voice room "r1" with mic muted' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r1'].micStates?.[String(hayato.uniqueId)]).toBe('muted');
+  });
+});
+
+describe('Web Admin age-down flow composite', () => {
+  test('"Greta on Web Admin executes the age-down flow" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ webDriver: { webAdminExecuteAgeDownFlow: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin executes the age-down flow' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+});
+
+describe('Concurrent N follow attempts', () => {
+  test('"N cross-cohort follow attempts hit /api/X concurrently" → driver, stores results on ctx', async () => {
+    const spy = jest.fn(async (count, _endpoint) =>
+      Array.from({ length: count }, () => ({ status: 404, latencyMs: 50 })),
+    );
+    const ctx = makeCtx({ webDriver: { simulateConcurrentFollowAttempts: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: '10 cross-cohort follow attempts hit /api/users/follow concurrently',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(10, '/api/users/follow');
+    expect(ctx.lastConcurrentResults).toHaveLength(10);
+  });
+});
+
+describe('Each response status is N (after concurrent batch)', () => {
+  test('all responses have status N → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastConcurrentResults = [{ status: 404 }, { status: 404 }, { status: 404 }];
+    const r = await executeStep({ kind: 'Then', text: 'each response status is 404' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('one response has different status → fail with mismatch detail', async () => {
+    const ctx = makeCtx();
+    ctx.lastConcurrentResults = [{ status: 404 }, { status: 200 }, { status: 404 }];
+    const r = await executeStep({ kind: 'Then', text: 'each response status is 404' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/200/);
+  });
+
+  test('no concurrent batch recorded → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'each response status is 404' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no recorded/);
+  });
+});
+
+describe('N audit rows are written assertion', () => {
+  test('exactly N audit rows in the auditLog collection → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'auditLog/a1': { action: 'follow_attempt' },
+      'auditLog/a2': { action: 'follow_attempt' },
+      'auditLog/a3': { action: 'follow_attempt' },
+      'auditLog/a4': { action: 'follow_attempt' },
+      'auditLog/a5': { action: 'follow_attempt' },
+      'auditLog/a6': { action: 'follow_attempt' },
+      'auditLog/a7': { action: 'follow_attempt' },
+      'auditLog/a8': { action: 'follow_attempt' },
+      'auditLog/a9': { action: 'follow_attempt' },
+      'auditLog/a10': { action: 'follow_attempt' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Then', text: '10 audit rows are written' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('count mismatch → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'auditLog/a1': { action: 'follow_attempt' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Then', text: '10 audit rows are written' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 10.*actual 1/);
+  });
+});
+
 describe('Conversation doc field equality assertion', () => {
   test('"the conversation doc \\"X\\" has field \\"Y\\" equal to Z" — boolean', async () => {
     const db = makeStatefulFakeDb({
