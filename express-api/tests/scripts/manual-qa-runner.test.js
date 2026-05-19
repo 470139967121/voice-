@@ -9021,6 +9021,177 @@ describe('Bare HTTP response status assertion', () => {
   });
 });
 
+describe('Bare API response-status-from-path assertion', () => {
+  test('"the response status from /api/X is N" reads ctx.lastResponse', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = { status: 200, body: null, path: '/api/economy/purchase' };
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response status from /api/economy/purchase is 200' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('path mismatch — fail with path detail', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = { status: 200, body: null, path: '/api/economy/purchase' };
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response status from /api/livekit/token is 200' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/livekit\/token/);
+  });
+
+  test('status mismatch — fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = { status: 500, body: null, path: '/api/livekit/token' };
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response status from /api/livekit/token is 404' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 404.*actual 500/);
+  });
+});
+
+describe('p95 latency budget assertion', () => {
+  test('all concurrent results within budget → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastConcurrentResults = Array.from({ length: 20 }, () => ({
+      status: 404,
+      latencyMs: 50,
+    }));
+    const r = await executeStep(
+      { kind: 'Then', text: 'each response p95 latency is less than 200ms' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('p95 exceeds budget → fail with actual', async () => {
+    const ctx = makeCtx();
+    ctx.lastConcurrentResults = [
+      ...Array.from({ length: 19 }, () => ({ status: 404, latencyMs: 50 })),
+      { status: 404, latencyMs: 500 },
+    ];
+    const r = await executeStep(
+      { kind: 'Then', text: 'each response p95 latency is less than 200ms' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/200/);
+  });
+
+  test('no concurrent batch — fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'each response p95 latency is less than 200ms' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no recorded/);
+  });
+});
+
+describe('No document is created in <subcollection>', () => {
+  test('subcollection empty → ok', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no document is created in "conversations/c1/messages"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('subcollection has docs → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'conversations/c1/messages/m1': { body: 'leaked' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no document is created in "conversations/c1/messages"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/c1\/messages/);
+  });
+});
+
+describe('Voice room composite state-seed (X created a <vis> <cohort>-cohort room)', () => {
+  test('"Theo created a public adult-cohort room" writes a room doc', async () => {
+    const { personas } = require('../../scripts/provision-test-personas');
+    const theo = personas.find((p) => p.id === 'P-10');
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Theo created a public adult-cohort room' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const roomDocs = Object.entries(db._docs).filter(([k]) => k.startsWith('rooms/'));
+    expect(roomDocs.length).toBe(1);
+    const [, room] = roomDocs[0];
+    expect(room.ownerUniqueId).toBe(theo.uniqueId);
+    expect(room.visibility).toBe('public');
+    expect(room.cohort).toBe('adult');
+  });
+
+  test('"Alice created a private minor-cohort room" — variant', async () => {
+    const { personas } = require('../../scripts/provision-test-personas');
+    const alice = personas.find((p) => p.id === 'P-02');
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice created a private minor-cohort room' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const roomDocs = Object.entries(db._docs).filter(([k]) => k.startsWith('rooms/'));
+    expect(roomDocs[0][1].ownerUniqueId).toBe(alice.uniqueId);
+    expect(roomDocs[0][1].visibility).toBe('private');
+    expect(roomDocs[0][1].cohort).toBe('minor');
+  });
+});
+
+describe('Dialog confirm action (platform-dispatch)', () => {
+  test('"X on Android confirms in the dialog" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidConfirmDialog: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android confirms in the dialog' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('iOS Sim variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosConfirmDialog: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim confirms in the dialog' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+});
+
+describe("Long-press on target person's seat", () => {
+  test('"X on Android long-presses Y\'s seat" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidLongPressSeat: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Theo on Android long-presses Ines's seat" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines');
+  });
+});
+
 describe('Voice room create composite (j09 host)', () => {
   test('"X on Android types title \\"Y\\" and chooses public visibility" → driver', async () => {
     const spy = jest.fn(async () => undefined);

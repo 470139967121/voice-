@@ -5742,6 +5742,160 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Bare response-status-from-path assertion: distinct from the Wake 61
+    // "the request returns status N" matcher because this one verifies
+    // the response came from the NAMED endpoint. Reads ctx.lastResponse
+    // and checks both status AND path match.
+    pattern: /^the response status from (\/api\/[\w/-]+) is (\d+)$/,
+    async handler(m, ctx) {
+      const expectedPath = m[1];
+      const expectedStatus = parseInt(m[2], 10);
+      if (!ctx.lastResponse) {
+        return { ok: false, error: 'no recorded response — earlier request step is missing' };
+      }
+      if (ctx.lastResponse.path && ctx.lastResponse.path !== expectedPath) {
+        return {
+          ok: false,
+          error: `last response path was ${ctx.lastResponse.path}, expected ${expectedPath}`,
+        };
+      }
+      const actual = ctx.lastResponse.status;
+      if (actual !== expectedStatus) {
+        return {
+          ok: false,
+          error: `${expectedPath} status mismatch: expected ${expectedStatus}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // p95 latency budget. Reads ctx.lastConcurrentResults, sorts by
+    // latencyMs, picks the 95th percentile (ceil(0.95*N) index), and
+    // asserts it's less than the budget.
+    pattern: /^each response p95 latency is less than (\d+)ms$/,
+    async handler(m, ctx) {
+      const budget = parseInt(m[1], 10);
+      if (!ctx.lastConcurrentResults || !Array.isArray(ctx.lastConcurrentResults)) {
+        return {
+          ok: false,
+          error: 'no recorded concurrent results — earlier batch step missing',
+        };
+      }
+      const sorted = [...ctx.lastConcurrentResults]
+        .map((r) => r.latencyMs || 0)
+        .sort((a, b) => a - b);
+      // p95 = "the slowest 5% should be under budget". With N samples,
+      // floor(0.95 * N) gives the 0-indexed position WHERE the top 5%
+      // begins — checking sorted[floor(0.95 * N)] captures the worst
+      // 5% boundary. For N=20: index 19 (the slowest sample).
+      const p95Idx = Math.min(sorted.length - 1, Math.floor(0.95 * sorted.length));
+      const p95 = sorted[p95Idx];
+      if (p95 >= budget) {
+        return {
+          ok: false,
+          error: `p95 latency ${p95}ms exceeds budget of ${budget}ms`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // No-document-in-subcollection assertion. Scans the named (sub)
+    // collection and asserts it's empty.
+    pattern: /^no document is created in "([^"]+)"$/,
+    async handler(m, ctx) {
+      const collection = m[1];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.collection(collection).get();
+      if (snap.docs.length > 0) {
+        return {
+          ok: false,
+          error: `expected no docs in "${collection}" but found ${snap.docs.length}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Voice room composite state-seed: "X created a (public|private)
+    // <cohort>-cohort room". Writes a `rooms/<auto-id>` doc owned by
+    // X with the named visibility and cohort. Auto-id chosen as
+    // "auto-<timestamp>-<random>" so multiple seeds don't collide.
+    pattern: /^([A-Z][a-z]+)\s+created a (public|private) (adult|minor)-cohort room$/,
+    async handler(m, ctx) {
+      const ownerName = m[1];
+      const visibility = m[2];
+      const cohort = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const owner = personas.get(ownerName);
+      if (!owner?.uniqueId) {
+        return { ok: false, error: `persona "${ownerName}" not in registry` };
+      }
+      // Math.random() is fine here — purely for collision avoidance in
+      // test-only auto-generated room ids; not security-sensitive.
+      // eslint-disable-next-line sonarjs/pseudo-random
+      const roomId = `auto-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+      await ctx.db.doc(`rooms/${roomId}`).set({
+        id: roomId,
+        ownerUniqueId: owner.uniqueId,
+        visibility,
+        cohort,
+        participantIds: [owner.uniqueId],
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Dialog confirm action. Distinct from Wake 45's generic "confirms"
+    // matcher — that one matches `X on <plat> confirms` (no suffix);
+    // this one matches `... confirms in the dialog`. Different driver
+    // method because dialogs use different selectors than inline buttons.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+confirms in the dialog$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webConfirmDialog) {
+          return { ok: false, error: 'ctx.webDriver.webConfirmDialog not configured' };
+        }
+        await ctx.webDriver.webConfirmDialog();
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidConfirmDialog) {
+          return { ok: false, error: 'ctx.uiDriver.androidConfirmDialog not configured' };
+        }
+        await ctx.uiDriver.androidConfirmDialog();
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosConfirmDialog) {
+          return { ok: false, error: 'ctx.uiDriver.iosConfirmDialog not configured' };
+        }
+        await ctx.uiDriver.iosConfirmDialog();
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for dialog-confirm step` };
+    },
+  },
+  {
+    // Long-press on target person's seat (j09 host kick-from-seat).
+    // Driver locates the seat element by target name and performs a
+    // long-press gesture (held tap).
+    pattern: /^([A-Z][a-z]+)\s+on Android long-presses ([A-Z][a-z]+)'s seat$/,
+    async handler(m, ctx) {
+      const target = m[2];
+      if (!ctx.uiDriver?.androidLongPressSeat) {
+        return { ok: false, error: 'ctx.uiDriver.androidLongPressSeat not configured' };
+      }
+      await ctx.uiDriver.androidLongPressSeat(target);
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
