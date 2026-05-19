@@ -7162,6 +7162,120 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 72 — admin "opens the <ordinal> report and taps "<X>"" (generic).
+    // j12:42 — `opens the third report and taps "Suspend for 7 days"`. The
+    // existing matcher at line ~2194 only accepts (first|second|new); this
+    // generic catches every other ordinal (third, fourth, fifth, ...).
+    // First-match-wins lets the existing matcher keep winning for its enum.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Web Admin\s+opens the ([a-z]+) report and taps "([^"]+)"(?: with reason "([^"]+)")?$/,
+    async handler(m, ctx) {
+      const ordinal = m[3];
+      const menuItem = m[4];
+      const reason = m[5] || null;
+      if (!ctx.webDriver?.webAdminOpenReportAndTap) {
+        return { ok: false, error: 'ctx.webDriver.webAdminOpenReportAndTap not configured' };
+      }
+      await ctx.webDriver.webAdminOpenReportAndTap(ordinal, menuItem, reason);
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 72 — admin "approves submissions <N>-<M>" (batch range).
+    // j12:48 — range-based batch approve. Driver receives (start, end)
+    // inclusive and approves all submissions in that range.
+    pattern: /^Greta on Web Admin approves submissions (\d+)-(\d+)$/,
+    async handler(m, ctx) {
+      const start = parseInt(m[1], 10);
+      const end = parseInt(m[2], 10);
+      if (!ctx.webDriver?.webAdminApproveSubmissions) {
+        return { ok: false, error: 'ctx.webDriver.webAdminApproveSubmissions not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminApproveSubmissions(start, end);
+      if (!ok) {
+        return { ok: false, error: `admin failed to approve submissions ${start}-${end}` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 72 — admin "rejects submission <N> with reason "<X>"" (+ optional dobOverride).
+    // j12:49 — bare form. j12:50 — `and dobOverride="2011-01-01"` suffix
+    // for age-verification rejections that also override the DOB. Optional
+    // group captures the override; null when absent.
+    pattern:
+      /^Greta on Web Admin rejects submission (\d+) with reason "([^"]+)"(?: and dobOverride="([^"]+)")?$/,
+    async handler(m, ctx) {
+      const submissionIdx = parseInt(m[1], 10);
+      const reason = m[2];
+      const dobOverride = m[3] || null;
+      if (!ctx.webDriver?.webAdminRejectSubmission) {
+        return { ok: false, error: 'ctx.webDriver.webAdminRejectSubmission not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminRejectSubmission(submissionIdx, reason, dobOverride);
+      if (!ok) {
+        return { ok: false, error: `admin failed to reject submission ${submissionIdx}` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 72 — admin UI "shows <N> rows".
+    // j12:64 — generic table row-count assertion. Driver returns current
+    // visible row count for the active table; matcher does exact compare.
+    pattern: /^Greta's Web Admin UI shows (\d+) rows$/,
+    async handler(m, ctx) {
+      const expected = parseInt(m[1], 10);
+      if (!ctx.webDriver?.webAdminGetRowCount) {
+        return { ok: false, error: 'ctx.webDriver.webAdminGetRowCount not configured' };
+      }
+      const actual = await ctx.webDriver.webAdminGetRowCount();
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `admin row-count mismatch: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 72 — admin "searches for user "<text>"".
+    // j12:80 — dedicated user-search flow (distinct from Wake 67's
+    // universal `searches "X"` which is the admin panel's global search).
+    pattern: /^Greta on Web Admin searches for user "([^"]+)"$/,
+    async handler(m, ctx) {
+      const query = m[1];
+      if (!ctx.webDriver?.webAdminSearchForUser) {
+        return { ok: false, error: 'ctx.webDriver.webAdminSearchForUser not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminSearchForUser(query);
+      if (!ok) {
+        return { ok: false, error: `admin user-search for "${query}" did not complete` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 72 — admin "adjusts shyCoins by ±<N> with reason "<X>"".
+    // j12:84 — signed-integer wallet adjustment with required audit-trail
+    // reason. The +/- prefix is part of the delta; driver receives signed
+    // int (positive = credit, negative = debit).
+    pattern: /^Greta on Web Admin adjusts shyCoins by ([+-]\d+) with reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const delta = parseInt(m[1], 10);
+      const reason = m[2];
+      if (!ctx.webDriver?.webAdminAdjustShyCoins) {
+        return { ok: false, error: 'ctx.webDriver.webAdminAdjustShyCoins not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminAdjustShyCoins(delta, reason);
+      if (!ok) {
+        return { ok: false, error: `admin failed to adjust shyCoins by ${delta}` };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

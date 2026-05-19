@@ -12540,3 +12540,249 @@ describe('Wake 71 — "opens his/her conversation with <Other>"', () => {
     expect(r.error).toMatch(/androidOpenConversationWith/);
   });
 });
+
+// ── Wake 72 ──────────────────────────────────────────────────────────
+
+describe('Wake 72 — admin "opens the <ordinal> report and taps "<X>"" (generic ordinal)', () => {
+  // j12-admin-daily-routine.feature:42
+  //   When Greta on Web Admin opens the third report and taps "Suspend for 7 days"
+  // Existing matcher (line ~2194) only accepts the enum (first|second|new).
+  // This generic accepts any lowercase ordinal word. Earlier specific matcher
+  // wins via first-match-wins for first/second/new; this catches the rest
+  // (third, fourth, fifth, ...).
+  test('third report variant → driver receives ordinal', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminOpenReportAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin opens the third report and taps "Suspend for 7 days"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('third', 'Suspend for 7 days', null);
+  });
+
+  test('with reason suffix', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminOpenReportAndTap: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin opens the fifth report and taps "Reject" with reason "Duplicate"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('fifth', 'Reject', 'Duplicate');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the third report and taps "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminOpenReportAndTap/);
+  });
+});
+
+describe('Wake 72 — admin "approves submissions <N>-<M>" (batch range)', () => {
+  // j12-admin-daily-routine.feature:48
+  //   When Greta on Web Admin approves submissions 1-3
+  // Range-based batch approve action. Driver receives (start, end) and
+  // approves all submissions in that range (inclusive).
+  test('range → driver receives both indices', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminApproveSubmissions: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin approves submissions 1-3' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(1, 3);
+  });
+
+  test('single-item range (N-N)', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminApproveSubmissions: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin approves submissions 7-7' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(7, 7);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin approves submissions 1-3' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminApproveSubmissions/);
+  });
+});
+
+describe('Wake 72 — admin "rejects submission <N> with reason "<X>"" (with optional dobOverride)', () => {
+  // j12-admin-daily-routine.feature:49
+  //   When Greta on Web Admin rejects submission 4 with reason "Image too blurry to read"
+  // j12-admin-daily-routine.feature:50
+  //   When Greta on Web Admin rejects submission 5 with reason "DOB on ID shows minor" and dobOverride="2011-01-01"
+  // Two shapes share one matcher via optional `and dobOverride="..."` suffix.
+  test('bare reject with reason', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminRejectSubmission: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin rejects submission 4 with reason "Image too blurry to read"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(4, 'Image too blurry to read', null);
+  });
+
+  test('with dobOverride', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminRejectSubmission: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin rejects submission 5 with reason "DOB on ID shows minor" and dobOverride="2011-01-01"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(5, 'DOB on ID shows minor', '2011-01-01');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin rejects submission 4 with reason "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminRejectSubmission/);
+  });
+});
+
+describe('Wake 72 — admin UI "shows <N> rows"', () => {
+  // j12-admin-daily-routine.feature:64
+  //   Then Greta's Web Admin UI shows 2 rows
+  // Generic table row-count assertion. Driver returns the current visible
+  // row count for the active table; matcher does an exact integer compare.
+  test('matching count → ok', async () => {
+    const spy = jest.fn(async () => 2);
+    const ctx = makeCtx({ webDriver: { webAdminGetRowCount: spy } });
+    const r = await executeStep({ kind: 'Then', text: "Greta's Web Admin UI shows 2 rows" }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('count mismatch → fail with both', async () => {
+    const spy = jest.fn(async () => 5);
+    const ctx = makeCtx({ webDriver: { webAdminGetRowCount: spy } });
+    const r = await executeStep({ kind: 'Then', text: "Greta's Web Admin UI shows 2 rows" }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/2/);
+    expect(r.error).toMatch(/5/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: "Greta's Web Admin UI shows 2 rows" }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminGetRowCount/);
+  });
+});
+
+describe('Wake 72 — admin "searches for user "<text>""', () => {
+  // j12-admin-daily-routine.feature:80
+  //   When Greta on Web Admin searches for user "50000020"
+  // Distinct from Wake 67's bare `searches "X"` (universal search) — this
+  // is the dedicated user-search flow (different admin panel screen,
+  // different result format).
+  test('searches by uniqueId → driver receives query', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminSearchForUser: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin searches for user "50000020"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('50000020');
+  });
+
+  test('searches by display name', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminSearchForUser: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin searches for user "Alice"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin searches for user "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminSearchForUser/);
+  });
+});
+
+describe('Wake 72 — admin "adjusts shyCoins by ±<N> with reason "<X>""', () => {
+  // j12-admin-daily-routine.feature:84
+  //   When Greta on Web Admin adjusts shyCoins by +500 with reason "Customer support refund"
+  // Signed-integer wallet adjustment with audit-trail reason. The "+"/"-"
+  // prefix is part of the delta; driver receives signed int.
+  test('positive delta', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminAdjustShyCoins: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin adjusts shyCoins by +500 with reason "Customer support refund"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(500, 'Customer support refund');
+  });
+
+  test('negative delta (deduction)', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminAdjustShyCoins: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin adjusts shyCoins by -100 with reason "Chargeback clawback"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(-100, 'Chargeback clawback');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin adjusts shyCoins by +500 with reason "X"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminAdjustShyCoins/);
+  });
+});
