@@ -18854,3 +18854,187 @@ describe('Wake 96 — "<Name> [P-NN] is signed in on <Plat> with cohort=<C> (not
     expect(ctx.sessions.get('Hayato')?.locale).toBe('en');
   });
 });
+
+// ── Wake 97 — close `within Nms` inner-shape gaps ────────────────────
+// The pareto + background scans didn't recurse into the inner step
+// after `within Nms <inner>` strips its timeout prefix. runFeatureFile
+// surfaced 6 inner shapes the scans missed.
+
+describe('Wake 97 — "<Name>\'s <Plat> UI shows <Other>\'s user card"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsUserCard: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI shows Alice's user card" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Alice');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsUserCard: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI shows Alice's user card" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Alice|card/);
+  });
+});
+
+describe('Wake 97 — "<Name>\'s <Plat> UI shows the warning banner overlay on top of the room"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsRoomWarningBanner: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Theo's Android UI shows the warning banner overlay on top of the room",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Theo's Android UI shows the warning banner overlay on top of the room",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsRoomWarningBanner/);
+  });
+});
+
+describe('Wake 97 — `the database has document "<path>" with field "seats[*].userId == N" entry <k>=<v>`', () => {
+  test('matching seat entry → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'rooms/r1': {
+        seats: [
+          { userId: 50000060, muted: false },
+          { userId: 60000010, muted: true },
+        ],
+      },
+    });
+    const ctx = makeCtx({ db, scenarioVars: new Map([['roomId', 'r1']]) });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "rooms/{roomId}" with field "seats[*].userId == 60000010" entry muted=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('seat present but field mismatch → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'rooms/r1': { seats: [{ userId: 60000010, muted: false }] },
+    });
+    const ctx = makeCtx({ db, scenarioVars: new Map([['roomId', 'r1']]) });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "rooms/{roomId}" with field "seats[*].userId == 60000010" entry muted=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/muted|false|true/);
+  });
+
+  test('no matching seat → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'rooms/r1': { seats: [{ userId: 50000060, muted: false }] },
+    });
+    const ctx = makeCtx({ db, scenarioVars: new Map([['roomId', 'r1']]) });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "rooms/{roomId}" with field "seats[*].userId == 60000010" entry muted=true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/60000010|seat/);
+  });
+});
+
+describe('Wake 97 — "<Name>\'s <Plat> UI shows skeleton placeholders for user cards"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsUserCardSkeletons: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's Web UI shows skeleton placeholders for user cards" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsUserCardSkeletons: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's Web UI shows skeleton placeholders for user cards" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Ines|skeleton/);
+  });
+});
+
+describe('Wake 97 — `<Name>\'s <Plat> UI shows a "<X>" banner`', () => {
+  test('iOS Sim matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsBanner: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Ines\'s iOS Sim UI shows a "Reconnecting..." banner' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Reconnecting...');
+  });
+
+  test('Android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsBanner: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI shows a "Hold on" banner' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'Hold on');
+  });
+});
+
+describe('Wake 97 — "<Name>\'s LiveKit track is not disconnected"', () => {
+  test('connected → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ liveKitDriver: { trackIsConnected: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's LiveKit track is not disconnected" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines');
+  });
+
+  test('disconnected → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ liveKitDriver: { trackIsConnected: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's LiveKit track is not disconnected" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Ines|disconnected/);
+  });
+});

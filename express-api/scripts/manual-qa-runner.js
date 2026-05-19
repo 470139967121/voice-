@@ -11038,6 +11038,173 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 97 — "<Name>'s <Plat> UI shows <Other>'s user card". j07.
+    // Inner step under `within Nms`. Bare user-card-visibility check.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows ([A-Z][a-z]+)'s user card$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsUserCard'
+        : platform === 'Android'
+          ? 'androidShowsUserCard'
+          : 'iosShowsUserCard';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, target);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show ${target}'s user card to ${viewer}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 97 — "<Name>'s <Plat> UI shows the warning banner overlay on
+    // top of the room". j10. Specific cohort-warning overlay assertion.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the warning banner overlay on top of the room$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsRoomWarningBanner'
+        : platform === 'Android'
+          ? 'androidShowsRoomWarningBanner'
+          : 'iosShowsRoomWarningBanner';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show the warning banner overlay on the room`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 97 — `the database has document "<path>" with field
+    // "seats[*].userId == N" entry <k>=<v>`. j10. Nested array entry
+    // assertion: locate the seat where userId equals N, then assert
+    // the named field equals the named value. The path supports
+    // `{varName}` placeholders resolved upstream.
+    pattern:
+      /^the database has document "([^"]+)" with field "seats\[\*\]\.userId == (\d+)" entry (\w+)=(\w+)$/,
+    async handler(m, ctx) {
+      const docPath = m[1];
+      const userId = Number(m[2]);
+      const field = m[3];
+      const expected = parseLiteral(m[4]);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) {
+        return { ok: false, error: `doc "${docPath}" does not exist` };
+      }
+      const data = snap.data();
+      const seat = (data?.seats || []).find((s) => s?.userId === userId);
+      if (!seat) {
+        return {
+          ok: false,
+          error: `no seat with userId=${userId} in "${docPath}"`,
+        };
+      }
+      if (seat[field] !== expected) {
+        return {
+          ok: false,
+          error: `seat[userId=${userId}].${field} was ${JSON.stringify(seat[field])}, expected ${JSON.stringify(expected)}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 97 — "<Name>'s <Plat> UI shows skeleton placeholders for
+    // user cards". j14. Low-bandwidth loading-state assertion.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows skeleton placeholders for user cards$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsUserCardSkeletons'
+        : platform === 'Android'
+          ? 'androidShowsUserCardSkeletons'
+          : 'iosShowsUserCardSkeletons';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show skeleton placeholders for user cards`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 97 — `<Name>'s <Plat> UI shows a "<X>" banner`. j14.
+    // Generic banner-text assertion (sibling of Wake 30's toast
+    // matcher; banners persist while toasts auto-dismiss).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a "([^"]+)" banner$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const banner = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsBanner'
+        : platform === 'Android'
+          ? 'androidShowsBanner'
+          : 'iosShowsBanner';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, banner);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show a "${banner}" banner`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 97 — "<Name>'s LiveKit track is not disconnected". j14.
+    // LiveKit-layer assertion via ctx.liveKitDriver. Used in the
+    // packet-loss scenario to verify the audio track stays connected
+    // despite degraded network conditions.
+    pattern: /^([A-Z][a-z]+)'s LiveKit track is not disconnected$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.liveKitDriver?.trackIsConnected) {
+        return { ok: false, error: 'ctx.liveKitDriver.trackIsConnected not configured' };
+      }
+      const connected = await ctx.liveKitDriver.trackIsConnected(name);
+      if (!connected) {
+        return {
+          ok: false,
+          error: `${name}'s LiveKit track is disconnected (expected: still connected)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
