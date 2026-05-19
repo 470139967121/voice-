@@ -8112,6 +8112,184 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 79 — "<Name> on <Plat> picks template "<X>" and title "<Y>"".
+    // j15:25 — composite room-creation: select template + name room.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) picks template "([^"]+)" and title "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const template = m[3];
+      const title = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webPickTemplateAndTitle'
+        : platform === 'Android'
+          ? 'androidPickTemplateAndTitle'
+          : 'iosPickTemplateAndTitle';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, template, title);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: pick template "${template}" + title "${title}" did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 79 — "<Name> on <Plat> refreshes the "<X>" tab".
+    // j15:32 — app tab refresh (vs Web Admin refresh which has its own
+    // matcher at line ~3163).
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) refreshes the "([^"]+)" tab$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const tab = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webRefreshTab'
+        : platform === 'Android'
+          ? 'androidRefreshTab'
+          : 'iosRefreshTab';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, tab);
+      if (!ok) {
+        return { ok: false, error: `${name}: refresh "${tab}" tab did not complete` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 79 — "<Name> on <Plat> selects "<gift>" and recipient "<X>"".
+    // j15:42 — two-step composite gift-modal flow: pick gift, pick
+    // recipient.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) selects "([^"]+)" and recipient "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const gift = m[3];
+      const recipient = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webSelectGiftAndRecipient'
+        : platform === 'Android'
+          ? 'androidSelectGiftAndRecipient'
+          : 'iosSelectGiftAndRecipient';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, gift, recipient);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: select "${gift}" + recipient "${recipient}" did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 79 — "<Name>'s <Plat> UI shows the "<X>" tier badge on the
+    // room card". j15:36 — asserts the tier-badge text on a room card.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the "([^"]+)" tier badge on the room card$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const tier = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsTierBadge'
+        : platform === 'Android'
+          ? 'androidShowsTierBadge'
+          : 'iosShowsTierBadge';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, tier);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show "${tier}" tier badge on the room card`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 79 — "<Name>'s mic is already open on the seated host slot"
+    // (state-seed). j15:46 — finds the persona's host-owned room and
+    // sets mic-open + seated. Scans rooms/* by ownerUniqueId.
+    pattern: /^([A-Z][a-z]+)'s mic is already open on the seated host slot$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      const snap = await ctx.db.collection('rooms').get();
+      let targetDoc = null;
+      for (const doc of snap.docs) {
+        const data = doc.data();
+        if (data.ownerUniqueId === p.uniqueId) {
+          targetDoc = { id: doc.id, data };
+          break;
+        }
+      }
+      if (!targetDoc) {
+        return { ok: false, error: `no host-owned room found for "${name}"` };
+      }
+      const existing = targetDoc.data;
+      await ctx.db.doc(`rooms/${targetDoc.id}`).set(
+        {
+          ...existing,
+          micStates: { ...(existing.micStates || {}), [String(p.uniqueId)]: 'open' },
+          seats: [{ userId: p.uniqueId, muted: false }],
+        },
+        { merge: true },
+      );
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 79 — "<Name>'s <Plat> UI shows his/her/their seat as <state>".
+    // j10:79 — bridges back to j10 tail. Driver returns current seat
+    // state (available/occupied/reserved).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows (?:his|her|their) seat as (available|occupied|reserved)$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const expected = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webGetSeatState'
+        : platform === 'Android'
+          ? 'androidGetSeatState'
+          : 'iosGetSeatState';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const actual = await driver[methodName]();
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `seat state mismatch: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

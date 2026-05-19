@@ -14329,3 +14329,264 @@ describe('Wake 78 — "<Name>\'s <Plat> UI shows a "<X>" indicator"', () => {
     expect(r.error).toMatch(/iosShowsNamedIndicator/);
   });
 });
+
+// ── Wake 79 ──────────────────────────────────────────────────────────
+
+describe('Wake 79 — "<Name> on <Plat> picks template "<X>" and title "<Y>""', () => {
+  // j15-mc-performance.feature:25
+  //   When Selma on Android picks template "Singing" and title "Selma's Saturday Sing-along"
+  test('captures both template and title', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidPickTemplateAndTitle: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Selma on Android picks template "Singing" and title "Selma\'s Saturday Sing-along"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'Singing', "Selma's Saturday Sing-along");
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosPickTemplateAndTitle: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Mia on iOS Sim picks template "Talk" and title "Chat with Mia"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia', 'Talk', 'Chat with Mia');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Selma on Android picks template "X" and title "Y"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidPickTemplateAndTitle/);
+  });
+});
+
+describe('Wake 79 — "<Name> on <Plat> refreshes the "<X>" tab"', () => {
+  // j15-mc-performance.feature:32
+  //   When Theo on Android refreshes the "rooms" tab
+  // App tab refresh — distinct from existing Web Admin
+  // refresh-age-verification matcher (different platform + quoted tab).
+  test('quoted tab → driver receives name', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidRefreshTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android refreshes the "rooms" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'rooms');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosRefreshTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim refreshes the "discovery" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia', 'discovery');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android refreshes the "rooms" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidRefreshTab/);
+  });
+});
+
+describe('Wake 79 — "<Name> on <Plat> selects "<gift>" and recipient "<X>""', () => {
+  // j15-mc-performance.feature:42
+  //   When Alice on Web selects "rose" and recipient "Selma"
+  test('captures both → driver receives them', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSelectGiftAndRecipient: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web selects "rose" and recipient "Selma"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'rose', 'Selma');
+  });
+
+  test('different gift + recipient', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSelectGiftAndRecipient: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web selects "diamond" and recipient "Theo"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'diamond', 'Theo');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Web selects "rose" and recipient "Selma"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webSelectGiftAndRecipient/);
+  });
+});
+
+describe('Wake 79 — "<Name>\'s <Plat> UI shows the "<X>" tier badge on the room card"', () => {
+  // j15-mc-performance.feature:36
+  //   Then Theo's Android UI shows the "MC Singer" tier badge on the room card
+  test('matching badge → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsTierBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo\'s Android UI shows the "MC Singer" tier badge on the room card',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'MC Singer');
+  });
+
+  test('different tier', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsTierBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI shows the "Star" tier badge on the room card' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'Star');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsTierBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo\'s Android UI shows the "MC Singer" tier badge on the room card',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/MC Singer/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI shows the "X" tier badge on the room card' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsTierBadge/);
+  });
+});
+
+describe('Wake 79 — "<Name>\'s mic is already open on the seated host slot" (state-seed)', () => {
+  // j15-mc-performance.feature:46
+  //   Given Selma's mic is already open on the seated host slot
+  // Predicate state-seed: marks the persona's host-owned room with
+  // mic-open + seated.
+  test('updates room with host slot mic-open', async () => {
+    // Selma = P-14 = 50000080
+    const db = makeStatefulFakeDb({
+      'rooms/r-test': { id: 'r-test', ownerUniqueId: 50000080, participantIds: [50000080] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: "Selma's mic is already open on the seated host slot" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/r-test'].micStates['50000080']).toBe('open');
+    expect(db._docs['rooms/r-test'].seats[0]).toEqual(
+      expect.objectContaining({ userId: 50000080 }),
+    );
+  });
+
+  test('no host-owned room → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: "Selma's mic is already open on the seated host slot" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/host|room|Selma/i);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: "Selma's mic is already open on the seated host slot" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 79 — "<Name>\'s <Plat> UI shows his/her/their seat as <state>"', () => {
+  // j10-mid-room-warning.feature:79
+  //   Then Theo's Android UI shows his seat as available
+  test('matching state → ok', async () => {
+    const spy = jest.fn(async () => 'available');
+    const ctx = makeCtx({ uiDriver: { androidGetSeatState: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows his seat as available" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('different pronoun + state', async () => {
+    const spy = jest.fn(async () => 'occupied');
+    const ctx = makeCtx({ uiDriver: { androidGetSeatState: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's Android UI shows her seat as occupied" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatch → fail', async () => {
+    const spy = jest.fn(async () => 'occupied');
+    const ctx = makeCtx({ uiDriver: { androidGetSeatState: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows his seat as available" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/available/);
+    expect(r.error).toMatch(/occupied/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows his seat as available" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidGetSeatState/);
+  });
+});
