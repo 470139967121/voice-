@@ -18249,3 +18249,285 @@ describe('Wake 93 — bidirectional "the tester hears X on Y\'s P1 speakers AND 
     expect(r.error).toMatch(/Bao|inaudible/);
   });
 });
+
+// ── Wake 94 — the 100% milestone wake ────────────────────────────────
+
+describe('Wake 94 — "the PM body contains the raw key OR an English placeholder"', () => {
+  // j18-official-system-pms.feature:76
+  // Prior step: When the test harness fires sendSystemPm with key="totally_made_up_key" recipient=Adam
+  // Asserts the rendered PM falls back gracefully when the key is
+  // unknown — either renders the raw key OR a generic English placeholder.
+  test('raw key visible → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webPmBodyShowsRawKeyOrPlaceholder: spy } });
+    ctx.lastSentSystemPm = {
+      trigger: 'test harness',
+      key: 'totally_made_up_key',
+      recipientName: 'Adam',
+      recipientId: 90000001,
+    };
+    const r = await executeStep(
+      { kind: 'Then', text: 'the PM body contains the raw key OR an English placeholder' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('totally_made_up_key');
+  });
+
+  test('no fallback visible → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webPmBodyShowsRawKeyOrPlaceholder: spy } });
+    ctx.lastSentSystemPm = { key: 'X', recipientName: 'Adam', recipientId: 90000001 };
+    const r = await executeStep(
+      { kind: 'Then', text: 'the PM body contains the raw key OR an English placeholder' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/raw key|placeholder/);
+  });
+
+  test('no prior sendSystemPm → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'the PM body contains the raw key OR an English placeholder' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/sendSystemPm/);
+  });
+});
+
+describe('Wake 94 — "for each such room, every userId in participantIds resolves to a user with the same cohort as the room\'s cohort field"', () => {
+  // j19-osa-migration-regression.feature:42
+  // Prior step: When a query is run for every "rooms/*" doc with state="OPEN"
+  // Iterates ctx.lastQueryResult.docs; for each room, asserts all
+  // participants have cohort matching room.cohort.
+  test('all rooms internally consistent → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'adult' },
+    });
+    const ctx = makeCtx({ db });
+    ctx.lastQueryResult = {
+      docs: [{ cohort: 'adult', participantIds: [10, 20] }],
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "for each such room, every userId in participantIds resolves to a user with the same cohort as the room's cohort field",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatched cohort → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'minor' },
+    });
+    const ctx = makeCtx({ db });
+    ctx.lastQueryResult = {
+      docs: [{ id: 'r1', cohort: 'adult', participantIds: [10, 20] }],
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "for each such room, every userId in participantIds resolves to a user with the same cohort as the room's cohort field",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/20|minor|adult|mismatch/);
+  });
+
+  test('no prior query → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "for each such room, every userId in participantIds resolves to a user with the same cohort as the room's cohort field",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/lastQueryResult|query/);
+  });
+});
+
+describe('Wake 94 — "for each frozen conversation, no document was added to "<X>" after the migration timestamp"', () => {
+  // j19-osa-migration-regression.feature:57
+  // Iterates conversations where frozen=true. For each, checks the
+  // named subcollection (e.g., conversations/{id}/messages) — no doc
+  // may have createdAt > ctx.migrationTimestamp (defaults to 0).
+  test('frozen convs have no post-migration messages → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'conversations/c1': { frozen: true, createdAt: 0 },
+      'conversations/c1/messages/m1': { createdAt: 0, body: 'pre-OSA hello' },
+      'conversations/c2': { frozen: true, createdAt: 0 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'for each frozen conversation, no document was added to "conversations/{id}/messages" after the migration timestamp',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('frozen conv with post-migration message → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'conversations/c1': { frozen: true, createdAt: 0 },
+      'conversations/c1/messages/m1': { createdAt: 0, body: 'pre' },
+      'conversations/c1/messages/m2': { createdAt: 1000, body: 'POST — illegal!' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'for each frozen conversation, no document was added to "conversations/{id}/messages" after the migration timestamp',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/c1|m2|post/i);
+  });
+
+  test('non-frozen convs ignored → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'conversations/c1': { frozen: false, createdAt: 0 },
+      'conversations/c1/messages/m1': { createdAt: 9999, body: 'post-migration but unfrozen' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'for each frozen conversation, no document was added to "conversations/{id}/messages" after the migration timestamp',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe('Wake 94 — `the doc has entries in "<X>" with users from BOTH cohort="<A>" AND cohort="<B>"`', () => {
+  // j19-osa-migration-regression.feature:75
+  // Prior step: When a query is run for the user doc "users/1"
+  // ctx.lastQueryResult.data is the user doc. The field X (e.g.,
+  // followerIds) is an array of uniqueIds; resolve each to a user and
+  // check the set includes both named cohorts.
+  test('contains both cohorts → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'minor' },
+    });
+    const ctx = makeCtx({ db });
+    ctx.lastQueryResult = { exists: true, data: { followerIds: [10, 20] } };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the doc has entries in "followerIds" with users from BOTH cohort="adult" AND cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('only one cohort → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'adult' },
+    });
+    const ctx = makeCtx({ db });
+    ctx.lastQueryResult = { exists: true, data: { followerIds: [10, 20] } };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the doc has entries in "followerIds" with users from BOTH cohort="adult" AND cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/minor|missing/);
+  });
+
+  test('no prior doc → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the doc has entries in "followerIds" with users from BOTH cohort="adult" AND cohort="minor"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/lastQueryResult|doc/);
+  });
+});
+
+describe('Wake 94 — `the doc has at most N entries in "<X>" matching {action: "<Y>", sourceId: N}`', () => {
+  // j19-osa-migration-regression.feature:76
+  // Prior step: When a query is run for the user doc "users/1"
+  // ctx.lastQueryResult.data.<X> is an array of audit entries.
+  // Counts entries where e.action===Y AND e.sourceId===N (the 2nd
+  // capture group). Must be ≤ first capture.
+  test('zero matching entries → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastQueryResult = {
+      exists: true,
+      data: {
+        auditLog: [
+          { action: 'delivered', sourceId: 1 },
+          { action: 'blocked', sourceId: 99 },
+        ],
+      },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the doc has at most 0 entries in "auditLog" matching {action: "blocked", sourceId: 1}',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('exactly one matching entry but expected 0 → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastQueryResult = {
+      exists: true,
+      data: {
+        auditLog: [{ action: 'blocked', sourceId: 1 }],
+      },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the doc has at most 0 entries in "auditLog" matching {action: "blocked", sourceId: 1}',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/1|blocked|exceeded/);
+  });
+
+  test('within limit (N=2, found 1) → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastQueryResult = {
+      exists: true,
+      data: {
+        auditLog: [{ action: 'blocked', sourceId: 1 }],
+      },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the doc has at most 2 entries in "auditLog" matching {action: "blocked", sourceId: 1}',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});

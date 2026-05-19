@@ -10611,6 +10611,187 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 94 — "the PM body contains the raw key OR an English
+    // placeholder". j18:76. Graceful-fallback assertion when the
+    // sendSystemPm key is unknown — visible PM must contain either
+    // the raw key OR a generic English placeholder. Reads the key
+    // from ctx.lastSentSystemPm (Wake 89's broad sendSystemPm
+    // matcher populates this).
+    pattern: /^the PM body contains the raw key OR an English placeholder$/,
+    async handler(_m, ctx) {
+      if (!ctx.lastSentSystemPm?.key) {
+        return { ok: false, error: 'no prior sendSystemPm — raw-key assertion needs a When step' };
+      }
+      if (!ctx.webDriver?.webPmBodyShowsRawKeyOrPlaceholder) {
+        return {
+          ok: false,
+          error: 'ctx.webDriver.webPmBodyShowsRawKeyOrPlaceholder not configured',
+        };
+      }
+      const ok = await ctx.webDriver.webPmBodyShowsRawKeyOrPlaceholder(ctx.lastSentSystemPm.key);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `PM body shows neither raw key "${ctx.lastSentSystemPm.key}" nor an English placeholder`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 94 — "for each such room, every userId in participantIds
+    // resolves to a user with the same cohort as the room's cohort
+    // field". j19:42. Iterates ctx.lastQueryResult.docs (rooms from
+    // prior query) — for each, all participantIds must resolve to
+    // users whose cohort matches the room's cohort.
+    pattern:
+      /^for each such room, every userId in participantIds resolves to a user with the same cohort as the room's cohort field$/,
+    async handler(_m, ctx) {
+      if (!ctx.lastQueryResult || !Array.isArray(ctx.lastQueryResult.docs)) {
+        return {
+          ok: false,
+          error:
+            'ctx.lastQueryResult.docs missing — run a `When a query is run for ...` step first',
+        };
+      }
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const usersEntries = snapToEntries(await ctx.db.collection('users').get());
+      const cohortMap = new Map();
+      for (const { data } of usersEntries) {
+        if (data?.uniqueId !== undefined && data?.uniqueId !== null && data.cohort) {
+          cohortMap.set(String(data.uniqueId), data.cohort);
+        }
+      }
+      const violations = [];
+      for (const room of ctx.lastQueryResult.docs) {
+        const roomCohort = room?.cohort;
+        if (!roomCohort) continue;
+        for (const pid of room?.participantIds || []) {
+          const c = cohortMap.get(String(pid));
+          if (c && c !== roomCohort) {
+            violations.push(
+              `${room.id || '?'}: user ${pid} cohort=${c} ≠ room cohort=${roomCohort}`,
+            );
+          }
+        }
+      }
+      if (violations.length > 0) {
+        return {
+          ok: false,
+          error: `${violations.length} mismatch(es) (first: ${violations[0]})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 94 — `for each frozen conversation, no document was added
+    // to "<X>" after the migration timestamp`. j19:57. Iterates
+    // conversations with frozen=true; for each, checks the named
+    // subcollection (`{id}` placeholder is substituted with the conv
+    // id). No doc may have createdAt > ctx.migrationTimestamp (default 0).
+    pattern:
+      /^for each frozen conversation, no document was added to "([^"]+)" after the migration timestamp$/,
+    async handler(m, ctx) {
+      const pathTemplate = m[1];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const threshold = ctx.migrationTimestamp ?? 0;
+      const convsEntries = snapToEntries(await ctx.db.collection('conversations').get());
+      const violations = [];
+      for (const { id, data } of convsEntries) {
+        if (data?.frozen !== true) continue;
+        const subPath = pathTemplate.replace('{id}', id);
+        const subEntries = snapToEntries(await ctx.db.collection(subPath).get());
+        for (const { id: subId, data: subData } of subEntries) {
+          if (typeof subData?.createdAt === 'number' && subData.createdAt > threshold) {
+            violations.push(`${subPath}/${subId} (createdAt=${subData.createdAt})`);
+          }
+        }
+      }
+      if (violations.length > 0) {
+        return {
+          ok: false,
+          error: `${violations.length} post-migration doc(s) under frozen conversations (first: ${violations[0]})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 94 — `the doc has entries in "<X>" with users from BOTH
+    // cohort="<A>" AND cohort="<B>"`. j19:75. Reads ctx.lastQueryResult.data
+    // (single-doc query from prior step). Field X is an array of
+    // uniqueIds; resolve each to a user and check the set of cohorts
+    // contains BOTH named cohorts.
+    pattern:
+      /^the doc has entries in "([^"]+)" with users from BOTH cohort="([^"]+)" AND cohort="([^"]+)"$/,
+    async handler(m, ctx) {
+      const field = m[1];
+      const cohortA = m[2];
+      const cohortB = m[3];
+      if (!ctx.lastQueryResult?.data) {
+        return {
+          ok: false,
+          error: 'ctx.lastQueryResult.data missing — run a single-doc query step first',
+        };
+      }
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const ids = ctx.lastQueryResult.data[field] || [];
+      const usersEntries = snapToEntries(await ctx.db.collection('users').get());
+      const cohortMap = new Map();
+      for (const { data } of usersEntries) {
+        if (data?.uniqueId !== undefined && data?.uniqueId !== null && data.cohort) {
+          cohortMap.set(String(data.uniqueId), data.cohort);
+        }
+      }
+      const found = new Set();
+      for (const id of ids) {
+        const c = cohortMap.get(String(id));
+        if (c) found.add(c);
+      }
+      const missing = [];
+      if (!found.has(cohortA)) missing.push(cohortA);
+      if (!found.has(cohortB)) missing.push(cohortB);
+      if (missing.length > 0) {
+        return {
+          ok: false,
+          error: `${field} missing entries with cohort=${missing.join(', ')} (found cohorts: ${[...found].join(', ') || 'none'})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 94 — `the doc has at most N entries in "<X>" matching
+    // {action: "<Y>", sourceId: N}`. j19:76. Audit-log count cap on
+    // a single-doc query result. The 2nd `N` (sourceId filter) is a
+    // numeric literal — currently the corpus only uses sourceId=1
+    // (Officia's uniqueId).
+    pattern:
+      /^the doc has at most (\d+) entries in "([^"]+)" matching \{action: "([^"]+)", sourceId: (\d+)\}$/,
+    async handler(m, ctx) {
+      const max = Number(m[1]);
+      const field = m[2];
+      const action = m[3];
+      const sourceId = Number(m[4]);
+      if (!ctx.lastQueryResult?.data) {
+        return {
+          ok: false,
+          error: 'ctx.lastQueryResult.data missing — run a single-doc query step first',
+        };
+      }
+      const entries = ctx.lastQueryResult.data[field] || [];
+      const matches = entries.filter((e) => e?.action === action && e?.sourceId === sourceId);
+      if (matches.length > max) {
+        return {
+          ok: false,
+          error: `${matches.length} entries in ${field} match {action: "${action}", sourceId: ${sourceId}}, expected at most ${max} (exceeded)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
