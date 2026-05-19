@@ -19777,3 +19777,131 @@ describe('Wake 101 — "<Name>\'s LiveKit publish for that room is <enabled|disa
     expect(r.error).toMatch(/Marcus|publish|disabled/);
   });
 });
+
+// ── Wake 102 — j07/j09/j11 singletons ────────────────────────────────
+
+describe('Wake 102 — `<Name>\'s <Plat> UI replaces follow button with "<X>"`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidReplacesFollowButton: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Android UI replaces follow button with "profile_unfollowButton"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'profile_unfollowButton');
+  });
+});
+
+describe('Wake 102 — "<Name>\'s <Plat> UI shows a new conversation with <Other> highlighted as unread"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsNewUnreadConversation: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Alice's Web UI shows a new conversation with Adam highlighted as unread",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Adam');
+  });
+});
+
+describe('Wake 102 — "<Name>\'s <Plat> UI shows <Other> in seat N of the seat grid"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsInSeatGrid: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's Web UI shows Ines in seat 2 of the seat grid" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Ines', 2);
+  });
+});
+
+describe('Wake 102 — "<Name>\'s LiveKit track for room {<X>} has publish permission enabled"', () => {
+  test('publish enabled → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({
+      liveKitDriver: { publishPermissionForRoom: spy },
+      scenarioVars: new Map([['roomId', 'r1']]),
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Ines's LiveKit track for room {roomId} has publish permission enabled",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'r1');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({
+      liveKitDriver: { publishPermissionForRoom: spy },
+      scenarioVars: new Map([['roomId', 'r1']]),
+    });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Ines's LiveKit track for room {roomId} has publish permission enabled",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Ines|publish|r1/);
+  });
+});
+
+describe('Wake 102 — `<Name>\'s <Plat> UI shows the system PM from Officia "<X>"`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsSystemPmFromOfficia: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Nora\'s iOS Sim UI shows the system PM from Officia "Action taken on your report"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Nora', 'Action taken on your report');
+  });
+});
+
+describe('Wake 102 — `<Name>\'s <Plat> UI shows the warning screen with reason "<X>"`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsWarningScreenWithReason: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Raul\'s Android UI shows the warning screen with reason "First-strike harassment"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'First-strike harassment');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Raul\'s Android UI shows the warning screen with reason "X"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsWarningScreenWithReason/);
+  });
+});

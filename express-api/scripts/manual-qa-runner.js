@@ -11915,6 +11915,171 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 102 — `<Name>'s <Plat> UI replaces follow button with "<X>"`.
+    // j07 — UI element swap after follow action completes.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI replaces follow button with "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const buttonId = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webReplacesFollowButton'
+        : platform === 'Android'
+          ? 'androidReplacesFollowButton'
+          : 'iosReplacesFollowButton';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, buttonId);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI did not replace follow button with "${buttonId}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 102 — "<Name>'s <Plat> UI shows a new conversation with
+    // <Other> highlighted as unread". j07 — recipient's inbox shows
+    // new unread conversation from sender.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a new conversation with ([A-Z][a-z]+) highlighted as unread$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const other = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsNewUnreadConversation'
+        : platform === 'Android'
+          ? 'androidShowsNewUnreadConversation'
+          : 'iosShowsNewUnreadConversation';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, other);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} UI does not show new unread conversation with ${other}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 102 — "<Name>'s <Plat> UI shows <Other> in seat N of the
+    // seat grid". j09 — specific seat-position assertion on the visual
+    // grid.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows ([A-Z][a-z]+) in seat (\d+) of the seat grid$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const seatNum = Number(m[4]);
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsInSeatGrid'
+        : platform === 'Android'
+          ? 'androidShowsInSeatGrid'
+          : 'iosShowsInSeatGrid';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, target, seatNum);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} UI does not show ${target} in seat ${seatNum} of the seat grid`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 102 — "<Name>'s LiveKit track for room <X> has publish
+    // permission enabled". j09 — LiveKit-layer permission check after
+    // a host approves a seat request. The room identifier is the
+    // interpolated path segment (was `{roomId}` placeholder upstream).
+    pattern: /^([A-Z][a-z]+)'s LiveKit track for room (\S+) has publish permission enabled$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const roomId = m[2];
+      if (!ctx.liveKitDriver?.publishPermissionForRoom) {
+        return { ok: false, error: 'ctx.liveKitDriver.publishPermissionForRoom not configured' };
+      }
+      const ok = await ctx.liveKitDriver.publishPermissionForRoom(name, roomId);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s LiveKit track for room ${roomId} does not have publish permission`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 102 — `<Name>'s <Plat> UI shows the system PM from Officia
+    // "<X>"`. j11 — recipient sees a moderation-outcome system PM.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the system PM from Officia "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const subject = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsSystemPmFromOfficia'
+        : platform === 'Android'
+          ? 'androidShowsSystemPmFromOfficia'
+          : 'iosShowsSystemPmFromOfficia';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, subject);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show system PM from Officia "${subject}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 102 — `<Name>'s <Plat> UI shows the warning screen with
+    // reason "<X>"`. j11 — punished user sees moderation reason.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the warning screen with reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const reason = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsWarningScreenWithReason'
+        : platform === 'Android'
+          ? 'androidShowsWarningScreenWithReason'
+          : 'iosShowsWarningScreenWithReason';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, reason);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show warning screen with reason "${reason}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
