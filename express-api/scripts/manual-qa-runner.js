@@ -5896,6 +5896,177 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Voice room create-with-joiners composite (j09). Auto-generates
+    // a room id, writes a doc owned by X with participantIds containing
+    // owner + N synthetic joiner uniqueIds (60000001..60000000+N).
+    pattern: /^([A-Z][a-z]+)\s+created a room and has (\d+) joiners$/,
+    async handler(m, ctx) {
+      const ownerName = m[1];
+      const joinerCount = parseInt(m[2], 10);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const owner = personas.get(ownerName);
+      if (!owner?.uniqueId) {
+        return { ok: false, error: `persona "${ownerName}" not in registry` };
+      }
+      // eslint-disable-next-line sonarjs/pseudo-random
+      const roomId = `auto-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+      const joiners = Array.from({ length: joinerCount }, (_, i) => 60000001 + i);
+      await ctx.db.doc(`rooms/${roomId}`).set({
+        id: roomId,
+        ownerUniqueId: owner.uniqueId,
+        participantIds: [owner.uniqueId, ...joiners],
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Network drops for N seconds (Android + iOS Sim). Driver simulates
+    // a network outage for the named persona for the named duration.
+    // Outage clears automatically after the duration — scenarios that
+    // need the outage to persist past the duration must re-arm.
+    pattern: /^([A-Z][a-z]+)'s (Android|iOS Sim) network drops for (\d+) seconds$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const seconds = parseInt(m[3], 10);
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidNetworkDropFor) {
+          return { ok: false, error: 'ctx.uiDriver.androidNetworkDropFor not configured' };
+        }
+        await ctx.uiDriver.androidNetworkDropFor(name, seconds);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosNetworkDropFor) {
+          return { ok: false, error: 'ctx.uiDriver.iosNetworkDropFor not configured' };
+        }
+        await ctx.uiDriver.iosNetworkDropFor(name, seconds);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for network-drop step` };
+    },
+  },
+  {
+    // Each-joiner UI navigates back with toast (j09 host-disconnected).
+    // Driver verifies that EVERY joiner of the most-recent room ended
+    // up on the rooms tab AND saw the named toast. Driver receives
+    // just the toast text — it tracks the joiner set internally.
+    pattern: /^each joiner's UI navigates back to the rooms tab with "([^"]+)" toast$/,
+    async handler(m, ctx) {
+      const toast = m[1];
+      if (!ctx.webDriver?.eachJoinerNavigatesBackWithToast) {
+        return {
+          ok: false,
+          error: 'ctx.webDriver.eachJoinerNavigatesBackWithToast not configured',
+        };
+      }
+      const ok = await ctx.webDriver.eachJoinerNavigatesBackWithToast(toast);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `not all joiners navigated back to rooms tab with "${toast}" toast`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Voice room composite create with named ID + cohort (j09). Unlike
+    // Wake 64's auto-id form, this matcher takes an explicit room ID
+    // from the corpus author.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+created (?:an? )?(adult|minor)-cohort room "([^"]+)"$/,
+    async handler(m, ctx) {
+      const ownerName = m[1];
+      const cohort = m[3];
+      const roomId = m[4];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const owner = personas.get(ownerName);
+      if (!owner?.uniqueId) {
+        return { ok: false, error: `persona "${ownerName}" not in registry` };
+      }
+      await ctx.db.doc(`rooms/${roomId}`).set({
+        id: roomId,
+        ownerUniqueId: owner.uniqueId,
+        cohort,
+        participantIds: [owner.uniqueId],
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Response body does not include <X>. Reads ctx.lastResponse.body
+    // and asserts the named field is absent. Field name parsed as
+    // bare word; corpus uses singular noun forms ("a token", "an
+    // error", etc.) — the matcher strips the article.
+    pattern: /^the response body does not include an? (\w+)$/,
+    async handler(m, ctx) {
+      const field = m[1];
+      if (!ctx.lastResponse) {
+        return { ok: false, error: 'no recorded response — earlier request step is missing' };
+      }
+      const body = ctx.lastResponse.body || {};
+      if (Object.prototype.hasOwnProperty.call(body, field)) {
+        return {
+          ok: false,
+          error: `response body should not include "${field}" but it did (value=${JSON.stringify(body[field])})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // UI does not show the "<X>" button (quoted-button absence).
+    // Distinct from Wake 49's quoted-string absence: that one matches
+    // a literal quoted string ("Alice", "main_roomsTab"); this one
+    // matches a NAMED button with explicit "the X button" suffix.
+    // Driver returns truthy iff the named button is currently rendered.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show the "([^"]+)" button$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const buttonName = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webShowsNamedButton) {
+          return { ok: false, error: 'ctx.webDriver.webShowsNamedButton not configured' };
+        }
+        const shown = await ctx.webDriver.webShowsNamedButton(buttonName);
+        if (shown) {
+          return { ok: false, error: `Web UI shows "${buttonName}" button but should not` };
+        }
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsNamedButton) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidShowsNamedButton not configured',
+          };
+        }
+        const shown = await ctx.uiDriver.androidShowsNamedButton(buttonName);
+        if (shown) {
+          return { ok: false, error: `Android UI shows "${buttonName}" button but should not` };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsNamedButton) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsNamedButton not configured' };
+        }
+        const shown = await ctx.uiDriver.iosShowsNamedButton(buttonName);
+        if (shown) {
+          return { ok: false, error: `iOS UI shows "${buttonName}" button but should not` };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for named-button-absence step` };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

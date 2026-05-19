@@ -9021,6 +9021,157 @@ describe('Bare HTTP response status assertion', () => {
   });
 });
 
+describe('Voice room create with joiners composite state-seed', () => {
+  test('"X created a room and has N joiners" writes a room doc with N+1 participants', async () => {
+    const { personas } = require('../../scripts/provision-test-personas');
+    const theo = personas.find((p) => p.id === 'P-10');
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Theo created a room and has 2 joiners' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const roomDocs = Object.entries(db._docs).filter(([k]) => k.startsWith('rooms/'));
+    expect(roomDocs.length).toBe(1);
+    const [, room] = roomDocs[0];
+    expect(room.ownerUniqueId).toBe(theo.uniqueId);
+    expect(room.participantIds.length).toBe(3); // owner + 2 joiners
+  });
+});
+
+describe('Network drops for N seconds (platform-dispatch)', () => {
+  test('"X\'s Android network drops for N seconds" → driver call', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidNetworkDropFor: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Theo's Android network drops for 30 seconds" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 30);
+  });
+
+  test('iOS Sim variant routes correctly', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosNetworkDropFor: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Ines's iOS Sim network drops for 10 seconds" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 10);
+  });
+});
+
+describe('Each joiner UI navigates back with toast (composite)', () => {
+  test('"each joiner\'s UI navigates back to the rooms tab with \\"X\\" toast" → driver', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { eachJoinerNavigatesBackWithToast: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'each joiner\'s UI navigates back to the rooms tab with "Host disconnected" toast',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Host disconnected');
+  });
+
+  test('driver returns false (some joiner stuck) → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { eachJoinerNavigatesBackWithToast: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'each joiner\'s UI navigates back to the rooms tab with "Host disconnected" toast',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Host disconnected/);
+  });
+});
+
+describe('Voice room composite create with named room ID', () => {
+  test('"X on Android created an adult-cohort room \\"Y\\"" writes rooms/Y', async () => {
+    const { personas } = require('../../scripts/provision-test-personas');
+    const theo = personas.find((p) => p.id === 'P-10');
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Theo on Android created an adult-cohort room "ra1"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/ra1']).toBeDefined();
+    expect(db._docs['rooms/ra1'].ownerUniqueId).toBe(theo.uniqueId);
+    expect(db._docs['rooms/ra1'].cohort).toBe('adult');
+  });
+
+  test('minor-cohort variant', async () => {
+    const { personas } = require('../../scripts/provision-test-personas');
+    const alice = personas.find((p) => p.id === 'P-02');
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice on Web created a minor-cohort room "rm1"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['rooms/rm1'].cohort).toBe('minor');
+    expect(db._docs['rooms/rm1'].ownerUniqueId).toBe(alice.uniqueId);
+  });
+});
+
+describe('Response body does not include <X>', () => {
+  test('body lacks the named field → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = { status: 200, body: { error: 'cohort_mismatch' } };
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body does not include a token' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('body contains the named field → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = { status: 200, body: { token: 'leaked-tok' } };
+    const r = await executeStep(
+      { kind: 'Then', text: 'the response body does not include a token' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/token/);
+  });
+});
+
+describe('UI does not show the "<X>" button (quoted-button absence)', () => {
+  test('webDriver.webDoesNotShowNamedButton returns false → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsNamedButton: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Vexa\'s Web UI does not show the "Send" button' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Send');
+  });
+
+  test('driver returns true (button present) → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsNamedButton: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Vexa\'s Web UI does not show the "Send" button' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Send/);
+  });
+});
+
 describe('Bare API response-status-from-path assertion', () => {
   test('"the response status from /api/X is N" reads ctx.lastResponse', async () => {
     const ctx = makeCtx();
