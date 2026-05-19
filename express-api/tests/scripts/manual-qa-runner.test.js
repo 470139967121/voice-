@@ -16841,3 +16841,291 @@ describe('Wake 88 — "the <topic> (broadcast|flow) fires sendSystemPm with key=
     expect(r.error).toMatch(/Zzzghost/);
   });
 });
+
+// ── Wake 89 ──────────────────────────────────────────────────────────
+
+describe('Wake 89 — broad "the <noun> fires sendSystemPm with key="<X>"[ recipient=<Other>]"', () => {
+  // j18-official-system-pms.feature:39, 55
+  //   When the broadcast fires sendSystemPm with key="policy_update_v4"
+  //   When the test harness fires sendSystemPm with key="totally_made_up_key" recipient=Adam
+  // Broad fallback for trigger phrases that don't match Wake 82's
+  // "<X> webhook" or Wake 88's "<X> broadcast|flow". Placed LAST so the
+  // narrower matchers still fire first.
+  test('bare broadcast (no recipient) → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the broadcast fires sendSystemPm with key="policy_update_v4"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('broadcast', 'policy_update_v4', null);
+  });
+
+  test('test harness with recipient → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the test harness fires sendSystemPm with key="totally_made_up_key" recipient=Adam',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Adam = P-01 = 90000001
+    expect(spy).toHaveBeenCalledWith('test harness', 'totally_made_up_key', 90000001);
+  });
+
+  test('does NOT shadow Wake 82 webhook variant', async () => {
+    // The Wake 82 matcher must still fire first for "X webhook fires...".
+    // We verify by ensuring the spy receives the webhook name "post-approval",
+    // not "post-approval webhook".
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the post-approval webhook fires sendSystemPm with key="age_seg_age_up_welcome_pm" recipient=Adam',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('post-approval', 'age_seg_age_up_welcome_pm', 90000001);
+  });
+
+  test('unknown recipient → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the test harness fires sendSystemPm with key="X" recipient=Zzzghost',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
+
+describe('Wake 89 — "<Name>\'s <Plat> UI shows non-empty <Language> text for section N"', () => {
+  // j13-locales-rtl-cjk.feature:36
+  //   Then Layla's Web UI shows non-empty Arabic text for section 11
+  // Locale section assertion: driver verifies that section N of the
+  // currently-rendered screen contains visible non-empty text in the
+  // named language's script (not English fallback).
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsNonEmptyLocaleText: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Web UI shows non-empty Arabic text for section 11" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'ar', 11);
+  });
+
+  test('Japanese section', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsNonEmptyLocaleText: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Yuki's Web UI shows non-empty Japanese text for section 3" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 'ja', 3);
+  });
+
+  test('unknown language → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsNonEmptyLocaleText: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Web UI shows non-empty Klingonese text for section 1" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Klingonese|language/);
+  });
+});
+
+describe('Wake 89 — "<Name>\'s <Plat> UI disables the <X> input"', () => {
+  // j11-harassment-moderation-cycle.feature:50
+  //   Then Raul's Android UI disables the message input
+  // UI control state assertion. Parameterised on the input name so a
+  // future "disables the comment input" / "disables the gift input"
+  // would not need a new matcher.
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidDisablesInput: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI disables the message input" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'message');
+  });
+
+  test('Web variant + different input', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webDisablesInput: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web UI disables the comment input" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Greta', 'comment');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidDisablesInput: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI disables the message input" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Raul|message|disabled/);
+  });
+});
+
+describe('Wake 89 — "<Name>\'s <Plat> Admin UI shows <Other>\'s appeal with the text"', () => {
+  // j11-harassment-moderation-cycle.feature:73
+  //   Then Greta's Web Admin UI shows Raul's appeal with the text
+  // Admin moderation UI assertion. Driver verifies an appeal section
+  // is visible for <Other> with non-empty body text.
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsAppealText: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI shows Raul's appeal with the text" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Greta', 'Raul');
+  });
+
+  test('no appeal → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webAdminShowsAppealText: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI shows Raul's appeal with the text" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Raul|appeal/);
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI shows Raul's appeal with the text" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminShowsAppealText/);
+  });
+});
+
+describe('Wake 89 — "a conversation "<X>" exists ... created before the OSA migration" (state-seed)', () => {
+  // j08-cross-cohort-wall.feature:14
+  //   Given a conversation "c1" exists with participantIds=[50000040, 60000010] created before the OSA migration
+  // State-seed: plants a conversations/<id> doc with the cross-cohort
+  // participant pair and a createdAt of 0 (signalling "before OSA
+  // migration"). Used by j08 to verify the migration sweep marks legacy
+  // mixed-cohort conversations as locked.
+  test('plants conversation doc with both participants', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'a conversation "c1" exists with participantIds=[50000040, 60000010] created before the OSA migration',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const doc = db._docs['conversations/c1'];
+    expect(doc).toBeDefined();
+    expect(doc.participantIds).toEqual([50000040, 60000010]);
+    expect(doc.createdAt).toBe(0);
+  });
+
+  test('different id', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'a conversation "legacy-7" exists with participantIds=[1, 2] created before the OSA migration',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['conversations/legacy-7']).toBeDefined();
+    expect(db._docs['conversations/legacy-7'].participantIds).toEqual([1, 2]);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'a conversation "c1" exists with participantIds=[1, 2] created before the OSA migration',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 89 — "<Name> on <Plat> taps the <X> from the <Y>"', () => {
+  // j16-event-host-team-leader.feature:24
+  //   When Selma on Android taps the event-room link from the invite banner
+  // Composite tap-from-source. Driver locates the named surface (Y) and
+  // taps the named control (X) within it.
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapFromSurface: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Selma on Android taps the event-room link from the invite banner',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'event-room link', 'invite banner');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosTapFromSurface: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Yuki on iOS Sim taps the gift button from the room toolbar',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 'gift button', 'room toolbar');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Selma on Android taps the event-room link from the invite banner',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTapFromSurface/);
+  });
+});

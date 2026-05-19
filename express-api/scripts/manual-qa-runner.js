@@ -9697,6 +9697,216 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 89 — broad "the <noun> fires sendSystemPm with key="<X>"
+    // [recipient=<Other>]". j18:39, 55. Fallback for sendSystemPm
+    // trigger phrases that don't match Wake 82's "<X> webhook" or
+    // Wake 88's "<X> broadcast|flow". MUST be placed AFTER both —
+    // first-match-wins gives the narrower matchers priority so they
+    // still capture only the trigger token (Wake 82: "post-approval",
+    // not "post-approval webhook"). The noun phrase capture is
+    // bounded by the literal " fires sendSystemPm" suffix so backtracking
+    // is bounded.
+    pattern: /^the ([^"]+?) fires sendSystemPm with key="([^"]+)"(?: recipient=([A-Z][a-z]+))?$/,
+    async handler(m, ctx) {
+      const trigger = m[1];
+      const key = m[2];
+      const recipientName = m[3];
+      let recipientId = null;
+      if (recipientName) {
+        const personas = loadPersonas();
+        const p = personas.get(recipientName);
+        if (!p?.uniqueId) {
+          return { ok: false, error: `recipient "${recipientName}" not in registry` };
+        }
+        recipientId = p.uniqueId;
+      }
+      if (!ctx.webDriver?.fireSystemPmWebhook) {
+        return { ok: false, error: 'ctx.webDriver.fireSystemPmWebhook not configured' };
+      }
+      const ok = await ctx.webDriver.fireSystemPmWebhook(trigger, key, recipientId);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${trigger} failed to fire sendSystemPm key=${key}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 89 — "<Name>'s <Plat> UI shows non-empty <Language> text for
+    // section N". j13:36. Locale section assertion. Driver checks that
+    // section N of the currently-rendered screen contains visible
+    // non-empty text rendered in the named language's script (not
+    // English fallback). The static language-name → BCP-47-code map
+    // covers the 20 supported locales.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows non-empty ([A-Z][a-z]+) text for section (\d+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const langName = m[3];
+      const section = Number(m[4]);
+      const LOCALE_NAME_TO_CODE = {
+        Arabic: 'ar',
+        German: 'de',
+        Spanish: 'es',
+        French: 'fr',
+        Hindi: 'hi',
+        Indonesian: 'id',
+        Italian: 'it',
+        Japanese: 'ja',
+        Khmer: 'km',
+        Korean: 'ko',
+        Dutch: 'nl',
+        Polish: 'pl',
+        Portuguese: 'pt',
+        Russian: 'ru',
+        Swedish: 'sv',
+        Thai: 'th',
+        Turkish: 'tr',
+        Ukrainian: 'uk',
+        Vietnamese: 'vi',
+        Chinese: 'zh',
+        English: 'en',
+      };
+      const code = LOCALE_NAME_TO_CODE[langName];
+      if (!code) {
+        return { ok: false, error: `unknown language name "${langName}"` };
+      }
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsNonEmptyLocaleText'
+        : platform === 'Android'
+          ? 'androidShowsNonEmptyLocaleText'
+          : 'iosShowsNonEmptyLocaleText';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, code, section);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: section ${section} did not show non-empty ${langName} text`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 89 — "<Name>'s <Plat> UI disables the <X> input". j11:50.
+    // UI control state assertion. The input name is parameterised so
+    // future "disables the comment input" / "gift input" don't need a
+    // new matcher.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI disables the (\w+) input$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const inputName = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webDisablesInput'
+        : platform === 'Android'
+          ? 'androidDisablesInput'
+          : 'iosDisablesInput';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const disabled = await driver[methodName](name, inputName);
+      if (!disabled) {
+        return {
+          ok: false,
+          error: `${name}: ${inputName} input is not disabled on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 89 — "<Name>'s <Plat> Admin UI shows <Other>'s appeal with
+    // the text". j11:73. Admin moderation UI assertion. Driver verifies
+    // an appeal section is visible for <Other> with non-empty body text
+    // (the "with the text" suffix is rhetorical — there's no assertion
+    // on a specific string).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) Admin UI shows ([A-Z][a-z]+)'s appeal with the text$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webAdminShowsAppealText'
+        : platform === 'Android'
+          ? 'androidAdminShowsAppealText'
+          : 'iosAdminShowsAppealText';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](viewer, target);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${viewer}'s Admin UI does not show ${target}'s appeal text`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 89 — `a conversation "<X>" exists with participantIds=[N, N]
+    // created before the OSA migration` (state-seed). j08:14. Plants a
+    // conversations/<id> doc with the cross-cohort participant pair and
+    // createdAt=0 (sentinel for "before OSA migration"). j08's migration
+    // sweep uses createdAt < OSA_MIGRATION_TS to identify legacy docs.
+    pattern:
+      /^a conversation "([^"]+)" exists with participantIds=\[(\d+), (\d+)\] created before the OSA migration$/,
+    async handler(m, ctx) {
+      const id = m[1];
+      const a = Number(m[2]);
+      const b = Number(m[3]);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      await ctx.db.doc(`conversations/${id}`).set({
+        participantIds: [a, b],
+        createdAt: 0,
+        state: 'OPEN',
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 89 — "<Name> on <Plat> taps the <X> from the <Y>". j16:24.
+    // Composite tap-from-source. Driver locates surface Y, scopes the
+    // search, and taps control X within it. Lazy `(.+?)` is bounded by
+    // the literal " from the " so backtracking can't explode.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) taps the ([^"]+?) from the (.+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const source = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webTapFromSurface'
+        : platform === 'Android'
+          ? 'androidTapFromSurface'
+          : 'iosTapFromSurface';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, target, source);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: tap "${target}" from "${source}" did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
