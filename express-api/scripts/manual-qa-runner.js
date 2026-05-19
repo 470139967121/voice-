@@ -10254,6 +10254,178 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 92 — "<Name> [P-NN] (cohort) opens the <X> tab on <Plat>".
+    // j17:67. Bracket-cohort tab-open variant (sibling of Wake 88's
+    // bracket-cohort sign-in matcher). Mid-step `(cohort)` paren is
+    // not end-anchored so stripStepAnnotation leaves it; cohort tag
+    // is informational here (sign-in happened earlier).
+    pattern:
+      /^([A-Z][a-z]+)\s*\[(P-\d{2})\]\s*\((?:minor|adult)\)\s+opens the (\w+) tab on (Web Chromium|Web Safari|Web|Android|iOS Sim)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const tab = m[3];
+      const platform = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webOpensTab'
+        : platform === 'Android'
+          ? 'androidOpensTab'
+          : 'iosOpensTab';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, tab);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: open ${tab} tab did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 92 — "<Name>'s <Plat> Admin UI shows a table of recent <X>".
+    // j12:24. Generic admin-table presence assertion. Driver returns
+    // an array of entries (or false/empty for "not visible"); matcher
+    // stores them on ctx.lastTableEntries so the next "each entry
+    // shows <fields>" step can verify field presence.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) Admin UI shows a table of recent (\w+(?:\s+\w+){0,2})$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const noun = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webAdminShowsTableOf'
+        : platform === 'Android'
+          ? 'androidAdminShowsTableOf'
+          : 'iosAdminShowsTableOf';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const result = await driver[methodName](viewer, noun);
+      if (!result) {
+        return {
+          ok: false,
+          error: `${viewer}'s Admin UI does not show a table of ${noun}`,
+        };
+      }
+      if (Array.isArray(result) && result.length === 0) {
+        return { ok: false, error: `${noun} table is empty (no rows)` };
+      }
+      ctx.lastTableEntries = Array.isArray(result) ? result : null;
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 92 — "each entry shows <field> + <field> + ...". j12:25.
+    // Verifies every entry in ctx.lastTableEntries has all named fields
+    // (non-null/undefined). The "+ "-separated field list lets future
+    // cycles cover other tables without new matchers.
+    pattern: /^each entry shows (\w+(?: \+ \w+){0,9})$/,
+    async handler(m, ctx) {
+      const fields = m[1].split(' + ');
+      if (!Array.isArray(ctx.lastTableEntries)) {
+        return {
+          ok: false,
+          error: 'ctx.lastTableEntries missing — preceding table step required',
+        };
+      }
+      for (let i = 0; i < ctx.lastTableEntries.length; i++) {
+        const entry = ctx.lastTableEntries[i];
+        const missing = fields.filter((f) => entry?.[f] === undefined || entry?.[f] === null);
+        if (missing.length > 0) {
+          return {
+            ok: false,
+            error: `entry ${i} missing field(s): ${missing.join(', ')}`,
+          };
+        }
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 92 — "<Name>'s <Plat> UI shows the list of contributors with
+    // amounts". j15:35. Bare list-presence + per-row-amount assertion;
+    // driver returns true only when both conditions hold.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the list of contributors with amounts$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsContributorsList'
+        : platform === 'Android'
+          ? 'androidShowsContributorsList'
+          : 'iosShowsContributorsList';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: contributors list (with amounts) not shown on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 92 — `<Name>'s <Plat> UI shows the PM thread with document
+    // direction "<X>"`. j18:33. CSS direction assertion — verifies the
+    // active PM thread DOM has `dir="rtl"` (or "ltr") so the layout
+    // flips correctly for RTL locales.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the PM thread with document direction "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const direction = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsPmThreadDirection'
+        : platform === 'Android'
+          ? 'androidShowsPmThreadDirection'
+          : 'iosShowsPmThreadDirection';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, direction);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: PM thread does not have document direction "${direction}" on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 92 — `no audit row records "<X>" with reason "<Y>" for this
+    // delivery`. j18:60. Audit-log absence assertion. Reads
+    // ctx.lastAuditLog (populated by a sendSystemPm driver that
+    // captures per-delivery audit rows). Ok if no entry has
+    // action===X AND reason===Y. Empty/missing log = vacuously ok.
+    pattern: /^no audit row records "([^"]+)" with reason "([^"]+)" for this delivery$/,
+    async handler(m, ctx) {
+      const action = m[1];
+      const reason = m[2];
+      const log = ctx.lastAuditLog || [];
+      const hits = log.filter((row) => row?.action === action && row?.reason === reason);
+      if (hits.length > 0) {
+        return {
+          ok: false,
+          error: `${hits.length} audit row(s) match action="${action}" reason="${reason}" (expected none)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

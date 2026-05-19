@@ -17747,3 +17747,268 @@ describe('Wake 91 — "the (rail )?card shows the "<X>" badge[ + <suffix>]" (com
     expect(r.error).toMatch(/MC Singer|badge/);
   });
 });
+
+// ── Wake 92 ──────────────────────────────────────────────────────────
+
+describe('Wake 92 — "<Name> [P-NN] (cohort) opens the <X> tab on <Plat>"', () => {
+  // j17-teacher-classroom.feature:67
+  //   When Marcus [P-04] (minor) opens the home tab on Android
+  // Sibling of Wake 88's bracket-cohort sign-in matcher — same
+  // mid-step `(cohort)` paren that stripStepAnnotation can't remove.
+  // Action variant: opens a named tab. The cohort tag is purely
+  // informational here (the actor was already signed in earlier).
+  test('matching → driver called', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidOpensTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus [P-04] (minor) opens the home tab on Android' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus', 'home');
+  });
+
+  test('iOS Sim variant + adult cohort', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosOpensTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice [P-02] (adult) opens the profile tab on iOS Sim' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'profile');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus [P-04] (minor) opens the home tab on Android' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidOpensTab/);
+  });
+});
+
+describe('Wake 92 — "<Name>\'s <Plat> Admin UI shows a table of recent <X>"', () => {
+  // j12-admin-daily-routine.feature:24
+  //   Then Greta's Web Admin UI shows a table of recent blocked attempts
+  // Generic admin-table presence assertion. The driver returns the
+  // visible table entries; matcher stores them on ctx.lastTableEntries
+  // so subsequent "each entry shows <fields>" steps can verify them.
+  test('matching → ok, populates lastTableEntries', async () => {
+    const entries = [
+      { action: 'block', targetId: 1, adminId: 2, timestamp: 1000, reason: 'spam' },
+      { action: 'block', targetId: 3, adminId: 2, timestamp: 2000, reason: 'abuse' },
+    ];
+    const spy = jest.fn(async () => entries);
+    const ctx = makeCtx({ webDriver: { webAdminShowsTableOf: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Greta's Web Admin UI shows a table of recent blocked attempts",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Greta', 'blocked attempts');
+    expect(ctx.lastTableEntries).toEqual(entries);
+  });
+
+  test('empty table → fail', async () => {
+    const spy = jest.fn(async () => []);
+    const ctx = makeCtx({ webDriver: { webAdminShowsTableOf: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Greta's Web Admin UI shows a table of recent blocked attempts",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/empty|no rows|blocked attempts/);
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webAdminShowsTableOf: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Greta's Web Admin UI shows a table of recent blocked attempts",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/blocked attempts|table/);
+  });
+});
+
+describe('Wake 92 — "each entry shows <field> + <field> + ..."', () => {
+  // j12-admin-daily-routine.feature:25
+  //   Then each entry shows action + targetId + adminId + timestamp + reason
+  // Verifies every entry in ctx.lastTableEntries has all named fields
+  // present (non-null/undefined). The "+ "-separated field list lets
+  // future cycles cover other tables (rooms list, gift log, etc.)
+  // without new matchers.
+  test('all fields present → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastTableEntries = [
+      { action: 'block', targetId: 1, adminId: 2, timestamp: 1000, reason: 'spam' },
+      { action: 'block', targetId: 3, adminId: 2, timestamp: 2000, reason: 'abuse' },
+    ];
+    const r = await executeStep(
+      { kind: 'Then', text: 'each entry shows action + targetId + adminId + timestamp + reason' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('one entry missing field → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastTableEntries = [
+      { action: 'block', targetId: 1, adminId: 2, timestamp: 1000, reason: 'spam' },
+      { action: 'block', targetId: 3, adminId: 2, timestamp: 2000 /* reason missing */ },
+    ];
+    const r = await executeStep(
+      { kind: 'Then', text: 'each entry shows action + targetId + adminId + timestamp + reason' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/reason|missing|1/);
+  });
+
+  test('no table captured → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'each entry shows action + targetId' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/lastTableEntries|table/);
+  });
+});
+
+describe('Wake 92 — "<Name>\'s <Plat> UI shows the list of contributors with amounts"', () => {
+  // j15-mc-performance.feature:35
+  //   Then Selma's Android UI shows the list of contributors with amounts
+  // Driver verifies the contributors list is visible AND each row shows
+  // a numeric amount (sentinel return: true if both conditions hold).
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsContributorsList: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Selma's Android UI shows the list of contributors with amounts" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsContributorsList: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Selma's Android UI shows the list of contributors with amounts" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Selma|contributors/);
+  });
+});
+
+describe('Wake 92 — "<Name>\'s <Plat> UI shows the PM thread with document direction "<X>""', () => {
+  // j18-official-system-pms.feature:33
+  //   Then Layla's Web UI shows the PM thread with document direction "rtl"
+  // CSS document-direction assertion. Driver verifies the active PM
+  // thread DOM has `dir="rtl"` (or "ltr") at the thread-container level
+  // — important for RTL locales to ensure layout flip is applied.
+  test('rtl → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsPmThreadDirection: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Layla\'s Web UI shows the PM thread with document direction "rtl"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'rtl');
+  });
+
+  test('ltr variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsPmThreadDirection: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Adam\'s Web UI shows the PM thread with document direction "ltr"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'ltr');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsPmThreadDirection: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Layla\'s Web UI shows the PM thread with document direction "rtl"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/rtl|direction/);
+  });
+});
+
+describe('Wake 92 — `no audit row records "<X>" with reason "<Y>" for this delivery`', () => {
+  // j18-official-system-pms.feature:60
+  //   Then no audit row records "blocked" with reason "cohort_mismatch" for this delivery
+  // Audit-log absence assertion. Reads ctx.lastAuditLog (populated by
+  // a sendSystemPm driver that captures the per-delivery audit rows).
+  // Ok if no entry has action=X AND reason=Y.
+  test('no matching audit row → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastAuditLog = [
+      { action: 'delivered', reason: 'ok' },
+      { action: 'blocked', reason: 'rate_limit' },
+    ];
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no audit row records "blocked" with reason "cohort_mismatch" for this delivery',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('empty audit log → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastAuditLog = [];
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no audit row records "blocked" with reason "cohort_mismatch" for this delivery',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('matching audit row → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastAuditLog = [{ action: 'blocked', reason: 'cohort_mismatch' }];
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no audit row records "blocked" with reason "cohort_mismatch" for this delivery',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/blocked|cohort_mismatch/);
+  });
+});
