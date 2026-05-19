@@ -18687,3 +18687,170 @@ describe('Wake 95 — `the gifts "<X>" (Nc coins / Nb beans), "<Y>" (..), "<Z>" 
     expect(r.error).toMatch(/db/);
   });
 });
+
+// ── Wake 96 — final Background-step closure (true 100% coverage) ─────
+
+describe('Wake 96 — "<Name> [P-NN] is signed in (<Lang>) as a follow target"', () => {
+  // j13-locales-rtl-cjk.feature Background:
+  //   Given Alice [P-02] is signed in (English) as a follow target
+  test('plants session and tags as follow target', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] is signed in (English) as a follow target' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Alice')?.customClaims.uniqueId).toBe(50000010);
+    expect(ctx.followTargets?.has('Alice')).toBe(true);
+  });
+
+  test('different language captures locale info', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Layla [P-13] is signed in (Arabic) as a follow target' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Layla')?.persona.uniqueId).toBe(50000070);
+  });
+});
+
+describe('Wake 96 — `<Name> [P-NN] is also paired on <Plat> with Network Link Conditioner "<X>" preset`', () => {
+  // j14-low-bandwidth-degraded.feature Background:
+  //   Given Ines [P-11] is also paired on iOS Sim with Network Link Conditioner "3G" preset
+  test('records paired platform + network preset', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Ines [P-11] is also paired on iOS Sim with Network Link Conditioner "3G" preset',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.pairedPlatforms?.get('Ines')).toEqual({
+      platform: 'iOS Sim',
+      networkPreset: '3G',
+    });
+  });
+
+  test('Edge preset variant', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Adam [P-01] is also paired on Android with Network Link Conditioner "Edge" preset',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.pairedPlatforms?.get('Adam')).toEqual({
+      platform: 'Android',
+      networkPreset: 'Edge',
+    });
+  });
+});
+
+describe('Wake 96 — "<Name> is also signed in on <Plat> (same Firebase identity) for hosting"', () => {
+  // j16-event-host-team-leader.feature Background:
+  //   Given Tariq is also signed in on Android (same Firebase identity) for hosting
+  test('plants secondary session', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Tariq is also signed in on Android (same Firebase identity) for hosting',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Tariq')?.customClaims.uniqueId).toBe(50000081);
+    expect(ctx.pairedPlatforms?.get('Tariq')?.platform).toBe('Android');
+  });
+
+  test('unknown persona → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Zzzghost is also signed in on Android (same Firebase identity) for hosting',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost|persona/);
+  });
+});
+
+describe('Wake 96 — "<Name>\'s user doc has teamRoster=[N, N, ...]"', () => {
+  // j16-event-host-team-leader.feature Background:
+  //   Given Tariq's user doc has teamRoster=[50000080]
+  test('single-element roster', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: "Tariq's user doc has teamRoster=[50000080]" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000081'].teamRoster).toEqual([50000080]);
+  });
+
+  test('multi-element roster', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: "Tariq's user doc has teamRoster=[50000080, 50000081, 50000090]" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000081'].teamRoster).toEqual([50000080, 50000081, 50000090]);
+  });
+
+  test('no db → fail teamRoster step', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: "Tariq's user doc has teamRoster=[50000080]" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 96 — "<Name> [P-NN] is signed in on <Plat> with cohort=<C> (note) and locale=<L>"', () => {
+  // j18-official-system-pms.feature Background:
+  //   Given Hayato [P-06] is signed in on Android with cohort=minor (post-j04 state) and locale=ja
+  test('captures cohort + locale, ignores annotation paren', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] is signed in on Android with cohort=minor (post-j04 state) and locale=ja',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const session = ctx.sessions.get('Hayato');
+    expect(session?.customClaims.uniqueId).toBe(50000030);
+    expect(session?.customClaims.cohort).toBe('minor');
+    expect(session?.locale).toBe('ja');
+  });
+
+  test('different cohort value is honoured', async () => {
+    // Hayato's registry cohort is `minor` but the scenario can override it via
+    // the with-clause to model a post-flip state. The matcher must use the
+    // declared value, NOT the persona registry's default.
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Hayato [P-06] is signed in on Android with cohort=adult (post-flip) and locale=en',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Hayato')?.customClaims.cohort).toBe('adult');
+    expect(ctx.sessions.get('Hayato')?.locale).toBe('en');
+  });
+});

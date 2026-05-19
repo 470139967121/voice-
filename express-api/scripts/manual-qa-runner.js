@@ -10926,6 +10926,118 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 96 — "<Name> [P-NN] is signed in (<Lang>) as a follow target".
+    // j13 Background. Mid-step `(Lang)` paren + trailing "as a follow
+    // target" suffix. The language is informational (the persona's UI
+    // locale); the "follow target" tag marks the actor as a target for
+    // other personas' follow attempts in the same scenario.
+    pattern: /^([A-Z][a-z]+)\s*\[(P-\d{2})\]\s+is signed in \((\w+)\) as a follow target$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const pCode = m[2];
+      const personas = loadPersonas();
+      const p = personas.get(pCode) || personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      ctx.sessions.set(name, {
+        persona: p,
+        idToken: `synthetic:${name}:${p.uniqueId}`,
+        refreshToken: null,
+        localId: String(p.uniqueId),
+        customClaims: { uniqueId: p.uniqueId, cohort: p.cohort, ephemeral: !!p.ephemeral },
+      });
+      if (!ctx.followTargets) ctx.followTargets = new Set();
+      ctx.followTargets.add(name);
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 96 — `<Name> [P-NN] is also paired on <Plat> with Network
+    // Link Conditioner "<X>" preset`. j14 Background. Pairs another
+    // device for the persona with a named throttling preset
+    // (e.g., "3G", "Edge"). Records on ctx.pairedPlatforms so the
+    // driver can apply the network condition.
+    pattern:
+      /^([A-Z][a-z]+)\s*\[(P-\d{2})\]\s+is also paired on (Web Chromium|Web Safari|Web|Android|iOS Sim) with Network Link Conditioner "([^"]+)" preset$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[3];
+      const preset = m[4];
+      if (!ctx.pairedPlatforms) ctx.pairedPlatforms = new Map();
+      ctx.pairedPlatforms.set(name, { platform, networkPreset: preset });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 96 — "<Name> is also signed in on <Plat> (same Firebase
+    // identity) for hosting". j16 Background. Bare-name secondary
+    // sign-in for a multi-device hosting setup. Synthesises a
+    // session (no separate Firebase auth) and records the paired
+    // platform.
+    pattern:
+      /^([A-Z][a-z]+) is also signed in on (Web Chromium|Web Safari|Web|Android|iOS Sim) \(same Firebase identity\) for hosting$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      ctx.sessions.set(name, {
+        persona: p,
+        idToken: `synthetic:${name}:${p.uniqueId}`,
+        refreshToken: null,
+        localId: String(p.uniqueId),
+        customClaims: { uniqueId: p.uniqueId, cohort: p.cohort, ephemeral: !!p.ephemeral },
+      });
+      if (!ctx.pairedPlatforms) ctx.pairedPlatforms = new Map();
+      ctx.pairedPlatforms.set(name, { platform, hosting: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 96 — "<Name>'s user doc has teamRoster=[N, N, ...]".
+    // j16 Background. Array-field state-seed. Writes users/<uniqueId>.
+    // teamRoster as a numeric array.
+    pattern: /^([A-Z][a-z]+)'s user doc has teamRoster=\[(\d+(?:,\s*\d+)*)\]$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const ids = m[2].split(',').map((s) => Number(s.trim()));
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) return { ok: false, error: `persona "${name}" not in registry` };
+      await ctx.db.doc(`users/${p.uniqueId}`).set({ teamRoster: ids }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 96 — "<Name> [P-NN] is signed in on <Plat> with cohort=<C>
+    // (note) and locale=<L>". j18 Background. Bracket sign-in with
+    // mid-step paren in the with-clause + extra `and locale=Y` suffix.
+    // The Wake 65 permissive matcher rejects this form because its
+    // `[^()]+?` excludes parens inside the with-clause. The optional
+    // `(?:\s+\([^)]*\))?` here absorbs the annotation paren.
+    pattern:
+      /^([A-Z][a-z]+)\s*\[(P-\d{2})\]\s+is signed in on (Web Chromium|Web Safari|Web|Android|iOS Sim) with cohort=(\w+)(?:\s+\([^)]*\))?\s+and locale=([a-z]{2}(?:-[A-Z]{2})?)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const pCode = m[2];
+      const cohort = m[4];
+      const locale = m[5];
+      const personas = loadPersonas();
+      const p = personas.get(pCode) || personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      ctx.sessions.set(name, {
+        persona: p,
+        idToken: `synthetic:${name}:${p.uniqueId}`,
+        refreshToken: null,
+        localId: String(p.uniqueId),
+        customClaims: { uniqueId: p.uniqueId, cohort, ephemeral: !!p.ephemeral },
+        locale,
+      });
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
