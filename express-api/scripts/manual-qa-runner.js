@@ -11385,6 +11385,166 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 99 — `<Name>'s <Plat> UI[ opens conversation "<X>"] shows
+    // the frozen-banner element <suffix>`. j08, 4 corpus rows. The
+    // optional "opens conversation X" mid-step prefix is real corpus
+    // phrasing (two verbs in one step). Driver parses suffix to decide
+    // which form (text-from-key / locale-string).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI (?:opens conversation "([^"]+)" )?shows the frozen-banner element (.+)$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const convId = m[3] || null;
+      const suffix = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsFrozenBanner'
+        : platform === 'Android'
+          ? 'androidShowsFrozenBanner'
+          : 'iosShowsFrozenBanner';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, convId, suffix);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} UI does not show the frozen-banner element (${suffix})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 99 — `<Name>'s <Plat> UI navigates to the room screen
+    // <suffix>`. j09, 2 corpus rows. The suffix describes the
+    // expected post-navigation state (host seat occupied / non-seated
+    // participant) — driver dispatches based on the trailing context.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI navigates to the room screen (.+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const suffix = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webNavigatesToRoomScreen'
+        : platform === 'Android'
+          ? 'androidNavigatesToRoomScreen'
+          : 'iosNavigatesToRoomScreen';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, suffix);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: navigation to room screen (${suffix}) did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 99 — `<Name>'s <Plat> UI shows a "<X>" gift from <Other>`.
+    // j01 gift-receipt notification on recipient's view.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a "([^"]+)" gift from ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const recipient = m[1];
+      const platform = m[2];
+      const giftId = m[3];
+      const sender = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsGiftFromSender'
+        : platform === 'Android'
+          ? 'androidShowsGiftFromSender'
+          : 'iosShowsGiftFromSender';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](recipient, giftId, sender);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${recipient}'s ${platform} UI does not show a "${giftId}" gift from ${sender}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 99 — "<Name>'s <Plat> UI shows only minor-cohort users in
+    // the rankings". j02 cohort-filtered rankings list.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows only minor-cohort users in the rankings$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsOnlyMinorCohortInRankings'
+        : platform === 'Android'
+          ? 'androidShowsOnlyMinorCohortInRankings'
+          : 'iosShowsOnlyMinorCohortInRankings';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} rankings include non-minor users`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 99 — `<Name>'s <Plat> UI navigates to "<Path>"`. j03+ post-
+    // sign-in navigation assertion. Driver receives (name, path).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI navigates to "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const route = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webNavigatesToPath'
+        : platform === 'Android'
+          ? 'androidNavigatesToPath'
+          : 'iosNavigatesToPath';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, route);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: ${platform} did not navigate to "${route}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 99 — "POST <path> receives a request with a web push token
+    // from <Name>". j03 FCM token capture state-seed. Records each
+    // (path, persona) entry on ctx.fcmTokenRegistrations so a
+    // downstream "no FCM dispatch fails" or similar step can verify.
+    pattern: /^POST (\S+) receives a request with a web push token from ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const apiPath = m[1];
+      const persona = m[2];
+      if (!ctx.fcmTokenRegistrations) ctx.fcmTokenRegistrations = [];
+      ctx.fcmTokenRegistrations.push({ path: apiPath, persona });
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

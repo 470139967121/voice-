@@ -19264,3 +19264,217 @@ describe('Wake 98 — `<Name>\'s <Plat> UI shows <Other> in the results[ with di
     expect(r.error).toMatch(/iosShowsInResults/);
   });
 });
+
+// ── Wake 99 — frozen-banner cluster + j09 room-screen variants ──────
+
+describe('Wake 99 — `<Name>\'s <Plat> UI[ opens conversation "<X>"] shows the frozen-banner element <suffix>`', () => {
+  // j08 cluster, 4 corpus rows. Row 2 has unusual "opens conversation X"
+  // mid-step prefix (real corpus phrasing).
+  test('with text from key', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsFrozenBanner: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Vexa\'s Web UI shows the frozen-banner element with text from key "age_seg_frozen_conversation_banner"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(
+      'Vexa',
+      null,
+      'with text from key "age_seg_frozen_conversation_banner"',
+    );
+  });
+
+  test('with opens-conversation prefix', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsFrozenBanner: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Marcus\'s Android UI opens conversation "c1" shows the frozen-banner element with text from key "age_seg_frozen_conversation_banner"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(
+      'Marcus',
+      'c1',
+      'with text from key "age_seg_frozen_conversation_banner"',
+    );
+  });
+
+  test('with locale string variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsFrozenBanner: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Hayato's Android UI shows the frozen-banner element with the Japanese age_seg_frozen_conversation_banner string",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(
+      'Hayato',
+      null,
+      'with the Japanese age_seg_frozen_conversation_banner string',
+    );
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsFrozenBanner: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Vexa\'s Web UI shows the frozen-banner element with text from key "X"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Vexa|frozen-banner/);
+  });
+});
+
+describe("Wake 99 — `<Name>'s <Plat> UI navigates to the room screen <suffix>`", () => {
+  // j09 — 2 corpus rows with different trailing context.
+  test('with host seat occupied', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidNavigatesToRoomScreen: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Theo's Android UI navigates to the room screen with host seat occupied",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'with host seat occupied');
+  });
+
+  test('as a non-seated participant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webNavigatesToRoomScreen: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Alice's Web UI navigates to the room screen as a non-seated participant",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'as a non-seated participant');
+  });
+});
+
+describe('Wake 99 — `<Name>\'s <Plat> UI shows a "<X>" gift from <Other>`', () => {
+  // j01: Alice's Web UI shows a "rose" gift from Adam
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsGiftFromSender: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Web UI shows a "rose" gift from Adam' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'rose', 'Adam');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsGiftFromSender: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Web UI shows a "crown" gift from Bob' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Alice|crown|Bob/);
+  });
+});
+
+describe('Wake 99 — "<Name>\'s <Plat> UI shows only minor-cohort users in the rankings"', () => {
+  // j02 cohort filter on rankings list.
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsOnlyMinorCohortInRankings: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI shows only minor-cohort users in the rankings" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Mia's iOS Sim UI shows only minor-cohort users in the rankings" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosShowsOnlyMinorCohortInRankings/);
+  });
+});
+
+describe('Wake 99 — `<Name>\'s <Plat> UI navigates to "<Path>"`', () => {
+  // j03: Lena's Web UI navigates to "/"
+  test('Web nav to root', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webNavigatesToPath: spy } });
+    const r = await executeStep({ kind: 'Then', text: 'Lena\'s Web UI navigates to "/"' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Lena', '/');
+  });
+
+  test('Android nav to deep route', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidNavigatesToPath: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Adam\'s Android UI navigates to "/profile/42"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', '/profile/42');
+  });
+});
+
+describe('Wake 99 — "POST <path> receives a request with a web push token from <Name>"', () => {
+  // j03 FCM token capture.
+  test('records token registration', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'POST /api/notifications/token receives a request with a web push token from Lena',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.fcmTokenRegistrations).toContainEqual({
+      path: '/api/notifications/token',
+      persona: 'Lena',
+    });
+  });
+
+  test('multiple registrations accumulate', async () => {
+    const ctx = makeCtx();
+    await executeStep(
+      {
+        kind: 'Then',
+        text: 'POST /api/notifications/token receives a request with a web push token from Lena',
+      },
+      ctx,
+    );
+    await executeStep(
+      {
+        kind: 'Then',
+        text: 'POST /api/notifications/token receives a request with a web push token from Marcus',
+      },
+      ctx,
+    );
+    expect(ctx.fcmTokenRegistrations).toHaveLength(2);
+  });
+});
