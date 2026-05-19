@@ -13041,3 +13041,250 @@ describe('Wake 73 — admin "taps "<X>" and types deviceId="<id>" + reason "<tex
     expect(r.error).toMatch(/webAdminTapAndTypeBanDevice/);
   });
 });
+
+// ── Wake 74 ──────────────────────────────────────────────────────────
+
+describe('Wake 74 — "<Name>\'s browser locale is "<code>"" (state-seed)', () => {
+  // j12-admin-daily-routine.feature:130
+  //   Given Greta's browser locale is "ar"
+  // Sets the persona's browser-locale before subsequent rendering steps
+  // run. Stored on ctx.browserLocales for later assertions.
+  test('records locale per persona', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Given', text: 'Greta\'s browser locale is "ar"' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(ctx.browserLocales.get('Greta')).toBe('ar');
+  });
+
+  test('country-suffixed locale', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Given', text: 'Alice\'s browser locale is "en-US"' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(ctx.browserLocales.get('Alice')).toBe('en-US');
+  });
+
+  test('multiple personas accumulate', async () => {
+    const ctx = makeCtx();
+    await executeStep({ kind: 'Given', text: 'Alice\'s browser locale is "en"' }, ctx);
+    await executeStep({ kind: 'Given', text: 'Layla\'s browser locale is "ar"' }, ctx);
+    expect(ctx.browserLocales.get('Alice')).toBe('en');
+    expect(ctx.browserLocales.get('Layla')).toBe('ar');
+  });
+});
+
+describe('Wake 74 — "<Name>\'s Web Admin UI document direction is "<dir>""', () => {
+  // j12-admin-daily-routine.feature:131
+  //   Then Greta's Web Admin UI document direction is "ltr"
+  // Distinct from the existing `Web UI document direction` matcher at
+  // line ~2648 which asserts on the main app — this one asserts on the
+  // admin panel which can have different RTL handling (admin panel is
+  // English-only by policy).
+  test('matching direction → ok', async () => {
+    const spy = jest.fn(async () => 'ltr');
+    const ctx = makeCtx({ webDriver: { webAdminGetDocumentDirection: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Greta\'s Web Admin UI document direction is "ltr"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatched direction → fail', async () => {
+    const spy = jest.fn(async () => 'rtl');
+    const ctx = makeCtx({ webDriver: { webAdminGetDocumentDirection: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Greta\'s Web Admin UI document direction is "ltr"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/ltr/);
+    expect(r.error).toMatch(/rtl/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Greta\'s Web Admin UI document direction is "ltr"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminGetDocumentDirection/);
+  });
+});
+
+describe('Wake 74 — "<Name>\'s Web Admin UI labels are in <language>"', () => {
+  // j12-admin-daily-routine.feature:132
+  //   Then Greta's Web Admin UI labels are in English
+  // Admin panel is English-only per ShyTalk policy. Driver detects label
+  // language; matcher does a name-to-language check.
+  test('matching language → ok', async () => {
+    const spy = jest.fn(async () => 'English');
+    const ctx = makeCtx({ webDriver: { webAdminDetectLabelLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI labels are in English" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatch → fail with both', async () => {
+    const spy = jest.fn(async () => 'Arabic');
+    const ctx = makeCtx({ webDriver: { webAdminDetectLabelLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI labels are in English" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/English/);
+    expect(r.error).toMatch(/Arabic/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI labels are in English" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminDetectLabelLanguage/);
+  });
+});
+
+describe('Wake 74 — "no rendered <text|character> contains|has the Unicode replacement glyph U+FFFD"', () => {
+  // j13-locales-rtl-cjk.feature lines 14, 96
+  //   Then no rendered text contains the Unicode replacement glyph U+FFFD
+  //   Then no rendered character has the Unicode replacement glyph U+FFFD
+  // Both shapes share one matcher. U+FFFD (`�`) is what renders when a
+  // glyph can't be resolved — its presence means a missing font fallback.
+  test('no glyph found → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webHasReplacementGlyph: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no rendered text contains the Unicode replacement glyph U+FFFD' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('character variant (j13:96)', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webHasReplacementGlyph: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no rendered character has the Unicode replacement glyph U+FFFD' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('glyph found → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webHasReplacementGlyph: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'no rendered text contains the Unicode replacement glyph U+FFFD' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/U\+FFFD|replacement/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'no rendered text contains the Unicode replacement glyph U+FFFD' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webHasReplacementGlyph/);
+  });
+});
+
+describe('Wake 74 — "no string is missing translation"', () => {
+  // j13-locales-rtl-cjk.feature:95
+  //   Then no string is missing translation
+  // Driver scans the rendered DOM for raw i18n keys / missing-translation
+  // sentinel ("missing_translation:KEY", "[MISSING]", etc.).
+  test('all translated → ok', async () => {
+    const spy = jest.fn(async () => []);
+    const ctx = makeCtx({ webDriver: { webMissingTranslations: spy } });
+    const r = await executeStep({ kind: 'Then', text: 'no string is missing translation' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('missing translations present → fail with examples', async () => {
+    const spy = jest.fn(async () => ['profile_followers', 'wallet_buy_coins']);
+    const ctx = makeCtx({ webDriver: { webMissingTranslations: spy } });
+    const r = await executeStep({ kind: 'Then', text: 'no string is missing translation' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/profile_followers/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'no string is missing translation' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webMissingTranslations/);
+  });
+});
+
+describe('Wake 74 — "<Name>\'s <Plat> UI does not show any raw i18n key like "<X>""', () => {
+  // j13-locales-rtl-cjk.feature:24
+  //   Then Layla's Web UI does not show any raw i18n key like "profile_followers"
+  // Negative assertion that a raw resource key (which would indicate a
+  // missing translation) is NOT rendered. The "X" is an example key — the
+  // matcher passes it to the driver as a sample to detect missing-
+  // translation sentinels.
+  test('raw key absent → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsRawI18nKey: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Layla\'s Web UI does not show any raw i18n key like "profile_followers"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'profile_followers');
+  });
+
+  test('raw key present → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsRawI18nKey: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Layla\'s Web UI does not show any raw i18n key like "profile_followers"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/profile_followers/);
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosShowsRawI18nKey: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI does not show any raw i18n key like "wallet_buy_coins"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia', 'wallet_buy_coins');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Layla\'s Web UI does not show any raw i18n key like "X"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webShowsRawI18nKey/);
+  });
+});

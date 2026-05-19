@@ -7397,6 +7397,134 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 74 — "<Name>'s browser locale is "<code>"" (state-seed).
+    // j12:130 — sets the persona's browser-locale before subsequent
+    // rendering steps run. Stored on ctx.browserLocales for later use
+    // by document-direction and label-language assertions.
+    pattern: /^([A-Z][a-z]+)'s browser locale is "([a-z]{2}(?:-[A-Z]{2})?)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const locale = m[2];
+      if (!ctx.browserLocales) ctx.browserLocales = new Map();
+      ctx.browserLocales.set(name, locale);
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 74 — "<Name>'s Web Admin UI document direction is "<dir>"".
+    // j12:131 — distinct from the existing `Web UI document direction`
+    // matcher (line ~2648); admin panel can have different RTL handling
+    // (English-only per ShyTalk policy → always ltr regardless of
+    // browser locale).
+    pattern: /^([A-Z][a-z]+)'s Web Admin UI document direction is "(ltr|rtl|auto)"$/,
+    async handler(m, ctx) {
+      const expected = m[2];
+      if (!ctx.webDriver?.webAdminGetDocumentDirection) {
+        return { ok: false, error: 'ctx.webDriver.webAdminGetDocumentDirection not configured' };
+      }
+      const actual = await ctx.webDriver.webAdminGetDocumentDirection();
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `Web Admin document direction was "${actual}", expected "${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 74 — "<Name>'s Web Admin UI labels are in <language>".
+    // j12:132 — admin panel labels must always be English regardless of
+    // browser locale. Driver detects label language via DOM sampling.
+    pattern: /^([A-Z][a-z]+)'s Web Admin UI labels are in (\w+)$/,
+    async handler(m, ctx) {
+      const expected = m[2];
+      if (!ctx.webDriver?.webAdminDetectLabelLanguage) {
+        return { ok: false, error: 'ctx.webDriver.webAdminDetectLabelLanguage not configured' };
+      }
+      const actual = await ctx.webDriver.webAdminDetectLabelLanguage();
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `Web Admin labels were in ${actual}, expected ${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 74 — "no rendered <text|character> <contains|has> the Unicode
+    // replacement glyph U+FFFD".
+    // j13:14 + j13:96 — both shapes share one matcher. U+FFFD (`�`)
+    // renders when a glyph can't be resolved (font-fallback failure).
+    pattern:
+      /^no rendered (?:text|character) (?:contains|has) the Unicode replacement glyph U\+FFFD$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webHasReplacementGlyph) {
+        return { ok: false, error: 'ctx.webDriver.webHasReplacementGlyph not configured' };
+      }
+      const hasGlyph = await ctx.webDriver.webHasReplacementGlyph();
+      if (hasGlyph) {
+        return {
+          ok: false,
+          error: 'rendered text contains the U+FFFD replacement glyph (font fallback failed)',
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 74 — "no string is missing translation".
+    // j13:95 — driver scans the rendered DOM for raw i18n keys or
+    // missing-translation sentinels. Returns an array of offending keys
+    // (empty = all translated).
+    pattern: /^no string is missing translation$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.webMissingTranslations) {
+        return { ok: false, error: 'ctx.webDriver.webMissingTranslations not configured' };
+      }
+      const missing = await ctx.webDriver.webMissingTranslations();
+      if (Array.isArray(missing) && missing.length > 0) {
+        return {
+          ok: false,
+          error: `missing translations: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? ` (and ${missing.length - 5} more)` : ''}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 74 — "<Name>'s <Plat> UI does not show any raw i18n key like
+    // "<X>"". j13:24 — a raw resource key in the rendered DOM indicates
+    // a missing translation. The "X" is a sample key; the driver uses
+    // it to detect the sentinel format.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not show any raw i18n key like "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const sampleKey = m[3];
+      const methodName =
+        platform === 'Android'
+          ? 'androidShowsRawI18nKey'
+          : platform === 'iOS Sim'
+            ? 'iosShowsRawI18nKey'
+            : 'webShowsRawI18nKey';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shows = await driver[methodName](name, sampleKey);
+      if (shows) {
+        return {
+          ok: false,
+          error: `${platform} UI shows raw i18n key like "${sampleKey}" — translation missing`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
