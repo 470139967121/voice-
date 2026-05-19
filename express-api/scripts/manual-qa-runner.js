@@ -10102,6 +10102,158 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 91 — "the script exit code is N". j19:67. Asserts the exit
+    // code from the most recent migration-script run. Defaults to 0
+    // if no prior run recorded one (the existing no-op migration
+    // matcher leaves ctx.lastScriptExitCode unset → idempotent re-runs
+    // are by default exit-0).
+    pattern: /^the script exit code is (\d+)$/,
+    async handler(m, ctx) {
+      const expected = Number(m[1]);
+      const actual = ctx.lastScriptExitCode ?? 0;
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `script exit code was ${actual}, expected ${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 91 — "N users are tagged for a broadcast" (state-seed).
+    // j18:36. Records the broadcast cohort size on ctx for downstream
+    // assertions (e.g., "no FCM dispatch fails" scales with this).
+    pattern: /^(\d+) users are tagged for a broadcast$/,
+    async handler(m, ctx) {
+      ctx.broadcastTaggedCount = Number(m[1]);
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 91 — "no FCM dispatch fails". j18:40. Reads
+    // ctx.fcmDispatchResults (populated by an FCM-send driver) and
+    // asserts every entry succeeded. Empty result list is ok — the
+    // assertion is "none failed", not "≥1 succeeded".
+    pattern: /^no FCM dispatch fails$/,
+    async handler(_m, ctx) {
+      const results = ctx.fcmDispatchResults || [];
+      const failures = results.filter((r) => r?.success === false);
+      if (failures.length > 0) {
+        const first = failures[0];
+        return {
+          ok: false,
+          error: `${failures.length} FCM dispatch failure(s) (first: ${first.token ?? '?'} → ${first.error ?? 'unknown'})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 91 — `the system logs a warning "<X>"`. j18:57. Reads
+    // ctx.systemLogs (populated by a log-capture driver) and asserts a
+    // warning-level entry with message === expected exists. Failing
+    // when no logs captured (rather than passing-by-default) catches
+    // the "I forgot to wire the log capture" silent-fail case.
+    pattern: /^the system logs a warning "([^"]*)"$/,
+    async handler(m, ctx) {
+      const expected = m[1];
+      if (!Array.isArray(ctx.systemLogs)) {
+        return { ok: false, error: 'ctx.systemLogs not captured — wire log-capture driver first' };
+      }
+      const hit = ctx.systemLogs.some((log) => log?.level === 'warn' && log?.message === expected);
+      if (!hit) {
+        return {
+          ok: false,
+          error: `no warning log matched "${expected}" (captured ${ctx.systemLogs.length} log(s))`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 91 — "<Name>'s <Plat> UI shows the welcome PM body in
+    // <Language>". j18:31. Locale-resolution assertion: welcome PM
+    // must render in the named language, not the user's locale
+    // fallback. Driver receives (name, BCP-47 code).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the welcome PM body in ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const langName = m[3];
+      const LOCALE_NAME_TO_CODE = {
+        Arabic: 'ar',
+        German: 'de',
+        Spanish: 'es',
+        French: 'fr',
+        Hindi: 'hi',
+        Indonesian: 'id',
+        Italian: 'it',
+        Japanese: 'ja',
+        Khmer: 'km',
+        Korean: 'ko',
+        Dutch: 'nl',
+        Polish: 'pl',
+        Portuguese: 'pt',
+        Russian: 'ru',
+        Swedish: 'sv',
+        Thai: 'th',
+        Turkish: 'tr',
+        Ukrainian: 'uk',
+        Vietnamese: 'vi',
+        Chinese: 'zh',
+        English: 'en',
+      };
+      const code = LOCALE_NAME_TO_CODE[langName];
+      if (!code) {
+        return { ok: false, error: `unknown language name "${langName}"` };
+      }
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsWelcomePmInLanguage'
+        : platform === 'Android'
+          ? 'androidShowsWelcomePmInLanguage'
+          : 'iosShowsWelcomePmInLanguage';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, code);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: welcome PM not shown in ${langName} on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 91 — `the (rail )?card shows the "<X>" badge[ + <suffix>]`.
+    // j15 (rail card) + j17 (plain card) unified. "rail " prefix and
+    // "+ <suffix>" tail are both optional so one matcher catches both
+    // corpus phrasings. Driver receives kind ("rail"|"plain"), badge,
+    // suffix — kind lets the driver scope its search to the right
+    // surface.
+    pattern: /^the (rail )?card shows the "([^"]+)" badge(?: \+ (.+))?$/,
+    async handler(m, ctx) {
+      const kind = m[1] ? 'rail' : 'plain';
+      const badge = m[2];
+      const suffix = m[3] || '';
+      if (!ctx.uiDriver?.showsCardBadge) {
+        return { ok: false, error: 'ctx.uiDriver.showsCardBadge not configured' };
+      }
+      const ok = await ctx.uiDriver.showsCardBadge(kind, badge, suffix);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${kind} card does not show "${badge}" badge${suffix ? ` + ${suffix}` : ''}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

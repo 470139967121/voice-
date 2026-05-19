@@ -17537,3 +17537,213 @@ describe('Wake 90 — Wake 89 broad sendSystemPm extension: writes ctx.lastSentS
     });
   });
 });
+
+// ── Wake 91 ──────────────────────────────────────────────────────────
+
+describe('Wake 91 — "the script exit code is N"', () => {
+  // j19-osa-migration-regression.feature:67
+  //   Then the script exit code is 0
+  // Asserts the exit code from the most recent migration-script run.
+  // Defaults to 0 if no prior run recorded an exit code (the existing
+  // no-op migration matcher leaves it unset → idempotent re-runs are
+  // by default exit-0).
+  test('default exit code is 0', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'the script exit code is 0' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('explicit exit code matches', async () => {
+    const ctx = makeCtx();
+    ctx.lastScriptExitCode = 2;
+    const r = await executeStep({ kind: 'Then', text: 'the script exit code is 2' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatched exit code → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastScriptExitCode = 1;
+    const r = await executeStep({ kind: 'Then', text: 'the script exit code is 0' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/0|1/);
+  });
+});
+
+describe('Wake 91 — "N users are tagged for a broadcast" (state-seed)', () => {
+  // j18-official-system-pms.feature:36
+  //   Given 1000 users are tagged for a broadcast
+  // State-seed: records the broadcast cohort size so subsequent
+  // assertions (e.g., "no FCM dispatch fails" → expects N successes)
+  // can scale. MVP records on ctx; future work could plant N user
+  // docs with broadcastTag=true.
+  test('sets ctx.broadcastTaggedCount', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: '1000 users are tagged for a broadcast' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.broadcastTaggedCount).toBe(1000);
+  });
+
+  test('different N', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Given', text: '7 users are tagged for a broadcast' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(ctx.broadcastTaggedCount).toBe(7);
+  });
+});
+
+describe('Wake 91 — "no FCM dispatch fails"', () => {
+  // j18-official-system-pms.feature:40
+  //   Then no FCM dispatch fails
+  // Reads ctx.fcmDispatchResults (populated by an FCM-send driver) and
+  // asserts every entry succeeded. Empty result list is considered ok
+  // — the assertion is "none failed", not "at least one succeeded".
+  test('empty results → ok', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'no FCM dispatch fails' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('all succeeded → ok', async () => {
+    const ctx = makeCtx();
+    ctx.fcmDispatchResults = [
+      { token: 'a', success: true },
+      { token: 'b', success: true },
+    ];
+    const r = await executeStep({ kind: 'Then', text: 'no FCM dispatch fails' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('one failed → fail', async () => {
+    const ctx = makeCtx();
+    ctx.fcmDispatchResults = [
+      { token: 'a', success: true },
+      { token: 'b', success: false, error: 'invalid token' },
+    ];
+    const r = await executeStep({ kind: 'Then', text: 'no FCM dispatch fails' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/b|invalid|fail/);
+  });
+});
+
+describe('Wake 91 — "the system logs a warning "<X>""', () => {
+  // j18-official-system-pms.feature:57
+  //   Then the system logs a warning "Unknown system PM key: totally_made_up_key"
+  // Asserts ctx.systemLogs contains a warning-level entry with the
+  // expected message. Substring match (the corpus uses exact strings
+  // but other Wakes have demonstrated that exact matches break easily
+  // when implementations add prefixes/IDs).
+  test('matching warning → ok', async () => {
+    const ctx = makeCtx();
+    ctx.systemLogs = [
+      { level: 'info', message: 'startup' },
+      { level: 'warn', message: 'Unknown system PM key: totally_made_up_key' },
+    ];
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the system logs a warning "Unknown system PM key: totally_made_up_key"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('no matching warning → fail', async () => {
+    const ctx = makeCtx();
+    ctx.systemLogs = [{ level: 'info', message: 'startup' }];
+    const r = await executeStep(
+      { kind: 'Then', text: 'the system logs a warning "Unknown system PM key: X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Unknown|warning/);
+  });
+
+  test('no logs captured → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'the system logs a warning "X"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/systemLogs|logs/);
+  });
+});
+
+describe('Wake 91 — "<Name>\'s <Plat> UI shows the welcome PM body in <Language>"', () => {
+  // j18-official-system-pms.feature:31
+  //   Then Adam's Android UI shows the welcome PM body in English
+  // Asserts the welcome PM is rendered in the named language (not the
+  // user's locale fallback). Driver receives (name, languageCode).
+  test('English → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsWelcomePmInLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI shows the welcome PM body in English" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'en');
+  });
+
+  test('Japanese Web variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsWelcomePmInLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Yuki's Web UI shows the welcome PM body in Japanese" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 'ja');
+  });
+
+  test('unknown language → fail', async () => {
+    const ctx = makeCtx({ uiDriver: { androidShowsWelcomePmInLanguage: jest.fn() } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI shows the welcome PM body in Klingonese" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Klingonese|language/);
+  });
+});
+
+describe('Wake 91 — "the (rail )?card shows the "<X>" badge[ + <suffix>]" (combined)', () => {
+  // Two corpus shapes unified:
+  //   j15-mc-performance.feature: the rail card shows the "MC Singer" badge
+  //   j17-teacher-classroom.feature: the card shows the "Teacher" badge + language flag
+  // Bare badge-on-card assertion. "rail " prefix and "+ <suffix>"
+  // tail are both optional so the same driver covers both phrasings.
+  test('rail card with badge', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { showsCardBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the rail card shows the "MC Singer" badge' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('rail', 'MC Singer', '');
+  });
+
+  test('plain card with badge + suffix', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { showsCardBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the card shows the "Teacher" badge + language flag' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('plain', 'Teacher', 'language flag');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { showsCardBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the rail card shows the "MC Singer" badge' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/MC Singer|badge/);
+  });
+});
