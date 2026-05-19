@@ -12573,6 +12573,164 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 106 — "the reports counter on the dashboard updates to N".
+    // j12 — admin dashboard live counter update.
+    pattern: /^the reports counter on the dashboard updates to (\d+)$/,
+    async handler(m, ctx) {
+      const expected = Number(m[1]);
+      if (!ctx.webDriver?.webDashboardReportsCounterEquals) {
+        return {
+          ok: false,
+          error: 'ctx.webDriver.webDashboardReportsCounterEquals not configured',
+        };
+      }
+      const ok = await ctx.webDriver.webDashboardReportsCounterEquals(expected);
+      if (!ok) {
+        return { ok: false, error: `dashboard reports counter does not equal ${expected}` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 106 — `N audit entries with action "<X>" exist`. j12 —
+    // count check against the audit collection.
+    pattern: /^(\d+) audit entries with action "([^"]+)" exist$/,
+    async handler(m, ctx) {
+      const expected = Number(m[1]);
+      const action = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.collection('audit').get();
+      const matched = (snap.docs || []).filter((d) => {
+        const data = typeof d.data === 'function' ? d.data() : d;
+        return data?.action === action;
+      });
+      if (matched.length !== expected) {
+        return {
+          ok: false,
+          error: `${matched.length} audit entries with action "${action}", expected ${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 106 — "the N corresponding users have isAgeVerified=true".
+    // j12 — verifies ctx.lastUserIds (uniqueIds) all have
+    // isAgeVerified=true. Cross-checks the count.
+    pattern: /^the (\d+) corresponding users have isAgeVerified=true$/,
+    async handler(m, ctx) {
+      const expected = Number(m[1]);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const ids = ctx.lastUserIds || [];
+      if (ids.length !== expected) {
+        return {
+          ok: false,
+          error: `count mismatch — ctx.lastUserIds has ${ids.length} entries, expected ${expected}`,
+        };
+      }
+      const unverified = [];
+      for (const id of ids) {
+        const snap = await ctx.db.doc(`users/${id}`).get();
+        if (!snap.exists || snap.data()?.isAgeVerified !== true) {
+          unverified.push(id);
+        }
+      }
+      if (unverified.length > 0) {
+        return {
+          ok: false,
+          error: `${unverified.length} users not isAgeVerified (first: ${unverified[0]})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 106 — "the user receives a system PM from Officia with the
+    // reject reason". j12 — confirms a system PM was sent to
+    // ctx.lastTargetUser with ctx.lastRejectReason.
+    pattern: /^the user receives a system PM from Officia with the reject reason$/,
+    async handler(_m, ctx) {
+      if (!ctx.lastTargetUser) {
+        return {
+          ok: false,
+          error: 'ctx.lastTargetUser not set — preceding admin-action step required',
+        };
+      }
+      if (!ctx.webDriver?.receivedSystemPmWithReason) {
+        return { ok: false, error: 'ctx.webDriver.receivedSystemPmWithReason not configured' };
+      }
+      const ok = await ctx.webDriver.receivedSystemPmWithReason(
+        ctx.lastTargetUser,
+        ctx.lastRejectReason,
+      );
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${ctx.lastTargetUser} did not receive system PM from Officia with reason "${ctx.lastRejectReason}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 106 — "the target user is downgraded to cohort=<X>". j12 —
+    // verifies the user identified by ctx.lastTargetUser has the named
+    // cohort in Firestore.
+    pattern: /^the target user is downgraded to cohort=(\w+)$/,
+    async handler(m, ctx) {
+      const expected = m[1];
+      if (!ctx.lastTargetUser) {
+        return {
+          ok: false,
+          error: 'ctx.lastTargetUser not set — preceding admin-action step required',
+        };
+      }
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(ctx.lastTargetUser);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${ctx.lastTargetUser}" not in registry` };
+      }
+      const snap = await ctx.db.doc(`users/${p.uniqueId}`).get();
+      const actual = snap.exists ? snap.data()?.cohort : null;
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `${ctx.lastTargetUser}.cohort is "${actual}", expected "${expected}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 106 — `<Name>'s <Plat> Admin UI shows the "<X>" stat`. j12
+    // — named-stat visibility on the admin dashboard.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) Admin UI shows the "([^"]+)" stat$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const statName = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webAdminShowsStat'
+        : platform === 'Android'
+          ? 'androidAdminShowsStat'
+          : 'iosAdminShowsStat';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, statName);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} Admin UI does not show the "${statName}" stat`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

@@ -20223,3 +20223,156 @@ describe('Wake 105 — "<Name>\'s <Plat> Admin UI shows the dashboard with count
     expect(r.error).toMatch(/Greta|dashboard|counters/);
   });
 });
+
+// ── Wake 106 — j12 admin daily routine ─────────────────────────────
+
+describe('Wake 106 — "the reports counter on the dashboard updates to N"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webDashboardReportsCounterEquals: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the reports counter on the dashboard updates to 2' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(2);
+  });
+});
+
+describe('Wake 106 — `N audit entries with action "<X>" exist`', () => {
+  test('matching count → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'audit/a1': { action: 'age_verification.approve' },
+      'audit/a2': { action: 'age_verification.approve' },
+      'audit/a3': { action: 'age_verification.approve' },
+      'audit/a4': { action: 'block' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: '3 audit entries with action "age_verification.approve" exist' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('wrong count → fail', async () => {
+    const db = makeStatefulFakeDb({ 'audit/a1': { action: 'block' } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: '3 audit entries with action "age_verification.approve" exist' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/0|3|audit|age_verification/);
+  });
+});
+
+describe('Wake 106 — "the N corresponding users have isAgeVerified=true"', () => {
+  test('all verified → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { isAgeVerified: true },
+      'users/20': { isAgeVerified: true },
+      'users/30': { isAgeVerified: true },
+    });
+    const ctx = makeCtx({ db });
+    ctx.lastUserIds = [10, 20, 30];
+    const r = await executeStep(
+      { kind: 'Then', text: 'the 3 corresponding users have isAgeVerified=true' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('one not verified → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { isAgeVerified: true },
+      'users/20': { isAgeVerified: false },
+      'users/30': { isAgeVerified: true },
+    });
+    const ctx = makeCtx({ db });
+    ctx.lastUserIds = [10, 20, 30];
+    const r = await executeStep(
+      { kind: 'Then', text: 'the 3 corresponding users have isAgeVerified=true' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/20|isAgeVerified|verified/);
+  });
+
+  test('count mismatch → fail', async () => {
+    const ctx = makeCtx({ db: makeStatefulFakeDb({}) });
+    ctx.lastUserIds = [10, 20];
+    const r = await executeStep(
+      { kind: 'Then', text: 'the 3 corresponding users have isAgeVerified=true' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/2|3|count/);
+  });
+});
+
+describe('Wake 106 — "the user receives a system PM from Officia with the reject reason"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { receivedSystemPmWithReason: spy } });
+    ctx.lastTargetUser = 'Hayato';
+    ctx.lastRejectReason = 'underage';
+    const r = await executeStep(
+      { kind: 'Then', text: 'the user receives a system PM from Officia with the reject reason' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato', 'underage');
+  });
+
+  test('no target user → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'the user receives a system PM from Officia with the reject reason' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/lastTargetUser|target/);
+  });
+});
+
+describe('Wake 106 — "the target user is downgraded to cohort=<X>"', () => {
+  test('matching → ok', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': { cohort: 'minor' } });
+    const ctx = makeCtx({ db });
+    ctx.lastTargetUser = 'Hayato';
+    const r = await executeStep(
+      { kind: 'Then', text: 'the target user is downgraded to cohort=minor' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('still adult → fail', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000030': { cohort: 'adult' } });
+    const ctx = makeCtx({ db });
+    ctx.lastTargetUser = 'Hayato';
+    const r = await executeStep(
+      { kind: 'Then', text: 'the target user is downgraded to cohort=minor' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Hayato|minor|adult/);
+  });
+});
+
+describe('Wake 106 — `<Name>\'s <Plat> Admin UI shows the "<X>" stat`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsStat: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Greta\'s Web Admin UI shows the "Blocked cross-cohort attempts (24h)" stat',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Greta', 'Blocked cross-cohort attempts (24h)');
+  });
+});
