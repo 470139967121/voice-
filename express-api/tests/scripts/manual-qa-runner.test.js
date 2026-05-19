@@ -17129,3 +17129,411 @@ describe('Wake 89 — "<Name> on <Plat> taps the <X> from the <Y>"', () => {
     expect(r.error).toMatch(/androidTapFromSurface/);
   });
 });
+
+// ── Wake 90 ──────────────────────────────────────────────────────────
+
+describe('Wake 90 — "the script reports N <thing>" (j19 idempotency)', () => {
+  // j19-osa-migration-regression.feature:63-66
+  //   Then the script reports 0 followingIds entries to remove
+  //   Then the script reports 0 followerIds entries to remove
+  //   Then the script reports 0 rooms to close
+  //   Then the script reports 0 conversations to freeze
+  // Re-uses the j19 BG `probeOsaInvariants` count logic — if invariants
+  // hold post-migration, all 4 counts are 0. The matcher reads counts
+  // from a fresh probe (cached on ctx._osaCounts to amortise across
+  // the 4 calls in the same scenario).
+  function makeOsaDb(users, rooms, convs) {
+    const allDocs = {};
+    for (const u of users) allDocs[`users/${u.uniqueId}`] = u;
+    for (const r of rooms) allDocs[`rooms/${r.id}`] = r;
+    for (const c of convs) allDocs[`conversations/${c.id}`] = c;
+    return makeStatefulFakeDb(allDocs);
+  }
+
+  test('reports 0 with all-clean invariants', async () => {
+    const db = makeOsaDb(
+      [
+        { uniqueId: 10, cohort: 'adult', followingIds: [20], followerIds: [] },
+        { uniqueId: 20, cohort: 'adult', followingIds: [], followerIds: [10] },
+      ],
+      [],
+      [],
+    );
+    const ctx = makeCtx({ db });
+    for (const text of [
+      'the script reports 0 followingIds entries to remove',
+      'the script reports 0 followerIds entries to remove',
+      'the script reports 0 rooms to close',
+      'the script reports 0 conversations to freeze',
+    ]) {
+      const r = await executeStep({ kind: 'Then', text }, ctx);
+      expect(r.ok).toBe(true);
+    }
+  });
+
+  test('reports nonzero with cross-cohort followingIds', async () => {
+    const db = makeOsaDb(
+      [
+        { uniqueId: 10, cohort: 'adult', followingIds: [20], followerIds: [] },
+        { uniqueId: 20, cohort: 'minor', followingIds: [], followerIds: [10] },
+      ],
+      [],
+      [],
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the script reports 0 followingIds entries to remove' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/1|followingIds/);
+  });
+
+  test('reports mismatch when expected count differs', async () => {
+    const db = makeOsaDb(
+      [
+        { uniqueId: 10, cohort: 'adult', followingIds: [20], followerIds: [] },
+        { uniqueId: 20, cohort: 'minor', followingIds: [], followerIds: [10] },
+      ],
+      [],
+      [],
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the script reports 2 followingIds entries to remove' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    // Counted 1 cross-cohort entry; expected 2.
+    expect(r.error).toMatch(/1|2/);
+  });
+
+  test('reports rooms-to-close count', async () => {
+    const db = makeOsaDb(
+      [
+        { uniqueId: 10, cohort: 'adult' },
+        { uniqueId: 20, cohort: 'minor' },
+      ],
+      [
+        {
+          id: 'r1',
+          state: 'OPEN',
+          cohort: 'adult',
+          participantIds: [10, 20],
+        },
+      ],
+      [],
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Then', text: 'the script reports 1 rooms to close' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('reports conversations-to-freeze count', async () => {
+    const db = makeOsaDb(
+      [
+        { uniqueId: 10, cohort: 'adult' },
+        { uniqueId: 20, cohort: 'minor' },
+      ],
+      [],
+      [{ id: 'c1', participantIds: [10, 20], frozen: false }],
+    );
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the script reports 1 conversations to freeze' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('unknown thing → fail', async () => {
+    const db = makeOsaDb([], [], []);
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the script reports 0 widgets to wibble' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/widgets|unknown/i);
+  });
+});
+
+describe('Wake 90 — "every such doc has field "<X>" equal to "<Y>""', () => {
+  // j19-osa-migration-regression.feature:49
+  //   Then every such doc has field "closedReason" equal to "osa_mixed_cohort_migration"
+  // Iterates ctx.lastQueryResult.docs from a prior `When a query is run for ...`
+  // step. Every doc must have field=value.
+  test('all docs match → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastQueryResult = {
+      docs: [
+        { closedReason: 'osa_mixed_cohort_migration' },
+        { closedReason: 'osa_mixed_cohort_migration' },
+      ],
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'every such doc has field "closedReason" equal to "osa_mixed_cohort_migration"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('one doc mismatches → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastQueryResult = {
+      docs: [{ closedReason: 'osa_mixed_cohort_migration' }, { closedReason: 'other_reason' }],
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'every such doc has field "closedReason" equal to "osa_mixed_cohort_migration"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/closedReason|other_reason|1/);
+  });
+
+  test('no prior query → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'every such doc has field "closedReason" equal to "osa_mixed_cohort_migration"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/lastQueryResult|query/);
+  });
+});
+
+describe('Wake 90 — "every such doc has field "<X>" set to a value within the migration window"', () => {
+  // j19-osa-migration-regression.feature:50
+  //   Then every such doc has field "closedAt" set to a value within the migration window
+  // Permissive variant of the equal-to assertion: field must be a number
+  // (timestamp). Future work could tighten by reading a concrete migration
+  // window from ctx.
+  test('all docs have numeric value → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastQueryResult = {
+      docs: [{ closedAt: 1700000000000 }, { closedAt: 1700000123456 }],
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'every such doc has field "closedAt" set to a value within the migration window',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('one doc missing value → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastQueryResult = {
+      docs: [{ closedAt: 1700000000000 }, { otherField: 'X' }],
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'every such doc has field "closedAt" set to a value within the migration window',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/closedAt|missing/);
+  });
+});
+
+describe('Wake 90 — "no "<X>" doc with state="<Y>" has participantIds containing users with differing cohort"', () => {
+  // j19-osa-migration-regression.feature:43
+  //   Then no "rooms/*" doc with state="OPEN" has participantIds containing users with differing cohort
+  // Fresh query against the named collection + state filter; asserts no
+  // doc has mixed-cohort participants. Resolves cohorts via users
+  // collection lookup.
+  test('all rooms same-cohort → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'adult' },
+      'rooms/r1': { state: 'OPEN', participantIds: [10, 20] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no "rooms/*" doc with state="OPEN" has participantIds containing users with differing cohort',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mixed-cohort room → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'minor' },
+      'rooms/r1': { state: 'OPEN', participantIds: [10, 20] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no "rooms/*" doc with state="OPEN" has participantIds containing users with differing cohort',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/r1|differing|mixed/);
+  });
+
+  test('state filter excludes CLOSED → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'minor' },
+      'rooms/r1': { state: 'CLOSED', participantIds: [10, 20] },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'no "rooms/*" doc with state="OPEN" has participantIds containing users with differing cohort',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe('Wake 90 — "for each conversation where participantIds contains users with differing cohort, the doc has field "<X>" equal to <bool>"', () => {
+  // j19-osa-migration-regression.feature:56
+  //   Then for each conversation where participantIds contains users with differing cohort, the doc has field "frozen" equal to true
+  // Iterates conversations collection; for each mixed-cohort conv,
+  // asserts field = expected value.
+  test('all mixed-cohort convs are frozen → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'minor' },
+      'conversations/c1': { participantIds: [10, 20], frozen: true },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'for each conversation where participantIds contains users with differing cohort, the doc has field "frozen" equal to true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mixed-cohort conv NOT frozen → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'minor' },
+      'conversations/c1': { participantIds: [10, 20], frozen: false },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'for each conversation where participantIds contains users with differing cohort, the doc has field "frozen" equal to true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/c1|frozen/);
+  });
+
+  test('same-cohort convs ignored → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/10': { uniqueId: 10, cohort: 'adult' },
+      'users/20': { uniqueId: 20, cohort: 'adult' },
+      'conversations/c1': { participantIds: [10, 20], frozen: false },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'for each conversation where participantIds contains users with differing cohort, the doc has field "frozen" equal to true',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe('Wake 90 — "the recipient is <Name>" (assertion on last sendSystemPm)', () => {
+  // j18-official-system-pms.feature:54
+  //   Then the recipient is Adam
+  // Reads ctx.lastSentSystemPm (populated by the Wake 89 broad
+  // sendSystemPm matcher) and asserts the recipient name matches.
+  test('matching recipient → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastSentSystemPm = { recipientName: 'Adam', recipientId: 90000001 };
+    const r = await executeStep({ kind: 'Then', text: 'the recipient is Adam' }, ctx);
+    expect(r.ok).toBe(true);
+  });
+
+  test('different recipient → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastSentSystemPm = { recipientName: 'Hayato', recipientId: 50000030 };
+    const r = await executeStep({ kind: 'Then', text: 'the recipient is Adam' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Adam|Hayato/);
+  });
+
+  test('no prior sendSystemPm → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Then', text: 'the recipient is Adam' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/sendSystemPm|recipient/);
+  });
+});
+
+describe('Wake 90 — Wake 89 broad sendSystemPm extension: writes ctx.lastSentSystemPm', () => {
+  // Wake 89's broad sendSystemPm matcher must now populate
+  // ctx.lastSentSystemPm so the new Wake 90 "the recipient is X"
+  // matcher has data to read. Additive change — no existing test
+  // depends on this field being absent.
+  test('writes lastSentSystemPm with recipient name + id', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the test harness fires sendSystemPm with key="X" recipient=Adam',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.lastSentSystemPm).toEqual({
+      trigger: 'test harness',
+      key: 'X',
+      recipientName: 'Adam',
+      recipientId: 90000001,
+    });
+  });
+
+  test('bare broadcast (no recipient) → recipientId null', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the broadcast fires sendSystemPm with key="policy_update_v4"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.lastSentSystemPm).toEqual({
+      trigger: 'broadcast',
+      key: 'policy_update_v4',
+      recipientName: null,
+      recipientId: null,
+    });
+  });
+});

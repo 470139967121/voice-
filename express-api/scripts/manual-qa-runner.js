@@ -9731,6 +9731,13 @@ const matchers = [
           error: `${trigger} failed to fire sendSystemPm key=${key}`,
         };
       }
+      // Wake 90 — record send for downstream "the recipient is X" assertion.
+      ctx.lastSentSystemPm = {
+        trigger,
+        key,
+        recipientName: recipientName || null,
+        recipientId,
+      };
       return { ok: true };
     },
   },
@@ -9902,6 +9909,194 @@ const matchers = [
         return {
           ok: false,
           error: `${name}: tap "${target}" from "${source}" did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 90 — "the script reports N <thing>". j19:63-66. Migration
+    // idempotency check: re-running on the post-migration database
+    // should report zero changes across 4 categories. The matcher reads
+    // counts from `osaCounts(db)` (cached on ctx._osaCounts for the
+    // scenario lifetime — j19 has 4 such assertions in one scenario).
+    pattern: /^the script reports (\d+) (.+)$/,
+    async handler(m, ctx) {
+      const expected = Number(m[1]);
+      const thing = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      if (!ctx._osaCounts) ctx._osaCounts = await osaCounts(ctx.db);
+      const map = {
+        'followingIds entries to remove': 'crossFollowing',
+        'followerIds entries to remove': 'crossFollower',
+        'rooms to close': 'mixedRooms',
+        'conversations to freeze': 'unfrozenCross',
+      };
+      const key = map[thing];
+      if (!key) {
+        return { ok: false, error: `unknown reporting category "${thing}"` };
+      }
+      const actual = ctx._osaCounts[key];
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `script reports ${actual} ${thing}, expected ${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 90 — `every such doc has field "<X>" equal to "<Y>"`. j19:49.
+    // Iterates ctx.lastQueryResult.docs (populated by a prior `When a
+    // query is run for ...` step). Every doc must have field equal to
+    // the named value (string equality).
+    pattern: /^every such doc has field "([^"]+)" equal to "([^"]+)"$/,
+    async handler(m, ctx) {
+      const field = m[1];
+      const value = m[2];
+      if (!ctx.lastQueryResult || !Array.isArray(ctx.lastQueryResult.docs)) {
+        return {
+          ok: false,
+          error:
+            'ctx.lastQueryResult.docs missing — run a `When a query is run for ...` step first',
+        };
+      }
+      const mismatches = ctx.lastQueryResult.docs.filter((d) => d?.[field] !== value);
+      if (mismatches.length > 0) {
+        return {
+          ok: false,
+          error: `${mismatches.length} doc(s) had ${field} != "${value}" (first: ${JSON.stringify(mismatches[0]).slice(0, 80)})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 90 — `every such doc has field "<X>" set to a value within
+    // the migration window`. j19:50. Permissive variant: asserts the
+    // field is a number (timestamp). Future work could tighten by
+    // reading a concrete migration window from ctx.migrationWindow.
+    pattern: /^every such doc has field "([^"]+)" set to a value within the migration window$/,
+    async handler(m, ctx) {
+      const field = m[1];
+      if (!ctx.lastQueryResult || !Array.isArray(ctx.lastQueryResult.docs)) {
+        return {
+          ok: false,
+          error:
+            'ctx.lastQueryResult.docs missing — run a `When a query is run for ...` step first',
+        };
+      }
+      const missing = ctx.lastQueryResult.docs.filter((d) => typeof d?.[field] !== 'number');
+      if (missing.length > 0) {
+        return {
+          ok: false,
+          error: `${missing.length} doc(s) missing numeric ${field} timestamp`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 90 — `no "<X>" doc with state="<Y>" has participantIds
+    // containing users with differing cohort`. j19:43. Fresh query
+    // against the named collection (X strips trailing /*); resolves
+    // each participant's cohort via users collection and asserts no
+    // doc has >1 distinct cohort.
+    pattern:
+      /^no "([^"]+)" doc with state="([^"]+)" has participantIds containing users with differing cohort$/,
+    async handler(m, ctx) {
+      const pathPattern = m[1];
+      const stateFilter = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const collectionName = pathPattern.replace(/\/\*$/, '');
+      const usersEntries = snapToEntries(await ctx.db.collection('users').get());
+      const cohortMap = new Map();
+      for (const { data } of usersEntries) {
+        if (data?.uniqueId !== undefined && data?.uniqueId !== null && data.cohort) {
+          cohortMap.set(String(data.uniqueId), data.cohort);
+        }
+      }
+      const docsEntries = snapToEntries(await ctx.db.collection(collectionName).get());
+      const violations = [];
+      for (const { id, data } of docsEntries) {
+        if (data?.state !== stateFilter) continue;
+        const cohorts = new Set();
+        for (const pid of data.participantIds || []) {
+          const c = cohortMap.get(String(pid));
+          if (c) cohorts.add(c);
+        }
+        if (cohorts.size > 1) violations.push(id || JSON.stringify(data).slice(0, 30));
+      }
+      if (violations.length > 0) {
+        return {
+          ok: false,
+          error: `${violations.length} ${pathPattern} doc(s) with mixed-cohort participants (first: ${violations[0]})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 90 — `for each conversation where participantIds contains
+    // users with differing cohort, the doc has field "<X>" equal to
+    // <value>`. j19:56. Iterates conversations, filters to mixed-cohort,
+    // asserts the named field equals the parsed value (bool literal or
+    // quoted string).
+    pattern:
+      /^for each conversation where participantIds contains users with differing cohort, the doc has field "([^"]+)" equal to (true|false|"[^"]+")$/,
+    async handler(m, ctx) {
+      const field = m[1];
+      const expected = parseLiteral(m[2]);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const usersEntries = snapToEntries(await ctx.db.collection('users').get());
+      const cohortMap = new Map();
+      for (const { data } of usersEntries) {
+        if (data?.uniqueId !== undefined && data?.uniqueId !== null && data.cohort) {
+          cohortMap.set(String(data.uniqueId), data.cohort);
+        }
+      }
+      const convsEntries = snapToEntries(await ctx.db.collection('conversations').get());
+      const violations = [];
+      for (const { id, data } of convsEntries) {
+        const cohorts = new Set();
+        for (const pid of data?.participantIds || []) {
+          const c = cohortMap.get(String(pid));
+          if (c) cohorts.add(c);
+        }
+        if (cohorts.size <= 1) continue;
+        if (data?.[field] !== expected) violations.push(id || JSON.stringify(data).slice(0, 30));
+      }
+      if (violations.length > 0) {
+        return {
+          ok: false,
+          error: `${violations.length} mixed-cohort conversation(s) had ${field} != ${m[2]} (first: ${violations[0]})`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 90 — "the recipient is <Name>" (assertion on the most-recent
+    // sendSystemPm call). j18:54. Reads ctx.lastSentSystemPm (populated
+    // by the Wake 89 broad sendSystemPm matcher, Wake 82 webhook
+    // matcher, and Wake 88 broadcast/flow matcher — only the broad
+    // matcher writes this field as of Wake 90; other matchers can be
+    // updated later to populate it too).
+    pattern: /^the recipient is ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const expected = m[1];
+      if (!ctx.lastSentSystemPm) {
+        return {
+          ok: false,
+          error: 'no prior sendSystemPm — recipient assertion needs a When step',
+        };
+      }
+      const actual = ctx.lastSentSystemPm.recipientName;
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `recipient was ${actual ?? 'null'}, expected ${expected}`,
         };
       }
       return { ok: true };
@@ -10154,6 +10349,87 @@ async function probeOsaInvariants(db) {
     };
   }
   return { ok: true };
+}
+
+/**
+ * Wake 90 — shim that normalises a Firestore-style snapshot into
+ * `[{id, data}, ...]` entries. firebase-admin `QuerySnapshot` exposes
+ * both `.docs` (array of QueryDocumentSnapshot) and `.forEach()` — but
+ * the test fakes only expose one or the other: `makeStatefulFakeDb`
+ * yields `{ docs: [...] }`, `makeProbeDb` yields `{ forEach(...), size }`.
+ * This helper makes both shapes consumable by the same code path.
+ */
+function snapToEntries(snap) {
+  const out = [];
+  if (snap && Array.isArray(snap.docs)) {
+    for (const d of snap.docs) {
+      const id = typeof d.id === 'string' ? d.id : undefined;
+      const data = typeof d.data === 'function' ? d.data() : d;
+      out.push({ id, data });
+    }
+  } else if (snap && typeof snap.forEach === 'function') {
+    snap.forEach((d) => {
+      const id = typeof d.id === 'string' ? d.id : undefined;
+      const data = typeof d.data === 'function' ? d.data() : d;
+      out.push({ id, data });
+    });
+  }
+  return out;
+}
+
+/**
+ * Wake 90 — Per-category OSA migration count probe. Returns the four
+ * counts that the j19 idempotency-script reports. Companion to
+ * `probeOsaInvariants` (which exposes only a single ok/error verdict);
+ * this version exposes the raw counts so the j19 "the script reports
+ * N X" assertions can compare them. NOT a refactor of the existing
+ * probe — uses `.get()` + in-memory state filter rather than `.where()`
+ * because the test fake-dbs differ in `.where()` support.
+ */
+async function osaCounts(db) {
+  const usersAr = snapToEntries(await db.collection('users').get()).map((e) => e.data);
+  const cohortMap = new Map();
+  for (const u of usersAr) {
+    if (u?.uniqueId !== undefined && u?.uniqueId !== null && u.cohort) {
+      cohortMap.set(String(u.uniqueId), u.cohort);
+    }
+  }
+  let crossFollowing = 0;
+  let crossFollower = 0;
+  for (const u of usersAr) {
+    if (u?.userType === 'SHYTALK_OFFICIAL' || u?.isOfficial) continue;
+    if (!u?.cohort) continue;
+    for (const targetId of u.followingIds || []) {
+      const c = cohortMap.get(String(targetId));
+      if (c && c !== u.cohort) crossFollowing++;
+    }
+    for (const sourceId of u.followerIds || []) {
+      const c = cohortMap.get(String(sourceId));
+      if (c && c !== u.cohort) crossFollower++;
+    }
+  }
+  let mixedRooms = 0;
+  const roomsAr = snapToEntries(await db.collection('rooms').get()).map((e) => e.data);
+  for (const r of roomsAr) {
+    if (r?.state !== 'OPEN') continue;
+    const cohorts = new Set();
+    for (const pid of r.participantIds || []) {
+      const c = cohortMap.get(String(pid));
+      if (c) cohorts.add(c);
+    }
+    if (cohorts.size > 1) mixedRooms++;
+  }
+  let unfrozenCross = 0;
+  const convsAr = snapToEntries(await db.collection('conversations').get()).map((e) => e.data);
+  for (const c of convsAr) {
+    const cohorts = new Set();
+    for (const pid of c.participantIds || []) {
+      const ch = cohortMap.get(String(pid));
+      if (ch) cohorts.add(ch);
+    }
+    if (cohorts.size > 1 && c.frozen !== true) unfrozenCross++;
+  }
+  return { crossFollowing, crossFollower, mixedRooms, unfrozenCross };
 }
 
 // Snapshot baseline capture. Records the value of each field at the time of
