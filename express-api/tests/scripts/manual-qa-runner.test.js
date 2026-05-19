@@ -13288,3 +13288,280 @@ describe('Wake 74 — "<Name>\'s <Plat> UI does not show any raw i18n key like "
     expect(r.error).toMatch(/webShowsRawI18nKey/);
   });
 });
+
+// ── Wake 75 ──────────────────────────────────────────────────────────
+
+describe('Wake 75 — "UI shows the <name> field aligned <direction>"', () => {
+  // j13-locales-rtl-cjk.feature:13
+  //   Then Layla's Web UI shows the search field aligned right
+  // RTL layout verification — search field in Arabic locale should be
+  // right-aligned. Driver returns current alignment of named field.
+  test('matching alignment → ok', async () => {
+    const spy = jest.fn(async () => 'right');
+    const ctx = makeCtx({ webDriver: { webGetFieldAlignment: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Web UI shows the search field aligned right" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'search');
+  });
+
+  test('mismatched alignment → fail', async () => {
+    const spy = jest.fn(async () => 'left');
+    const ctx = makeCtx({ webDriver: { webGetFieldAlignment: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Web UI shows the search field aligned right" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/right/);
+    expect(r.error).toMatch(/left/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Web UI shows the search field aligned right" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webGetFieldAlignment/);
+  });
+});
+
+describe('Wake 75 — "UI shows <language> labels for "<X>", "<Y>", ..."', () => {
+  // j13-locales-rtl-cjk.feature:18
+  //   Then Layla's Web UI shows Arabic labels for "Followers", "Following", "Beans"
+  // Composite: verify the named English labels render in the persona's
+  // locale. Driver receives (name, language, labelKeys[]).
+  test('parses comma-separated quoted list', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsLocaleLabels: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Layla\'s Web UI shows Arabic labels for "Followers", "Following", "Beans"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'Arabic', ['Followers', 'Following', 'Beans']);
+  });
+
+  test('different language + single label', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsLocaleLabels: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Kenji\'s Web UI shows Japanese labels for "Profile"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Kenji', 'Japanese', ['Profile']);
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsLocaleLabels: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Layla\'s Web UI shows Arabic labels for "Followers"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Arabic|Followers/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Layla\'s Web UI shows Arabic labels for "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webShowsLocaleLabels/);
+  });
+});
+
+describe('Wake 75 — "UI shows the balance with locale-appropriate thousands separator"', () => {
+  // j13-locales-rtl-cjk.feature:31
+  //   Then Layla's Web UI shows the balance with locale-appropriate thousands separator
+  // Driver checks that the rendered balance uses the locale's correct
+  // thousands separator (Arabic = U+066C, English = ",", German = ".").
+  test('correct separator → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webBalanceUsesLocaleSeparator: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Layla's Web UI shows the balance with locale-appropriate thousands separator",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla');
+  });
+
+  test('wrong separator → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webBalanceUsesLocaleSeparator: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Layla's Web UI shows the balance with locale-appropriate thousands separator",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/separator/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Layla's Web UI shows the balance with locale-appropriate thousands separator",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webBalanceUsesLocaleSeparator/);
+  });
+});
+
+describe('Wake 75 — "<Name>\'s Android UI layoutDirection is <RTL|LTR>"', () => {
+  // j13-locales-rtl-cjk.feature:39
+  //   Then Layla's Android UI layoutDirection is RTL
+  // Android-specific layoutDirection attribute (View.LAYOUT_DIRECTION_RTL).
+  // Driver introspects the root view's layoutDirection.
+  test('matching direction → ok', async () => {
+    const spy = jest.fn(async () => 'RTL');
+    const ctx = makeCtx({ uiDriver: { androidGetLayoutDirection: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Android UI layoutDirection is RTL" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatch → fail', async () => {
+    const spy = jest.fn(async () => 'LTR');
+    const ctx = makeCtx({ uiDriver: { androidGetLayoutDirection: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Android UI layoutDirection is RTL" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/RTL/);
+    expect(r.error).toMatch(/LTR/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Android UI layoutDirection is RTL" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidGetLayoutDirection/);
+  });
+});
+
+describe('Wake 75 — "system font fallback resolves to a <X>-capable font"', () => {
+  // j13-locales-rtl-cjk.feature:45
+  //   Then the system font fallback resolves to a Japanese-capable font
+  // CJK font fallback verification — driver loads a test glyph for the
+  // named script and asserts the resolved font supports it.
+  test('matching capability → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webFontFallbackCapable: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the system font fallback resolves to a Japanese-capable font' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Japanese');
+  });
+
+  test('different script', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webFontFallbackCapable: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the system font fallback resolves to a Arabic-capable font' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Arabic');
+  });
+
+  test('capability missing → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webFontFallbackCapable: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the system font fallback resolves to a Japanese-capable font' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Japanese/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'the system font fallback resolves to a Japanese-capable font' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webFontFallbackCapable/);
+  });
+});
+
+describe('Wake 75 — "<Name> on <Plat> sends a/an "<gift>" gift to <Recipient>"', () => {
+  // j13-locales-rtl-cjk.feature:27
+  //   When Layla on Web sends "rose" gift to Alice
+  // j13-locales-rtl-cjk.feature:71
+  //   When Kenji on Web sends a "rose" gift to Alice
+  // Two corpus shapes share one matcher via optional `(?:an? )?` article.
+  test('bare form (no article)', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSendGiftTo: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Layla on Web sends "rose" gift to Alice' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'rose', 'Alice');
+  });
+
+  test('with "a" article', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webSendGiftTo: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Kenji on Web sends a "rose" gift to Alice' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Kenji', 'rose', 'Alice');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidSendGiftTo: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul on Android sends "diamond" gift to Nora' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'diamond', 'Nora');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Layla on Web sends "rose" gift to Alice' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webSendGiftTo/);
+  });
+});

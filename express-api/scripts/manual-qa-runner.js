@@ -7525,6 +7525,166 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 75 — "UI shows the <name> field aligned <direction>".
+    // j13:13 — RTL layout verification. Driver returns current alignment
+    // for the named field.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the (\w+) field aligned (left|right|center)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const fieldName = m[3];
+      const expected = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webGetFieldAlignment'
+        : platform === 'Android'
+          ? 'androidGetFieldAlignment'
+          : 'iosGetFieldAlignment';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const actual = await driver[methodName](name, fieldName);
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `${fieldName} field alignment: expected ${expected}, actual ${actual}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 75 — "UI shows <language> labels for "<X>", "<Y>", ...".
+    // j13:18 — verify named English labels render in the persona's locale.
+    // Driver receives the persona, target language, and parsed label list.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows (\w+) labels for ((?:"[^"]+"(?:,\s*)?)+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const language = m[3];
+      const labelList = m[4];
+      const labels = [...labelList.matchAll(/"([^"]+)"/g)].map((mm) => mm[1]);
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsLocaleLabels'
+        : platform === 'Android'
+          ? 'androidShowsLocaleLabels'
+          : 'iosShowsLocaleLabels';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, language, labels);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show ${language} labels for ${labels.join(', ')}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 75 — "UI shows the balance with locale-appropriate thousands
+    // separator". j13:31 — driver checks the rendered balance string uses
+    // the locale's correct separator.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the balance with locale-appropriate thousands separator$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webBalanceUsesLocaleSeparator'
+        : platform === 'Android'
+          ? 'androidBalanceUsesLocaleSeparator'
+          : 'iosBalanceUsesLocaleSeparator';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${platform} UI balance does not use locale-appropriate thousands separator`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 75 — "<Name>'s Android UI layoutDirection is <RTL|LTR>".
+    // j13:39 — Android-specific layoutDirection attribute. Driver
+    // introspects the root view's layoutDirection.
+    pattern: /^([A-Z][a-z]+)'s Android UI layoutDirection is (RTL|LTR)$/,
+    async handler(m, ctx) {
+      const expected = m[2];
+      if (!ctx.uiDriver?.androidGetLayoutDirection) {
+        return { ok: false, error: 'ctx.uiDriver.androidGetLayoutDirection not configured' };
+      }
+      const actual = await ctx.uiDriver.androidGetLayoutDirection();
+      if (actual !== expected) {
+        return {
+          ok: false,
+          error: `Android layoutDirection was ${actual}, expected ${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 75 — "system font fallback resolves to a <X>-capable font".
+    // j13:45 — CJK font fallback verification. Driver loads a sample
+    // glyph for the named script and asserts the resolved font supports
+    // it.
+    pattern: /^the system font fallback resolves to a (\w+(?:-\w+)*)-capable font$/,
+    async handler(m, ctx) {
+      const script = m[1];
+      if (!ctx.webDriver?.webFontFallbackCapable) {
+        return { ok: false, error: 'ctx.webDriver.webFontFallbackCapable not configured' };
+      }
+      const ok = await ctx.webDriver.webFontFallbackCapable(script);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `system font fallback is not ${script}-capable (missing font?)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 75 — "<Name> on <Plat> sends a/an "<gift>" gift to <Recipient>".
+    // j13:27 + j13:71 — two corpus shapes share one matcher via optional
+    // `(?:an? )?` article. Sends a gift (vs a message) — separate UI flow.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+sends (?:an? )?"([^"]+)" gift to ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const giftName = m[3];
+      const recipient = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webSendGiftTo'
+        : platform === 'Android'
+          ? 'androidSendGiftTo'
+          : 'iosSendGiftTo';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, giftName, recipient);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name} failed to send "${giftName}" gift to ${recipient} on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
