@@ -8449,6 +8449,118 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 81 — multi-device pairing state-seed.
+    // j17:19 — `<Name> is also paired on <Plat> (same Firebase identity)
+    // for <purpose>`. Records on ctx.pairedPlatforms.
+    pattern:
+      /^([A-Z][a-z]+) is also paired on (Web Chromium|Web Safari|Web|Android|iOS Sim) \(same Firebase identity\) for (\w+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const purpose = m[3];
+      if (!ctx.pairedPlatforms) ctx.pairedPlatforms = new Map();
+      ctx.pairedPlatforms.set(name, { platform, purpose });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 81 — multi-field form-fill composite.
+    // j17:28 — `<Name> on <Plat> fills in: language "zh", level
+    // "Beginner", title "Intro to Mandarin tones"`. Parses kv-list:
+    // `<key> "<value>", <key> "<value>", ...`.
+    pattern: /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) fills in: (.+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const kvText = m[3];
+      // Parse `<key> "<value>"(, <key> "<value>")*` into a plain object.
+      // The `[^"]*` quoted-value capture is bounded by `"` on both sides,
+      // so the regex makes linear progress over kvText (no overlapping
+      // captures). The `\w+` key class is non-overlapping with the space
+      // that follows. Linear time despite the alternation-free capture.
+      const fields = {};
+      // eslint-disable-next-line sonarjs/slow-regex
+      for (const match of kvText.matchAll(/(\w+)\s+"([^"]*)"/g)) {
+        fields[match[1]] = match[2];
+      }
+      const methodName = platform.startsWith('Web')
+        ? 'webFillIn'
+        : platform === 'Android'
+          ? 'androidFillIn'
+          : 'iosFillIn';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, fields);
+      if (!ok) {
+        return { ok: false, error: `${name}: fill-in did not complete` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 81 — tap a named button on a named card.
+    // j17:33 — `<Name> on <Plat> taps "<X>" on the <noun> card`. Driver
+    // receives persona, button text, card type.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) taps "([^"]+)" on the (\w+) card$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const buttonText = m[3];
+      const cardType = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webTapOnCard'
+        : platform === 'Android'
+          ? 'androidTapOnCard'
+          : 'iosTapOnCard';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, buttonText, cardType);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: tap "${buttonText}" on ${cardType} card did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 81 — triple-composite gift action.
+    // j17:57 — `<Name> on <Plat> taps the gift icon and selects "<X>"
+    // with recipient "<Y>"`. Combines Wake 79's two-step gift modal
+    // with Wake 80's gift-icon-in-room opener.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) taps the gift icon and selects "([^"]+)" with recipient "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const gift = m[3];
+      const recipient = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webGiftIconSelectAndRecipient'
+        : platform === 'Android'
+          ? 'androidGiftIconSelectAndRecipient'
+          : 'iosGiftIconSelectAndRecipient';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, gift, recipient);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: gift icon + select "${gift}" + recipient "${recipient}" did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

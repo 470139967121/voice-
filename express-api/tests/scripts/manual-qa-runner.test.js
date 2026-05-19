@@ -14868,3 +14868,165 @@ describe('Wake 80 — "<Name>\'s <Plat> UI shows total beans earned this session
     expect(r.error).toMatch(/androidGetTotalBeansThisSession/);
   });
 });
+
+// ── Wake 81 ──────────────────────────────────────────────────────────
+
+describe('Wake 81 — "<Name> is also paired on <Plat> (same Firebase identity) for <purpose>"', () => {
+  // j17-teacher-classroom.feature:19
+  //   Given Bao is also paired on Android (same Firebase identity) for hosting
+  // Multi-device pairing state-seed: stores on ctx.pairedPlatforms.
+  test('records pairing in ctx.pairedPlatforms', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Bao is also paired on Android (same Firebase identity) for hosting',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.pairedPlatforms.get('Bao')).toEqual({
+      platform: 'Android',
+      purpose: 'hosting',
+    });
+  });
+
+  test('different platform + purpose', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Alice is also paired on iOS Sim (same Firebase identity) for streaming',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.pairedPlatforms.get('Alice')).toEqual({
+      platform: 'iOS Sim',
+      purpose: 'streaming',
+    });
+  });
+});
+
+describe('Wake 81 — "<Name> on <Plat> fills in: <kv-list>"', () => {
+  // j17-teacher-classroom.feature:28
+  //   When Bao on Web fills in: language "zh", level "Beginner", title "Intro to Mandarin tones"
+  // Multi-field form-fill composite.
+  test('parses kv-list with comma separation', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webFillIn: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Bao on Web fills in: language "zh", level "Beginner", title "Intro to Mandarin tones"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao', {
+      language: 'zh',
+      level: 'Beginner',
+      title: 'Intro to Mandarin tones',
+    });
+  });
+
+  test('single-field fill', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webFillIn: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Bao on Web fills in: title "Quick lesson"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao', { title: 'Quick lesson' });
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'When', text: 'Bao on Web fills in: title "X"' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webFillIn/);
+  });
+});
+
+describe('Wake 81 — "<Name> on <Plat> taps "<X>" on the <noun> card"', () => {
+  // j17-teacher-classroom.feature:33
+  //   When Bao on Android taps "Start lesson" on the lesson card
+  test('matching tap → driver receives all three', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapOnCard: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Bao on Android taps "Start lesson" on the lesson card' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao', 'Start lesson', 'lesson');
+  });
+
+  test('different card type', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapOnCard: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Theo on Android taps "Join" on the room card' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'Join', 'room');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Bao on Android taps "Start lesson" on the lesson card' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTapOnCard/);
+  });
+});
+
+describe('Wake 81 — "<Name> on <Plat> taps the gift icon and selects "<X>" with recipient "<Y>""', () => {
+  // j17-teacher-classroom.feature:57
+  //   When Yuki on iOS Sim taps the gift icon and selects "rose" with recipient "Bao"
+  // Triple composite: open gift modal, pick gift, pick recipient.
+  test('iOS Sim: all three captured', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosGiftIconSelectAndRecipient: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Yuki on iOS Sim taps the gift icon and selects "rose" with recipient "Bao"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 'rose', 'Bao');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidGiftIconSelectAndRecipient: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Theo on Android taps the gift icon and selects "diamond" with recipient "Alice"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'diamond', 'Alice');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Yuki on iOS Sim taps the gift icon and selects "rose" with recipient "Bao"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosGiftIconSelectAndRecipient/);
+  });
+});
