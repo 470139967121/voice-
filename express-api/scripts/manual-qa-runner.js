@@ -471,6 +471,18 @@ const matchers = [
           const docPath = `users/${p.uniqueId}`;
           await ctx.db.doc(docPath).set(fields, { merge: true });
           captureSnapshots(ctx, docPath, fields);
+          // Mirror locale-shaped fields into the dedicated ctx maps so
+          // driver-level assertions (e.g., webDocumentDirection,
+          // androidShowsLocaleText) can route by persona without
+          // re-querying Firestore.
+          if (fields.browserLocale) {
+            if (!ctx.browserLocales) ctx.browserLocales = new Map();
+            ctx.browserLocales.set(name, fields.browserLocale);
+          }
+          if (fields.deviceLocale) {
+            if (!ctx.personaLocales) ctx.personaLocales = new Map();
+            ctx.personaLocales.set(name, fields.deviceLocale);
+          }
         }
       }
       return { ok: true };
@@ -1551,6 +1563,10 @@ const matchers = [
       });
       ctx.personaPlatforms.set(name, platform);
       ctx.locale = locale;
+      // Mirror into ctx.browserLocales so downstream driver assertions
+      // (e.g., webDocumentDirection) can route by persona.
+      if (!ctx.browserLocales) ctx.browserLocales = new Map();
+      ctx.browserLocales.set(name, locale);
       return { ok: true };
     },
   },
@@ -2675,6 +2691,7 @@ const matchers = [
     // "auto", though the corpus only uses ltr/rtl).
     pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s Web UI document direction is "(ltr|rtl|auto)"$/,
     async handler(m, ctx) {
+      const name = m[1];
       const expected = m[3];
       if (!ctx.webDriver) {
         return { ok: false, error: 'Web step requires ctx.webDriver (document direction)' };
@@ -2682,7 +2699,11 @@ const matchers = [
       if (!ctx.webDriver.webDocumentDirection) {
         return { ok: false, error: 'ctx.webDriver.webDocumentDirection not configured' };
       }
-      const actual = await ctx.webDriver.webDocumentDirection();
+      // Pass persona name + their declared browser locale (set by an
+      // earlier `with browser locale <X>` matcher) so the driver can
+      // apply it to that persona's page before reading the dir attribute.
+      const locale = ctx.browserLocales?.get?.(name) || ctx.browserLocales?.[name];
+      const actual = await ctx.webDriver.webDocumentDirection(name, locale);
       if (actual !== expected) {
         return {
           ok: false,

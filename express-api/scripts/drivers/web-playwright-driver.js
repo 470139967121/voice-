@@ -1,3 +1,4 @@
+/* global document, window, NodeFilter */
 /**
  * Web driver backed by the `playwright` package.
  *
@@ -161,6 +162,102 @@ async function createWebDriver({ baseURL = 'http://localhost:8888', headless = t
       return false;
     };
   }
+
+  // ── Real implementations (override stubs above) ─────────────────────
+  // Each method docs the matcher signature it satisfies.
+
+  // <Name>'s Web UI document direction is "ltr"|"rtl"|"auto"
+  // Reads the dir attribute on <html>. Optional 2nd arg is the locale to
+  // apply via localStorage before reading — the public web app's
+  // language-selector.js reads localStorage on load and sets
+  // document.documentElement.dir based on RTL_LANGS membership.
+  driver.webDocumentDirection = async (name, locale) => {
+    const page = await pageFor(name || 'default');
+    if (locale) {
+      // Apply via localStorage (the only mechanism the public app honours;
+      // ?lang= query param is NOT supported per public/js/language-selector.js).
+      if (!page.url() || page.url() === 'about:blank') await page.goto('/');
+      await page.evaluate((lang) => {
+        try {
+          localStorage.setItem('shytalk_language', lang);
+        } catch (_) {
+          /* sandboxed */
+        }
+      }, locale);
+      await page.reload({ waitUntil: 'networkidle' });
+    } else if (!page.url() || page.url() === 'about:blank') {
+      await page.goto('/');
+    }
+    return page.evaluate(() => document.documentElement.getAttribute('dir') || 'ltr');
+  };
+
+  // <Name>'s Web UI shows the <Language> translation of "<EnglishKey>"
+  // Driver receives (BCP-47 code, English key/phrase). Verifies the
+  // visible page text contains the localised translation. Uses the
+  // homepage-translations.js dictionary loaded by the public web app.
+  driver.webShowsTranslationOf = async (code, englishKey) => {
+    const page = await pageFor('default');
+    if (!page.url() || page.url() === 'about:blank') {
+      await page.goto(`/?lang=${code}`);
+    }
+    // Switch language preference via the homepage's language-selector API.
+    await page.evaluate((lang) => {
+      try {
+        localStorage.setItem('shytalk_language', lang);
+      } catch (_) {
+        /* localStorage may be blocked — fall back to lang query param */
+      }
+    }, code);
+    await page.reload({ waitUntil: 'networkidle' });
+    // Look up the translation in the loaded translations object the page
+    // exposes (homepage-translations.js attaches to window). If the key
+    // isn't found, the test surface needs the dictionary updated — that's
+    // a real finding worth surfacing.
+    const result = await page.evaluate(
+      ({ lang, key }) => {
+        const dict = window.homepageTranslations || window.shytalkTranslations || {};
+        const langDict = dict[lang] || {};
+        const translated = langDict[key];
+        if (!translated) return { ok: false, reason: `no translation for key "${key}" in ${lang}` };
+        const bodyText = document.body.innerText || '';
+        return { ok: bodyText.includes(translated), translated };
+      },
+      { lang: code, key: englishKey },
+    );
+    return Boolean(result?.ok);
+  };
+
+  // the test runner scans all rendered strings on <Name>'s Web UI across N screens
+  // Walks N screens (homepage + N-1 follow-on routes), collecting visible
+  // strings into a flat array. The next matcher consumes the result via
+  // ctx.scannedStrings.
+  driver.webScanAllRenderedStrings = async (name, screensCount) => {
+    const page = await pageFor(name || 'default');
+    const routes = [
+      '/',
+      '/roadmap.html',
+      '/privacy.html',
+      '/terms.html',
+      '/community-guidelines.html',
+    ];
+    const collected = [];
+    for (let i = 0; i < Math.min(screensCount, routes.length); i++) {
+      await page.goto(routes[i], { waitUntil: 'networkidle' });
+      const texts = await page.evaluate(() => {
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        const out = [];
+        let node = walker.nextNode();
+        while (node) {
+          const t = (node.textContent || '').trim();
+          if (t) out.push(t);
+          node = walker.nextNode();
+        }
+        return out;
+      });
+      collected.push(...texts);
+    }
+    return collected;
+  };
 
   driver.close = async () => {
     for (const p of pages.values()) {
