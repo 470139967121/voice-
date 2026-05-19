@@ -12786,3 +12786,258 @@ describe('Wake 72 — admin "adjusts shyCoins by ±<N> with reason "<X>""', () =
     expect(r.error).toMatch(/webAdminAdjustShyCoins/);
   });
 });
+
+// ── Wake 73 ──────────────────────────────────────────────────────────
+
+describe('Wake 73 — admin "lifts the <ordinal> appeal"', () => {
+  // j12-admin-daily-routine.feature:70
+  //   When Greta on Web Admin lifts the first appeal
+  // "Lift" reverses a suspension on the targeted appeal.
+  test('first → driver receives ordinal', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminLiftAppeal: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin lifts the first appeal' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('first');
+  });
+
+  test('higher ordinal', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminLiftAppeal: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin lifts the seventh appeal' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('seventh');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin lifts the first appeal' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminLiftAppeal/);
+  });
+});
+
+describe('Wake 73 — admin "denies the <ordinal> appeal with reason "<X>""', () => {
+  // j12-admin-daily-routine.feature:71
+  //   When Greta on Web Admin denies the second appeal with reason "Persistent pattern of harassment"
+  // Inverse of lift — confirms the suspension stands.
+  test('denies with reason → driver receives ordinal + reason', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminDenyAppeal: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin denies the second appeal with reason "Persistent pattern of harassment"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('second', 'Persistent pattern of harassment');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin denies the first appeal with reason "X"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminDenyAppeal/);
+  });
+});
+
+describe('Wake 73 — admin "opens the "<name>" subtab"', () => {
+  // j12-admin-daily-routine.feature:91
+  //   When Greta on Web Admin opens the "security" subtab
+  // Subtab navigation inside the admin panel.
+  test('opens named subtab → driver receives name', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminOpenSubtab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the "security" subtab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('security');
+  });
+
+  test('multi-word subtab', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminOpenSubtab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the "device bans" subtab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('device bans');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin opens the "security" subtab' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminOpenSubtab/);
+  });
+});
+
+describe('Wake 73 — admin "filters by action="<X>""', () => {
+  // j12-admin-daily-routine.feature:103
+  //   When Greta on Web Admin filters by action="suspend"
+  // Audit-log filter step.
+  test('filters by action value → driver receives it', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminFilterByAction: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin filters by action="suspend"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('suspend');
+  });
+
+  test('different action value', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminFilterByAction: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin filters by action="warn"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('warn');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Greta on Web Admin filters by action="X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminFilterByAction/);
+  });
+});
+
+describe('Wake 73 — admin "attempts to PATCH|DELETE <path>" (audit-immutability test)', () => {
+  // j12-admin-daily-routine.feature:106-107
+  // Tests audit-log immutability — the API must reject mutations.
+  test('PATCH variant → fires request, records lastResponse', async () => {
+    const idToken =
+      'aaa.' + Buffer.from(JSON.stringify({ uniqueId: 90000001 })).toString('base64url') + '.bbb';
+    const fetchMock = jest.fn(async () => ({
+      status: 405,
+      text: async () => JSON.stringify({ error: 'Method not allowed' }),
+    }));
+    const ctx = makeCtx({ fetch: fetchMock });
+    ctx.sessions.set('Greta', { uniqueId: 90000001, idToken });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin attempts to PATCH /api/admin/audit/{anyEntry}',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const [, opts] = fetchMock.mock.calls[0];
+    expect(opts.method).toBe('PATCH');
+    expect(ctx.lastResponse.status).toBe(405);
+  });
+
+  test('DELETE variant', async () => {
+    const idToken =
+      'aaa.' + Buffer.from(JSON.stringify({ uniqueId: 90000001 })).toString('base64url') + '.bbb';
+    const fetchMock = jest.fn(async () => ({
+      status: 405,
+      text: async () => JSON.stringify({ error: 'Method not allowed' }),
+    }));
+    const ctx = makeCtx({ fetch: fetchMock });
+    ctx.sessions.set('Greta', { uniqueId: 90000001, idToken });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin attempts to DELETE /api/admin/audit/{anyEntry}',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const [, opts] = fetchMock.mock.calls[0];
+    expect(opts.method).toBe('DELETE');
+  });
+
+  test('no session → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin attempts to PATCH /api/admin/audit/{anyEntry}',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Greta/);
+  });
+});
+
+describe('Wake 73 — admin "taps "<X>" and types deviceId="<id>" + reason "<text>"" (ban-device composite)', () => {
+  // j12-admin-daily-routine.feature:93
+  //   When Greta on Web Admin taps "Ban device" and types deviceId="device-xyz" + reason "Repeated abuse"
+  // Triple composite: tap action, type deviceId, type reason.
+  test('all three fields captured', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminTapAndTypeBanDevice: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "Ban device" and types deviceId="device-xyz" + reason "Repeated abuse"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith({
+      action: 'Ban device',
+      deviceId: 'device-xyz',
+      reason: 'Repeated abuse',
+    });
+  });
+
+  test('different action button', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminTapAndTypeBanDevice: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "Unban" and types deviceId="device-abc" + reason "Resolved"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy.mock.calls[0][0].action).toBe('Unban');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Greta on Web Admin taps "Ban device" and types deviceId="x" + reason "y"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webAdminTapAndTypeBanDevice/);
+  });
+});

@@ -7276,6 +7276,127 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 73 — admin "lifts the <ordinal> appeal".
+    // j12:70 — reverses a suspension on the targeted appeal.
+    pattern: /^Greta on Web Admin lifts the (\w+) appeal$/,
+    async handler(m, ctx) {
+      const ordinal = m[1];
+      if (!ctx.webDriver?.webAdminLiftAppeal) {
+        return { ok: false, error: 'ctx.webDriver.webAdminLiftAppeal not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminLiftAppeal(ordinal);
+      if (!ok) {
+        return { ok: false, error: `admin failed to lift the ${ordinal} appeal` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 73 — admin "denies the <ordinal> appeal with reason "<X>"".
+    // j12:71 — inverse of lift. Reason required for audit-trail.
+    pattern: /^Greta on Web Admin denies the (\w+) appeal with reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const ordinal = m[1];
+      const reason = m[2];
+      if (!ctx.webDriver?.webAdminDenyAppeal) {
+        return { ok: false, error: 'ctx.webDriver.webAdminDenyAppeal not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminDenyAppeal(ordinal, reason);
+      if (!ok) {
+        return { ok: false, error: `admin failed to deny the ${ordinal} appeal` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 73 — admin "opens the "<name>" subtab".
+    // j12:91 — subtab navigation inside the admin panel (distinct from
+    // top-level tabs handled by webAdminOpenTab). Names are quoted; may
+    // be multi-word.
+    pattern: /^Greta on Web Admin opens the "([^"]+)" subtab$/,
+    async handler(m, ctx) {
+      const subtab = m[1];
+      if (!ctx.webDriver?.webAdminOpenSubtab) {
+        return { ok: false, error: 'ctx.webDriver.webAdminOpenSubtab not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminOpenSubtab(subtab);
+      if (!ok) {
+        return { ok: false, error: `admin failed to open "${subtab}" subtab` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 73 — admin "filters by action="<X>"".
+    // j12:103 — audit-log filter step. Drives the column-filter input.
+    pattern: /^Greta on Web Admin filters by action="([^"]+)"$/,
+    async handler(m, ctx) {
+      const action = m[1];
+      if (!ctx.webDriver?.webAdminFilterByAction) {
+        return { ok: false, error: 'ctx.webDriver.webAdminFilterByAction not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminFilterByAction(action);
+      if (!ok) {
+        return { ok: false, error: `admin failed to filter by action="${action}"` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 73 — admin "attempts to PATCH|DELETE <path>" (audit-immutability).
+    // j12:106-107 — `attempts to PATCH /api/admin/audit/{anyEntry}` and
+    // `attempts to DELETE /api/admin/audit/{anyEntry}`. The `{anyEntry}`
+    // placeholder is left unresolved by interpolateScenarioVars (no
+    // scenario var bound); the runner passes the literal path through to
+    // fetch. The API is expected to return 405 — the matcher records
+    // lastResponse without asserting the status (the next assertion step
+    // does that).
+    pattern: /^Greta on Web Admin attempts to (PATCH|DELETE) (\/api\/[\w/-]+(?:\/\{[\w]+\})?)$/,
+    async handler(m, ctx) {
+      const method = m[1];
+      const apiPath = m[2];
+      const sess = ctx.sessions.get('Greta');
+      if (!sess) {
+        return { ok: false, error: 'no signed-in session for "Greta" — Given step missing?' };
+      }
+      const r = await ctx.fetch(ctx.apiBase + apiPath, {
+        method,
+        headers: {
+          Authorization: `Bearer ${sess.idToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      let parsedBody = null;
+      try {
+        const text = await r.text();
+        parsedBody = text ? JSON.parse(text) : null;
+      } catch {
+        // body not JSON — keep null
+      }
+      ctx.lastResponse = { status: r.status, body: parsedBody, persona: 'Greta', path: apiPath };
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 73 — admin "taps "<X>" and types deviceId="<id>" + reason "<text>"".
+    // j12:93 — ban-device composite. Triple composite: tap action,
+    // type deviceId, type reason. Driver receives a struct.
+    pattern: /^Greta on Web Admin taps "([^"]+)" and types deviceId="([^"]+)" \+ reason "([^"]+)"$/,
+    async handler(m, ctx) {
+      const action = m[1];
+      const deviceId = m[2];
+      const reason = m[3];
+      if (!ctx.webDriver?.webAdminTapAndTypeBanDevice) {
+        return { ok: false, error: 'ctx.webDriver.webAdminTapAndTypeBanDevice not configured' };
+      }
+      const ok = await ctx.webDriver.webAdminTapAndTypeBanDevice({ action, deviceId, reason });
+      if (!ok) {
+        return { ok: false, error: `admin "${action}" composite did not complete` };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
