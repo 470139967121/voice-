@@ -9021,6 +9021,161 @@ describe('Bare HTTP response status assertion', () => {
   });
 });
 
+describe('Voice room create composite (j09 host)', () => {
+  test('"X on Android types title \\"Y\\" and chooses public visibility" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidCreateRoomComposite: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Theo on Android types title "Theo\'s Test Room" and chooses public visibility',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith("Theo's Test Room", 'public');
+  });
+
+  test('private visibility variant', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidCreateRoomComposite: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Theo on Android types title "Private Room" and chooses private visibility',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Private Room', 'private');
+  });
+});
+
+describe('Receives LiveKit token (bare + in-response-from-POST)', () => {
+  test('"X on Android receives a LiveKit token" → driver (bare)', async () => {
+    const spy = jest.fn(async () => 'tok-abc');
+    const ctx = makeCtx({ uiDriver: { androidReceiveLiveKitToken: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo on Android receives a LiveKit token' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(null);
+  });
+
+  test('"... in response from POST /api/livekit/token" — driver receives endpoint', async () => {
+    const spy = jest.fn(async () => 'tok-abc');
+    const ctx = makeCtx({ uiDriver: { androidReceiveLiveKitToken: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo on Android receives a LiveKit token in response from POST /api/livekit/token',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('/api/livekit/token');
+  });
+
+  test('Web variant routes correctly', async () => {
+    const spy = jest.fn(async () => 'tok-abc');
+    const ctx = makeCtx({ webDriver: { webReceiveLiveKitToken: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice on Web receives a LiveKit token' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(null);
+  });
+
+  test('driver returns null/empty — fail', async () => {
+    const spy = jest.fn(async () => null);
+    const ctx = makeCtx({ uiDriver: { androidReceiveLiveKitToken: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo on Android receives a LiveKit token' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/LiveKit/);
+  });
+});
+
+describe('Seat grid assertion (N of M seats occupied)', () => {
+  test('"X\'s <plat> UI shows the seat grid with N of M seats occupied" — Wake 30 strips trailing parens', async () => {
+    const spy = jest.fn(async () => ({ occupied: 1, total: 8 }));
+    const ctx = makeCtx({ uiDriver: { androidSeatGridState: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Theo's Android UI shows the seat grid with 1 of 8 seats occupied (by himself)",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('mismatch — fail with expected vs actual', async () => {
+    const spy = jest.fn(async () => ({ occupied: 2, total: 8 }));
+    const ctx = makeCtx({ uiDriver: { androidSeatGridState: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the seat grid with 1 of 8 seats occupied" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 1.*actual 2/);
+  });
+});
+
+describe('Taps the same room (relative reference)', () => {
+  test('"X on iOS Sim taps the same room" → driver call', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosTapSameRoom: spy } });
+    const r = await executeStep({ kind: 'When', text: 'Ines on iOS Sim taps the same room' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(false);
+  });
+
+  test('"taps the same room again" — driver receives isAgain=true', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { iosTapSameRoom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on iOS Sim taps the same room again' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('Approve seat request composite', () => {
+  test('"X on Android taps approve on Y\'s seat request" → driver', async () => {
+    const spy = jest.fn(async () => undefined);
+    const ctx = makeCtx({ uiDriver: { androidApproveSeatRequest: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Theo on Android taps approve on Ines's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines');
+  });
+});
+
+describe('Block via API attempt', () => {
+  test('"X on Android attempts to block Y via /api/users/block" (Wake-30 strips trailing parens)', async () => {
+    const spy = jest.fn(async () => ({ status: 200 }));
+    const ctx = makeCtx({ uiDriver: { androidAttemptBlock: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Hayato on Android attempts to block Officia (uniqueId=1) via /api/users/block',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Officia', '/api/users/block');
+  });
+});
+
 describe('Abstract cohort UI absence (any adult-cohort visitor)', () => {
   test('"Mia\'s iOS Sim UI does not show any adult-cohort visitor" → driver returns false → ok', async () => {
     const spy = jest.fn(async () => false);

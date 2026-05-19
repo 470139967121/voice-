@@ -5584,6 +5584,164 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Voice room create composite (j09 host). Driver opens the create-
+    // room form, types the title, picks the visibility radio, and taps
+    // Create. Single matcher for the full composite because the corpus
+    // uses it that way (intermediate steps not load-bearing).
+    pattern:
+      /^([A-Z][a-z]+)\s+on Android types title "([^"]+)" and chooses (public|private) visibility$/,
+    async handler(m, ctx) {
+      const title = m[2];
+      const visibility = m[3];
+      if (!ctx.uiDriver?.androidCreateRoomComposite) {
+        return { ok: false, error: 'ctx.uiDriver.androidCreateRoomComposite not configured' };
+      }
+      await ctx.uiDriver.androidCreateRoomComposite(title, visibility);
+      return { ok: true };
+    },
+  },
+  {
+    // Receives a LiveKit token. Two forms — bare and "in response from
+    // POST <api>". Driver receives the endpoint (null for bare). Returns
+    // the token string (truthy = ok). Platform-dispatch.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+receives a LiveKit token(?: in response from POST (\/api\/[\w/-]+))?$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const endpoint = m[3] || null;
+      let token;
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webReceiveLiveKitToken) {
+          return { ok: false, error: 'ctx.webDriver.webReceiveLiveKitToken not configured' };
+        }
+        token = await ctx.webDriver.webReceiveLiveKitToken(endpoint);
+      } else if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidReceiveLiveKitToken) {
+          return {
+            ok: false,
+            error: 'ctx.uiDriver.androidReceiveLiveKitToken not configured',
+          };
+        }
+        token = await ctx.uiDriver.androidReceiveLiveKitToken(endpoint);
+      } else if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosReceiveLiveKitToken) {
+          return { ok: false, error: 'ctx.uiDriver.iosReceiveLiveKitToken not configured' };
+        }
+        token = await ctx.uiDriver.iosReceiveLiveKitToken(endpoint);
+      } else {
+        return { ok: false, error: `unknown platform "${platform}" for LiveKit token step` };
+      }
+      if (!token) {
+        return { ok: false, error: `no LiveKit token received on ${platform}` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Seat grid assertion (j09). Wake 30 strips trailing parens (e.g.
+    // "(by himself)"). Driver returns { occupied, total } for the
+    // currently-rendered seat grid. Matcher asserts both numbers.
+    pattern:
+      /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the seat grid with (\d+) of (\d+) seats occupied$/,
+    async handler(m, ctx) {
+      const platform = m[3];
+      const expectedOccupied = parseInt(m[4], 10);
+      const expectedTotal = parseInt(m[5], 10);
+      let state;
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidSeatGridState) {
+          return { ok: false, error: 'ctx.uiDriver.androidSeatGridState not configured' };
+        }
+        state = await ctx.uiDriver.androidSeatGridState();
+      } else if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosSeatGridState) {
+          return { ok: false, error: 'ctx.uiDriver.iosSeatGridState not configured' };
+        }
+        state = await ctx.uiDriver.iosSeatGridState();
+      } else if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webSeatGridState) {
+          return { ok: false, error: 'ctx.webDriver.webSeatGridState not configured' };
+        }
+        state = await ctx.webDriver.webSeatGridState();
+      } else {
+        return { ok: false, error: `unknown platform "${platform}" for seat-grid step` };
+      }
+      if (state?.occupied !== expectedOccupied || state?.total !== expectedTotal) {
+        return {
+          ok: false,
+          error: `seat grid mismatch: expected ${expectedOccupied} of ${expectedTotal}, actual ${state?.occupied} of ${state?.total}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Taps the same room (relative reference, j09). The "same room" is
+    // the room most-recently created or referenced — driver maintains
+    // that state. Optional " again" suffix passed as boolean.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+taps the same room( again)?$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const isAgain = !!m[3];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webTapSameRoom) {
+          return { ok: false, error: 'ctx.webDriver.webTapSameRoom not configured' };
+        }
+        await ctx.webDriver.webTapSameRoom(isAgain);
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidTapSameRoom) {
+          return { ok: false, error: 'ctx.uiDriver.androidTapSameRoom not configured' };
+        }
+        await ctx.uiDriver.androidTapSameRoom(isAgain);
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosTapSameRoom) {
+          return { ok: false, error: 'ctx.uiDriver.iosTapSameRoom not configured' };
+        }
+        await ctx.uiDriver.iosTapSameRoom(isAgain);
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for tap-same-room step` };
+    },
+  },
+  {
+    // Approve seat request composite (j09 host). Driver locates the
+    // seat-request notification for the named user and taps approve.
+    pattern: /^([A-Z][a-z]+)\s+on Android\s+taps approve on ([A-Z][a-z]+)'s seat request$/,
+    async handler(m, ctx) {
+      const requester = m[2];
+      if (!ctx.uiDriver?.androidApproveSeatRequest) {
+        return { ok: false, error: 'ctx.uiDriver.androidApproveSeatRequest not configured' };
+      }
+      await ctx.uiDriver.androidApproveSeatRequest(requester);
+      return { ok: true };
+    },
+  },
+  {
+    // Block via API attempt (j04). Wake 30 strips ONLY trailing parens,
+    // so the corpus form `block Officia (uniqueId=1) via /api/users/block`
+    // has mid-step parens — allow optional `\(...\)` after the target.
+    // Driver stores result on ctx.lastResponse for downstream assertions.
+    pattern:
+      /^([A-Z][a-z]+)\s+on Android attempts to block ([A-Z][a-z]+)(?:\s+\([^()]*\))?\s+via (\/api\/[\w/-]+)$/,
+    async handler(m, ctx) {
+      const target = m[2];
+      const apiPath = m[3];
+      if (!ctx.uiDriver?.androidAttemptBlock) {
+        return { ok: false, error: 'ctx.uiDriver.androidAttemptBlock not configured' };
+      }
+      const result = await ctx.uiDriver.androidAttemptBlock(target, apiPath);
+      if (result && typeof result.status === 'number') {
+        ctx.lastResponse = { status: result.status, body: result.body || null, path: apiPath };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
