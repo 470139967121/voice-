@@ -11545,6 +11545,181 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 100 — `<Name>'s <Plat> UI navigates back to the "<X>" tab`.
+    // j09, 2 corpus rows. Post-room-exit navigation back to a named tab.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI navigates back to the "([^"]+)" tab$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const tab = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webNavigatesBackToTab'
+        : platform === 'Android'
+          ? 'androidNavigatesBackToTab'
+          : 'iosNavigatesBackToTab';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, tab);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: ${platform} did not navigate back to "${tab}" tab`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 100 — `<Name>'s <Plat> UI shows the <noun> in the thread
+    // [with <suffix>]`. j07, 2 corpus rows. <noun>: message/reply.
+    // Optional trailing context (e.g., "with timestamp + sent indicator").
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the (\w+) in the thread(?: (.+))?$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const noun = m[3];
+      const suffix = m[4] || '';
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsInThread'
+        : platform === 'Android'
+          ? 'androidShowsInThread'
+          : 'iosShowsInThread';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, noun, suffix);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} thread does not show the ${noun}${suffix ? ` (${suffix})` : ''}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 100 — `<Name>'s <Plat> UI shows the new "<X>" gift entry`.
+    // j05 gift-log entry on recipient view.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the new "([^"]+)" gift entry$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const giftId = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsNewGiftEntry'
+        : platform === 'Android'
+          ? 'androidShowsNewGiftEntry'
+          : 'iosShowsNewGiftEntry';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, giftId);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show the new "${giftId}" gift entry`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 100 — `<Name>'s <Plat> UI shows the in-app gift notification
+    // with sender "<X>" and gift "<Y>"`. j05 — toast/banner when a gift
+    // is received in real time.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the in-app gift notification with sender "([^"]+)" and gift "([^"]+)"$/,
+    async handler(m, ctx) {
+      const recipient = m[1];
+      const platform = m[2];
+      const sender = m[3];
+      const giftId = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsInAppGiftNotification'
+        : platform === 'Android'
+          ? 'androidShowsInAppGiftNotification'
+          : 'iosShowsInAppGiftNotification';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](recipient, sender, giftId);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${recipient}'s ${platform} UI does not show in-app gift notification (sender="${sender}", gift="${giftId}")`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 100 — "<Name>'s <Plat> UI shows (her|his|their) own rank in
+    // the top N". j05 leaderboard rank visibility. Pronoun is purely
+    // grammatical, not captured.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows (?:her|his|their) own rank in the top (\d+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const topN = Number(m[3]);
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsOwnRankInTop'
+        : platform === 'Android'
+          ? 'androidShowsOwnRankInTop'
+          : 'iosShowsOwnRankInTop';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, topN);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show own rank in top ${topN}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 100 — `<Name>'s <Plat> UI shows the new "<X>" balance via
+    // Firestore listener`. j06 — wallet refresh via real-time listener
+    // (not a fresh API fetch). The balance can include commas (e.g.,
+    // "5,000") so it's captured as a string, not a number.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the new "([^"]+)" balance via Firestore listener$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const balance = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsBalanceViaListener'
+        : platform === 'Android'
+          ? 'androidShowsBalanceViaListener'
+          : 'iosShowsBalanceViaListener';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, balance);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show new balance "${balance}" via Firestore listener`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

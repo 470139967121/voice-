@@ -19478,3 +19478,161 @@ describe('Wake 99 — "POST <path> receives a request with a web push token from
     expect(ctx.fcmTokenRegistrations).toHaveLength(2);
   });
 });
+
+// ── Wake 100 — j07/j09 cluster + j05/j06 singletons ─────────────────
+
+describe('Wake 100 — `<Name>\'s <Plat> UI navigates back to the "<X>" tab`', () => {
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosNavigatesBackToTab: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Ines\'s iOS Sim UI navigates back to the "rooms" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'rooms');
+  });
+
+  test('Web variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webNavigatesBackToTab: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Web UI navigates back to the "rooms" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'rooms');
+  });
+});
+
+describe("Wake 100 — `<Name>'s <Plat> UI shows the <noun> in the thread[ with <suffix>]`", () => {
+  test('message with timestamp suffix', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsInThread: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Adam's Android UI shows the message in the thread with timestamp + sent indicator",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'message', 'with timestamp + sent indicator');
+  });
+
+  test('bare reply', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsInThread: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI shows the reply in the thread" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'reply', '');
+  });
+});
+
+describe('Wake 100 — `<Name>\'s <Plat> UI shows the new "<X>" gift entry`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNewGiftEntry: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Selma\'s Android UI shows the new "crown" gift entry' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'crown');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsNewGiftEntry: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Selma\'s Android UI shows the new "rose" gift entry' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Selma|rose/);
+  });
+});
+
+describe('Wake 100 — `<Name>\'s <Plat> UI shows the in-app gift notification with sender "<X>" and gift "<Y>"`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsInAppGiftNotification: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Selma\'s Android UI shows the in-app gift notification with sender "Alice" and gift "crown"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'Alice', 'crown');
+  });
+});
+
+describe('Wake 100 — "<Name>\'s <Plat> UI shows (her|his|their) own rank in the top N"', () => {
+  test("'her' pronoun", async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsOwnRankInTop: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's Web UI shows her own rank in the top 100" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 100);
+  });
+
+  test("'his' pronoun variant", async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsOwnRankInTop: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI shows his own rank in the top 50" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 50);
+  });
+
+  test("'their' gender-neutral", async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsOwnRankInTop: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Yuki's iOS Sim UI shows their own rank in the top 10" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 10);
+  });
+});
+
+describe('Wake 100 — `<Name>\'s <Plat> UI shows the new "<X>" balance via Firestore listener`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsBalanceViaListener: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Alice\'s Android UI shows the new "5,000" balance via Firestore listener',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', '5,000');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsBalanceViaListener: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Alice\'s Android UI shows the new "1,234" balance via Firestore listener',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Alice|balance|1,234/);
+  });
+});
