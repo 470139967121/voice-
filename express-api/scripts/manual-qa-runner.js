@@ -6067,6 +6067,230 @@ const matchers = [
       return { ok: false, error: `unknown platform "${platform}" for named-button-absence step` };
     },
   },
+  {
+    // Wake 66 — multi-clause persona locale state-seed (j08 Background).
+    // Pins per-persona locale for the scenario. We don't write to Firestore
+    // here (locale lives on the client profile and the runner doesn't
+    // mutate client state from a Given step); we just record the
+    // association in ctx.personaLocales so later assertions can branch on
+    // locale without re-parsing the Given step.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) locale=([a-z]{2}(?:-[A-Z]{2})?), ([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) locale=([a-z]{2}(?:-[A-Z]{2})?)$/,
+    async handler(m, ctx) {
+      const a = { name: m[1], platform: m[2], locale: m[3] };
+      const b = { name: m[4], platform: m[5], locale: m[6] };
+      const personas = loadPersonas();
+      for (const p of [a, b]) {
+        if (!personas.get(p.name)) {
+          return { ok: false, error: `persona "${p.name}" not in registry` };
+        }
+      }
+      if (!ctx.personaLocales) ctx.personaLocales = new Map();
+      ctx.personaLocales.set(a.name, { platform: a.platform, locale: a.locale });
+      ctx.personaLocales.set(b.name, { platform: b.platform, locale: b.locale });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 66 — LiveKit track is disconnected (bare assertion).
+    // Used both as a top-level Then step and as the inner step after
+    // `within Nms` peels off its prefix. Three room-identifier forms:
+    //   1. `{placeholder}` — left unresolved by interpolateScenarioVars
+    //      when no scenario var is bound; passed verbatim to the driver.
+    //   2. `"quoted"` — common for literal IDs like `"r1"`.
+    //   3. bare token — alphanumeric room ID.
+    // The matcher passes the room identifier through with quotes/braces
+    // preserved when present (quoted form is unquoted before dispatch).
+    pattern:
+      /^([A-Z][a-z]+)'s LiveKit track for (?:room\s+)?(?:"([^"]+)"|(\{[^}]+\})|([\w-]+)) is disconnected$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const roomId = m[2] || m[3] || m[4];
+      if (!ctx.liveKitDriver?.trackIsDisconnected) {
+        return { ok: false, error: 'ctx.liveKitDriver.trackIsDisconnected not configured' };
+      }
+      const disconnected = await ctx.liveKitDriver.trackIsDisconnected(name, roomId);
+      if (!disconnected) {
+        return {
+          ok: false,
+          error: `${name}'s LiveKit track for ${roomId} is still connected (not disconnected)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 66 — tester hears <X>'s audio on <Y>'s <platform> device.
+    // Fundamentally @manual: only a human tester can verify real audio
+    // playback. Gated on `ctx.testerDriver.confirmHearsAudio(from, on,
+    // platform)`. In interactive mode the driver prompts the human; in
+    // auto mode the driver is absent and the matcher fails with a clear
+    // "@manual-only" marker so the operator knows to tag the scenario.
+    // The trailing `(real microphone)` annotation in j09:65 is stripped
+    // by stripStepAnnotation before this matcher runs.
+    pattern:
+      /^the tester hears ([A-Z][a-z]+)'s audio on ([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) device$/,
+    async handler(m, ctx) {
+      const fromName = m[1];
+      const onName = m[2];
+      const platform = m[3];
+      if (!ctx.testerDriver?.confirmHearsAudio) {
+        return {
+          ok: false,
+          error: `manual-only assertion — no testerDriver. Tag scenario @manual or wire ctx.testerDriver.confirmHearsAudio.`,
+        };
+      }
+      const heard = await ctx.testerDriver.confirmHearsAudio(fromName, onName, platform);
+      if (!heard) {
+        return {
+          ok: false,
+          error: `tester did not confirm hearing ${fromName}'s audio on ${onName}'s ${platform} device`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 66 — UI shows the "<tab>" tab with no navigation to the
+    // <screen> screen (composite).
+    // Asserts BOTH that the named tab is currently selected AND that
+    // no nav-stack push to <screen> has occurred. Used in j09 to verify
+    // a cross-cohort participant lands on the rooms list with the room
+    // they tapped never opening. Driver collapses both checks into one
+    // call per platform — keeps the matcher contract narrow and lets
+    // each driver decide how to introspect its UI stack.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the "([^"]+)" tab with no navigation to the (\w+) screen$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const tab = m[3];
+      const screen = m[4];
+      if (platform.startsWith('Web')) {
+        if (!ctx.webDriver?.webShowsTabWithNoNavTo) {
+          return { ok: false, error: 'ctx.webDriver.webShowsTabWithNoNavTo not configured' };
+        }
+        const ok = await ctx.webDriver.webShowsTabWithNoNavTo(tab, screen);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `Web UI is not on "${tab}" tab OR has navigated to ${screen} screen`,
+          };
+        }
+        return { ok: true };
+      }
+      if (platform === 'Android') {
+        if (!ctx.uiDriver?.androidShowsTabWithNoNavTo) {
+          return { ok: false, error: 'ctx.uiDriver.androidShowsTabWithNoNavTo not configured' };
+        }
+        const ok = await ctx.uiDriver.androidShowsTabWithNoNavTo(tab, screen);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `Android UI is not on "${tab}" tab OR has navigated to ${screen} screen`,
+          };
+        }
+        return { ok: true };
+      }
+      if (platform === 'iOS Sim') {
+        if (!ctx.uiDriver?.iosShowsTabWithNoNavTo) {
+          return { ok: false, error: 'ctx.uiDriver.iosShowsTabWithNoNavTo not configured' };
+        }
+        const ok = await ctx.uiDriver.iosShowsTabWithNoNavTo(tab, screen);
+        if (!ok) {
+          return {
+            ok: false,
+            error: `iOS UI is not on "${tab}" tab OR has navigated to ${screen} screen`,
+          };
+        }
+        return { ok: true };
+      }
+      return { ok: false, error: `unknown platform "${platform}" for tab+no-nav step` };
+    },
+  },
+  {
+    // Wake 66 — conversation between two personas is frozen (state-seed).
+    // Seeds `conversations/<id>` with frozen=true + participantIds. The
+    // mid-step `(annotation)` parens describe cohort/locale but are NOT
+    // stripped by the END-anchored stripStepAnnotation. The matcher
+    // tolerates them inline via `\s*\([^)]+\)` and ignores their content
+    // — corpus author's intent is to document the test setup for the
+    // human reader, not to drive runner behaviour.
+    pattern:
+      /^the conversation "([^"]+)" between ([A-Z][a-z]+)\s*\([^)]+\) and ([A-Z][a-z]+)\s*\([^)]+\) is frozen$/,
+    async handler(m, ctx) {
+      const convId = m[1];
+      const nameA = m[2];
+      const nameB = m[3];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const a = personas.get(nameA);
+      const b = personas.get(nameB);
+      if (!a?.uniqueId) return { ok: false, error: `persona "${nameA}" not in registry` };
+      if (!b?.uniqueId) return { ok: false, error: `persona "${nameB}" not in registry` };
+      await ctx.db.doc(`conversations/${convId}`).set({
+        id: convId,
+        participantIds: [a.uniqueId, b.uniqueId],
+        frozen: true,
+        frozenAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 66 — response from /api/X as <persona> has N results and
+    // "<field>=<value>" in every row.
+    // Composite assertion: (a) count matches AND (b) every row has the
+    // field equal to the value. Reads ctx.lastResponse (an earlier
+    // request-firing step must have populated it). The "as <persona>"
+    // segment is informational — identifies which persona made the
+    // request in the corpus — and is NOT re-issued by this matcher.
+    // Singular vs plural: the corpus uses "1 result" but "0 results" /
+    // "5 results", so the trailing `s` is optional.
+    pattern:
+      /^the response from (\/api\/[\w/-]+) as ([A-Z][a-z]+) has (\d+) results? and "([^"=]+)=([^"]+)" in every row$/,
+    async handler(m, ctx) {
+      const expectedPath = m[1];
+      const expectedCount = parseInt(m[3], 10);
+      const field = m[4];
+      const expectedValue = m[5];
+      if (!ctx.lastResponse) {
+        return { ok: false, error: 'no recorded response — earlier request step is missing' };
+      }
+      if (ctx.lastResponse.path && ctx.lastResponse.path !== expectedPath) {
+        return {
+          ok: false,
+          error: `response path mismatch: expected ${expectedPath}, last was ${ctx.lastResponse.path}`,
+        };
+      }
+      const body = ctx.lastResponse.body;
+      if (!body || !Array.isArray(body.results)) {
+        return {
+          ok: false,
+          error: `response body has no results[] array (got ${JSON.stringify(body)})`,
+        };
+      }
+      const rows = body.results;
+      if (rows.length !== expectedCount) {
+        return {
+          ok: false,
+          error: `expected ${expectedCount} result(s) but actual ${rows.length}`,
+        };
+      }
+      for (const row of rows) {
+        const actual = row[field];
+        // Loose equality after string coercion — corpus values are bare
+        // strings ("minor", "adult", "true") but the response may carry
+        // booleans / numbers.
+        if (String(actual) !== expectedValue) {
+          return {
+            ok: false,
+            error: `row violates "${field}=${expectedValue}": got ${field}=${JSON.stringify(actual)} in ${JSON.stringify(row)}`,
+          };
+        }
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

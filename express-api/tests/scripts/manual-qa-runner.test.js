@@ -10768,3 +10768,363 @@ describe('I-5 — response-from-path with body=null but successful status', () =
     expect(r.error).toContain('200');
   });
 });
+
+// ── Wake 66 ──────────────────────────────────────────────────────────
+
+describe('Wake 66 — multi-clause persona locale state-seed', () => {
+  // j08-cross-cohort-wall.feature:124
+  //   Given Vexa on Web locale=en, Marcus on Android locale=en
+  // Background-block precondition that pins per-persona locale for the
+  // scenario. Handler must look up both personas (so a typo fails fast)
+  // and record locale in ctx.personaLocales for later assertions.
+  test('two personas + platforms + locales — both recorded', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Vexa on Web locale=en, Marcus on Android locale=en' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaLocales.get('Vexa')).toEqual({ platform: 'Web', locale: 'en' });
+    expect(ctx.personaLocales.get('Marcus')).toEqual({ platform: 'Android', locale: 'en' });
+  });
+
+  test('different locales per persona (mixed scenario)', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Hayato on Android locale=ja, Alice on Web locale=en' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.personaLocales.get('Hayato')).toEqual({ platform: 'Android', locale: 'ja' });
+    expect(ctx.personaLocales.get('Alice')).toEqual({ platform: 'Web', locale: 'en' });
+  });
+
+  test('unknown persona — fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzunknown on Web locale=en, Alice on Web locale=en' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzunknown/);
+  });
+});
+
+describe('Wake 66 — LiveKit track is disconnected (bare assertion)', () => {
+  // j09-voice-room-host.feature:87
+  //   Then Alice's LiveKit track for room {roomId} is disconnected
+  // Also j04:90 (via `within Nms` wrapping):
+  //   Then within 5000ms Hayato's LiveKit track for "r1" is disconnected
+  // After the `within` wrapper peels off, the inner step lands here.
+  // Three room-identifier forms: `{placeholder}`, `"quoted"`, bare token.
+  test('placeholder room id — driver returns true → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ liveKitDriver: { trackIsDisconnected: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's LiveKit track for room {roomId} is disconnected" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', '{roomId}');
+  });
+
+  test('quoted room id — driver receives unquoted', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ liveKitDriver: { trackIsDisconnected: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Hayato\'s LiveKit track for "r1" is disconnected' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato', 'r1');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ liveKitDriver: { trackIsDisconnected: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's LiveKit track for room r1 is disconnected" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/still connected|not disconnected/i);
+  });
+
+  test('no driver configured → clear error', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's LiveKit track for room r1 is disconnected" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/liveKitDriver/);
+  });
+});
+
+describe("Wake 66 — tester hears <X>'s audio on <Y>'s device", () => {
+  // j09-voice-room-host.feature:65
+  //   Then the tester hears Ines's audio on Theo's Android device (real microphone)
+  // The trailing `(real microphone)` is stripped by stripStepAnnotation
+  // before the matcher runs. This step is fundamentally @manual — the
+  // runner has no way to verify real audio without a human. We expose a
+  // testerDriver gate: in interactive mode the driver prompts; in auto
+  // mode the driver is absent and the step fails with a clear marker
+  // so the operator knows to tag the scenario @manual.
+  test('testerDriver returns true → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ testerDriver: { confirmHearsAudio: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Ines's audio on Theo's Android device",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Theo', 'Android');
+  });
+
+  test('testerDriver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ testerDriver: { confirmHearsAudio: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Ines's audio on Theo's iOS Sim device",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/tester did not confirm/i);
+  });
+
+  test('no testerDriver — clear @manual hint', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "the tester hears Ines's audio on Theo's Android device",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/manual/i);
+  });
+});
+
+describe('Wake 66 — UI shows tab with no navigation to screen', () => {
+  // j09-voice-room-host.feature:94
+  //   Then Marcus's Android UI shows the "rooms" tab with no navigation to the room screen
+  // Composite: asserts (a) tab is current AND (b) no nav-stack push to
+  // the named screen has occurred. Driver returns boolean for the combined
+  // check — keeps the matcher contract narrow and lets each platform
+  // driver decide how to introspect tab + nav stack.
+  test('android driver returns true → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsTabWithNoNavTo: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Marcus\'s Android UI shows the "rooms" tab with no navigation to the room screen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('rooms', 'room');
+  });
+
+  test('ios driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosShowsTabWithNoNavTo: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Mia\'s iOS Sim UI shows the "discovery" tab with no navigation to the profile screen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/discovery|profile/);
+  });
+
+  test('web driver path', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsTabWithNoNavTo: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Alice\'s Web UI shows the "home" tab with no navigation to the wallet screen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('home', 'wallet');
+  });
+
+  test('unknown platform — fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Alice\'s Web UI shows the "home" tab with no navigation to the wallet screen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webShowsTabWithNoNavTo/);
+  });
+});
+
+describe('Wake 66 — conversation between two personas is frozen (state-seed)', () => {
+  // j08-cross-cohort-wall.feature:137
+  //   Given the conversation "c2" between Hayato (post-flip minor, locale=ja)
+  //         and Alice (adult, locale=en) is frozen
+  // The mid-step `(annotation)` parens describe the personas' cohort/locale
+  // but are NOT stripped (stripStepAnnotation is END-anchored). The matcher
+  // tolerates them inline and ignores their content — corpus author's
+  // intent is to document the test setup, not to drive behaviour.
+  test('seeds conversations/<id> with frozen=true and participantIds', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text:
+          'the conversation "c2" between Hayato (post-flip minor, locale=ja) ' +
+          'and Alice (adult, locale=en) is frozen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const conv = db._docs['conversations/c2'];
+    expect(conv).toBeDefined();
+    expect(conv.frozen).toBe(true);
+    // Hayato = 50000030, Alice = 50000010
+    expect(conv.participantIds.sort()).toEqual([50000010, 50000030]);
+  });
+
+  test('unknown persona — fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the conversation "c9" between Zzzghost (a, b) and Alice (c, d) is frozen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db — fail with clear hint', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the conversation "c2" between Hayato (a) and Alice (b) is frozen',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 66 — response from /api/X as <persona> has N results and "k=v" in every row', () => {
+  // j02-minor-new-restricted.feature:54
+  //   Then the response from /api/users/search as Mia has 1 result and "cohort=minor" in every row
+  // Composite assertion: count + per-row field. The "as <persona>" is
+  // informational (identifies which persona made the request); the matcher
+  // does NOT re-issue the request — just validates ctx.lastResponse which
+  // an earlier "Mia on iOS Sim GETs /api/users/search" step recorded.
+  test('count and field match for every row → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = {
+      status: 200,
+      path: '/api/users/search',
+      body: { results: [{ uniqueId: 90000003, cohort: 'minor' }] },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/users/search as Mia has 1 result and "cohort=minor" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('row violates field assertion → fail with offending row', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = {
+      status: 200,
+      path: '/api/users/search',
+      body: {
+        results: [
+          { uniqueId: 90000003, cohort: 'minor' },
+          { uniqueId: 60000010, cohort: 'adult' },
+        ],
+      },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/users/search as Mia has 2 results and "cohort=minor" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/cohort/);
+    expect(r.error).toMatch(/adult/);
+  });
+
+  test('count mismatch → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = {
+      status: 200,
+      path: '/api/users/search',
+      body: { results: [{ cohort: 'minor' }] },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/users/search as Mia has 5 results and "cohort=minor" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/expected 5.*got 1|expected 5.*actual 1/);
+  });
+
+  test('path mismatch → fail with both paths', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = {
+      status: 200,
+      path: '/api/economy/wallet',
+      body: { results: [] },
+    };
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/users/search as Mia has 0 results and "cohort=minor" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/wallet|search/);
+  });
+
+  test('no recorded response → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/users/search as Mia has 0 results and "cohort=minor" in every row',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no recorded/);
+  });
+});
