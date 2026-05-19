@@ -9511,6 +9511,192 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 88 — "<Name> [P-NN] (cohort) is signed in on <Plat>". j17:24,
+    // j18:46. The mid-step `(cohort)` paren is NOT end-anchored so
+    // stripStepAnnotation leaves it; the existing line-368 sign-in
+    // matcher rejects it. This explicit variant synthesises a session
+    // whose customClaims.cohort is the DECLARED cohort, even if the
+    // persona registry would say otherwise. That's intentional: the
+    // scenario asserts cohort-specific behaviour by labelling the actor,
+    // and downstream cohort-gated steps should believe the label.
+    pattern:
+      /^([A-Z][a-z]+)\s*\[(P-\d{2})\]\s*\((minor|adult)\)\s+is signed in on\s+(Web Chromium|Web Safari|Web|Android|iOS Sim)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const pCode = m[2];
+      const cohort = m[3];
+      const personas = loadPersonas();
+      const p = personas.get(pCode) || personas.get(name);
+      if (!p) return { ok: false, error: `persona "${name}" not in registry` };
+      ctx.sessions.set(name, {
+        persona: p,
+        idToken: `synthetic:${name}:${p.uniqueId}`,
+        refreshToken: null,
+        localId: String(p.uniqueId),
+        customClaims: { uniqueId: p.uniqueId, cohort, ephemeral: !!p.ephemeral },
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 88 — "the database has N entries in "<X>" added since "<ts>"".
+    // j05:14. Counts docs in the named (sub)collection whose timestamp
+    // field is strictly > the `since` value. Timestamp field tried in
+    // order: createdAt, at, timestamp. The "since" placeholder is
+    // interpolated upstream so {ts} (scenario var) becomes a real number.
+    pattern: /^the database has (\d+) entries in "([^"]+)" added since "([^"]+)"$/,
+    async handler(m, ctx) {
+      const expectedCount = Number(m[1]);
+      const colPath = m[2];
+      const sinceRaw = m[3];
+      const since = Number(sinceRaw);
+      if (!Number.isFinite(since)) {
+        return {
+          ok: false,
+          error: `since="${sinceRaw}" is not a number (placeholder unresolved?)`,
+        };
+      }
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.collection(colPath).get();
+      const matched = snap.docs.filter((d) => {
+        const data = typeof d.data === 'function' ? d.data() : d;
+        const t = data?.createdAt ?? data?.at ?? data?.timestamp;
+        return typeof t === 'number' && t > since;
+      });
+      if (matched.length !== expectedCount) {
+        return {
+          ok: false,
+          error: `count was ${matched.length} entries in "${colPath}" since ${since}, expected ${expectedCount}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 88 — "<Name>'s <Plat> UI shows the official badge[ <suffix>]".
+    // j13/j18 variants. Bare and suffixed forms unified into one
+    // matcher; the optional trailing fragment is passed to the driver
+    // verbatim so it can dispatch to the right slot ("on the sender
+    // avatar", "with Arabic label", etc.).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the official badge(?: (.+))?$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const suffix = m[3] || '';
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsOfficialBadge'
+        : platform === 'Android'
+          ? 'androidShowsOfficialBadge'
+          : 'iosShowsOfficialBadge';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, suffix);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show ${name}'s official badge${suffix ? ` (${suffix})` : ''}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 88 — "<Name> on <Plat> opens <Other>'s profile and taps
+    // "<X>"". j11:33. Composite: open profile + tap action. Driver
+    // sequences both atomically so the test can't observe a half-open
+    // state (would be a race against profile-modal animation).
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) opens ([A-Z][a-z]+)'s profile and taps "([^"]+)"$/,
+    async handler(m, ctx) {
+      const actor = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const button = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webOpenProfileAndTap'
+        : platform === 'Android'
+          ? 'androidOpenProfileAndTap'
+          : 'iosOpenProfileAndTap';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](actor, target, button);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${actor}: open ${target}'s profile + tap "${button}" did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 88 — "<Name> on <Plat> opens <Other>'s profile from the <X>".
+    // j17:71, j18:49. Composite navigation: from source surface (room,
+    // PM, inbox, ...) → other's profile. Source word tells the driver
+    // which entry-point gesture to use.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) opens ([A-Z][a-z]+)'s profile from the (\w+)$/,
+    async handler(m, ctx) {
+      const actor = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const source = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webOpenProfileFrom'
+        : platform === 'Android'
+          ? 'androidOpenProfileFrom'
+          : 'iosOpenProfileFrom';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](actor, target, source);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${actor}: open ${target}'s profile from ${source} did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 88 — "the <topic> (broadcast|flow) fires sendSystemPm with
+    // key="<X>" recipient=<Other>". j18:38, 51. Sibling of Wake 82's
+    // webhook variant — same effective driver semantics, only the
+    // Gherkin trigger word differs (broadcast/flow vs webhook). Placed
+    // AFTER the Wake 82 matcher; the `webhook` keyword is not in this
+    // pattern so they don't collide.
+    pattern:
+      /^the (\w+(?:-\w+)*) (broadcast|flow) fires sendSystemPm with key="([^"]+)" recipient=([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const triggerName = m[1];
+      const key = m[3];
+      const recipientName = m[4];
+      const personas = loadPersonas();
+      const p = personas.get(recipientName);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `recipient "${recipientName}" not in registry` };
+      }
+      if (!ctx.webDriver?.fireSystemPmWebhook) {
+        return { ok: false, error: 'ctx.webDriver.fireSystemPmWebhook not configured' };
+      }
+      const ok = await ctx.webDriver.fireSystemPmWebhook(triggerName, key, p.uniqueId);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${triggerName} failed to fire sendSystemPm key=${key}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

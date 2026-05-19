@@ -16544,3 +16544,300 @@ describe('Wake 87 — "<Name> received a system PM from <Other>" (state-seed)', 
     expect(r.error).toMatch(/db/);
   });
 });
+
+// ── Wake 88 ──────────────────────────────────────────────────────────
+
+describe('Wake 88 — "<Name> [P-NN] (cohort) is signed in on <Plat>"', () => {
+  // j17-teacher-classroom.feature:24, j18-official-system-pms.feature:46
+  //   Given Marcus [P-04] (minor) is signed in on Android
+  // Mid-step `(minor)` paren is NOT end-anchored, so stripStepAnnotation
+  // doesn't remove it — the existing line-368 sign-in matcher rejects it.
+  // This matcher accepts the mid-step cohort tag explicitly and threads
+  // it through to ctx.sessions so downstream cohort-gated steps see the
+  // declared cohort even if Firestore says something else.
+  test('matches minor cohort and synthesises session', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Marcus [P-04] (minor) is signed in on Android' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const session = ctx.sessions.get('Marcus');
+    expect(session).toBeDefined();
+    expect(session.customClaims.cohort).toBe('minor');
+    // Marcus = P-04 = 60000010
+    expect(session.customClaims.uniqueId).toBe(60000010);
+  });
+
+  test('matches adult cohort', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice [P-02] (adult) is signed in on Web' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const session = ctx.sessions.get('Alice');
+    expect(session.customClaims.cohort).toBe('adult');
+  });
+
+  test('matches iOS Sim variant', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Yuki [P-18] (minor) is signed in on iOS Sim' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.sessions.get('Yuki').customClaims.cohort).toBe('minor');
+  });
+
+  test('unknown persona → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost [P-99] (minor) is signed in on Android' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost|persona/);
+  });
+});
+
+describe('Wake 88 — "the database has N entries in "<X>" added since "<ts>""', () => {
+  // j05-alice-monetization.feature:14
+  //   Then the database has 3 entries in "users/50000010/gifts" added since "{ts}"
+  // Counts docs in a subcollection whose createdAt (or `at`/`timestamp`)
+  // is strictly after the recorded timestamp. The {ts} placeholder is
+  // resolved upstream by interpolateScenarioVars.
+  test('matching count → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000010/gifts/g1': { createdAt: 2000, gift: 'rose' },
+      'users/50000010/gifts/g2': { createdAt: 3000, gift: 'cake' },
+      'users/50000010/gifts/g3': { createdAt: 4000, gift: 'star' },
+      'users/50000010/gifts/g0': { createdAt: 500, gift: 'old' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 3 entries in "users/50000010/gifts" added since "1000"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('wrong count → fail with counts', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000010/gifts/g1': { createdAt: 2000 },
+      'users/50000010/gifts/g2': { createdAt: 3000 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 5 entries in "users/50000010/gifts" added since "1000"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/2|5|count/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 3 entries in "users/50000010/gifts" added since "1000"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 88 — "<Name>\'s <Plat> UI shows the official badge[ <suffix>]"', () => {
+  // j13-locales-rtl-cjk.feature & j18-official-system-pms.feature variants:
+  //   Then Hayato's Android UI shows the official badge
+  //   Then Adam's Android UI shows the official badge on the sender avatar
+  //   Then Layla's Web UI shows the official badge with Arabic label
+  // Optional trailing fragment is passed to the driver so it can decide
+  // which slot/locale-label to assert against.
+  test('bare badge → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsOfficialBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Hayato's Android UI shows the official badge" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato', '');
+  });
+
+  test('badge with sender-avatar suffix', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsOfficialBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Adam's Android UI shows the official badge on the sender avatar",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'on the sender avatar');
+  });
+
+  test('badge with arabic-label suffix on Web', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsOfficialBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Layla's Web UI shows the official badge with Arabic label" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Layla', 'with Arabic label');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsOfficialBadge: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Hayato's Android UI shows the official badge" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Hayato|badge/);
+  });
+});
+
+describe('Wake 88 — "<Name> on <Plat> opens <Other>\'s profile and taps "<X>""', () => {
+  // j11-harassment-moderation-cycle.feature:33
+  //   When Nora on iOS Sim opens Raul's profile and taps "Block"
+  // Composite: open profile + tap action. Driver sequences both so
+  // the test can't observe a half-open state.
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosOpenProfileAndTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Nora on iOS Sim opens Raul\'s profile and taps "Block"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Nora', 'Raul', 'Block');
+  });
+
+  test('Android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidOpenProfileAndTap: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Android opens Bob\'s profile and taps "Report"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Bob', 'Report');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Nora on iOS Sim opens Raul\'s profile and taps "Block"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosOpenProfileAndTap/);
+  });
+});
+
+describe('Wake 88 — "<Name> on <Plat> opens <Other>\'s profile from the <X>"', () => {
+  // j17-teacher-classroom.feature:71, j18-official-system-pms.feature:49
+  //   When Yuki on iOS Sim opens Bao's profile from the room
+  //   When Adam on Android opens Officia's profile from the PM
+  // Composite: navigate from <source-surface> → other's profile.
+  // The source phrase (room|PM|inbox|...) tells the driver which entry
+  // point to use.
+  test('iOS Sim from-room', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosOpenProfileFrom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Yuki on iOS Sim opens Bao's profile from the room" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 'Bao', 'room');
+  });
+
+  test('Android from-PM', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidOpenProfileFrom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Adam on Android opens Officia's profile from the PM" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Officia', 'PM');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosOpenProfileFrom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Yuki on iOS Sim opens Bao's profile from the room" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Yuki|profile|room/);
+  });
+});
+
+describe('Wake 88 — "the <topic> (broadcast|flow) fires sendSystemPm with key="<X>" recipient=<Other>"', () => {
+  // j18-official-system-pms.feature:38, 51
+  //   When the policy-update broadcast fires sendSystemPm with key="policy_update_v4" recipient=Marcus
+  //   When the suspension-notice flow fires sendSystemPm with key="moderation_suspension_notice" recipient=Layla
+  // Reuses Wake 82's fireSystemPmWebhook driver because the trigger
+  // type (webhook|broadcast|flow) doesn't change effective semantics —
+  // only the Gherkin author's English phrasing differs.
+  test('broadcast trigger → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the policy-update broadcast fires sendSystemPm with key="policy_update_v4" recipient=Marcus',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Marcus = P-04 = 60000010
+    expect(spy).toHaveBeenCalledWith('policy-update', 'policy_update_v4', 60000010);
+  });
+
+  test('flow trigger → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the suspension-notice flow fires sendSystemPm with key="moderation_suspension_notice" recipient=Layla',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    // Layla = P-13 = 50000070
+    expect(spy).toHaveBeenCalledWith('suspension-notice', 'moderation_suspension_notice', 50000070);
+  });
+
+  test('unknown recipient → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'the policy-update broadcast fires sendSystemPm with key="X" recipient=Zzzghost',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
