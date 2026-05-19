@@ -6985,6 +6985,183 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 71 — bare "POST <path> as <persona>" (no body).
+    // j11:73 — `POST /api/livekit/token as Raul`. Endpoints that derive
+    // everything from the bearer token need no request body. Distinct
+    // from existing `POST <path> with <kv-list> as <persona>` which
+    // requires a `with <payload>` token.
+    pattern: /^POST\s+(\/api\/[\w/-]+)\s+as\s+([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const apiPath = m[1];
+      const name = m[2];
+      const sess = ctx.sessions.get(name);
+      if (!sess) {
+        return { ok: false, error: `no signed-in session for "${name}" — Given step missing?` };
+      }
+      const r = await ctx.fetch(ctx.apiBase + apiPath, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sess.idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      });
+      let parsedBody = null;
+      try {
+        const text = await r.text();
+        parsedBody = text ? JSON.parse(text) : null;
+      } catch {
+        // body not JSON — keep null
+      }
+      ctx.lastResponse = { status: r.status, body: parsedBody, persona: name, path: apiPath };
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 71 — "<Name> on <Plat> attempts POST <path>" (bare, no body).
+    // j11:96 — `Raul on Android attempts POST /api/messages`. Sibling of
+    // the existing `attempts POST <path> with body <json>` matcher; this
+    // variant tests the API's rejection of bodyless POSTs (e.g., suspended
+    // user attempting to send a message).
+    pattern:
+      /^([A-Z][a-z]+)(?:\s+on\s+(?:Web Chromium|Web Safari|Web|Android|iOS Sim))?\s+attempts POST\s+(\/api\/[\w/-]+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const apiPath = m[2];
+      const sess = ctx.sessions.get(name);
+      if (!sess) {
+        return { ok: false, error: `no signed-in session for "${name}" — Given step missing?` };
+      }
+      const r = await ctx.fetch(ctx.apiBase + apiPath, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sess.idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      });
+      let parsedBody = null;
+      try {
+        const text = await r.text();
+        parsedBody = text ? JSON.parse(text) : null;
+      } catch {
+        // body not JSON — keep null
+      }
+      ctx.lastResponse = { status: r.status, body: parsedBody, persona: name, path: apiPath };
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 71 — types "<text>" into the <name> field (non-search).
+    // j11:82 — `types "..." into the appeal field`. Existing matchers
+    // catch `into the search field` specifically; this generic catches
+    // any other named field. First-match-wins keeps the search-specific
+    // matchers winning for their form.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+types "([^"]*)" into the (\w+) field$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const text = m[3];
+      const fieldName = m[4];
+      const methodName =
+        platform === 'Android'
+          ? 'androidTypeIntoNamedField'
+          : platform === 'iOS Sim'
+            ? 'iosTypeIntoNamedField'
+            : 'webTypeIntoNamedField';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      await driver[methodName](name, fieldName, text);
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 71 — UI no longer shows the <name> <kind>.
+    // j11:88 — `Raul's Android UI no longer shows the suspension screen`.
+    // Semantic-equivalent of `does not show the X` phrased as a state
+    // change. Reuses the same driver method as Wake 69's positive-form
+    // (just with inverted assertion).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI no longer shows the ([\w ]+) (button|screen|banner|dialog|panel|tab)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const noun = m[3].trim();
+      const kind = m[4];
+      const methodName =
+        platform === 'Android'
+          ? 'androidShowsNamedKind'
+          : platform === 'iOS Sim'
+            ? 'iosShowsNamedKind'
+            : 'webShowsNamedKind';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const stillShown = await driver[methodName](name, noun, kind);
+      if (stillShown) {
+        return {
+          ok: false,
+          error: `${platform} UI still shows the "${noun}" ${kind} but should not (no longer)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 71 — predicate state-seed "has been warned but not suspended".
+    // j11:101 — writes hasActiveWarning=true AND zeroes suspendedUntil.
+    // Tests the transition state — warning exists, suspension does not.
+    pattern: /^([A-Z][a-z]+) has been warned but not suspended$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      await ctx.db
+        .doc(`users/${p.uniqueId}`)
+        .set({ hasActiveWarning: true, suspendedUntil: 0 }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 71 — "<Name> on <Plat> opens his/her conversation with <Other>".
+    // j11:93 — composite navigation: open PM thread between the speaker
+    // and the named other persona. Driver resolves the conv id from the
+    // persona pair and navigates.
+    pattern:
+      /^([A-Z][a-z]+)\s+on (Web Chromium|Web Safari|Web|Android|iOS Sim)\s+opens (?:his|her|their) conversation with ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const otherName = m[3];
+      const methodName =
+        platform === 'Android'
+          ? 'androidOpenConversationWith'
+          : platform === 'iOS Sim'
+            ? 'iosOpenConversationWith'
+            : 'webOpenConversationWith';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, otherName);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${platform}: conversation between ${name} and ${otherName} did not open`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

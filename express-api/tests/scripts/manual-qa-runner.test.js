@@ -12302,3 +12302,241 @@ describe('Wake 70 — "<Name> is suspended until N days from now" (state-seed)',
     expect(r.error).toMatch(/db/);
   });
 });
+
+// ── Wake 71 ──────────────────────────────────────────────────────────
+
+describe('Wake 71 — bare "POST <path> as <persona>" (no body)', () => {
+  // j11-harassment-moderation-cycle.feature:73
+  //   When POST /api/livekit/token as Raul
+  // Bare POST with NO body — distinct from the existing `POST <path> with
+  // <kv-list> as <persona>` matcher which requires a `with <payload>` token.
+  // Used by endpoints that derive everything from the bearer token (e.g.,
+  // LiveKit token issuance keyed on auth claims).
+  test('fires POST with empty body, records lastResponse', async () => {
+    const idToken =
+      'aaa.' + Buffer.from(JSON.stringify({ uniqueId: 50000050 })).toString('base64url') + '.bbb';
+    const fetchMock = jest.fn(async () => ({
+      status: 200,
+      text: async () => JSON.stringify({ token: 'lk-abc' }),
+    }));
+    const ctx = makeCtx({ fetch: fetchMock });
+    ctx.sessions.set('Raul', { uniqueId: 50000050, idToken });
+    const r = await executeStep({ kind: 'When', text: 'POST /api/livekit/token as Raul' }, ctx);
+    expect(r.ok).toBe(true);
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://dev-api.example/api/livekit/token');
+    expect(opts.method).toBe('POST');
+    expect(opts.body).toBe('{}');
+    expect(ctx.lastResponse.status).toBe(200);
+    expect(ctx.lastResponse.path).toBe('/api/livekit/token');
+  });
+
+  test('no signed-in session → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'When', text: 'POST /api/livekit/token as Ghost' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Ghost/);
+  });
+});
+
+describe('Wake 71 — "<Name> on <Plat> attempts POST <path>" (bare, no body)', () => {
+  // j11-harassment-moderation-cycle.feature:96
+  //   When Raul on Android attempts POST /api/messages
+  // Sibling of the existing `attempts POST <path> with body <json>` matcher;
+  // this one omits the body (intended to test the API's rejection of
+  // bodyless POSTs, e.g., a suspended user attempting to send a message).
+  test('fires POST, records non-2xx as lastResponse without throwing', async () => {
+    const idToken =
+      'aaa.' + Buffer.from(JSON.stringify({ uniqueId: 50000050 })).toString('base64url') + '.bbb';
+    const fetchMock = jest.fn(async () => ({
+      status: 403,
+      text: async () => JSON.stringify({ error: 'suspended' }),
+    }));
+    const ctx = makeCtx({ fetch: fetchMock });
+    ctx.sessions.set('Raul', { uniqueId: 50000050, idToken });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul on Android attempts POST /api/messages' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(ctx.lastResponse.status).toBe(403);
+    expect(ctx.lastResponse.path).toBe('/api/messages');
+  });
+
+  test('no session → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Ghost on Android attempts POST /api/messages' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Ghost/);
+  });
+});
+
+describe('Wake 71 — types "<text>" into the <name> field (non-search)', () => {
+  // j11-harassment-moderation-cycle.feature:82
+  //   When Raul on Android types "I think this was a misunderstanding" into the appeal field
+  // Existing matchers cover `into the search field` specifically; this
+  // catches generic `into the <name> field` for any other named field
+  // (appeal, email, password, etc.). First-match-wins keeps the search-
+  // specific matchers winning when their form applies.
+  test('android: appeal field → driver receives field name + text', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTypeIntoNamedField: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Raul on Android types "I think this was a misunderstanding" into the appeal field',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'appeal', 'I think this was a misunderstanding');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosTypeIntoNamedField: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Mia on iOS Sim types "test@test.com" into the email field' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Mia', 'email', 'test@test.com');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Raul on Android types "x" into the appeal field',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTypeIntoNamedField/);
+  });
+});
+
+describe('Wake 71 — UI no longer shows the <name> <kind>', () => {
+  // j11-harassment-moderation-cycle.feature:88
+  //   Then Raul's Android UI no longer shows the suspension screen
+  // Semantic-equivalent of `does not show the X` but phrased as a state
+  // change ("no longer" implies it was previously shown). Same driver
+  // contract — returns truthy iff the named element is now absent.
+  test('driver returns false (no longer shown) → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedKind: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI no longer shows the suspension screen" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'suspension', 'screen');
+  });
+
+  test('driver returns true (still shown) → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedKind: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI no longer shows the suspension screen" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/suspension/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Android UI no longer shows the suspension screen" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsNamedKind/);
+  });
+});
+
+describe('Wake 71 — predicate state-seed "has been warned but not suspended"', () => {
+  // j11-harassment-moderation-cycle.feature:101
+  //   Given Raul has been warned but not suspended
+  // Predicate state-seed: writes hasActiveWarning=true AND ensures
+  // suspendedUntil=0 (or absent). Tests the transition state — warning
+  // exists, suspension does not. Conjunction is part of the assertion
+  // intent so we set BOTH fields, not just one.
+  test('writes hasActiveWarning=true and clears suspendedUntil', async () => {
+    const db = makeStatefulFakeDb({
+      'users/50000050': { hasActiveWarning: false, suspendedUntil: 999999999 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Raul has been warned but not suspended' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000050'].hasActiveWarning).toBe(true);
+    expect(db._docs['users/50000050'].suspendedUntil).toBe(0);
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost has been warned but not suspended' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Raul has been warned but not suspended' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 71 — "opens his/her conversation with <Other>"', () => {
+  // j11-harassment-moderation-cycle.feature:93
+  //   When Raul on Android opens his conversation with Nora
+  // Composite navigation: open the PM (private message) thread between
+  // the speaker and the named other persona. Driver resolves the conv
+  // id from the persona pair and navigates.
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidOpenConversationWith: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul on Android opens his conversation with Nora' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul', 'Nora');
+  });
+
+  test('iOS Sim variant + "her" pronoun', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosOpenConversationWith: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on iOS Sim opens her conversation with Bob' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Bob');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Raul on Android opens his conversation with Nora' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidOpenConversationWith/);
+  });
+});
