@@ -8731,6 +8731,132 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 83 — "<Name> [P-NN] is signed in as a non-admin user".
+    // j12:140 — predicate state-seed for admin-permission tests. Writes
+    // isAdmin=false on the persona's user doc.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+is signed in as a non-admin user$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      await ctx.db.doc(`users/${p.uniqueId}`).set({ isAdmin: false }, { merge: true });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 83 — "the audit log has <N> entries". j12:101 — large-volume
+    // state-seed. Driver bulk-writes synthetic audit entries.
+    pattern: /^the audit log has (\d+) entries$/,
+    async handler(m, ctx) {
+      const count = parseInt(m[1], 10);
+      if (!ctx.webDriver?.seedAuditLogEntries) {
+        return { ok: false, error: 'ctx.webDriver.seedAuditLogEntries not configured' };
+      }
+      const ok = await ctx.webDriver.seedAuditLogEntries(count);
+      if (!ok) {
+        return { ok: false, error: `failed to seed ${count} audit log entries` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 83 — "the scheduled startsAt has been reached". j16:42 —
+    // time-travel state-seed. Driver advances the mock clock to/past
+    // the latest event's startsAt and triggers any time-based watchers.
+    pattern: /^the scheduled startsAt has been reached$/,
+    async handler(_m, ctx) {
+      if (!ctx.webDriver?.advanceClockToStartsAt) {
+        return { ok: false, error: 'ctx.webDriver.advanceClockToStartsAt not configured' };
+      }
+      const ok = await ctx.webDriver.advanceClockToStartsAt();
+      if (!ok) {
+        return { ok: false, error: 'failed to advance mock clock to startsAt' };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 83 — "<Name> on <Plat> taps "<X>" on his/her/their event-host
+    // home". j16:43 — tap with contextual-location annotation.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) taps "([^"]+)" on (?:his|her|their) event-host home$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const buttonText = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webTapOnEventHostHome'
+        : platform === 'Android'
+          ? 'androidTapOnEventHostHome'
+          : 'iosTapOnEventHostHome';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, buttonText);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: tap "${buttonText}" on event-host home did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 83 — "<Name>'s <Plat> UI shows the roster panel with <Other>
+    // listed as "<status>"". j16:50 — composite roster assertion.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the roster panel with ([A-Z][a-z]+) listed as "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const otherName = m[3];
+      const status = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsRosterEntry'
+        : platform === 'Android'
+          ? 'androidShowsRosterEntry'
+          : 'iosShowsRosterEntry';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, otherName, status);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show ${otherName} listed as "${status}" in the roster panel`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 83 — "<Name> [P-NN] (annotation) opens the "<X>" tab".
+    // j15:75, j15:80 — persona-annotated tab navigation. The mid-step
+    // `(annotation)` is informational; the matcher tolerates any
+    // content inside the parens. Routes to androidOpenTab — the corpus
+    // only uses Android for this shape.
+    pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s*\([^)]+\)\s+opens the "([^"]+)" tab$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const tab = m[3];
+      if (!ctx.uiDriver?.androidOpenTab) {
+        return { ok: false, error: 'ctx.uiDriver.androidOpenTab not configured' };
+      }
+      const ok = await ctx.uiDriver.androidOpenTab(name, tab);
+      if (!ok) {
+        return { ok: false, error: `${name}: open "${tab}" tab did not complete` };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

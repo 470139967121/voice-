@@ -15342,3 +15342,253 @@ describe('Wake 82 — "<X> (locale=<a>) is being downgraded by <Y> (locale=<b>) 
     expect(r.error).toMatch(/db/);
   });
 });
+
+// ── Wake 83 ──────────────────────────────────────────────────────────
+
+describe('Wake 83 — "<Name> [P-NN] is signed in as a non-admin user"', () => {
+  // j12-admin-daily-routine.feature:140
+  //   Given Adam [P-01] is signed in as a non-admin user
+  // Predicate state-seed for admin-permission tests. Sets isAdmin=false
+  // on the persona's user doc.
+  test('writes isAdmin=false', async () => {
+    // Adam = P-01 = 90000001 (ephemeral)
+    const db = makeStatefulFakeDb({ 'users/90000001': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Adam [P-01] is signed in as a non-admin user' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/90000001'].isAdmin).toBe(false);
+  });
+
+  test('different persona', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice is signed in as a non-admin user' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].isAdmin).toBe(false);
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost is signed in as a non-admin user' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
+
+describe('Wake 83 — "the audit log has <N> entries"', () => {
+  // j12-admin-daily-routine.feature:101
+  //   Given the audit log has 10000 entries
+  // Large-volume state-seed. Bulk-writes synthetic audit entries to
+  // exercise pagination/perf paths. Driver receives target count.
+  test('seeds N entries via driver', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { seedAuditLogEntries: spy } });
+    const r = await executeStep({ kind: 'Given', text: 'the audit log has 10000 entries' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(10000);
+  });
+
+  test('smaller count', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { seedAuditLogEntries: spy } });
+    const r = await executeStep({ kind: 'Given', text: 'the audit log has 50 entries' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith(50);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'Given', text: 'the audit log has 10000 entries' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/seedAuditLogEntries/);
+  });
+});
+
+describe('Wake 83 — "the scheduled startsAt has been reached"', () => {
+  // j16-event-host-team-leader.feature:42
+  //   Given the scheduled startsAt has been reached
+  // Time-travel state-seed: advances mock clock to/past the most recent
+  // event's startsAt. Driver triggers any time-based watchers.
+  test('triggers time advance via driver', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { advanceClockToStartsAt: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the scheduled startsAt has been reached' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { advanceClockToStartsAt: spy } });
+    const r = await executeStep(
+      { kind: 'Given', text: 'the scheduled startsAt has been reached' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/startsAt|clock/i);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'the scheduled startsAt has been reached' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/advanceClockToStartsAt/);
+  });
+});
+
+describe('Wake 83 — "<Name> on <Plat> taps "<X>" on his/her/their event-host home"', () => {
+  // j16-event-host-team-leader.feature:43
+  //   When Tariq on Android taps "Start event" on his event-host home
+  // Tap with a contextual-location annotation (the event-host home is
+  // a specific screen, not a card or tab).
+  test('matching tap → driver receives button text', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapOnEventHostHome: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Tariq on Android taps "Start event" on his event-host home' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Tariq', 'Start event');
+  });
+
+  test('different pronoun + button', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapOnEventHostHome: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Alice on Android taps "End event" on her event-host home' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'End event');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Tariq on Android taps "X" on his event-host home' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTapOnEventHostHome/);
+  });
+});
+
+describe('Wake 83 — "<Name>\'s <Plat> UI shows the roster panel with <Other> listed as "<status>""', () => {
+  // j16-event-host-team-leader.feature:50
+  //   Then Tariq's Android UI shows the roster panel with Selma listed as "waiting"
+  // Composite roster-assertion: persona + status. Driver verifies the
+  // roster panel contains a row for the named persona with the named
+  // status.
+  test('matching listing → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsRosterEntry: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Tariq\'s Android UI shows the roster panel with Selma listed as "waiting"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Tariq', 'Selma', 'waiting');
+  });
+
+  test('different status', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsRosterEntry: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Tariq\'s Android UI shows the roster panel with Selma listed as "performing"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Tariq', 'Selma', 'performing');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsRosterEntry: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Tariq\'s Android UI shows the roster panel with Selma listed as "waiting"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Selma|waiting/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Tariq\'s Android UI shows the roster panel with Selma listed as "X"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsRosterEntry/);
+  });
+});
+
+describe('Wake 83 — "<Name> [P-NN] (a non-follower) opens the "<X>" tab"', () => {
+  // j15-mc-performance.feature:75
+  //   When Adam [P-01] (a non-follower) opens the "home" tab
+  // Persona-annotated tab navigation. The `(a non-follower)` annotation
+  // is informational — runner doesn't enforce non-follower status, just
+  // navigates to the tab. Stripped by stripStepAnnotation? Let's check
+  // — the parens are MID-step, not end-anchored. So they remain.
+  test('non-follower opens tab → driver receives tab', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidOpenTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam [P-01] (a non-follower) opens the "home" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'home');
+  });
+
+  test('different annotation parenthetical also matches', async () => {
+    // The matcher should tolerate any mid-step paren content
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidOpenTab: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus [P-04] (minor) opens the "home" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus', 'home');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Adam (a non-follower) opens the "home" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidOpenTab/);
+  });
+});
