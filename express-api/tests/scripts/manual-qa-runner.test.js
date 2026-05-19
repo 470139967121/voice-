@@ -16287,3 +16287,260 @@ describe('Wake 86 — "<Name>\'s locale is <X>" (bare state-seed)', () => {
     expect(r.error).toMatch(/Zzzghost/);
   });
 });
+
+// ── Wake 87 ──────────────────────────────────────────────────────────
+
+describe('Wake 87 — "<Name> on <Plat> selects N stars and submits feedback "<X>""', () => {
+  // j17-teacher-classroom.feature:60
+  //   When Yuki on iOS Sim selects 5 stars and submits feedback "Bao explained tones clearly"
+  // Composite rating action: pick N stars + type feedback + submit.
+  test('captures stars and feedback', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosSubmitStarFeedback: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Yuki on iOS Sim selects 5 stars and submits feedback "Bao explained tones clearly"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 5, 'Bao explained tones clearly');
+  });
+
+  test('singular "star"', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosSubmitStarFeedback: spy } });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: 'Yuki on iOS Sim selects 1 star and submits feedback "Disappointing"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 1, 'Disappointing');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Yuki on iOS Sim selects 5 stars and submits feedback "X"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosSubmitStarFeedback/);
+  });
+});
+
+describe('Wake 87 — "<Name>\'s <Plat> UI shows a chart of beans earned per week"', () => {
+  // j17-teacher-classroom.feature:74
+  //   Then Bao's Web UI shows a chart of beans earned per week
+  // Bare chart-presence assertion (no per-bin value verification —
+  // driver returns truthy iff the named chart is rendered).
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsBeansPerWeekChart: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Bao's Web UI shows a chart of beans earned per week" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao');
+  });
+
+  test('no chart → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webShowsBeansPerWeekChart: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Bao's Web UI shows a chart of beans earned per week" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/chart|beans/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Bao's Web UI shows a chart of beans earned per week" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webShowsBeansPerWeekChart/);
+  });
+});
+
+describe('Wake 87 — "the rail shows lessons tagged for language "<X>""', () => {
+  // j17-teacher-classroom.feature:80
+  //   Then the rail shows lessons tagged for language "zh"
+  // Rail content assertion. Driver verifies every visible card on the
+  // rail has language=<X>.
+  test('matching language → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webRailShowsLessonsForLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the rail shows lessons tagged for language "zh"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('zh');
+  });
+
+  test('different language', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webRailShowsLessonsForLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the rail shows lessons tagged for language "ja"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('ja');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webRailShowsLessonsForLanguage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'the rail shows lessons tagged for language "zh"' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/zh|lessons/);
+  });
+});
+
+describe('Wake 87 — "<Name> on <Plat> refreshes the language rail"', () => {
+  // j17-teacher-classroom.feature:78
+  //   When Marcus on Android refreshes the language rail
+  test('captures persona → driver called', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidRefreshLanguageRail: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus on Android refreshes the language rail' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Marcus');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosRefreshLanguageRail: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Yuki on iOS Sim refreshes the language rail' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Marcus on Android refreshes the language rail' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidRefreshLanguageRail/);
+  });
+});
+
+describe('Wake 87 — "the response from <path>?<query> does not include the <noun>"', () => {
+  // j17-teacher-classroom.feature:82
+  //   Then the response from /api/rooms/featured?cohort=minor does not include the lesson
+  // Negative absence assertion on a previously-recorded response.
+  // "the lesson" is treated as a soft tag — driver decides what counts
+  // as "the lesson" based on the most-recently-created lesson.
+  test('lesson absent → ok', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = {
+      status: 200,
+      path: '/api/rooms/featured',
+      body: { results: [{ uniqueId: 50000010 }] },
+    };
+    ctx.lastCreatedLessonId = 'lesson-XYZ';
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/rooms/featured?cohort=minor does not include the lesson',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('lesson present → fail', async () => {
+    const ctx = makeCtx();
+    ctx.lastResponse = {
+      status: 200,
+      path: '/api/rooms/featured',
+      body: { results: [{ id: 'lesson-XYZ' }] },
+    };
+    ctx.lastCreatedLessonId = 'lesson-XYZ';
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/rooms/featured?cohort=minor does not include the lesson',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/lesson-XYZ/);
+  });
+
+  test('no recorded response → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the response from /api/rooms/featured?cohort=minor does not include the lesson',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no recorded/);
+  });
+});
+
+describe('Wake 87 — "<Name> received a system PM from <Other>" (state-seed)', () => {
+  // j18-official-system-pms.feature:45
+  //   Given Adam received a system PM from Officia
+  // State-seed: writes a messages/<id> doc with sender + recipient.
+  test('writes message doc with sender + recipient', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    // Adam = P-01 = 90000001, Officia (j18 system) is at uniqueId 1
+    const r = await executeStep(
+      { kind: 'Given', text: 'Adam received a system PM from Officia' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const messageKeys = Object.keys(db._docs).filter((k) => k.startsWith('messages/'));
+    expect(messageKeys).toHaveLength(1);
+    const message = db._docs[messageKeys[0]];
+    expect(message.recipientId).toBe(90000001);
+    expect(message.senderName).toBe('Officia');
+  });
+
+  test('unknown recipient → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zzzghost received a system PM from Officia' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Adam received a system PM from Officia' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});

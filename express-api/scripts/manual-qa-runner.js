@@ -9336,6 +9336,181 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 87 — "<Name> on <Plat> selects N stars and submits feedback
+    // "<X>"". j17:60. Composite rating action: pick stars + type feedback
+    // + submit, dispatched as a single driver call so the driver can
+    // sequence taps atomically (avoid race where partial-rating gets
+    // submitted by a flaky scroll).
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) selects (\d+) stars? and submits feedback "([^"]*)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const stars = Number(m[3]);
+      const feedback = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webSubmitStarFeedback'
+        : platform === 'Android'
+          ? 'androidSubmitStarFeedback'
+          : 'iosSubmitStarFeedback';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, stars, feedback);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: submit ${stars}★ feedback did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 87 — "<Name>'s <Plat> UI shows a chart of beans earned per
+    // week". j17:74. Bare chart-presence assertion. Driver returns true
+    // iff the named chart component is rendered; bin-level value checks
+    // belong in a separate Wake (would need a different step phrasing).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a chart of beans earned per week$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsBeansPerWeekChart'
+        : platform === 'Android'
+          ? 'androidShowsBeansPerWeekChart'
+          : 'iosShowsBeansPerWeekChart';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show ${name}'s beans-per-week chart`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 87 — "the rail shows lessons tagged for language "<X>"".
+    // j17:80. Web-only rail content assertion (no persona/platform in
+    // the phrase — implicitly the actor whose UI is currently focused).
+    // Driver verifies every visible card on the rail carries language=X.
+    pattern: /^the rail shows lessons tagged for language "([^"]*)"$/,
+    async handler(m, ctx) {
+      const lang = m[1];
+      if (!ctx.webDriver?.webRailShowsLessonsForLanguage) {
+        return { ok: false, error: 'ctx.webDriver.webRailShowsLessonsForLanguage not configured' };
+      }
+      const ok = await ctx.webDriver.webRailShowsLessonsForLanguage(lang);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `rail does not show lessons tagged for language "${lang}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 87 — "<Name> on <Plat> refreshes the language rail". j17:78.
+    // Pull-to-refresh / refresh-button on the language-filter rail.
+    // Action only — no follow-up assertion (the next Then-step covers
+    // the post-refresh state).
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) refreshes the language rail$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webRefreshLanguageRail'
+        : platform === 'Android'
+          ? 'androidRefreshLanguageRail'
+          : 'iosRefreshLanguageRail';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: refresh language rail did not complete on ${platform}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 87 — "the response from <path>?<query> does not include the
+    // <noun>". j17:82. Negative absence assertion on the most-recent
+    // recorded HTTP response. <noun> maps to a ctx field holding the
+    // identifier (e.g., `lesson` → ctx.lastCreatedLessonId). We
+    // JSON-stringify the body and check the needle isn't present
+    // anywhere — covers the case where the API returns the id in any
+    // shape (results[*].id, results[*].uniqueId, nested doc refs).
+    pattern: /^the response from ([^?\s]+)\?(\S+) does not include the (\w+)$/,
+    async handler(m, ctx) {
+      const noun = m[3];
+      if (!ctx.lastResponse) {
+        return { ok: false, error: 'no recorded response — When step missing?' };
+      }
+      const lookups = {
+        lesson: ctx.lastCreatedLessonId,
+        user: ctx.lastCreatedUserId,
+        room: ctx.lastCreatedRoomId,
+        gift: ctx.lastCreatedGiftId,
+      };
+      const needle = lookups[noun];
+      if (!needle) {
+        return {
+          ok: false,
+          error: `no ctx.lastCreated${noun[0].toUpperCase()}${noun.slice(1)}Id to check absence of`,
+        };
+      }
+      const body = JSON.stringify(ctx.lastResponse.body ?? '');
+      if (body.includes(needle)) {
+        return {
+          ok: false,
+          error: `response includes ${noun} ${needle} (expected absent)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 87 — "<Name> received a system PM from <Other>" (state-seed).
+    // j18:45. Plants a messages/<id> doc so subsequent steps can assert
+    // inbox behaviour without first triggering the webhook. Sender is
+    // stored as a name (not uniqueId) because the system-sender for j18
+    // is Officia (uniqueId=1) but downstream assertions check the
+    // rendered name string.
+    pattern: /^([A-Z][a-z]+) received a system PM from ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const recipientName = m[1];
+      const senderName = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(recipientName);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${recipientName}" not in registry` };
+      }
+      const messageId = `system-${p.uniqueId}-${Date.now()}`;
+      await ctx.db.doc(`messages/${messageId}`).set({
+        recipientId: p.uniqueId,
+        senderName,
+        isSystem: true,
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
