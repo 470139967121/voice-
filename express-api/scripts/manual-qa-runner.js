@@ -13012,7 +13012,11 @@ async function probeOsaInvariants(db) {
       const c = cohortMap.get(String(pid));
       if (c) cohorts.add(c);
     }
-    if (cohorts.size > 1 && data.frozen !== true) unfrozenCross++;
+    // Migration script writes `frozenAtMigration: true` (audit marker
+    // per migrate-segregation-relationships.js:868) — NOT `frozen`.
+    // Accept either field name for backward-compat with older seed data.
+    const isFrozen = data.frozen === true || data.frozenAtMigration === true;
+    if (cohorts.size > 1 && !isFrozen) unfrozenCross++;
   });
 
   const violations = [];
@@ -13105,7 +13109,9 @@ async function osaCounts(db) {
       const ch = cohortMap.get(String(pid));
       if (ch) cohorts.add(ch);
     }
-    if (cohorts.size > 1 && c.frozen !== true) unfrozenCross++;
+    // Mirror probeOsaInvariants: accept frozen OR frozenAtMigration.
+    const isFrozen = c.frozen === true || c.frozenAtMigration === true;
+    if (cohorts.size > 1 && !isFrozen) unfrozenCross++;
   }
   return { crossFollowing, crossFollower, mixedRooms, unfrozenCross };
 }

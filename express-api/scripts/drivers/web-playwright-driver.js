@@ -113,6 +113,16 @@ const WEB_METHOD_NAMES = [
   'webSubmitStarFeedback',
   'webTapFromSurface',
   'webPairedSessionShowsSameTotals',
+  // Cycle-10 surfaced these as missing-but-needed:
+  'fireSystemPmWebhook',
+  'neitherUserIsFollowingTheOther',
+  'webOpenProfilePanel',
+  'webAdminIssueWarning',
+  'hasPurchasedSuccessfully',
+  'webDocumentDirection',
+  'webShowsTranslationOf',
+  'webScanAllRenderedStrings',
+  'webFallbackEnStrings',
   // Append-only — add new method names as new matchers land.
 ];
 
