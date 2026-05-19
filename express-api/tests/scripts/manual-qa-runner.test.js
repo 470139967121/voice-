@@ -19905,3 +19905,99 @@ describe('Wake 102 — `<Name>\'s <Plat> UI shows the warning screen with reason
     expect(r.error).toMatch(/androidShowsWarningScreenWithReason/);
   });
 });
+
+// ── Wake 103 — j07/j09 narrows ──────────────────────────────────────
+
+describe('Wake 103 — "<Name>\'s <Plat> UI navigates to <Other>\'s profile screen"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidNavigatesToProfileScreen: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Adam's Android UI navigates to Alice's profile screen" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'Alice');
+  });
+});
+
+describe("Wake 103 — `<Name>'s <Plat> UI shows a +N in the stalkers/profile-visits counter`", () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsStalkersDelta: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Alice's Web UI shows a +1 in the stalkers/profile-visits counter",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 1);
+  });
+});
+
+describe('Wake 103 — `<Name>\'s <Plat> UI shows the edited body "<X>" with an "<Y>" tag`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsEditedBodyWithTag: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Alice\'s Web UI shows the edited body "typo here" with an "edited" tag',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'typo here', 'edited');
+  });
+});
+
+describe('Wake 103 — "<Name>\'s <Plat> UI also shows <Other> in the participants list"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAlsoShowsInParticipantsList: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's Web UI also shows Ines in the participants list" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Ines');
+  });
+});
+
+describe('Wake 103 — `<Name>\'s <Plat> UI shows mic icon as "<X>"`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsMicIconAs: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Ines\'s iOS Sim UI shows mic icon as "open"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'open');
+  });
+});
+
+describe('Wake 103 — "<Name>\'s <Plat> UI shows the room-closed summary panel"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webShowsRoomClosedSummary: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's Web UI shows the room-closed summary panel" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice');
+  });
+
+  test('driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Alice's Web UI shows the room-closed summary panel" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webShowsRoomClosedSummary/);
+  });
+});

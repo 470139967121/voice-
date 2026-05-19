@@ -12080,6 +12080,176 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 103 — "<Name>'s <Plat> UI navigates to <Other>'s profile
+    // screen". j07 — profile-tap navigation.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI navigates to ([A-Z][a-z]+)'s profile screen$/,
+    async handler(m, ctx) {
+      const actor = m[1];
+      const platform = m[2];
+      const target = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webNavigatesToProfileScreen'
+        : platform === 'Android'
+          ? 'androidNavigatesToProfileScreen'
+          : 'iosNavigatesToProfileScreen';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](actor, target);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${actor}: ${platform} did not navigate to ${target}'s profile screen`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 103 — `<Name>'s <Plat> UI shows a +N in the
+    // stalkers/profile-visits counter`. j07 — profile-visit count
+    // increment. Specific phrasing (not a generic `<X>` count badge).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a \+(\d+) in the stalkers\/profile-visits counter$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const delta = Number(m[3]);
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsStalkersDelta'
+        : platform === 'Android'
+          ? 'androidShowsStalkersDelta'
+          : 'iosShowsStalkersDelta';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, delta);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show +${delta} in stalkers/profile-visits counter`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 103 — `<Name>'s <Plat> UI shows the edited body "<X>" with
+    // an "<Y>" tag`. j07 — message-edit indicator on the recipient view.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the edited body "([^"]+)" with an "([^"]+)" tag$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const body = m[3];
+      const tag = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsEditedBodyWithTag'
+        : platform === 'Android'
+          ? 'androidShowsEditedBodyWithTag'
+          : 'iosShowsEditedBodyWithTag';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, body, tag);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show edited body "${body}" with "${tag}" tag`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 103 — "<Name>'s <Plat> UI also shows <Other> in the
+    // participants list". j09 — confirms a participant is visible in
+    // multiple session views.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI also shows ([A-Z][a-z]+) in the participants list$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const other = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webAlsoShowsInParticipantsList'
+        : platform === 'Android'
+          ? 'androidAlsoShowsInParticipantsList'
+          : 'iosAlsoShowsInParticipantsList';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, other);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} UI does not show ${other} in participants list`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 103 — `<Name>'s <Plat> UI shows mic icon as "<X>"`. j09 —
+    // mic-state indicator (open/closed/muted).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows mic icon as "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const state = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsMicIconAs'
+        : platform === 'Android'
+          ? 'androidShowsMicIconAs'
+          : 'iosShowsMicIconAs';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, state);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show mic icon as "${state}"`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 103 — "<Name>'s <Plat> UI shows the room-closed summary
+    // panel". j09 — post-room-close summary view.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the room-closed summary panel$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsRoomClosedSummary'
+        : platform === 'Android'
+          ? 'androidShowsRoomClosedSummary'
+          : 'iosShowsRoomClosedSummary';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show the room-closed summary panel`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
