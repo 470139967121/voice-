@@ -20126,3 +20126,100 @@ describe('Wake 104 — "<Name>\'s <Plat> Admin UI shows N rows in the <X> table"
     expect(spy).toHaveBeenCalledWith('Greta', 3, 'reports');
   });
 });
+
+// ── Wake 105 — j04/j10/j11/j12 narrows ──────────────────────────────
+
+describe('Wake 105 — "<Name>\'s <Plat> UI is no longer in the voice room"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidIsNoLongerInVoiceRoom: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Hayato's Android UI is no longer in the voice room" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato');
+  });
+});
+
+describe('Wake 105 — "<Name>\'s <Plat> UI continues normally in the room"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidContinuesNormallyInRoom: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI continues normally in the room" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo');
+  });
+});
+
+describe('Wake 105 — "<Name>\'s <Plat> UI shows the message in the conversation thread"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsMessageInConversationThread: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Nora's iOS Sim UI shows the message in the conversation thread" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Nora');
+  });
+});
+
+describe('Wake 105 — "<Name>\'s <Plat> Admin UI shows the new report in the queue"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsNewReportInQueue: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI shows the new report in the queue" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Greta');
+  });
+});
+
+describe('Wake 105 — "<Name>\'s <Plat> UI shows the second offensive message"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsSecondOffensiveMessage: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Nora's iOS Sim UI shows the second offensive message" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Nora');
+  });
+});
+
+describe('Wake 105 — "<Name>\'s <Plat> Admin UI shows the dashboard with counters: N reports, N verifications, N appeals"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsDashboardCounters: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Greta's Web Admin UI shows the dashboard with counters: 3 reports, 5 verifications, 2 appeals",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Greta', { reports: 3, verifications: 5, appeals: 2 });
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webAdminShowsDashboardCounters: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: "Greta's Web Admin UI shows the dashboard with counters: 1 reports, 2 verifications, 3 appeals",
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Greta|dashboard|counters/);
+  });
+});

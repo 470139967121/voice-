@@ -12402,6 +12402,177 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 105 — "<Name>'s <Plat> UI is no longer in the voice room".
+    // j04 — negative assertion after force-eject. Sibling of Wake 101's
+    // "is still in the room <suffix>" matcher.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI is no longer in the voice room$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webIsNoLongerInVoiceRoom'
+        : platform === 'Android'
+          ? 'androidIsNoLongerInVoiceRoom'
+          : 'iosIsNoLongerInVoiceRoom';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI is STILL in the voice room (expected ejected)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 105 — "<Name>'s <Plat> UI continues normally in the room".
+    // j10 — opposite of "is still in but unable to interact" — actor
+    // is unaffected by the mid-room warning event.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI continues normally in the room$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webContinuesNormallyInRoom'
+        : platform === 'Android'
+          ? 'androidContinuesNormallyInRoom'
+          : 'iosContinuesNormallyInRoom';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not continue normally in the room`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 105 — "<Name>'s <Plat> UI shows the message in the
+    // conversation thread". j11 — basic message-visibility assertion
+    // (not the WAKE-100 generic in-thread variant, which has a noun
+    // capture; this is "the message" specifically).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the message in the conversation thread$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsMessageInConversationThread'
+        : platform === 'Android'
+          ? 'androidShowsMessageInConversationThread'
+          : 'iosShowsMessageInConversationThread';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show the message in the conversation thread`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 105 — "<Name>'s <Plat> Admin UI shows the new report in
+    // the queue". j11 — admin sees a freshly-filed report.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) Admin UI shows the new report in the queue$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webAdminShowsNewReportInQueue'
+        : platform === 'Android'
+          ? 'androidAdminShowsNewReportInQueue'
+          : 'iosAdminShowsNewReportInQueue';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} Admin UI does not show the new report in the queue`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 105 — "<Name>'s <Plat> UI shows the second offensive
+    // message". j11 — sequential corpus-specific assertion (after
+    // a first message; this is the next one).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the second offensive message$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsSecondOffensiveMessage'
+        : platform === 'Android'
+          ? 'androidShowsSecondOffensiveMessage'
+          : 'iosShowsSecondOffensiveMessage';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s ${platform} UI does not show the second offensive message`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 105 — "<Name>'s <Plat> Admin UI shows the dashboard with
+    // counters: N reports, N verifications, N appeals". j12 — admin
+    // landing page counters. Driver receives (viewer, {reports, verifications, appeals}).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) Admin UI shows the dashboard with counters: (\d+) reports, (\d+) verifications, (\d+) appeals$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const reports = Number(m[3]);
+      const verifications = Number(m[4]);
+      const appeals = Number(m[5]);
+      const methodName = platform.startsWith('Web')
+        ? 'webAdminShowsDashboardCounters'
+        : platform === 'Android'
+          ? 'androidAdminShowsDashboardCounters'
+          : 'iosAdminShowsDashboardCounters';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, { reports, verifications, appeals });
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} Admin UI dashboard counters do not match {reports:${reports}, verifications:${verifications}, appeals:${appeals}}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
