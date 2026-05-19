@@ -20001,3 +20001,128 @@ describe('Wake 103 — "<Name>\'s <Plat> UI shows the room-closed summary panel"
     expect(r.error).toMatch(/webShowsRoomClosedSummary/);
   });
 });
+
+// ── Wake 104 — j10/j11/j12 narrows ──────────────────────────────────
+
+describe('Wake 104 — `<Name>\'s <Plat> UI shows a "<X>" toast and navigates back to "<Y>"`', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsToastAndNavigatesBack: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Ines\'s iOS Sim UI shows a "Room closed by host warning" toast and navigates back to "/rooms"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines', 'Room closed by host warning', '/rooms');
+  });
+});
+
+describe('Wake 104 — "the database has N entries in "<X>" with reportedId=N"', () => {
+  test('matching count → ok', async () => {
+    const db = makeStatefulFakeDb({
+      'reports/r1': { reportedId: 50000050, reason: 'spam' },
+      'reports/r2': { reportedId: 50000050, reason: 'abuse' },
+      'reports/r3': { reportedId: 99999, reason: 'unrelated' },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 2 entries in "reports" with reportedId=50000050',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('wrong count → fail', async () => {
+    const db = makeStatefulFakeDb({
+      'reports/r1': { reportedId: 50000050 },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has 2 entries in "reports" with reportedId=50000050',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/1|2|reportedId/);
+  });
+});
+
+describe('Wake 104 — "the database has document "<X>" with field "<Y>" approximately equal to now + N days"', () => {
+  test('within tolerance → ok', async () => {
+    const expectedMs = Date.now() + 3 * 24 * 60 * 60 * 1000;
+    const db = makeStatefulFakeDb({ 'users/50000050': { suspendedUntil: expectedMs } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000050" with field "suspendedUntil" approximately equal to now + 3 days',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('out of tolerance → fail', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000050': { suspendedUntil: Date.now() } });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the database has document "users/50000050" with field "suspendedUntil" approximately equal to now + 3 days',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/suspendedUntil|expected|now/);
+  });
+});
+
+describe('Wake 104 — "<Name>\'s Firebase Auth refreshTokens are revoked"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ firebaseAdmin: { tokensAreRevoked: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Raul's Firebase Auth refreshTokens are revoked" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Raul');
+  });
+});
+
+describe('Wake 104 — "the Firebase Auth session for <Name> has revokeRefreshTokens timestamp updated"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ firebaseAdmin: { revokeTimestampIsUpdated: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'the Firebase Auth session for Hayato has revokeRefreshTokens timestamp updated',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Hayato');
+  });
+});
+
+describe('Wake 104 — "<Name>\'s <Plat> Admin UI shows N rows in the <X> table"', () => {
+  test('matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webAdminShowsRowCountInTable: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Greta's Web Admin UI shows 3 rows in the reports table" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Greta', 3, 'reports');
+  });
+});

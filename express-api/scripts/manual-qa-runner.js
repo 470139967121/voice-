@@ -12250,6 +12250,158 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 104 — `<Name>'s <Plat> UI shows a "<X>" toast and navigates
+    // back to "<Y>"`. j10 — toast + nav (no timeout prefix, distinct
+    // from Wake 93's OR-within variant).
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows a "([^"]+)" toast and navigates back to "([^"]+)"$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const toast = m[3];
+      const route = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsToastAndNavigatesBack'
+        : platform === 'Android'
+          ? 'androidShowsToastAndNavigatesBack'
+          : 'iosShowsToastAndNavigatesBack';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, toast, route);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: "${toast}" toast + nav to "${route}" did not happen`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 104 — "the database has N entries in "<X>" with
+    // reportedId=N". j11 — count of report docs targeting a specific
+    // user. Generic but corpus-specific to the `reportedId` field.
+    pattern: /^the database has (\d+) entries in "([^"]+)" with reportedId=(\d+)$/,
+    async handler(m, ctx) {
+      const expected = Number(m[1]);
+      const colPath = m[2];
+      const reportedId = Number(m[3]);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.collection(colPath).get();
+      const matched = (snap.docs || []).filter((d) => {
+        const data = typeof d.data === 'function' ? d.data() : d;
+        return data?.reportedId === reportedId;
+      });
+      if (matched.length !== expected) {
+        return {
+          ok: false,
+          error: `count was ${matched.length} entries in "${colPath}" with reportedId=${reportedId}, expected ${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 104 — "the database has document "<X>" with field "<Y>"
+    // approximately equal to now + N days". j11 — time-based field
+    // assertion with ±60s tolerance (typical for "now-relative" checks).
+    pattern:
+      /^the database has document "([^"]+)" with field "([^"]+)" approximately equal to now \+ (\d+) days$/,
+    async handler(m, ctx) {
+      const docPath = m[1];
+      const field = m[2];
+      const days = Number(m[3]);
+      const toleranceMs = 60 * 1000; // ±60s
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const snap = await ctx.db.doc(docPath).get();
+      if (!snap.exists) return { ok: false, error: `doc "${docPath}" does not exist` };
+      const actual = snap.data()?.[field];
+      if (typeof actual !== 'number') {
+        return {
+          ok: false,
+          error: `${docPath}.${field} is not a number (typeof = ${typeof actual})`,
+        };
+      }
+      const expected = Date.now() + days * 24 * 60 * 60 * 1000;
+      if (Math.abs(actual - expected) > toleranceMs) {
+        return {
+          ok: false,
+          error: `${docPath}.${field}=${actual} not within ±60s of expected now+${days}d=${expected}`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 104 — "<Name>'s Firebase Auth refreshTokens are revoked".
+    // j11 — admin-side token revocation check via firebase-admin.
+    pattern: /^([A-Z][a-z]+)'s Firebase Auth refreshTokens are revoked$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.firebaseAdmin?.tokensAreRevoked) {
+        return { ok: false, error: 'ctx.firebaseAdmin.tokensAreRevoked not configured' };
+      }
+      const ok = await ctx.firebaseAdmin.tokensAreRevoked(name);
+      if (!ok) {
+        return { ok: false, error: `${name}'s Firebase Auth refreshTokens are NOT revoked` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 104 — "the Firebase Auth session for <Name> has
+    // revokeRefreshTokens timestamp updated". j04 — sibling assertion
+    // (different phrasing) for the same underlying revocation event.
+    pattern:
+      /^the Firebase Auth session for ([A-Z][a-z]+) has revokeRefreshTokens timestamp updated$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      if (!ctx.firebaseAdmin?.revokeTimestampIsUpdated) {
+        return { ok: false, error: 'ctx.firebaseAdmin.revokeTimestampIsUpdated not configured' };
+      }
+      const ok = await ctx.firebaseAdmin.revokeTimestampIsUpdated(name);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}'s Firebase Auth revokeRefreshTokens timestamp is NOT updated`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 104 — "<Name>'s <Plat> Admin UI shows N rows in the <X>
+    // table". j12 — generic admin table row-count assertion. Distinct
+    // from Wake 98's "row for X with status Y" — this is plain count.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) Admin UI shows (\d+) rows in the (\w+(?:[ -]\w+)?) table$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const count = Number(m[3]);
+      const tableName = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webAdminShowsRowCountInTable'
+        : platform === 'Android'
+          ? 'androidAdminShowsRowCountInTable'
+          : 'iosAdminShowsRowCountInTable';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](viewer, count, tableName);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${viewer}'s ${platform} Admin UI does not show ${count} rows in the ${tableName} table`,
+        };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
