@@ -9180,6 +9180,162 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 86 — "<Name> scheduled an event including <Other>" (state-seed).
+    // j16:33 — creates an events doc with hostUid + roster.
+    pattern: /^([A-Z][a-z]+) scheduled an event including ([A-Z][a-z]+)$/,
+    async handler(m, ctx) {
+      const hostName = m[1];
+      const participantName = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const host = personas.get(hostName);
+      const participant = personas.get(participantName);
+      if (!host?.uniqueId) {
+        return { ok: false, error: `persona "${hostName}" not in registry` };
+      }
+      if (!participant?.uniqueId) {
+        return { ok: false, error: `persona "${participantName}" not in registry` };
+      }
+      const eventId = `event-${host.uniqueId}-${ctx.scenarioStartTime || Date.now()}`;
+      await ctx.db.doc(`events/${eventId}`).set({
+        id: eventId,
+        hostUid: host.uniqueId,
+        roster: [participant.uniqueId],
+        createdAt: Date.now(),
+      });
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 86 — "<Name> on <Plat> taps "<X>" in the roster panel". j16:51.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) taps "([^"]+)" in the roster panel$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const buttonText = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webTapInRosterPanel'
+        : platform === 'Android'
+          ? 'androidTapInRosterPanel'
+          : 'iosTapInRosterPanel';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name, buttonText);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${name}: tap "${buttonText}" in roster panel did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 86 — "<Name>'s <Plat> UI shows the classroom room screen with
+    // "<X>" badge on the host seat". j17:35.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the classroom room screen with "([^"]+)" badge on the host seat$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const badge = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsClassroomWithHostBadge'
+        : platform === 'Android'
+          ? 'androidShowsClassroomWithHostBadge'
+          : 'iosShowsClassroomWithHostBadge';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, badge);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show classroom room screen with "${badge}" badge`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 86 — "<Name>'s <Plat> UI shows <Other>'s "<X>" room card".
+    // j17:40 — possessive room-card assertion: viewer + owner + title.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows ([A-Z][a-z]+)'s "([^"]+)" room card$/,
+    async handler(m, ctx) {
+      const viewer = m[1];
+      const platform = m[2];
+      const owner = m[3];
+      const title = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsOthersRoomCard'
+        : platform === 'Android'
+          ? 'androidShowsOthersRoomCard'
+          : 'iosShowsOthersRoomCard';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](viewer, owner, title);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show ${owner}'s "${title}" room card`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 86 — "<Name> on <Plat> approves <Other>'s seat request". j17:51.
+    pattern:
+      /^([A-Z][a-z]+) on (Web Chromium|Web Safari|Web|Android|iOS Sim) approves ([A-Z][a-z]+)'s seat request$/,
+    async handler(m, ctx) {
+      const host = m[1];
+      const platform = m[2];
+      const requester = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webApproveSeatRequest'
+        : platform === 'Android'
+          ? 'androidApproveSeatRequest'
+          : 'iosApproveSeatRequest';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](host, requester);
+      if (!ok) {
+        return {
+          ok: false,
+          error: `${host}: approve ${requester}'s seat request did not complete`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 86 — "<Name>'s locale is <X>" (bare state-seed). j17:66.
+    // Distinct from Wake 74's quoted `browser locale is "X"` (which
+    // stores in ctx.browserLocales). This writes to users/<id>.locale.
+    pattern: /^([A-Z][a-z]+)'s locale is ([a-z]{2}(?:-[A-Z]{2})?)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const locale = m[2];
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
+      }
+      await ctx.db.doc(`users/${p.uniqueId}`).set({ locale }, { merge: true });
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────

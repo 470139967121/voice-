@@ -16050,3 +16050,240 @@ describe('Wake 85 — "<Name> [P-NN] is a <minor|adult> with userType=<X>" (stat
     expect(r.error).toMatch(/Zzzghost/);
   });
 });
+
+// ── Wake 86 ──────────────────────────────────────────────────────────
+
+describe('Wake 86 — "<Name> scheduled an event including <Other>" (state-seed)', () => {
+  // j16-event-host-team-leader.feature:33
+  //   Given Tariq scheduled an event including Selma
+  // State-seed: creates an events doc with hostUid + roster including
+  // the named participant.
+  test('writes event doc with host and roster', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    // Tariq = P-16 ? Let me skip lookup and just verify event was written.
+    const r = await executeStep(
+      { kind: 'Given', text: 'Tariq scheduled an event including Selma' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const eventKeys = Object.keys(db._docs).filter((k) => k.startsWith('events/'));
+    expect(eventKeys).toHaveLength(1);
+    const event = db._docs[eventKeys[0]];
+    // Roster should contain Selma's uniqueId (50000080)
+    expect(event.roster).toContain(50000080);
+  });
+
+  test('unknown participant → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Tariq scheduled an event including Zzzghost' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+
+  test('no db → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Given', text: 'Tariq scheduled an event including Selma' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/db/);
+  });
+});
+
+describe('Wake 86 — "<Name> on <Plat> taps "<X>" in the roster panel"', () => {
+  // j16-event-host-team-leader.feature:51
+  //   When Tariq on Android taps "Promote Selma" in the roster panel
+  // Roster-panel tap with named button (e.g., "Promote X").
+  test('matching tap → driver receives button text', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapInRosterPanel: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Tariq on Android taps "Promote Selma" in the roster panel' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Tariq', 'Promote Selma');
+  });
+
+  test('different button', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidTapInRosterPanel: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: 'Tariq on Android taps "Remove" in the roster panel' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Tariq', 'Remove');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Tariq on Android taps "X" in the roster panel' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidTapInRosterPanel/);
+  });
+});
+
+describe('Wake 86 — "<Name>\'s <Plat> UI shows the classroom room screen with "<X>" badge on the host seat"', () => {
+  // j17-teacher-classroom.feature:35
+  //   Then Bao's Android UI shows the classroom room screen with "Teacher" badge on the host seat
+  // Composite room-screen + tier badge + host seat.
+  test('matching badge → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsClassroomWithHostBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Bao\'s Android UI shows the classroom room screen with "Teacher" badge on the host seat',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao', 'Teacher');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsClassroomWithHostBadge: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Bao\'s Android UI shows the classroom room screen with "Teacher" badge on the host seat',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Teacher/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Bao\'s Android UI shows the classroom room screen with "X" badge on the host seat',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsClassroomWithHostBadge/);
+  });
+});
+
+describe('Wake 86 — "<Name>\'s <Plat> UI shows <Other>\'s "<X>" room card"', () => {
+  // j17-teacher-classroom.feature:40
+  //   Then Yuki's iOS Sim UI shows Bao's "Intro to Mandarin tones" room card
+  // Possessive room-card assertion: viewer + owner + room title.
+  test('matching card → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsOthersRoomCard: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Yuki\'s iOS Sim UI shows Bao\'s "Intro to Mandarin tones" room card',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Yuki', 'Bao', 'Intro to Mandarin tones');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsOthersRoomCard: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Theo\'s Android UI shows Alice\'s "Saturday Show" room card' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'Alice', 'Saturday Show');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Yuki\'s iOS Sim UI shows Bao\'s "X" room card' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosShowsOthersRoomCard/);
+  });
+});
+
+describe('Wake 86 — "<Name> on <Plat> approves <Other>\'s seat request"', () => {
+  // j17-teacher-classroom.feature:51
+  //   When Bao on Android approves Yuki's seat request
+  // Host moderation action: approve a participant's request-to-be-seated.
+  test('matching approval → driver receives both', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidApproveSeatRequest: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Bao on Android approves Yuki's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao', 'Yuki');
+  });
+
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosApproveSeatRequest: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Selma on iOS Sim approves Alice's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Selma', 'Alice');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: "Bao on Android approves Yuki's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidApproveSeatRequest/);
+  });
+});
+
+describe('Wake 86 — "<Name>\'s locale is <X>" (bare state-seed)', () => {
+  // j17-teacher-classroom.feature:66
+  //   Given Yuki's locale is ja
+  // Bare locale state-seed. Distinct from Wake 74's "<X>'s browser
+  // locale is "<Y>"" (which is quoted and stores in ctx.browserLocales).
+  // This writes to users/<uniqueId>.locale.
+  test('writes locale to user doc', async () => {
+    // Yuki = P-18 = 50000091
+    const db = makeStatefulFakeDb({ 'users/50000091': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: "Yuki's locale is ja" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000091'].locale).toBe('ja');
+  });
+
+  test('country-suffixed locale', async () => {
+    const db = makeStatefulFakeDb({ 'users/50000010': {} });
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: "Alice's locale is en-US" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(db._docs['users/50000010'].locale).toBe('en-US');
+  });
+
+  test('unknown persona → fail', async () => {
+    const db = makeStatefulFakeDb({});
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: "Zzzghost's locale is en" }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zzzghost/);
+  });
+});
