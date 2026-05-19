@@ -399,11 +399,15 @@ function assertSafeProject(projectId) {
   if (!p) {
     throw new Error('SAFETY: project id is empty — refusing to run');
   }
-  if (p.includes('dev') || p.includes('local') || p.includes('emulator')) {
+  // Firebase docs convention: `demo-` prefix marks an emulator-only project
+  // (cannot accidentally hit prod even if creds leak — Google rejects
+  // non-existent project ids). We accept it as a strong signal of safety,
+  // alongside the existing dev/local/emulator substring whitelist.
+  if (p.startsWith('demo-') || p.includes('dev') || p.includes('local') || p.includes('emulator')) {
     return p;
   }
   throw new Error(
-    `SAFETY: refusing to run against project "${projectId}" — only dev/local/emulator projects are allowed`,
+    `SAFETY: refusing to run against project "${projectId}" — only dev/local/emulator/demo-* projects are allowed`,
   );
 }
 

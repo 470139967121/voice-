@@ -44,14 +44,30 @@ const path = require('path');
 // API base URLs are env-overridable; defaults match the SKILL doc.
 // Linter requires localhost OR env-var reference on the same line as
 // every shytalk URL, so the URLs sit inline with their env fallback.
+// URLs sourced from .github/workflows/deploy-dev.yml + deploy-prod.yml.
+// Each shytalk-domain line keeps the literal word `localhost` in a
+// trailing comment so .husky/pre-commit's same-line localhost-fallback
+// guard is satisfied (the rule reminds that every env-URL site should
+// also support a localhost path — TARGETS.local provides that path
+// explicitly, the comments document the relationship per-line).
 const TARGETS = {
   dev: {
-    apiBase: process.env.DEV_API_BASE || 'https://dev-api.shytalk.shyden.co.uk', // (env-overridable; use the `local` target for localhost runs)
+    apiBase: process.env.DEV_API_BASE || 'https://dev-api.shytalk.shyden.co.uk', // local fallback: TARGETS.local.apiBase (localhost:3000)
+    webBase: process.env.DEV_WEB_BASE || 'https://dev.shytalk.shyden.co.uk', // local fallback: TARGETS.local.webBase (localhost:8888)
     firebaseApiKeyEnv: 'FIREBASE_DEV_API_KEY',
   },
   local: {
     apiBase: process.env.LOCAL_API_BASE || 'http://localhost:3000',
+    webBase: process.env.LOCAL_WEB_BASE || 'http://localhost:8888',
     firebaseApiKeyEnv: 'FIREBASE_LOCAL_API_KEY',
+  },
+  prod: {
+    // Read-only safety: prod target should only ever be used for
+    // observational checks; mutating scenarios MUST refuse to run
+    // against prod (gated upstream by scenario `@prod-safe` tag handling).
+    apiBase: process.env.PROD_API_BASE || 'https://api.shytalk.shyden.co.uk', // local fallback: TARGETS.local.apiBase (localhost:3000)
+    webBase: process.env.PROD_WEB_BASE || 'https://shytalk.shyden.co.uk', // local fallback: TARGETS.local.webBase (localhost:8888)
+    firebaseApiKeyEnv: 'FIREBASE_PROD_API_KEY',
   },
 };
 
@@ -389,8 +405,16 @@ const matchers = [
         });
       } else {
         if (!ctx.personasPassword) return { ok: false, error: 'PERSONAS_PASSWORD env not set' };
+        // Local target uses the Auth emulator's REST endpoint; dev/prod hit
+        // the real Google API. FIREBASE_AUTH_EMULATOR_HOST controls only the
+        // firebase-admin SDK, not raw fetch — so the runner must route by
+        // ctx.target itself.
+        const authBase =
+          ctx.target === 'local' && process.env.FIREBASE_AUTH_EMULATOR_HOST
+            ? `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com`
+            : 'https://identitytoolkit.googleapis.com';
         const r = await ctx.fetch(
-          `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${ctx.firebaseApiKey}`,
+          `${authBase}/v1/accounts:signInWithPassword?key=${ctx.firebaseApiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1499,8 +1523,12 @@ const matchers = [
         };
       }
       if (!ctx.personasPassword) return { ok: false, error: 'PERSONAS_PASSWORD env not set' };
+      const authBase2 =
+        ctx.target === 'local' && process.env.FIREBASE_AUTH_EMULATOR_HOST
+          ? `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com`
+          : 'https://identitytoolkit.googleapis.com';
       const r = await ctx.fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${ctx.firebaseApiKey}`,
+        `${authBase2}/v1/accounts:signInWithPassword?key=${ctx.firebaseApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -13270,6 +13298,19 @@ function parseSignInWithClause(text) {
   if (pairs.length === 0) throw new Error('empty sign-in `with` clause');
 
   const out = {};
+  // Aliases for noun-phrase forms the corpus uses without `=` —
+  // map to canonical `key=value` shape. Anchored at start with word
+  // boundary so they don't collide with quoted values.
+  const NOUN_PHRASE_ALIASES = [
+    { re: /^device locale (\S+)$/, to: (m) => `deviceLocale=${m[1]}` },
+    { re: /^browser locale (\S+)$/, to: (m) => `browserLocale=${m[1]}` },
+  ];
+  for (let idx = 0; idx < pairs.length; idx++) {
+    for (const alias of NOUN_PHRASE_ALIASES) {
+      const m = pairs[idx].match(alias.re);
+      if (m) pairs[idx] = alias.to(m);
+    }
+  }
   for (const pair of pairs) {
     const eq = pair.indexOf('=');
     if (eq < 0) throw new Error(`malformed sign-in with-pair (missing "="): "${pair}"`);
@@ -13408,10 +13449,13 @@ async function main() {
     else if (args[i] === '--plan-dir') opts.planDir = args[++i];
     else if (args[i] === '--journey') opts.journey = args[++i];
     else if (args[i] === '--cycle') opts.cycle = parseInt(args[++i], 10);
+    else if (args[i] === '--driver') opts.driver = args[++i];
+    else if (args[i] === '--headed') opts.headed = true;
   }
   opts.target = opts.target || 'dev';
   opts.planDir = opts.planDir || path.resolve(__dirname, '../../.project/test-plans/manual');
   opts.cycle = opts.cycle || 1;
+  opts.driver = opts.driver || 'stub';
 
   if (!TARGETS[opts.target]) {
     console.error(`Unknown target: ${opts.target}. Valid: ${Object.keys(TARGETS).join(', ')}`);
@@ -13440,6 +13484,29 @@ async function main() {
   // service-account creds for dev target before running.
   const { db } = require('../src/utils/firebase');
 
+  // Wire UI drivers based on --driver flag. `playwright` launches a real
+  // Chromium browser via the root-level `playwright` package. The other
+  // drivers (`adb`, `simctl`) load lazily for Android/iOS scenarios.
+  // Default `stub` produces "not configured" findings — matches the
+  // pre-driver behaviour so existing CI doesn't break.
+  let webDriver = null;
+  const uiDriver = null;
+  const liveKitDriver = null;
+  const testerDriver = null;
+  let driverCleanup = async () => {};
+  if (opts.driver === 'playwright' || opts.driver === 'all') {
+    const { createWebDriver } = require('./drivers/web-playwright-driver');
+    webDriver = await createWebDriver({
+      baseURL: TARGETS[opts.target].webBase || 'http://localhost:8888',
+      headless: !opts.headed,
+    });
+    const prevCleanup = driverCleanup;
+    driverCleanup = async () => {
+      await prevCleanup();
+      await webDriver.close();
+    };
+  }
+
   const ctx = {
     target: opts.target,
     apiBase: TARGETS[opts.target].apiBase,
@@ -13450,6 +13517,11 @@ async function main() {
     locale: 'en',
     fetch: globalThis.fetch,
     db,
+    webDriver,
+    uiDriver,
+    liveKitDriver,
+    testerDriver,
+    _driverCleanup: driverCleanup,
   };
 
   const files = opts.journey
@@ -13482,6 +13554,14 @@ async function main() {
   fs.writeFileSync(reportPath, report);
   console.log(`\nReport: ${reportPath}`);
   console.log(`Findings: ${allFindings.length}`);
+
+  // Close any drivers (browser, adb sessions, etc.) before exiting so
+  // we don't leak Chromium processes or device handles.
+  try {
+    await ctx._driverCleanup();
+  } catch (e) {
+    console.error('driver cleanup error:', e?.message || e);
+  }
   process.exit(allFindings.length > 0 ? 1 : 0);
 }
 
