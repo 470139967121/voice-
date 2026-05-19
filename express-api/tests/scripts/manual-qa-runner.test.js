@@ -15592,3 +15592,214 @@ describe('Wake 83 — "<Name> [P-NN] (a non-follower) opens the "<X>" tab"', () 
     expect(r.error).toMatch(/androidOpenTab/);
   });
 });
+
+// ── Wake 84 ──────────────────────────────────────────────────────────
+
+describe('Wake 84 — "<Name>\'s <Plat> UI still shows the <noun> <kind>"', () => {
+  // j10-mid-room-warning.feature:63
+  //   Then Theo's Android UI still shows the warning screen
+  // Positive-persistence variant of Wake 69's `UI shows the X <kind>`.
+  // Same driver — `still` is just author wording for continued state.
+  test('matching state → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedKind: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI still shows the warning screen" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'warning', 'screen');
+  });
+
+  test('driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsNamedKind: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI still shows the warning screen" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/warning/);
+  });
+});
+
+describe('Wake 84 — "<Name>\'s <Plat> UI does not navigate away"', () => {
+  // j10-mid-room-warning.feature:62
+  //   Then Theo's Android UI does not navigate away
+  test('no navigation occurred → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidDidNavigate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI does not navigate away" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('navigation occurred → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidDidNavigate: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI does not navigate away" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/navigate|navigated/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI does not navigate away" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidDidNavigate/);
+  });
+});
+
+describe('Wake 84 — "<Name>\'s <Plat> UI does NOT navigate back into room "<X>" automatically"', () => {
+  // j10-mid-room-warning.feature:72
+  //   Then Theo's Android UI does NOT navigate back into room "r1" automatically
+  test('no auto-rejoin → ok', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidDidAutoRejoinRoom: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo\'s Android UI does NOT navigate back into room "r1" automatically',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'r1');
+  });
+
+  test('auto-rejoin occurred → fail', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidDidAutoRejoinRoom: spy } });
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo\'s Android UI does NOT navigate back into room "r1" automatically',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/r1/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      {
+        kind: 'Then',
+        text: 'Theo\'s Android UI does NOT navigate back into room "r1" automatically',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidDidAutoRejoinRoom/);
+  });
+});
+
+describe('Wake 84 — "<Name>\'s <Plat> UI shows the room screen with <indicator> indicator"', () => {
+  // j10-mid-room-warning.feature:28
+  //   Then Theo's Android UI shows the room screen with mic-on indicator
+  test('matching indicator → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsRoomScreenWithIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the room screen with mic-on indicator" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'mic-on');
+  });
+
+  test('mic-off indicator', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsRoomScreenWithIndicator: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the room screen with mic-off indicator" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo', 'mic-off');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Theo's Android UI shows the room screen with mic-on indicator" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsRoomScreenWithIndicator/);
+  });
+});
+
+describe('Wake 84 — "<Name>\'s <Plat> UI is still in the room"', () => {
+  // j14-low-bandwidth-degraded.feature:67
+  //   Then Ines's iOS Sim UI is still in the room
+  test('still in room → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosIsStillInRoom: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's iOS Sim UI is still in the room" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines');
+  });
+
+  test('left the room → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosIsStillInRoom: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's iOS Sim UI is still in the room" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Ines|room/);
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: "Ines's iOS Sim UI is still in the room" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosIsStillInRoom/);
+  });
+});
+
+describe('Wake 84 — "<Name>\'s <Plat> network restores"', () => {
+  // j14-low-bandwidth-degraded.feature:70
+  //   When Ines's iOS Sim network restores
+  // Bare network-event step (no profile — driver decides what "restores"
+  // means based on prior state).
+  test('iOS Sim variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosNetworkRestores: spy } });
+    const r = await executeStep({ kind: 'When', text: "Ines's iOS Sim network restores" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Ines');
+  });
+
+  test('android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidNetworkRestores: spy } });
+    const r = await executeStep({ kind: 'When', text: "Theo's Android network restores" }, ctx);
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Theo');
+  });
+
+  test('no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'When', text: "Ines's iOS Sim network restores" }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosNetworkRestores/);
+  });
+});

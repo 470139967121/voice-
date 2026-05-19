@@ -8857,6 +8857,165 @@ const matchers = [
       return { ok: true };
     },
   },
+  {
+    // Wake 84 — "<Name>'s <Plat> UI still shows the <noun> <kind>".
+    // j10:63 — positive-persistence variant of Wake 69's `UI shows the
+    // X <kind>`. Reuses the same driver — `still` is just author wording.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI still shows the ([\w ]+) (button|screen|banner|dialog|panel|tab)$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const noun = m[3].trim();
+      const kind = m[4];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsNamedKind'
+        : platform === 'Android'
+          ? 'androidShowsNamedKind'
+          : 'iosShowsNamedKind';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, noun, kind);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI no longer shows the "${noun}" ${kind} (expected still shown)`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 84 — "<Name>'s <Plat> UI does not navigate away".
+    // j10:62 — bare negative-nav assertion. Driver returns truthy iff
+    // a navigation occurred since the last snapshot.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does not navigate away$/,
+    async handler(m, ctx) {
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webDidNavigate'
+        : platform === 'Android'
+          ? 'androidDidNavigate'
+          : 'iosDidNavigate';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const didNavigate = await driver[methodName]();
+      if (didNavigate) {
+        return { ok: false, error: `${platform} UI navigated away but should not have` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 84 — "<Name>'s <Plat> UI does NOT navigate back into room
+    // "<X>" automatically". j10:72.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI does NOT navigate back into room "([^"]+)" automatically$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const roomId = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webDidAutoRejoinRoom'
+        : platform === 'Android'
+          ? 'androidDidAutoRejoinRoom'
+          : 'iosDidAutoRejoinRoom';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const didRejoin = await driver[methodName](name, roomId);
+      if (didRejoin) {
+        return {
+          ok: false,
+          error: `${platform} UI auto-rejoined room "${roomId}" but should not have`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 84 — "<Name>'s <Plat> UI shows the room screen with
+    // <indicator> indicator". j10:28 — composite: room screen + indicator
+    // state in one step.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI shows the room screen with ([\w-]+) indicator$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const indicator = m[3];
+      const methodName = platform.startsWith('Web')
+        ? 'webShowsRoomScreenWithIndicator'
+        : platform === 'Android'
+          ? 'androidShowsRoomScreenWithIndicator'
+          : 'iosShowsRoomScreenWithIndicator';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const shown = await driver[methodName](name, indicator);
+      if (!shown) {
+        return {
+          ok: false,
+          error: `${platform} UI does not show room screen with "${indicator}" indicator`,
+        };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 84 — "<Name>'s <Plat> UI is still in the room". j14:67 —
+    // bare persistence assertion.
+    pattern:
+      /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) UI is still in the room$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webIsStillInRoom'
+        : platform === 'Android'
+          ? 'androidIsStillInRoom'
+          : 'iosIsStillInRoom';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const stillIn = await driver[methodName](name);
+      if (!stillIn) {
+        return { ok: false, error: `${name} is no longer in the room on ${platform}` };
+      }
+      return { ok: true };
+    },
+  },
+  {
+    // Wake 84 — "<Name>'s <Plat> network restores". j14:70 — bare
+    // network-event step (no profile — driver decides what "restores"
+    // means based on prior state).
+    pattern: /^([A-Z][a-z]+)'s (Web Chromium|Web Safari|Web|Android|iOS Sim) network restores$/,
+    async handler(m, ctx) {
+      const name = m[1];
+      const platform = m[2];
+      const methodName = platform.startsWith('Web')
+        ? 'webNetworkRestores'
+        : platform === 'Android'
+          ? 'androidNetworkRestores'
+          : 'iosNetworkRestores';
+      const driver = platform.startsWith('Web') ? ctx.webDriver : ctx.uiDriver;
+      if (!driver?.[methodName]) {
+        return { ok: false, error: `ctx.uiDriver.${methodName} not configured` };
+      }
+      const ok = await driver[methodName](name);
+      if (!ok) {
+        return { ok: false, error: `${name}'s ${platform} network did not restore` };
+      }
+      return { ok: true };
+    },
+  },
 ];
 
 // ── Step execution ──────────────────────────────────────────────────
