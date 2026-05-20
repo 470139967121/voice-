@@ -205,6 +205,29 @@ async function createWebDriver({ baseURL = 'http://localhost:8888', headless = t
   // Driver receives (BCP-47 code, English key/phrase). Verifies the
   // visible page text contains the localised translation. Uses the
   // homepage-translations.js dictionary loaded by the public web app.
+  // Web tap-by-tag — looks for an element with data-test-tag or
+  // [data-testid] attribute matching `tag`, OR an element whose text
+  // content equals tag. Falls back to clickable role match.
+  driver.webTap = async (tag) => {
+    const page = await pageFor('default');
+    if (!page.url() || page.url() === 'about:blank') await page.goto('/');
+    const locator = page
+      .locator(`[data-test-tag="${tag}"], [data-testid="${tag}"], [id="${tag}"]`)
+      .first();
+    try {
+      await locator.click({ timeout: 3000 });
+      return true;
+    } catch (_e) {
+      // Fallback: click by role+name (button with matching aria-label).
+      try {
+        await page.getByRole('button', { name: tag }).first().click({ timeout: 2000 });
+        return true;
+      } catch (_e2) {
+        return false;
+      }
+    }
+  };
+
   driver.webShowsTranslationOf = async (code, englishKey) => {
     const page = await pageFor('default');
     await page.evaluate((lang) => {

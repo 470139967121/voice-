@@ -205,6 +205,31 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     }
   };
 
+  // Dump the UI tree, find the bounds of the element with the given
+  // resource-id (accepts short OR fully-qualified shapes), tap centre.
+  // Returns true if found+tapped, false otherwise. Single-call replacement
+  // for the dump+regex+tap dance many matchers do; future matchers should
+  // call this instead of duplicating the logic.
+  driver.androidTapByTag = async (tag) => {
+    try {
+      const dump = await driver.androidUiDump();
+      const escTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // eslint-disable-next-line sonarjs/slow-regex
+      const re = new RegExp(
+        `resource-id="(?:[^"]*:id/)?${escTag}"[^<]*?bounds="\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]"`,
+      );
+      const match = re.exec(dump);
+      if (!match) return false;
+      const [, x1, y1, x2, y2] = match.map((v, i) => (i === 0 ? v : Number(v)));
+      const cx = Math.round((x1 + x2) / 2);
+      const cy = Math.round((y1 + y2) / 2);
+      return await driver.androidTap(cx, cy);
+    } catch (e) {
+      console.error(`[android-driver] androidTapByTag(${tag}) failed: ${e.message}`);
+      return false;
+    }
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
