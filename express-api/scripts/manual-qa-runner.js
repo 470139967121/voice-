@@ -762,9 +762,23 @@ const matchers = [
     async handler(m, ctx) {
       const name = m[1];
       const target = m[2];
+      // Session requirement applies ONLY to /api/ targets — those fire a
+      // real HTTP call from the runner with an Authorization: Bearer
+      // header sourced from the session's idToken. Non-API targets are
+      // a visit RECORD only (the runner can't render the SPA's DOM
+      // either way), so requiring a pre-existing session is backwards:
+      //   • j14 sign-in-on-Slow-3G opens /login.html as the first step
+      //     of the sign-in flow itself.
+      //   • j12 non-admin admin-bounce navigates a newly-signed-up user
+      //     to /admin.html to assert they get bounced — the bounce is
+      //     the assertion, not a precondition.
+      //   • j08 frozen-banner asserts conversation /c2 renders properly
+      //     after a c2-setup Background step that doesn't sign anyone
+      //     in (the conversation freeze is what's under test).
       const sess = ctx.sessions.get(name);
-      if (!sess)
+      if (!sess && target.startsWith('/api/')) {
         return { ok: false, error: `no signed-in session for "${name}" — Given step missing?` };
+      }
       // Reset lastResponse on every visit. Without this, a non-API "opens"
       // would leave stale lastResponse from a prior step — subsequent
       // assertions like "the response status is 200" would silently pass

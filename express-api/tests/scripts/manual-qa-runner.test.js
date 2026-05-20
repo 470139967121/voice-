@@ -10363,9 +10363,31 @@ describe('HTTP-call v3 — opens / navigates verbs', () => {
     expect(ctx.lastVisit.path).toBe('/profile/50000040#stalkers');
   });
 
-  test('errors when persona has no session', async () => {
+  // Wake 122: session requirement applies ONLY to /api/ targets.
+  // Non-API paths are visit-records only; the runner can't render the
+  // SPA's DOM either way, and several scenarios open public web pages
+  // (/login.html, /admin.html) BEFORE any session exists — that's the
+  // sign-in or auth-bounce flow itself.
+
+  test('non-API path without session records the visit (no error)', async () => {
     const ctx = makeCtx();
     const r = await executeStep({ kind: 'When', text: 'Vexa on Web opens "/discovery"' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(ctx.lastVisit).toEqual({ persona: 'Vexa', path: '/discovery' });
+  });
+
+  test('public sign-in entry point /login.html opens without a session', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: 'Ines on Web navigates to "/login.html"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('/api/ target WITHOUT session still errors (network call would have no auth header)', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep({ kind: 'When', text: 'Vexa on Web opens "/api/users/me"' }, ctx);
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/no signed-in session for "Vexa"/);
   });
