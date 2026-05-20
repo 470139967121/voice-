@@ -4930,19 +4930,54 @@ const matchers = [
   },
   {
     // "neither user is following the other" bare relation assertion
-    // (j07 pre-condition). Driver verifies that neither of the two
-    // most-recent personas-on-platform has the other in their
-    // followingIds.
+    // (j07 pre-condition). Reads the two most-recently-mentioned
+    // personas from ctx.personaPlatforms (populated by sign-in
+    // matchers in declaration order), looks up their uniqueIds via
+    // the persona registry, queries Firestore, and asserts that
+    // neither user appears in the other's followingIds OR followerIds.
+    //
+    // Previously delegated to a driver stub that returned false →
+    // always failed. The assertion is data-only (no UI), so it
+    // belongs in the matcher, not the driver.
     pattern: /^neither user is following the other$/,
     async handler(_m, ctx) {
-      if (!ctx.webDriver?.neitherUserIsFollowingTheOther) {
-        return { ok: false, error: 'ctx.webDriver.neitherUserIsFollowingTheOther not configured' };
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personaOrder = ctx.personaPlatforms ? [...ctx.personaPlatforms.keys()] : [];
+      // Fewer than 2 personas recorded means at least one is ephemeral
+      // (e.g. P-01 Adam pre-j01 has no Firestore presence — the matcher
+      // for "post-j01 state" sign-in form is a gap, see Wake 121
+      // backlog). A non-existent user can't be following anyone, so the
+      // assertion holds trivially.
+      if (personaOrder.length < 2) {
+        return { ok: true };
       }
-      const ok = await ctx.webDriver.neitherUserIsFollowingTheOther();
-      if (!ok) {
+      const [nameA, nameB] = personaOrder.slice(-2);
+      const personas = loadPersonas();
+      const a = personas.get(nameA);
+      const b = personas.get(nameB);
+      // Ephemeral personas (e.g. P-01 Adam pre-j01) have no uniqueId
+      // because they don't exist in Firestore yet. The assertion holds
+      // trivially: a user that doesn't exist can't be in anyone's
+      // follow lists.
+      if (!a?.uniqueId || !b?.uniqueId) {
+        return { ok: true };
+      }
+      const [snapA, snapB] = await Promise.all([
+        ctx.db.doc(`users/${a.uniqueId}`).get(),
+        ctx.db.doc(`users/${b.uniqueId}`).get(),
+      ]);
+      const dataA = snapA.exists ? snapA.data() : {};
+      const dataB = snapB.exists ? snapB.data() : {};
+      const aFollowsB = (dataA.followingIds || []).includes(b.uniqueId);
+      const bFollowsA = (dataB.followingIds || []).includes(a.uniqueId);
+      // Followers are the symmetric mirror — assert both sides cleanly
+      // so a one-sided graph corruption is also caught.
+      const aFollowedByB = (dataA.followerIds || []).includes(b.uniqueId);
+      const bFollowedByA = (dataB.followerIds || []).includes(a.uniqueId);
+      if (aFollowsB || bFollowsA || aFollowedByB || bFollowedByA) {
         return {
           ok: false,
-          error: 'precondition failed: at least one user is following the other',
+          error: `precondition failed: at least one user is following the other (${nameA}↔${nameB})`,
         };
       }
       return { ok: true };

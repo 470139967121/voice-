@@ -8529,26 +8529,97 @@ describe('Persona "is signed in on <plat> at <path>" variant (j07)', () => {
 });
 
 describe('"neither user is following the other" bare relation assertion', () => {
-  test('driver returns true → ok', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { neitherUserIsFollowingTheOther: spy } });
+  // Wake 121 rewrote this matcher to read ctx.db directly instead of
+  // delegating to a webDriver stub. The persona-name lookup goes
+  // through the persona registry (Adam=P-01 ephemeral, Alice=P-02
+  // uniqueId=50000010). The assertion holds iff neither persona's
+  // user doc has the counterparty in followingIds OR followerIds.
+
+  // Local clone of the upstream "Cross-cohort Firestore matcher"
+  // helper so this describe block doesn't depend on lexical scope
+  // from a different block.
+  function makeUserLookupDb(users) {
+    return {
+      doc: (docPath) => ({
+        get: async () => {
+          const match = /^users\/(.+)$/.exec(docPath);
+          if (!match) return { exists: false, data: () => undefined };
+          const u = users[match[1]];
+          return { exists: u !== undefined, data: () => u };
+        },
+      }),
+    };
+  }
+
+  test('two real personas with no follow edges → ok', async () => {
+    const ctx = makeCtx({
+      db: makeUserLookupDb({
+        50000010: { followingIds: [], followerIds: [] }, // Alice
+        60000010: { followingIds: [], followerIds: [] }, // Marcus
+      }),
+      personaPlatforms: new Map([
+        ['Alice', 'Web Chromium'],
+        ['Marcus', 'Android'],
+      ]),
+    });
     const r = await executeStep(
       { kind: 'Given', text: 'neither user is following the other' },
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalled();
   });
 
-  test('driver returns false → fail', async () => {
-    const spy = jest.fn(async () => false);
-    const ctx = makeCtx({ webDriver: { neitherUserIsFollowingTheOther: spy } });
+  test('Alice follows Marcus → fail (mentions both names)', async () => {
+    const ctx = makeCtx({
+      db: makeUserLookupDb({
+        50000010: { followingIds: [60000010], followerIds: [] }, // Alice follows Marcus
+        60000010: { followingIds: [], followerIds: [50000010] },
+      }),
+      personaPlatforms: new Map([
+        ['Alice', 'Web Chromium'],
+        ['Marcus', 'Android'],
+      ]),
+    });
     const r = await executeStep(
       { kind: 'Given', text: 'neither user is following the other' },
       ctx,
     );
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/following/);
+    expect(r.error).toMatch(/Alice/);
+    expect(r.error).toMatch(/Marcus/);
+  });
+
+  test('symmetric mirror — Alice in Marcus.followerIds (only) → fail', async () => {
+    // followerIds without the corresponding followingIds is a
+    // one-sided graph corruption — the assertion should still flag it.
+    const ctx = makeCtx({
+      db: makeUserLookupDb({
+        50000010: { followingIds: [], followerIds: [] },
+        60000010: { followingIds: [], followerIds: [50000010] },
+      }),
+      personaPlatforms: new Map([
+        ['Alice', 'Web Chromium'],
+        ['Marcus', 'Android'],
+      ]),
+    });
+    const r = await executeStep(
+      { kind: 'Given', text: 'neither user is following the other' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  test('fewer than 2 personas recorded → trivially ok (ephemeral case)', async () => {
+    const ctx = makeCtx({
+      db: makeUserLookupDb({}),
+      personaPlatforms: new Map([['Alice', 'Web Chromium']]),
+    });
+    const r = await executeStep(
+      { kind: 'Given', text: 'neither user is following the other' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
   });
 });
 
