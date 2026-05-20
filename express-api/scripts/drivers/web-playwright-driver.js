@@ -228,6 +228,26 @@ async function createWebDriver({ baseURL = 'http://localhost:8888', headless = t
     }
   };
 
+  // Web fill-in by tag — for each {key:value} in fields, locate an input
+  // with [data-test-tag=key] / [data-testid=key] / [name=key] / [id=key]
+  // and .fill() the value. Returns true if all fields filled.
+  driver.webFillIn = async (name, fields) => {
+    const page = await pageFor(name || 'default');
+    if (!page.url() || page.url() === 'about:blank') await page.goto('/');
+    for (const [key, value] of Object.entries(fields)) {
+      const locator = page
+        .locator(`[data-test-tag="${key}"], [data-testid="${key}"], input[name="${key}"], #${key}`)
+        .first();
+      try {
+        await locator.fill(String(value), { timeout: 3000 });
+      } catch (e) {
+        console.error(`[web-driver] webFillIn(${key}=${value}) failed: ${e.message}`);
+        return false;
+      }
+    }
+    return true;
+  };
+
   driver.webShowsTranslationOf = async (code, englishKey) => {
     const page = await pageFor('default');
     await page.evaluate((lang) => {
