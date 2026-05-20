@@ -325,6 +325,43 @@ describe('parseKvPairs', () => {
     expect(() => parseKvPairs(null)).toThrow(/must be a string, got object/);
   });
 
+  // ── Wake 124 — `key "value"` (no equals) accepted alongside `key="value"` ──
+  //
+  // The j06 invalid-receipt scenario phrases two pairs as
+  // `productId="coins-1000" and receipt "INVALID_BASE64_BLOB"` — equals
+  // for the first, space for the second. Previously the second pair
+  // threw "missing =" and the scenario failed at the parser before
+  // reaching its real assertion (POST 400 expected). The space form is
+  // gated on presence of a quoted value so bareword `foo` still throws.
+
+  test('space-form: key "value" parses to {key: "value"}', () => {
+    expect(parseKvPairs('receipt "INVALID_BASE64_BLOB"')).toEqual({
+      receipt: 'INVALID_BASE64_BLOB',
+    });
+  });
+
+  test('mixed: equals form chained with space form via " and "', () => {
+    expect(parseKvPairs('productId="coins-1000" and receipt "INVALID_BASE64_BLOB"')).toEqual({
+      productId: 'coins-1000',
+      receipt: 'INVALID_BASE64_BLOB',
+    });
+  });
+
+  test('space form preserves embedded spaces inside quotes', () => {
+    expect(parseKvPairs('greeting "hello world"')).toEqual({ greeting: 'hello world' });
+  });
+
+  test('bareword (no quote, no equals) still throws missing "="', () => {
+    // Regression guard — the space-form must only activate when a
+    // quoted value is present, otherwise typos like `foo` would
+    // silently parse as `{foo: undefined}` and corrupt scenarios.
+    expect(() => parseKvPairs('foo')).toThrow(/missing "="/);
+  });
+
+  test('value containing literal "=" still parses correctly (equals-form wins when no leading quote)', () => {
+    expect(parseKvPairs('expr="a=b"')).toEqual({ expr: 'a=b' });
+  });
+
   test('throws on undefined input', () => {
     expect(() => parseKvPairs(undefined)).toThrow(/must be a string, got undefined/);
   });

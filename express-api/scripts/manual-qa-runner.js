@@ -13391,10 +13391,31 @@ function parseKvPairs(text) {
 
   const out = {};
   for (const raw of pairs) {
+    // Two accepted forms inside a pair:
+    //   key="value"   (equals form — original contract)
+    //   key "value"   (space form — j06 corpus uses this mid-step when
+    //                  paired with another equals-form pair, e.g.
+    //                  `productId="coins-1000" and receipt "..."`)
+    // Space form is detected by: a quoted value exists AND it comes
+    // before any `=` sign. A bareword `foo` (no quote, no `=`) still
+    // throws `missing "="` per the original contract — the user gets
+    // a clear error rather than a silent parse of garbage.
     const eq = raw.indexOf('=');
-    if (eq < 0) throw new Error(`kv-pair missing "=": "${raw}"`);
-    const key = raw.slice(0, eq).trim();
-    const val = raw.slice(eq + 1).trim();
+    const firstQuote = raw.indexOf('"');
+    const useSpaceForm = firstQuote >= 0 && (eq < 0 || firstQuote < eq);
+    let key, val;
+    if (useSpaceForm) {
+      // Split on the first whitespace — the bare-identifier key ends
+      // there and the quoted-string value starts.
+      const sp = raw.search(/\s/);
+      if (sp < 0) throw new Error(`kv-pair missing value: "${raw}"`);
+      key = raw.slice(0, sp).trim();
+      val = raw.slice(sp + 1).trim();
+    } else {
+      if (eq < 0) throw new Error(`kv-pair missing "=": "${raw}"`);
+      key = raw.slice(0, eq).trim();
+      val = raw.slice(eq + 1).trim();
+    }
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
       throw new Error(`kv-pair key not identifier-shaped: "${key}"`);
     }
