@@ -9826,11 +9826,20 @@ describe('Web Admin age-down flow composite', () => {
 });
 
 describe('Concurrent N follow attempts', () => {
-  test('"N cross-cohort follow attempts hit /api/X concurrently" → driver, stores results on ctx', async () => {
-    const spy = jest.fn(async (count, _endpoint) =>
-      Array.from({ length: count }, () => ({ status: 404, latencyMs: 50 })),
-    );
-    const ctx = makeCtx({ webDriver: { simulateConcurrentFollowAttempts: spy } });
+  // Wake 131 moved the parallel-HTTP fan-out from a webDriver stub
+  // into the matcher (per the W121 pattern — pure HTTP, no UI).
+  // Each request uses the last-registered session's idToken.
+
+  test('fires N parallel POSTs and stores [{status, latencyMs}] on ctx', async () => {
+    const calls = [];
+    const ctx = makeCtx({
+      sessions: new Map([['Vexa', { idToken: 'vexa-token', persona: { uniqueId: 50000040 } }]]),
+      fetch: jest.fn(async (url, init) => {
+        calls.push({ url, init });
+        return { status: 404 };
+      }),
+    });
+    ctx.apiBase = 'http://localhost:3000';
     const r = await executeStep(
       {
         kind: 'When',
@@ -9839,8 +9848,26 @@ describe('Concurrent N follow attempts', () => {
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith(10, '/api/users/follow');
+    expect(calls).toHaveLength(10);
+    expect(calls[0].url).toBe('http://localhost:3000/api/users/follow');
+    expect(calls[0].init.method).toBe('POST');
+    expect(calls[0].init.headers.Authorization).toBe('Bearer vexa-token');
     expect(ctx.lastConcurrentResults).toHaveLength(10);
+    expect(ctx.lastConcurrentResults[0]).toMatchObject({ status: 404 });
+    expect(typeof ctx.lastConcurrentResults[0].latencyMs).toBe('number');
+  });
+
+  test('no sessions → ok:false (Given step missing)', async () => {
+    const ctx = makeCtx({ sessions: new Map(), fetch: jest.fn() });
+    const r = await executeStep(
+      {
+        kind: 'When',
+        text: '10 cross-cohort follow attempts hit /api/users/follow concurrently',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/no sessions/);
   });
 });
 

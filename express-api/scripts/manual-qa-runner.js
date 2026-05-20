@@ -5755,21 +5755,50 @@ const matchers = [
   },
   {
     // Concurrent N follow attempts (j08 cross-cohort wall concurrency
-    // probe). Driver fires N requests in parallel and returns an array
-    // of { status, latencyMs } per attempt. Results stored on
-    // ctx.lastConcurrentResults for downstream assertions.
+    // probe). Fires N parallel POSTs to the named endpoint and stores
+    // `[{ status, latencyMs }, ...]` on ctx.lastConcurrentResults for
+    // downstream `each response status is N` assertions.
+    //
+    // Rewritten (W131): pulled out of webDriver into the matcher (no UI
+    // surface — pure HTTP fan-out). Uses the most-recently-active
+    // session (last entry in ctx.sessions) to authorise each request.
+    // Body shape: the j08 corpus only uses this for /api/users/follow
+    // with a fixed cross-cohort targetUniqueId, so we hardcode the
+    // minor side (60000010 Marcus) as target — matches the scenario
+    // intent that EVERY concurrent attempt is the same cohort-violating
+    // request and EVERY response must be blocked.
     pattern: /^(\d+) cross-cohort follow attempts hit (\/api\/[\w/-]+) concurrently$/,
     async handler(m, ctx) {
       const count = parseInt(m[1], 10);
       const endpoint = m[2];
-      if (!ctx.webDriver?.simulateConcurrentFollowAttempts) {
-        return {
-          ok: false,
-          error: 'ctx.webDriver.simulateConcurrentFollowAttempts not configured',
-        };
+      if (!ctx.fetch) return { ok: false, error: 'ctx.fetch not configured' };
+      if (!ctx.sessions || ctx.sessions.size === 0) {
+        return { ok: false, error: 'no sessions in ctx — Given step missing?' };
       }
-      const results = await ctx.webDriver.simulateConcurrentFollowAttempts(count, endpoint);
-      ctx.lastConcurrentResults = results;
+      // Last-registered session is the active actor — j08 sets Vexa
+      // signed-in just before this step.
+      const lastName = [...ctx.sessions.keys()].pop();
+      const sess = ctx.sessions.get(lastName);
+      if (!sess?.idToken) {
+        return { ok: false, error: `session for "${lastName}" has no idToken` };
+      }
+      const tasks = [];
+      for (let i = 0; i < count; i++) {
+        const start = Date.now();
+        tasks.push(
+          ctx
+            .fetch(ctx.apiBase + endpoint, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${sess.idToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ targetUniqueId: 60000010 }),
+            })
+            .then((r) => ({ status: r.status, latencyMs: Date.now() - start })),
+        );
+      }
+      ctx.lastConcurrentResults = await Promise.all(tasks);
       return { ok: true };
     },
   },
