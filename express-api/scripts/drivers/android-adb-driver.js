@@ -154,6 +154,20 @@ async function createAndroidDriver({ serial: preferred } = {}) {
   }
   driver.adb = adb;
 
+  // Wire reverse port-forwards so wireless devices can reach
+  // laptop-hosted local services (Express API, Firebase emulators,
+  // LiveKit, MinIO). Without these, the app on a wireless device hits
+  // a Technical-Difficulties screen because localhost on the DEVICE
+  // is the device itself, not the laptop. Mirrors CLAUDE.md guidance
+  // for "Android on physical device".
+  for (const port of [3000, 7880, 9000, 8080, 9099, 9002]) {
+    try {
+      adb(['reverse', `tcp:${port}`, `tcp:${port}`]);
+    } catch (e) {
+      console.error(`[android-driver] adb reverse tcp:${port} failed: ${e.message}`);
+    }
+  }
+
   for (const methodName of listMethods()) {
     driver[methodName] = async (...args) => {
       console.error(
@@ -191,14 +205,30 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     }
   };
 
-  // Open named screen via the app's deep-link scheme (shytalk://<screen>).
-  // The app's AndroidManifest routes shytalk:// URIs to MainActivity which
-  // dispatches to the named destination. Falls back to `am start` if the
-  // deep-link doesn't resolve.
+  // Open named screen — launches the local-build app via MainActivity.
+  // The app's AndroidManifest does NOT declare a `shytalk://` scheme
+  // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
+  // Without an in-app nav-via-intent mechanism, the best we can do is
+  // launch the main activity and trust the app's startup routing to
+  // land somewhere sensible (typically home or sign-in). Per-screen
+  // navigation needs to be UI-driven (tap by uiautomator-dump tag) and
+  // is the responsibility of higher-level matchers.
   driver.androidOpenScreen = async (name, screen) => {
     try {
-      const uri = `shytalk://${screen}`;
-      adb(['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', uri]);
+      adb([
+        'shell',
+        'am',
+        'start',
+        '-n',
+        'com.shyden.shytalk.local/com.shyden.shytalk.MainActivity',
+      ]);
+      // Brief settle so the activity has time to draw before subsequent
+      // dump/tap calls. The 1.5s value mirrors what the existing
+      // android-e2e tests use (see app/src/androidTest fixtures).
+      await new Promise((r) => setTimeout(r, 1500));
+      // Stash the requested screen on the driver so a future matcher
+      // can use it as a hint when implementing real in-app navigation.
+      driver._requestedScreen = { name, screen };
       return true;
     } catch (e) {
       console.error(`[android-driver] androidOpenScreen(${name},${screen}) failed: ${e.message}`);
