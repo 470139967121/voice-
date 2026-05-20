@@ -168,6 +168,85 @@ async function createIosDriver({ udid: preferred } = {}) {
     }
   };
 
+  // ── XCUITest remote-control bridge ─────────────────────────────────
+  //
+  // The runner sends JSON commands to /tmp/qa-cmd.jsonl inside the
+  // simulator. A long-running XCUITest harness (see
+  // iosApp/iosAppUITests/ManualQARemoteControl.swift) polls that file,
+  // executes the command via XCUIApplication, and writes the result
+  // to /tmp/qa-result.jsonl. We read it back via `simctl spawn cat`.
+  //
+  // Pre-requisite: the `iosAppUITests` UI testing bundle must be added
+  // to the Xcode project AND running on the booted simulator before
+  // these methods are called. Without it, every IPC call returns
+  // false with a clear "harness not running" message.
+  //
+  // The bundle is launched outside the runner (typically by:
+  //   xcodebuild test-without-building -workspace iosApp.xcworkspace \
+  //     -scheme iosAppUITests \
+  //     -destination 'platform=iOS Simulator,id=<UDID>'
+  // ) so its lifetime is longer than any single scenario.
+  async function sendXcuiCommand(payload, { timeoutMs = 8000 } = {}) {
+    const json = JSON.stringify(payload);
+    // Write command file inside the simulator.
+    try {
+      execSync(
+        `xcrun simctl spawn '${udid}' sh -c "cat > /tmp/qa-cmd.jsonl" <<<'${json.replace(/'/g, "'\\''")}'`,
+        { encoding: 'utf8', shell: '/bin/bash' },
+      );
+    } catch (e) {
+      console.error(`[ios-driver] failed to write qa-cmd.jsonl: ${e.message}`);
+      return null;
+    }
+    // Poll for result file existence + non-empty content.
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const out = execSync(
+          `xcrun simctl spawn '${udid}' sh -c "cat /tmp/qa-result.jsonl 2>/dev/null"`,
+          { encoding: 'utf8' },
+        ).trim();
+        if (out) {
+          // Clear the result file so the next command's poll doesn't
+          // see this one's payload again.
+          try {
+            execSync(`xcrun simctl spawn '${udid}' sh -c "rm -f /tmp/qa-result.jsonl"`);
+          } catch (_) {
+            /* ignore */
+          }
+          return JSON.parse(out);
+        }
+      } catch (_) {
+        /* still polling */
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    console.error(`[ios-driver] sendXcuiCommand timeout after ${timeoutMs}ms (op=${payload.op})`);
+    return null;
+  }
+  driver._sendXcuiCommand = sendXcuiCommand;
+
+  driver.iosTap = async (id) => {
+    const r = await sendXcuiCommand({ op: 'tap', id });
+    return r && r.ok === true;
+  };
+  driver.iosTapByTag = async (id) => driver.iosTap(id);
+
+  driver.iosTypeText = async (id, text) => {
+    const r = await sendXcuiCommand({ op: 'type', id, text });
+    return r && r.ok === true;
+  };
+
+  driver.iosShowsText = async (text) => {
+    const r = await sendXcuiCommand({ op: 'shows_text', text });
+    return r && r.ok === true && r.data === 'true';
+  };
+
+  driver.iosUiDump = async () => {
+    const r = await sendXcuiCommand({ op: 'dump', id: 'ui' });
+    return r && r.ok === true ? r.data : '';
+  };
+
   driver.close = async () => {
     /* simctl is stateless; nothing to release */
   };
