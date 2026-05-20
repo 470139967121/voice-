@@ -389,10 +389,10 @@ jobs:
     # macos-latest per the no-self-hosted-runners policy. See deploy-dev.yml
     # for full rationale.
     runs-on: macos-latest
-    # Timeout kept at 90: K/Native linkReleaseFrameworkIosArm64 plus
-    # xcodebuild archive plus App Store upload ~50 min worst case on slow
-    # days; 90 gives runner-pool-slowdown headroom.
-    timeout-minutes: 90
+    # Bumped 2026-05-21 from 90 -> 150 to match deploy-dev.yml — cold caches
+    # on GitHub-hosted macos-latest blew through 90 min on the first dev run.
+    # See deploy-dev.yml's distribute-ios timeout comment for full rationale.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:

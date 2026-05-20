@@ -371,11 +371,16 @@ jobs:
     # an 8GB machine. macos-latest (14GB RAM, 3 cores) absorbs the load
     # without taking down a developer laptop.
     runs-on: macos-latest
-    # Timeout kept at 90: K/Native linkReleaseFrameworkIosArm64 ~24-29 min on
-    # the macos runner pool + xcodebuild archive ~15-20 min + pod install ~3
-    # min + TestFlight upload ~2 min = ~50-min worst case. 90 min gives
-    # runner-pool-slowdown headroom.
-    timeout-minutes: 90
+    # Bumped 2026-05-21 from 90 -> 150: first macos-latest run (26192253707)
+    # timed out at exactly 90 min while xcodebuild was still actively running.
+    # GitHub-hosted runners have COLD caches every run — gradle wrapper
+    # download + CocoaPods install + Xcode warmup + K/Native compile + pod
+    # install + xcodebuild archive + TestFlight upload accumulate to 90+ min
+    # without persistent state from prior runs. 150 min gives the headroom
+    # the previous "warm self-hosted" assumption no longer provides. The
+    # right longer-term fix is adding gradle + CocoaPods + DerivedData
+    # caching, but the timeout bump is the safe first step.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
