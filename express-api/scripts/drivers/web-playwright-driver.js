@@ -201,6 +201,18 @@ async function createWebDriver({ baseURL = 'http://localhost:8888', headless = t
     return page.evaluate(() => document.documentElement.getAttribute('dir') || 'ltr');
   };
 
+  // Web Admin variant — navigates to /admin.html and reads <html dir>.
+  // The admin panel is English-only by ShyTalk policy (per j12 scenario
+  // comments) so this should always return 'ltr' regardless of browser
+  // locale. The shared pageFor('default') context picks up any locale
+  // already applied via webDocumentDirection from earlier in the same
+  // scenario, so per-scenario test setup chains work.
+  driver.webAdminGetDocumentDirection = async () => {
+    const page = await pageFor('default');
+    await page.goto('/admin.html');
+    return page.evaluate(() => document.documentElement.getAttribute('dir') || 'ltr');
+  };
+
   // <Name>'s Web UI shows the <Language> translation of "<EnglishKey>"
   // Driver receives (BCP-47 code, English key/phrase). Verifies the
   // visible page text contains the localised translation. Uses the
