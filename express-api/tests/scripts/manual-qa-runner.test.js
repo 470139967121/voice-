@@ -5928,7 +5928,9 @@ describe('Cross-cohort Firestore matcher (Then no doc has any entry in "X" whose
     const ctx = makeCtx({
       db,
       lastQueryResult: {
-        docs: [{ exists: true, data: () => ({ followingIds: [50000010, 50000020] }) }],
+        // Upstream query matcher stores POJOs (snap.docs.map(d => d.data())),
+        // so the cross-cohort consumer reads data directly — no .data() call.
+        docs: [{ followingIds: [50000010, 50000020] }],
       },
     });
     const r = await executeStep(
@@ -5949,7 +5951,7 @@ describe('Cross-cohort Firestore matcher (Then no doc has any entry in "X" whose
     const ctx = makeCtx({
       db,
       lastQueryResult: {
-        docs: [{ exists: true, data: () => ({ followingIds: [50000010, 90000099] }) }],
+        docs: [{ followingIds: [50000010, 90000099] }],
       },
     });
     const r = await executeStep(
@@ -5971,7 +5973,7 @@ describe('Cross-cohort Firestore matcher (Then no doc has any entry in "X" whose
     const ctx = makeCtx({
       db,
       lastQueryResult: {
-        docs: [{ exists: true, data: () => ({ followerIds: [50000010] }) }],
+        docs: [{ followerIds: [50000010] }],
       },
     });
     const r = await executeStep(
@@ -6003,7 +6005,7 @@ describe('Cross-cohort Firestore matcher (Then no doc has any entry in "X" whose
     const db = makeUserLookupDb({});
     const ctx = makeCtx({
       db,
-      lastQueryResult: { docs: [{ exists: true, data: () => ({ followingIds: [] }) }] },
+      lastQueryResult: { docs: [{ followingIds: [] }] },
     });
     const r = await executeStep(
       {
@@ -6024,7 +6026,7 @@ describe('Cross-cohort Firestore matcher (Then no doc has any entry in "X" whose
     const ctx = makeCtx({
       db,
       lastQueryResult: {
-        docs: [{ exists: true, data: () => ({ followingIds: [99999999] }) }],
+        docs: [{ followingIds: [99999999] }],
       },
     });
     const r = await executeStep(
