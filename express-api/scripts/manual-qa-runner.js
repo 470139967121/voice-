@@ -235,6 +235,66 @@ function loadPersonas() {
   return _personasCache;
 }
 
+/**
+ * Test-side mirror of the OSA #17 PR 6 runtime hook in
+ * admin-age-verification.js /modify-dob. When test matchers shortcut a
+ * cohort flip by writing `cohort: 'minor'` directly to a user doc
+ * (skipping the full admin → DOB-modify flow), they ALSO need to clear
+ * cross-cohort follow edges — otherwise the j19 OSA invariant probe
+ * reports state the production route would never actually produce.
+ *
+ * Walks the user's followingIds + followerIds, looks up each
+ * counterparty's cohort, and emits symmetric arrayRemove writes for
+ * any edge where counterparty.cohort !== newCohort. SHYTALK_OFFICIAL
+ * counterparties exempt, mirroring the route + migration script.
+ *
+ * Returns the count of edges removed (caller can log if useful).
+ */
+async function clearCrossCohortFollowsForUserDoc(db, uniqueId, newCohort) {
+  // firebase-admin's FieldValue is a static class, available without
+  // any app init. Importing through src/utils/firebase would trigger
+  // the prod-init code path under jest (NODE_ENV !== 'local'), which
+  // exits the test process with a "FIREBASE_DATABASE_URL required" error.
+  const { FieldValue } = require('firebase-admin').firestore;
+  const userRef = db.doc(`users/${uniqueId}`);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) return 0;
+  const data = userSnap.data() || {};
+  const followingIds = Array.isArray(data.followingIds) ? data.followingIds : [];
+  const followerIds = Array.isArray(data.followerIds) ? data.followerIds : [];
+  const counterparties = [...new Set([...followingIds, ...followerIds])];
+  if (counterparties.length === 0) return 0;
+  const userIsOfficial = data.userType === 'SHYTALK_OFFICIAL' || data.isOfficial;
+  if (userIsOfficial) return 0;
+  const snaps = await Promise.all(counterparties.map((id) => db.doc(`users/${id}`).get()));
+  const cohortMap = new Map();
+  const officialMap = new Map();
+  snaps.forEach((snap, idx) => {
+    if (!snap.exists) return;
+    const cd = snap.data() || {};
+    cohortMap.set(counterparties[idx], cd.cohort ?? null);
+    officialMap.set(counterparties[idx], cd.userType === 'SHYTALK_OFFICIAL' || cd.isOfficial);
+  });
+  let cleared = 0;
+  for (const targetId of followingIds) {
+    const c = cohortMap.get(targetId);
+    if (!c || c === newCohort) continue;
+    if (officialMap.get(targetId)) continue;
+    await userRef.update({ followingIds: FieldValue.arrayRemove(targetId) });
+    await db.doc(`users/${targetId}`).update({ followerIds: FieldValue.arrayRemove(uniqueId) });
+    cleared++;
+  }
+  for (const sourceId of followerIds) {
+    const c = cohortMap.get(sourceId);
+    if (!c || c === newCohort) continue;
+    if (officialMap.get(sourceId)) continue;
+    await userRef.update({ followerIds: FieldValue.arrayRemove(sourceId) });
+    await db.doc(`users/${sourceId}`).update({ followingIds: FieldValue.arrayRemove(uniqueId) });
+    cleared++;
+  }
+  return cleared;
+}
+
 // ── Step matchers ───────────────────────────────────────────────────
 
 /**
@@ -5472,7 +5532,14 @@ const matchers = [
         return { ok: false, error: `document "${docPath}" does not exist` };
       }
       const actual = snap.data()?.[field];
-      if (actual !== expected) {
+      // Field-name duality for the OSA-freeze pair — see Wake 90 matcher
+      // comment above. Mirrors probeOsaInvariants' `isFrozen` predicate.
+      const data = snap.data() || {};
+      const isFrozenDual =
+        (field === 'frozenAtMigration' || field === 'frozen') &&
+        expected === true &&
+        (data.frozen === true || data.frozenAtMigration === true);
+      if (!isFrozenDual && actual !== expected) {
         return {
           ok: false,
           error: `field "${field}" on "${docPath}" expected ${expected}, actual ${actual}`,
@@ -7758,6 +7825,10 @@ const matchers = [
       await ctx.db
         .doc(`users/${p.uniqueId}`)
         .set({ locale, isAgeVerified: true, cohort: 'minor' }, { merge: true });
+      // OSA #17 PR 6 test-side mirror: clear cross-cohort follow edges
+      // that the runtime route would clear. Without this the j19 probe
+      // reports state the prod /modify-dob route would never produce.
+      await clearCrossCohortFollowsForUserDoc(ctx.db, p.uniqueId, 'minor');
       return { ok: true };
     },
   },
@@ -8779,6 +8850,8 @@ const matchers = [
       await ctx.db
         .doc(`users/${target.uniqueId}`)
         .set({ cohort: 'minor', locale: targetLocale }, { merge: true });
+      // OSA #17 PR 6 test-side mirror — see clearCrossCohortFollowsForUserDoc.
+      await clearCrossCohortFollowsForUserDoc(ctx.db, target.uniqueId, 'minor');
       if (!ctx.personaLocales) ctx.personaLocales = new Map();
       ctx.personaLocales.set(targetName, { platform: null, locale: targetLocale });
       ctx.personaLocales.set(adminName, { platform: null, locale: adminLocale });
@@ -9920,8 +9993,16 @@ const matchers = [
     // Wake 89 — `a conversation "<X>" exists with participantIds=[N, N]
     // created before the OSA migration` (state-seed). j08:14. Plants a
     // conversations/<id> doc with the cross-cohort participant pair and
-    // createdAt=0 (sentinel for "before OSA migration"). j08's migration
-    // sweep uses createdAt < OSA_MIGRATION_TS to identify legacy docs.
+    // createdAt=0 (sentinel for "before OSA migration").
+    //
+    // The j19 OSA regression suite probes "migration has run at least
+    // once" — i.e., the steady state under test is POST-migration. So
+    // this seed plants the doc in the state the migration would leave
+    // it: crossCohortAtMigration + frozenAtMigration set, mirroring
+    // migrate-segregation-relationships.js applyConversationMigration
+    // (line ~866). Without the flags, j19 reports the conv as an
+    // unfrozen-cross-cohort violation even though the test-author's
+    // intent is "migration already ran".
     pattern:
       /^a conversation "([^"]+)" exists with participantIds=\[(\d+), (\d+)\] created before the OSA migration$/,
     async handler(m, ctx) {
@@ -9933,6 +10014,9 @@ const matchers = [
         participantIds: [a, b],
         createdAt: 0,
         state: 'OPEN',
+        crossCohortAtMigration: true,
+        frozenAtMigration: true,
+        frozenAtMigrationAt: 1,
       });
       return { ok: true };
     },
@@ -10119,7 +10203,21 @@ const matchers = [
           if (c) cohorts.add(c);
         }
         if (cohorts.size <= 1) continue;
-        if (data?.[field] !== expected) violations.push(id || JSON.stringify(data).slice(0, 30));
+        // Field-name duality for `frozenAtMigration` ↔ `frozen`. The OSA
+        // probe (probeOsaInvariants line ~13018) treats either field
+        // being true as "this conv is frozen / cross-cohort access is
+        // sealed". The j19 step text picks ONE of those names; if the
+        // seeded data uses the other (e.g., non-migration freeze
+        // matchers write `frozen: true` while the migration writes
+        // `frozenAtMigration: true`), naive field-equality reports a
+        // false violation. Accept either field for this canonical pair.
+        const isFrozenDual =
+          (field === 'frozenAtMigration' || field === 'frozen') &&
+          expected === true &&
+          (data?.frozen === true || data?.frozenAtMigration === true);
+        if (!isFrozenDual && data?.[field] !== expected) {
+          violations.push(id || JSON.stringify(data).slice(0, 30));
+        }
       }
       if (violations.length > 0) {
         return {
