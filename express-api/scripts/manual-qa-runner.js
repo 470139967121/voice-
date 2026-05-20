@@ -13546,6 +13546,32 @@ async function main() {
       console.error(`[runner] Android driver init failed: ${e.message}`);
     }
   }
+  if (opts.driver === 'simctl' || opts.driver === 'all') {
+    try {
+      const { createIosDriver } = require('./drivers/ios-simctl-driver');
+      const iosDriver = await createIosDriver({});
+      if (!uiDriver) {
+        uiDriver = iosDriver;
+      } else {
+        // Merge iOS methods onto the existing uiDriver (Android-first).
+        // Each method name is platform-prefixed (`iosXxx` / `androidXxx`)
+        // so no collisions; matchers dispatch by step text platform.
+        for (const k of Object.keys(iosDriver)) {
+          if (typeof iosDriver[k] === 'function' && !uiDriver[k]) {
+            uiDriver[k] = iosDriver[k].bind(iosDriver);
+          }
+        }
+        uiDriver._iosDriver = iosDriver;
+      }
+      const prevCleanup = driverCleanup;
+      driverCleanup = async () => {
+        await prevCleanup();
+        await iosDriver.close();
+      };
+    } catch (e) {
+      console.error(`[runner] iOS driver init failed: ${e.message}`);
+    }
+  }
 
   const ctx = {
     target: opts.target,

@@ -163,6 +163,49 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     };
   }
 
+  // ── Real primitive implementations (override stubs) ─────────────────
+
+  // Dump the current screen's view hierarchy via uiautomator. Returns
+  // the raw XML string. Used by tag-targeted tap + assertion matchers
+  // that scan for resource-id + bounds.
+  driver.androidUiDump = async () => {
+    try {
+      adb(['shell', 'uiautomator', 'dump', '--compressed', '/sdcard/dump.xml']);
+      const xml = adb(['shell', 'cat', '/sdcard/dump.xml']);
+      return xml;
+    } catch (e) {
+      console.error(`[android-driver] androidUiDump failed: ${e.message}`);
+      return '';
+    }
+  };
+
+  // Tap at coordinate. Matchers compute (x, y) from the view dump's
+  // bounds and call this primitive.
+  driver.androidTap = async (x, y) => {
+    try {
+      adb(['shell', 'input', 'tap', String(Math.round(x)), String(Math.round(y))]);
+      return true;
+    } catch (e) {
+      console.error(`[android-driver] androidTap(${x},${y}) failed: ${e.message}`);
+      return false;
+    }
+  };
+
+  // Open named screen via the app's deep-link scheme (shytalk://<screen>).
+  // The app's AndroidManifest routes shytalk:// URIs to MainActivity which
+  // dispatches to the named destination. Falls back to `am start` if the
+  // deep-link doesn't resolve.
+  driver.androidOpenScreen = async (name, screen) => {
+    try {
+      const uri = `shytalk://${screen}`;
+      adb(['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', uri]);
+      return true;
+    } catch (e) {
+      console.error(`[android-driver] androidOpenScreen(${name},${screen}) failed: ${e.message}`);
+      return false;
+    }
+  };
+
   driver.close = async () => {
     /* adb sessions are stateless; nothing to release */
   };
