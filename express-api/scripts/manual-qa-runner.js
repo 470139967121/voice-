@@ -1931,9 +1931,30 @@ const matchers = [
     // the "shows the element with tag" matcher above. Bounds extraction
     // uses a node-local regex anchored to the same element to avoid
     // grabbing the bounds of an unrelated nearby element.
+    //
+    // Per-target tag aliasing: scenarios authored against the prod
+    // signup flow (`signin_signUpLink` → email → password → DOB) can't
+    // run end-to-end on the local build because local has no real
+    // signup UI — only dev-sign-in. The alias map below resolves
+    // prod-flow tags to local-build equivalents when target=local, so
+    // the scenarios stay source-of-truth and the runner translates.
     pattern: /^([A-Z][a-z]+)(?:\s*\[(P-\d{2})\])?\s+on Android\s+taps "([^"]+)"$/,
     async handler(m, ctx) {
-      const tag = m[3];
+      const rawTag = m[3];
+      const ANDROID_LOCAL_TAG_ALIASES = {
+        // Prod-flow signup → local dev-sign-in entry point. After
+        // tapping, the user lands on the persona picker.
+        signin_signUpLink: 'dev_sign_in',
+        // Persona-creation button in the prod signup flow lands on
+        // the same intermediate state as the local persona picker
+        // open button. The next-step matcher (persona pick) closes
+        // the flow.
+        signup_createAccountButton: 'persona_picker_open',
+      };
+      const tag =
+        ctx.target === 'local' && Object.hasOwn(ANDROID_LOCAL_TAG_ALIASES, rawTag)
+          ? ANDROID_LOCAL_TAG_ALIASES[rawTag]
+          : rawTag;
       if (!ctx.uiDriver) {
         return { ok: false, error: `UI step requires ctx.uiDriver (tag=${tag})` };
       }
