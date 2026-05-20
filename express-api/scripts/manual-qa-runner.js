@@ -5342,7 +5342,14 @@ const matchers = [
       if (!ctx.webDriver?.webTypeIntoSearch) {
         return { ok: false, error: 'ctx.webDriver.webTypeIntoSearch not configured' };
       }
-      await ctx.webDriver.webTypeIntoSearch(body);
+      const ok = await ctx.webDriver.webTypeIntoSearch(body);
+      if (ok === false) {
+        // Driver returns explicit `false` when it couldn't locate the
+        // search input. `undefined` (legacy stub) stays a pass for
+        // backwards-compat — defer cleanup to a future wake that
+        // standardises the driver-return contract across all methods.
+        return { ok: false, error: `webTypeIntoSearch("${body}") did not complete` };
+      }
       return { ok: true };
     },
   },

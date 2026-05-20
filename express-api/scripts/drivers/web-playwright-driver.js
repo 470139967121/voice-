@@ -201,6 +201,39 @@ async function createWebDriver({ baseURL = 'http://localhost:8888', headless = t
     return page.evaluate(() => document.documentElement.getAttribute('dir') || 'ltr');
   };
 
+  // Web "types into the search field". Locator tries the common
+  // search-input shapes the public app uses, in this priority order:
+  //   1. [data-test-tag="searchField"] / [data-testid="search"]
+  //   2. input[type="search"]
+  //   3. input[name="search"] / input[name="q"]
+  //   4. input[placeholder*="search" i] (loose textual fallback)
+  // Whichever matches first wins; an empty match throws via Playwright's
+  // locator timeout and we return false so the matcher reports a clean
+  // "did not complete" finding rather than a stack trace.
+  driver.webTypeIntoSearch = async (text) => {
+    const page = await pageFor('default');
+    if (!page.url() || page.url() === 'about:blank') await page.goto('/');
+    const locator = page
+      .locator(
+        [
+          '[data-test-tag="searchField"]',
+          '[data-testid="search"]',
+          'input[type="search"]',
+          'input[name="search"]',
+          'input[name="q"]',
+          'input[placeholder*="search" i]',
+        ].join(', '),
+      )
+      .first();
+    try {
+      await locator.fill(String(text), { timeout: 3000 });
+      return true;
+    } catch (e) {
+      console.error(`[web-driver] webTypeIntoSearch(${text}) failed: ${e.message}`);
+      return false;
+    }
+  };
+
   // Web Admin variant — navigates to /admin.html and reads <html dir>.
   // The admin panel is English-only by ShyTalk policy (per j12 scenario
   // comments) so this should always return 'ltr' regardless of browser
