@@ -4949,17 +4949,39 @@ const matchers = [
     // Tap-purchase-and-server-credits composite Given (j06 state
     // setup). Simulates a SUCCESSFUL purchase that credited the user —
     // useful when a scenario needs the post-credit state without
-    // running the full POST + receipt validation chain. Driver writes
-    // the balance and transaction doc directly.
+    // running the full POST + receipt validation chain.
+    //
+    // State-seed pattern (per W120/W124): writes directly to Firestore
+    // rather than delegating to a webDriver stub. Two writes:
+    //   - users/<uniqueId>: shyCoins set to the target value (the step
+    //     declares the EXACT post-credit balance, not a delta — so use
+    //     set/update with absolute value, not FieldValue.increment).
+    //   - users/<uniqueId>/transactions/<txId>: matches the shape
+    //     writeTransaction() produces in economy.js — COIN_PURCHASE
+    //     type, amount = coins, currency COINS, balanceAfter = coins.
     pattern:
       /^([A-Z][a-z]+)\s+taps purchase and the server credits coins=(\d+) \+ writes transaction$/,
     async handler(m, ctx) {
       const name = m[1];
       const coins = parseInt(m[2], 10);
-      if (!ctx.webDriver?.simulatePurchaseCredit) {
-        return { ok: false, error: 'ctx.webDriver.simulatePurchaseCredit not configured' };
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `persona "${name}" not in registry` };
       }
-      await ctx.webDriver.simulatePurchaseCredit(name, coins);
+      const ts = Date.now();
+      const txId = `test-credit-${p.uniqueId}-${ts}`;
+      await ctx.db.doc(`users/${p.uniqueId}`).update({ shyCoins: coins });
+      await ctx.db.doc(`users/${p.uniqueId}/transactions/${txId}`).set({
+        id: txId,
+        type: 'COIN_PURCHASE',
+        amount: coins,
+        currency: 'COINS',
+        balanceAfter: coins,
+        details: 'test-seed simulated credit',
+        timestamp: ts,
+      });
       return { ok: true };
     },
   },

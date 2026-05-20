@@ -8627,9 +8627,25 @@ describe('Web Admin processes refund', () => {
 });
 
 describe('Tap-purchase-and-server-credits composite (Given state setup)', () => {
-  test('"Alice taps purchase and the server credits coins=N + writes transaction" → driver', async () => {
-    const spy = jest.fn(async () => undefined);
-    const ctx = makeCtx({ webDriver: { simulatePurchaseCredit: spy } });
+  // Wake 126 converted this matcher from a driver-stub delegation to a
+  // direct Firestore write (state-seed pattern, same as W120/W124).
+  // The two writes pin the post-credit state without running the full
+  // POST + receipt-validation chain.
+
+  function makeWriteRecordingDb() {
+    const writes = [];
+    return {
+      writes,
+      doc: (path) => ({
+        set: async (data) => writes.push({ op: 'set', path, data }),
+        update: async (data) => writes.push({ op: 'update', path, data }),
+      }),
+    };
+  }
+
+  test('writes user shyCoins + transaction doc for known persona', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       {
         kind: 'Given',
@@ -8638,7 +8654,37 @@ describe('Tap-purchase-and-server-credits composite (Given state setup)', () => 
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('Alice', 6000);
+    const userUpdate = db.writes.find((w) => w.op === 'update' && w.path === 'users/50000010');
+    expect(userUpdate).toEqual({
+      op: 'update',
+      path: 'users/50000010',
+      data: { shyCoins: 6000 },
+    });
+    const txWrite = db.writes.find(
+      (w) => w.op === 'set' && w.path.startsWith('users/50000010/transactions/'),
+    );
+    expect(txWrite).toBeDefined();
+    expect(txWrite.data).toMatchObject({
+      type: 'COIN_PURCHASE',
+      amount: 6000,
+      currency: 'COINS',
+      balanceAfter: 6000,
+    });
+  });
+
+  test('unknown persona → ok:false (no silent state corruption)', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'Zephyr taps purchase and the server credits coins=6000 + writes transaction',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zephyr/);
+    expect(db.writes).toHaveLength(0);
   });
 });
 
