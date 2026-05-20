@@ -15665,31 +15665,47 @@ describe('Wake 83 — "<Name> [P-NN] is signed in as a non-admin user"', () => {
 });
 
 describe('Wake 83 — "the audit log has <N> entries"', () => {
-  // j12-admin-daily-routine.feature:101
-  //   Given the audit log has 10000 entries
-  // Large-volume state-seed. Bulk-writes synthetic audit entries to
-  // exercise pagination/perf paths. Driver receives target count.
-  test('seeds N entries via driver', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { seedAuditLogEntries: spy } });
-    const r = await executeStep({ kind: 'Given', text: 'the audit log has 10000 entries' }, ctx);
-    expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith(10000);
-  });
+  // Wake 126 converted this from a webDriver-stub delegation to a
+  // direct Firestore bulk-write. j12-admin-daily-routine.feature:101.
+  // Bulk-writes synthetic audit entries to exercise pagination/perf
+  // paths in the admin-audit-log queries.
 
-  test('smaller count', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { seedAuditLogEntries: spy } });
+  function makeWriteRecordingDb() {
+    const writes = [];
+    return {
+      writes,
+      doc: (path) => ({
+        set: async (data) => writes.push({ op: 'set', path, data }),
+      }),
+    };
+  }
+
+  test('writes N audit log docs to auditLog collection', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep({ kind: 'Given', text: 'the audit log has 50 entries' }, ctx);
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith(50);
+    const auditWrites = db.writes.filter((w) => w.path.startsWith('auditLog/'));
+    expect(auditWrites).toHaveLength(50);
+    expect(auditWrites[0].data).toMatchObject({
+      action: 'test_seed',
+      details: 'test-seed audit entry',
+    });
   });
 
-  test('no driver → fail', async () => {
-    const ctx = makeCtx();
-    const r = await executeStep({ kind: 'Given', text: 'the audit log has 10000 entries' }, ctx);
+  test('zero entries is valid (empty seed)', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'the audit log has 0 entries' }, ctx);
+    expect(r.ok).toBe(true);
+    expect(db.writes).toHaveLength(0);
+  });
+
+  test('no ctx.db → fail', async () => {
+    const ctx = makeCtx({ db: null });
+    const r = await executeStep({ kind: 'Given', text: 'the audit log has 50 entries' }, ctx);
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/seedAuditLogEntries/);
+    expect(r.error).toMatch(/ctx\.db/);
   });
 });
 

@@ -8986,17 +8986,41 @@ const matchers = [
   },
   {
     // Wake 83 — "the audit log has <N> entries". j12:101 — large-volume
-    // state-seed. Driver bulk-writes synthetic audit entries.
+    // state-seed. Writes N synthetic audit entries directly to the
+    // auditLog collection.
+    //
+    // State-seed pattern (W120/W124/W126): bulk-writes the docs the
+    // production audit-log writers would produce, rather than
+    // delegating to a webDriver stub. Shape mirrors the route-side
+    // audit writers (action + timestamp + synthetic IDs) so scenarios
+    // counting entries by query see the seeded rows alongside any
+    // real ones produced by the same cycle.
     pattern: /^the audit log has (\d+) entries$/,
     async handler(m, ctx) {
       const count = parseInt(m[1], 10);
-      if (!ctx.webDriver?.seedAuditLogEntries) {
-        return { ok: false, error: 'ctx.webDriver.seedAuditLogEntries not configured' };
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      if (!Number.isFinite(count) || count < 0) {
+        return { ok: false, error: `invalid audit-log entry count: ${m[1]}` };
       }
-      const ok = await ctx.webDriver.seedAuditLogEntries(count);
-      if (!ok) {
-        return { ok: false, error: `failed to seed ${count} audit log entries` };
+      const ts = Date.now();
+      // Sequential IDs keep ordering deterministic when the cycle
+      // queries by createdAt — preferable to random IDs which would
+      // make order non-reproducible across runs.
+      const writes = [];
+      for (let i = 0; i < count; i++) {
+        const id = `test-seed-${ts}-${i.toString().padStart(6, '0')}`;
+        writes.push(
+          ctx.db.doc(`auditLog/${id}`).set({
+            id,
+            action: 'test_seed',
+            actorId: 0,
+            targetId: 0,
+            timestamp: ts + i,
+            details: 'test-seed audit entry',
+          }),
+        );
       }
+      await Promise.all(writes);
       return { ok: true };
     },
   },
