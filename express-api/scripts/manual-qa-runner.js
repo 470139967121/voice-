@@ -4798,21 +4798,59 @@ const matchers = [
     // stripped by Wake 30. The "successfully" adverb is optional:
     // both phrasings ("purchased X with receipt Y" and ".... Y
     // successfully") indicate the same state — a completed purchase
-    // — and route to the same driver method.
+    // — and route to the same Firestore writes.
+    //
+    // Past-tense Given is a STATE-SEED, not an assertion. Previously
+    // delegated to a webDriver stub which returned false and emitted
+    // "has no successful purchase" findings against scenarios whose
+    // intent was "this purchase already happened, set it up". Now
+    // writes the same shape /api/economy/purchase would after a
+    // successful coin-package buy:
+    //   - purchaseReceipts/<sha256(receipt)>: { userId, productId,
+    //     purchaseToken, platform, isSubscription, createdAt,
+    //     verified: true, orderId, coinsGranted, bonusCoinsGranted }
+    //   - users/<uniqueId>: shyCoins += coinsGranted
+    // Coins are inferred from the productId suffix (`coins-1000` →
+    // 1000) so the scenario can drive replay / refund flows without
+    // also writing a `coinPackages/<id>` doc.
     pattern: /^([A-Z][a-z]+)\s+purchased "([^"]+)" with receipt "([^"]+)"(?: successfully)?$/,
     async handler(m, ctx) {
       const name = m[1];
-      const packageId = m[2];
+      const productId = m[2];
       const receipt = m[3];
-      if (!ctx.webDriver?.hasPurchasedSuccessfully) {
-        return { ok: false, error: 'ctx.webDriver.hasPurchasedSuccessfully not configured' };
-      }
-      const ok = await ctx.webDriver.hasPurchasedSuccessfully(name, packageId, receipt);
-      if (!ok) {
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(name);
+      if (!p?.uniqueId) {
         return {
           ok: false,
-          error: `${name} has no successful purchase for "${packageId}" with receipt "${receipt}"`,
+          error: `persona "${name}" not in registry (or ephemeral with no uniqueId)`,
         };
+      }
+      // Infer coins from productId suffix. `coins-1000` → 1000. Falls
+      // back to 0 for non-coin products (subscriptions etc. — those
+      // would seed via a different matcher).
+      const coinsMatch = /coins-(\d+)/i.exec(productId);
+      const coinsGranted = coinsMatch ? parseInt(coinsMatch[1], 10) : 0;
+      const crypto = require('node:crypto');
+      const receiptId = crypto.createHash('sha256').update(String(receipt)).digest('hex');
+      const { FieldValue } = require('firebase-admin').firestore;
+      await ctx.db.doc(`purchaseReceipts/${receiptId}`).set({
+        userId: p.uniqueId,
+        productId,
+        purchaseToken: receipt,
+        platform: 'test-seed',
+        isSubscription: false,
+        createdAt: Date.now(),
+        verified: true,
+        orderId: `test-seed-${receiptId.slice(0, 8)}`,
+        coinsGranted,
+        bonusCoinsGranted: 0,
+      });
+      if (coinsGranted > 0) {
+        await ctx.db
+          .doc(`users/${p.uniqueId}`)
+          .update({ shyCoins: FieldValue.increment(coinsGranted) });
       }
       return { ok: true };
     },

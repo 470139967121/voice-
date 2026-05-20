@@ -8350,10 +8350,29 @@ describe('Composite purchase action (sandbox receipt)', () => {
   });
 });
 
-describe('Past-tense purchase assertion (post-Wake-30 strip)', () => {
-  test('"X purchased \\"Y\\" with receipt \\"Z\\" successfully" → driver verify', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { hasPurchasedSuccessfully: spy } });
+describe('Past-tense purchase state-seed (post-Wake-30 strip)', () => {
+  // Wake 124 rewrote this matcher from a driver-stub assertion to a
+  // Firestore state-seed: writes purchaseReceipts/<sha256(receipt)>
+  // and (for coins-N productIds) increments the user's shyCoins.
+  // Past-tense Given is a state-seed, not an assertion of pre-existing
+  // state — previously the driver-stub path always returned false and
+  // emitted spurious "has no successful purchase" findings against
+  // scenarios whose intent was "this purchase already happened".
+
+  function makeWriteRecordingDb() {
+    const writes = [];
+    return {
+      writes,
+      doc: (path) => ({
+        set: async (data) => writes.push({ op: 'set', path, data }),
+        update: async (data) => writes.push({ op: 'update', path, data }),
+      }),
+    };
+  }
+
+  test('writes purchaseReceipts doc + increments shyCoins for coins-N productId', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       {
         kind: 'Given',
@@ -8363,21 +8382,87 @@ describe('Past-tense purchase assertion (post-Wake-30 strip)', () => {
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('Alice', 'coins-1000', 'receipt-R1');
+    // sha256('receipt-R1') deterministic — pin the receipt-doc path so a
+    // future change to the hash construction is visible immediately.
+    const receiptWrite = db.writes.find(
+      (w) => w.op === 'set' && w.path.startsWith('purchaseReceipts/'),
+    );
+    expect(receiptWrite).toBeDefined();
+    expect(receiptWrite.data).toMatchObject({
+      userId: 50000010,
+      productId: 'coins-1000',
+      purchaseToken: 'receipt-R1',
+      isSubscription: false,
+      verified: true,
+      coinsGranted: 1000,
+      bonusCoinsGranted: 0,
+    });
+    // Wallet increment write — Sentinel object shape varies between
+    // firebase-admin versions, so check the call shape loosely.
+    const walletWrite = db.writes.find((w) => w.op === 'update' && w.path === 'users/50000010');
+    expect(walletWrite).toBeDefined();
+    expect(walletWrite.data).toHaveProperty('shyCoins');
   });
 
-  test('driver returns false — fail', async () => {
-    const spy = jest.fn(async () => false);
-    const ctx = makeCtx({ webDriver: { hasPurchasedSuccessfully: spy } });
+  test('without "successfully" — same write semantics', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
-      {
-        kind: 'Given',
-        text: 'Alice purchased "coins-1000" with receipt "receipt-R1" successfully',
-      },
+      { kind: 'Given', text: 'Alice purchased "coins-1000" with receipt "receipt-R3"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(db.writes.find((w) => w.path.startsWith('purchaseReceipts/'))).toBeDefined();
+  });
+
+  test('non-coins productId still writes receipt but skips wallet increment', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Alice purchased "super-shy-monthly" with receipt "sub-R1"' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    const receiptWrite = db.writes.find((w) => w.path.startsWith('purchaseReceipts/'));
+    expect(receiptWrite).toBeDefined();
+    expect(receiptWrite.data.coinsGranted).toBe(0);
+    // No wallet increment for non-coin SKUs — those would route through
+    // a subscription seed matcher that doesn't exist yet (see future work).
+    expect(db.writes.find((w) => w.op === 'update' && w.path === 'users/50000010')).toBeUndefined();
+  });
+
+  test('unknown persona → clear error (no silent state corruption)', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      // Zephyr isn't in the persona registry (no real persona, no
+      // ephemeral entry). The matcher must refuse rather than write
+      // a receipt against a userId it can't resolve.
+      { kind: 'Given', text: 'Zephyr purchased "coins-1000" with receipt "receipt-R1"' },
       ctx,
     );
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/coins-1000/);
+    expect(r.error).toMatch(/Zephyr/);
+    // No writes attempted when the persona resolution fails.
+    expect(db.writes).toHaveLength(0);
+  });
+
+  test('different receipt strings produce different receiptId hashes (replay-detection prerequisite)', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    await executeStep(
+      { kind: 'Given', text: 'Alice purchased "coins-1000" with receipt "receipt-A"' },
+      ctx,
+    );
+    await executeStep(
+      { kind: 'Given', text: 'Alice purchased "coins-1000" with receipt "receipt-B"' },
+      ctx,
+    );
+    const receiptPaths = db.writes
+      .filter((w) => w.path.startsWith('purchaseReceipts/'))
+      .map((w) => w.path);
+    expect(receiptPaths).toHaveLength(2);
+    expect(receiptPaths[0]).not.toBe(receiptPaths[1]);
   });
 });
 
@@ -8398,20 +8483,36 @@ describe('Network drop simulation', () => {
 });
 
 describe('Past-tense purchase matcher generalised (optional "successfully")', () => {
-  test('"X purchased \\"Y\\" with receipt \\"Z\\"" without successfully — driver call', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { hasPurchasedSuccessfully: spy } });
+  // Both phrasings ("with receipt Y" and "with receipt Y successfully")
+  // route through the same state-seed handler in W124. The regression-
+  // guard here was originally added in Wake 56 for the optional-adverb
+  // pattern; W124 preserved that branch in the regex.
+
+  function makeWriteRecordingDb() {
+    const writes = [];
+    return {
+      writes,
+      doc: (path) => ({
+        set: async (data) => writes.push({ op: 'set', path, data }),
+        update: async (data) => writes.push({ op: 'update', path, data }),
+      }),
+    };
+  }
+
+  test('without "successfully" still parses and writes the receipt', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       { kind: 'Given', text: 'Alice purchased "coins-1000" with receipt "receipt-R3"' },
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('Alice', 'coins-1000', 'receipt-R3');
+    expect(db.writes.some((w) => w.path.startsWith('purchaseReceipts/'))).toBe(true);
   });
 
-  test('with "successfully" still works (regression-guard from Wake 56)', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { hasPurchasedSuccessfully: spy } });
+  test('with "successfully" still parses and writes the receipt', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       {
         kind: 'Given',
@@ -8420,7 +8521,7 @@ describe('Past-tense purchase matcher generalised (optional "successfully")', ()
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('Alice', 'coins-1000', 'receipt-R1');
+    expect(db.writes.some((w) => w.path.startsWith('purchaseReceipts/'))).toBe(true);
   });
 });
 
