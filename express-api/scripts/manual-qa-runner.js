@@ -2465,14 +2465,29 @@ const matchers = [
       // hiding the real per-edge cohort check from running, leaving the
       // j19 cross-cohort regression scenario crashed rather than
       // surfacing the underlying data state.
+      //
+      // SHYTALK_OFFICIAL exemption — system accounts are reachable
+      // from every cohort by design (system PMs cross cohort
+      // boundaries). When the doc being checked is an official
+      // account, skip the cohort-disallow assertion entirely. Both
+      // ends of the migration's preserved edges need this exemption
+      // to hold: source-side (Officia follows users of all cohorts)
+      // and target-side (users of all cohorts follow Officia).
       const offenders = [];
       for (const data of ctx.lastQueryResult.docs) {
+        if (data?.userType === 'SHYTALK_OFFICIAL' || data?.isOfficial === true) {
+          continue;
+        }
         const ids = data?.[field];
         if (!Array.isArray(ids)) continue;
         for (const uid of ids) {
           const userSnap = await ctx.db.doc(`users/${uid}`).get();
           if (!userSnap.exists) continue; // dangling reference — skipped
-          const cohort = userSnap.data()?.cohort;
+          const peer = userSnap.data() || {};
+          if (peer.userType === 'SHYTALK_OFFICIAL' || peer.isOfficial === true) {
+            continue;
+          }
+          const cohort = peer.cohort;
           if (cohort === disallowedCohort) {
             offenders.push({ uid, cohort });
           }
@@ -13364,6 +13379,7 @@ function pickField(obj, field) {
 async function probeOsaInvariants(db) {
   const usersSnap = await db.collection('users').get();
   const cohortMap = new Map();
+  const officialSet = new Set();
   const users = [];
   usersSnap.forEach((d) => {
     const data = d.data() || {};
@@ -13371,19 +13387,35 @@ async function probeOsaInvariants(db) {
     if (data?.uniqueId !== undefined && data?.uniqueId !== null && data.cohort) {
       cohortMap.set(String(data.uniqueId), data.cohort);
     }
+    // SHYTALK_OFFICIAL exemption tracking — both directions. System
+    // accounts deliver PMs to every cohort by design, so cross-cohort
+    // edges TO an official target (Marcus follows Officia) AND FROM an
+    // official source (Officia follows a beta-tester) must be
+    // preserved. Mirrors the migration script's exemption added in the
+    // same wake.
+    if (
+      data?.uniqueId !== undefined &&
+      (data?.userType === 'SHYTALK_OFFICIAL' || data?.isOfficial === true)
+    ) {
+      officialSet.add(String(data.uniqueId));
+    }
   });
 
   let crossFollowing = 0;
   let crossFollower = 0;
   for (const u of users) {
-    // SHYTALK_OFFICIAL is exempt from cohort follow-edge cleanup.
+    // Source-side exemption.
     if (u.userType === 'SHYTALK_OFFICIAL' || u.isOfficial) continue;
     if (!u.cohort) continue;
     for (const targetId of u.followingIds || []) {
+      // Target-side exemption: edge → official account is preserved.
+      if (officialSet.has(String(targetId))) continue;
       const c = cohortMap.get(String(targetId));
       if (c && c !== u.cohort) crossFollowing++;
     }
     for (const sourceId of u.followerIds || []) {
+      // Mirror-side exemption: edge from official account is preserved.
+      if (officialSet.has(String(sourceId))) continue;
       const c = cohortMap.get(String(sourceId));
       if (c && c !== u.cohort) crossFollower++;
     }
@@ -13469,9 +13501,20 @@ function snapToEntries(snap) {
 async function osaCounts(db) {
   const usersAr = snapToEntries(await db.collection('users').get()).map((e) => e.data);
   const cohortMap = new Map();
+  const officialSet = new Set();
   for (const u of usersAr) {
     if (u?.uniqueId !== undefined && u?.uniqueId !== null && u.cohort) {
       cohortMap.set(String(u.uniqueId), u.cohort);
+    }
+    // SHYTALK_OFFICIAL exemption (mirrors probeOsaInvariants): edges
+    // touching an official account on either side are preserved by
+    // the migration, so the idempotency counter must also exclude
+    // them or "re-running reports zero" never holds.
+    if (
+      u?.uniqueId !== undefined &&
+      (u?.userType === 'SHYTALK_OFFICIAL' || u?.isOfficial === true)
+    ) {
+      officialSet.add(String(u.uniqueId));
     }
   }
   let crossFollowing = 0;
@@ -13480,10 +13523,12 @@ async function osaCounts(db) {
     if (u?.userType === 'SHYTALK_OFFICIAL' || u?.isOfficial) continue;
     if (!u?.cohort) continue;
     for (const targetId of u.followingIds || []) {
+      if (officialSet.has(String(targetId))) continue;
       const c = cohortMap.get(String(targetId));
       if (c && c !== u.cohort) crossFollowing++;
     }
     for (const sourceId of u.followerIds || []) {
+      if (officialSet.has(String(sourceId))) continue;
       const c = cohortMap.get(String(sourceId));
       if (c && c !== u.cohort) crossFollower++;
     }

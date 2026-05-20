@@ -71,7 +71,9 @@ const personas = [
     locale: 'en',
     wallet: { shyCoins: 5000, beans: 2000, gcs: 100 },
     ageVerified: true,
-    follows: [50000060, 50000080],
+    // Officia (uniqueId=1) included so j19 can verify the migration
+    // preserves cross-cohort follow edges to/from SHYTALK_OFFICIAL.
+    follows: [50000060, 50000080, 1],
   },
   {
     id: 'P-04',
@@ -84,7 +86,11 @@ const personas = [
     locale: 'en',
     wallet: { shyCoins: 300, beans: 100, gcs: 0 },
     ageVerified: false,
-    follows: [],
+    // Officia (uniqueId=1) included so j19 can verify Officia retains
+    // followers from BOTH cohorts post-migration (adult Alice + this
+    // minor Marcus). System accounts are exempt from the cross-cohort
+    // follow-edge cleanup.
+    follows: [1],
   },
   {
     id: 'P-05',
