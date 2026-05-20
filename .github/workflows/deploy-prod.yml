@@ -385,10 +385,13 @@ jobs:
       inputs.ios &&
       (needs.deploy-backend-prod.result == 'success' || needs.deploy-backend-prod.result == 'skipped')
     environment: prod-ios
-    runs-on: [self-hosted, macOS, ARM64, shytalk-mac]
-    # Bumped from 45 -> 90 on 2026-04-28: K/Native linkReleaseFrameworkIosArm64
-    # plus xcodebuild archive plus App Store upload total ~50 min worst case
-    # on slow days; 90 gives runner-pool-slowdown headroom.
+    # Migrated 2026-05-20 from self-hosted Mac (shytalk-mac) to GitHub-hosted
+    # macos-latest per the no-self-hosted-runners policy. See deploy-dev.yml
+    # for full rationale.
+    runs-on: macos-latest
+    # Timeout kept at 90: K/Native linkReleaseFrameworkIosArm64 plus
+    # xcodebuild archive plus App Store upload ~50 min worst case on slow
+    # days; 90 gives runner-pool-slowdown headroom.
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -716,7 +719,9 @@ jobs:
     if: |
       always() &&
       needs.deploy-ios-prod.result == 'success'
-    runs-on: [self-hosted, macOS, ARM64, shytalk-mac]
+    # Migrated 2026-05-20 to GitHub-hosted macos-latest per the
+    # no-self-hosted-runners policy. See deploy-dev.yml for rationale.
+    runs-on: macos-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6

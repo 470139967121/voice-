@@ -365,12 +365,16 @@ jobs:
       always() &&
       inputs.ios-testers &&
       (needs.deploy-backend-dev.result == 'success' || needs.deploy-backend-dev.result == 'skipped')
-    runs-on: [self-hosted, macOS, ARM64, shytalk-mac]
-    # Bumped from 45 -> 90 on 2026-04-28: K/Native linkReleaseFrameworkIosArm64
-    # has been taking 24-29 min on the macos-15 runner pool (was ~10 min in
-    # mid-April). Plus xcodebuild archive ~15-20 min + pod install ~3 min +
-    # TestFlight upload ~2 min = comfortable 50-min worst case. 90 min gives
-    # headroom for runner-pool slowdowns without impacting normal-case time.
+    # Migrated 2026-05-20 from self-hosted Mac (shytalk-mac) to GitHub-hosted
+    # macos-latest per the no-self-hosted-runners policy. The self-hosted Mac
+    # was crashing under combined xcodebuild + K/Native memory pressure on
+    # an 8GB machine. macos-latest (14GB RAM, 3 cores) absorbs the load
+    # without taking down a developer laptop.
+    runs-on: macos-latest
+    # Timeout kept at 90: K/Native linkReleaseFrameworkIosArm64 ~24-29 min on
+    # the macos runner pool + xcodebuild archive ~15-20 min + pod install ~3
+    # min + TestFlight upload ~2 min = ~50-min worst case. 90 min gives
+    # runner-pool-slowdown headroom.
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
