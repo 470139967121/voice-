@@ -2385,9 +2385,14 @@ const matchers = [
             'ctx.lastQueryResult.docs missing — run a `When a query is run for every ...` step first',
         };
       }
+      // ctx.lastQueryResult.docs is an array of POJOs (the upstream
+      // query matcher already calls `.data()`); calling `.data()` on
+      // them again threw `doc.data is not a function`. This finding was
+      // hiding the real per-edge cohort check from running, leaving the
+      // j19 cross-cohort regression scenario crashed rather than
+      // surfacing the underlying data state.
       const offenders = [];
-      for (const doc of ctx.lastQueryResult.docs) {
-        const data = doc.data();
+      for (const data of ctx.lastQueryResult.docs) {
         const ids = data?.[field];
         if (!Array.isArray(ids)) continue;
         for (const uid of ids) {
