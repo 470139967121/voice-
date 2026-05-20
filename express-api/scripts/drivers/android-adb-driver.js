@@ -238,7 +238,11 @@ async function createAndroidDriver({ serial: preferred } = {}) {
   // land somewhere sensible (typically home or sign-in). Per-screen
   // navigation needs to be UI-driven (tap by uiautomator-dump tag) and
   // is the responsibility of higher-level matchers.
-  driver.androidOpenScreen = async (name, screen) => {
+  //
+  // Calling convention: single screen identifier (matchers pass one arg).
+  // Aligned with iosOpenScreen — previous (name, screen) signature did
+  // not match the matcher contract.
+  driver.androidOpenScreen = async (screen) => {
     try {
       adb([
         'shell',
@@ -253,10 +257,10 @@ async function createAndroidDriver({ serial: preferred } = {}) {
       await new Promise((r) => setTimeout(r, 1500));
       // Stash the requested screen on the driver so a future matcher
       // can use it as a hint when implementing real in-app navigation.
-      driver._requestedScreen = { name, screen };
+      driver._requestedScreen = screen;
       return true;
     } catch (e) {
-      console.error(`[android-driver] androidOpenScreen(${name},${screen}) failed: ${e.message}`);
+      console.error(`[android-driver] androidOpenScreen(${screen}) failed: ${e.message}`);
       return false;
     }
   };

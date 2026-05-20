@@ -135,12 +135,35 @@ async function createIosDriver({ udid: preferred } = {}) {
   }
 
   // Real implementation: open named screen via deep-link.
-  driver.iosOpenScreen = async (name, screen) => {
+  //
+  // Calling convention: matchers pass the single screen identifier (e.g.,
+  // "discovery", "wallet"). Earlier driver scaffolding used a two-arg
+  // (persona, screen) signature that didn't match the matcher's actual
+  // call, producing `shytalk://undefined` URLs and ~16 Blocker findings in
+  // cycle 1. Single-arg form aligns with iosTap/androidOpenScreen.
+  //
+  // Caveat: the iOS app's Info.plist registers exactly one URL scheme
+  // (the Google OAuth callback). There is no `shytalk://` scheme, so
+  // simctl's openurl call will succeed at the shell level but the OS
+  // surfaces a code=115 (LSApplicationWorkspaceErrorDomain) telling us
+  // no app handles that scheme. We detect that and return a clear,
+  // actionable error so the runner finding reads "deep-link unsupported,
+  // use UI navigation" rather than a generic openurl failure.
+  driver.iosOpenScreen = async (screen) => {
     try {
-      simctl(['openurl', udid, `shytalk://${screen}`]);
+      const out = execSync(`xcrun simctl openurl '${udid}' 'shytalk://${screen}' 2>&1`, {
+        encoding: 'utf8',
+      });
+      if (/error 115|failed to open/i.test(out)) {
+        console.error(
+          `[ios-driver] iosOpenScreen(${screen}): shytalk:// scheme is not registered in Info.plist; ` +
+            'use iosTapByTag-driven navigation instead of openurl',
+        );
+        return false;
+      }
       return true;
     } catch (e) {
-      console.error(`[ios-driver] iosOpenScreen(${name},${screen}) failed: ${e.message}`);
+      console.error(`[ios-driver] iosOpenScreen(${screen}) failed: ${e.message}`);
       return false;
     }
   };
