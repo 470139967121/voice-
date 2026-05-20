@@ -13471,13 +13471,26 @@ function formatReport(allFindings, allScenarioReports, target, cycleNumber) {
 async function main() {
   const args = process.argv.slice(2);
   const opts = {};
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--target') opts.target = args[++i];
-    else if (args[i] === '--plan-dir') opts.planDir = args[++i];
-    else if (args[i] === '--journey') opts.journey = args[++i];
-    else if (args[i] === '--cycle') opts.cycle = parseInt(args[++i], 10);
-    else if (args[i] === '--driver') opts.driver = args[++i];
-    else if (args[i] === '--headed') opts.headed = true;
+  // Normalise `--flag=value` into `--flag value` pairs so both forms work.
+  // Hand-rolled args parser was previously matching only the space form,
+  // which made `--target=local` silently fall through to the default
+  // target — exactly the kind of footgun the operator hits at 3am.
+  const flat = [];
+  for (const a of args) {
+    const eq = a.startsWith('--') ? a.indexOf('=') : -1;
+    if (eq > 2) {
+      flat.push(a.slice(0, eq), a.slice(eq + 1));
+    } else {
+      flat.push(a);
+    }
+  }
+  for (let i = 0; i < flat.length; i++) {
+    if (flat[i] === '--target') opts.target = flat[++i];
+    else if (flat[i] === '--plan-dir') opts.planDir = flat[++i];
+    else if (flat[i] === '--journey') opts.journey = flat[++i];
+    else if (flat[i] === '--cycle') opts.cycle = parseInt(flat[++i], 10);
+    else if (flat[i] === '--driver') opts.driver = flat[++i];
+    else if (flat[i] === '--headed') opts.headed = true;
   }
   opts.target = opts.target || 'dev';
   opts.planDir = opts.planDir || path.resolve(__dirname, '../../.project/test-plans/manual');
@@ -13495,12 +13508,19 @@ async function main() {
   }
   const firebaseApiKey = readFirebaseApiKey(opts.target);
   if (!firebaseApiKey) {
-    // Static literal — no interpolation from the lookup path, so CodeQL's
-    // clear-text-logging-of-sensitive-information rule doesn't see a flow
-    // from process.env[...] to console.error. Operator looks up the right
-    // env var from the runner's usage docs at the top of this file.
+    // Static literals — no interpolation of the env value into the message,
+    // so CodeQL's clear-text-logging-of-sensitive-information rule doesn't
+    // see a flow from process.env[...] to console.error. We DO interpolate
+    // the env-var NAME (which is itself a static literal in TARGETS) so the
+    // operator sees which variable to set for the resolved target.
+    const envName =
+      opts.target === 'dev'
+        ? 'FIREBASE_DEV_API_KEY'
+        : opts.target === 'local'
+          ? 'FIREBASE_LOCAL_API_KEY'
+          : 'FIREBASE_PROD_API_KEY';
     console.error(
-      'MISSING_ENV: Firebase Web API key — set FIREBASE_DEV_API_KEY (target=dev) or FIREBASE_LOCAL_API_KEY (target=local). Values in google-services.json.',
+      `MISSING_ENV: ${envName} for target=${opts.target} (find value in google-services.json).`,
     );
     process.exit(2);
   }
