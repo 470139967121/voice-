@@ -201,6 +201,17 @@ async function createWebDriver({ baseURL = 'http://localhost:8888', headless = t
     return page.evaluate(() => document.documentElement.getAttribute('dir') || 'ltr');
   };
 
+  // Returns the visible text content of the current page. Used by
+  // assertion matchers like `<P>'s Web UI shows "<text>"` to verify
+  // a string is rendered somewhere on the active page. innerText
+  // (not textContent) so hidden elements + script blocks don't
+  // contaminate the result — Playwright doesn't normalise on its own.
+  driver.webUiDump = async () => {
+    const page = await pageFor('default');
+    if (!page.url() || page.url() === 'about:blank') await page.goto('/');
+    return page.evaluate(() => document.body.innerText || '');
+  };
+
   // Web "types into the search field". Locator tries the common
   // search-input shapes the public app uses, in this priority order:
   //   1. [data-test-tag="searchField"] / [data-testid="search"]
