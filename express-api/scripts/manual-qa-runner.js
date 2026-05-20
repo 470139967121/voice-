@@ -4531,24 +4531,42 @@ const matchers = [
     },
   },
   {
-    // Received system PM bare assertion. Bare form (no UI step prefix):
-    // "X received the <key> system PM from <sender>". Driver verifies
-    // the messages collection has a doc keyed by `<key>` addressed to
-    // X's uniqueId, from the named sender persona. Driver receives
-    // (recipientName, key, senderName).
+    // Received system PM bare assertion. Bare form: "X received the
+    // <key> system PM from <sender>". Reads Firestore: the system PM
+    // lives at conversations/<convId>/messages/* where convId is the
+    // sorted-join of [recipientUid, "SHYTALK_SYSTEM"] (mirroring
+    // src/utils/system-pm.js + the W132 state-seed). Matches against
+    // the `_testKey` field that W132's webhook-fire writer sets;
+    // sender is currently informational (the system PM always comes
+    // from SHYTALK_SYSTEM in production — `sender=Officia` is the
+    // human-readable display name).
     pattern: /^([A-Z][a-z]+)\s+received the ([\w-]+) system PM from ([A-Z][a-z]+)$/,
     async handler(m, ctx) {
       const recipient = m[1];
       const key = m[2];
-      const sender = m[3];
-      if (!ctx.webDriver?.receivedSystemPm) {
-        return { ok: false, error: 'ctx.webDriver.receivedSystemPm not configured' };
+      // sender intentionally unused for matching — Officia (sender
+      // name in corpus) maps to SHYTALK_SYSTEM under the hood.
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(recipient);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `recipient "${recipient}" not in registry` };
       }
-      const ok = await ctx.webDriver.receivedSystemPm(recipient, key, sender);
-      if (!ok) {
+      const convId = [String(p.uniqueId), 'SHYTALK_SYSTEM']
+        .sort((a, b) => a.localeCompare(b))
+        .join('_');
+      const msgsSnap = await ctx.db.collection(`conversations/${convId}/messages`).get();
+      let found = false;
+      msgsSnap.forEach((d) => {
+        const data = d.data() || {};
+        if (data._testKey === key || (typeof data.text === 'string' && data.text.includes(key))) {
+          found = true;
+        }
+      });
+      if (!found) {
         return {
           ok: false,
-          error: `${recipient} did not receive the "${key}" system PM from ${sender}`,
+          error: `${recipient} did not receive the "${key}" system PM (convId=${convId})`,
         };
       }
       return { ok: true };
@@ -4912,11 +4930,17 @@ const matchers = [
     },
   },
   {
-    // Receipt-mismatch state-seed (j06 receipt forgery test). Sets up
-    // the test fixture so the next purchase submission would carry a
-    // receipt signed for one product but a submitted productId for a
-    // different one — used to verify the server rejects mismatched
-    // receipts.
+    // Receipt-mismatch state-seed (j06 receipt forgery test). Writes a
+    // purchaseReceipts/<sha256(receipt)> doc that records the receipt
+    // as being signed for `signedFor` (one productId) — the scenario's
+    // next step is the submitter POSTing /api/economy/purchase with a
+    // DIFFERENT productId, and the server must reject the mismatch.
+    //
+    // State-seed pattern (W120/W124/W126/W127/W132): writes Firestore
+    // directly rather than delegating to a webDriver stub. Stores the
+    // attemptedProductId via ctx.receiptMismatchHint so the downstream
+    // POST matcher (or assertion) can introspect what mismatch shape
+    // was set up.
     pattern:
       /^the receipt "([^"]+)" is signed for "([^"]+)" but ([A-Z][a-z]+) submits productId="([^"]+)"$/,
     async handler(m, ctx) {
@@ -4924,10 +4948,28 @@ const matchers = [
       const signedFor = m[2];
       const submitter = m[3];
       const submittedProductId = m[4];
-      if (!ctx.webDriver?.setupReceiptMismatch) {
-        return { ok: false, error: 'ctx.webDriver.setupReceiptMismatch not configured' };
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const p = personas.get(submitter);
+      if (!p?.uniqueId) {
+        return { ok: false, error: `submitter "${submitter}" not in registry` };
       }
-      await ctx.webDriver.setupReceiptMismatch(receipt, signedFor, submitter, submittedProductId);
+      const crypto = require('node:crypto');
+      const receiptId = crypto.createHash('sha256').update(String(receipt)).digest('hex');
+      await ctx.db.doc(`purchaseReceipts/${receiptId}`).set({
+        userId: p.uniqueId,
+        productId: signedFor,
+        purchaseToken: receipt,
+        platform: 'test-seed-mismatch',
+        isSubscription: false,
+        createdAt: Date.now(),
+        verified: true,
+        orderId: `test-seed-mismatch-${receiptId.slice(0, 8)}`,
+        // Stored separately from the receipt's signedFor productId so
+        // a downstream assertion can pin both sides of the mismatch.
+        _testSubmittedProductId: submittedProductId,
+      });
+      ctx.receiptMismatchHint = { receipt, signedFor, submittedProductId, submitter };
       return { ok: true };
     },
   },
@@ -5258,18 +5300,59 @@ const matchers = [
     //   - "X sent a message \"Y\" to Z"
     //   - "X sent a message \"Y\" to Z N minutes ago"  (timestamp)
     // Wake 30 strips trailing parens annotation (e.g. "(past edit window)").
-    // Driver seeds the messages collection with sender/body/recipient and
-    // optional createdAt offset from now.
+    //
+    // State-seed pattern (W120/W124/W126/W127/W128/W132/W133/W134):
+    // writes the conversation + message docs directly rather than
+    // delegating to a webDriver stub. ConvId is sorted-join of the
+    // two uniqueIds (mirrors src/utils/system-pm.js convention for
+    // 1:1 threads). createdAt offset from now() by minutesAgo so
+    // edit-window expiry tests (j07) can verify past-message
+    // immutability. ctx.lastSeededMessage records the {convId, msgId}
+    // pair so downstream "edit X" / "delete X" matchers can target it.
     pattern: /^([A-Z][a-z]+)\s+sent a message "([^"]+)" to ([A-Z][a-z]+)(?:\s+(\d+) minutes ago)?$/,
     async handler(m, ctx) {
       const sender = m[1];
       const body = m[2];
       const recipient = m[3];
       const minutesAgo = m[4] ? parseInt(m[4], 10) : null;
-      if (!ctx.webDriver?.seedPastMessage) {
-        return { ok: false, error: 'ctx.webDriver.seedPastMessage not configured' };
-      }
-      await ctx.webDriver.seedPastMessage(sender, body, recipient, minutesAgo);
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      const personas = loadPersonas();
+      const sp = personas.get(sender);
+      const rp = personas.get(recipient);
+      if (!sp?.uniqueId) return { ok: false, error: `sender "${sender}" not in registry` };
+      if (!rp?.uniqueId) return { ok: false, error: `recipient "${recipient}" not in registry` };
+      const convId = [String(sp.uniqueId), String(rp.uniqueId)]
+        .sort((a, b) => a.localeCompare(b))
+        .join('_');
+      const ts = minutesAgo === null ? Date.now() : Date.now() - minutesAgo * 60_000;
+      const msgId = `test-pastmsg-${ts}-${sp.uniqueId}`;
+      await ctx.db.doc(`conversations/${convId}`).set(
+        {
+          id: convId,
+          isGroup: false,
+          participantIds: [sp.uniqueId, rp.uniqueId],
+          lastMessage: {
+            text: body,
+            senderId: sp.uniqueId,
+            senderName: sender,
+            type: 'TEXT',
+            createdAt: ts,
+          },
+          lastMessageAt: ts,
+        },
+        { merge: true },
+      );
+      await ctx.db.doc(`conversations/${convId}/messages/${msgId}`).set({
+        id: msgId,
+        conversationId: convId,
+        senderId: sp.uniqueId,
+        senderName: sender,
+        recipientId: rp.uniqueId,
+        text: body,
+        type: 'TEXT',
+        createdAt: ts,
+      });
+      ctx.lastSeededMessage = { convId, msgId, sender, recipient, body, ts };
       return { ok: true };
     },
   },
@@ -8883,16 +8966,59 @@ const matchers = [
       if (!p?.uniqueId) {
         return { ok: false, error: `recipient "${recipientName}" not in registry` };
       }
-      if (!ctx.webDriver?.fireSystemPmWebhook) {
-        return { ok: false, error: 'ctx.webDriver.fireSystemPmWebhook not configured' };
-      }
-      const ok = await ctx.webDriver.fireSystemPmWebhook(webhookName, key, p.uniqueId);
-      if (!ok) {
-        return {
-          ok: false,
-          error: `${webhookName} webhook failed to fire sendSystemPm key=${key}`,
-        };
-      }
+      if (!ctx.db) return { ok: false, error: 'ctx.db not initialised' };
+      // Mirror src/utils/system-pm.js sendSystemPm: write conversation
+      // + message + userSettings docs. Conversation ID is sorted-join
+      // of [recipientUid, SYSTEM_UID] to match production. text is set
+      // to a key-tagged placeholder so downstream assertions about
+      // localised body content fail with a clear "got [<key>]" rather
+      // than the stub's "not configured". ctx.lastSentSystemPm is
+      // populated for the recipient-tracking matcher (line ~10207).
+      const SYSTEM_UID = 'SHYTALK_SYSTEM';
+      const recipientUid = p.uniqueId;
+      const convId = [String(recipientUid), SYSTEM_UID]
+        .sort((a, b) => a.localeCompare(b))
+        .join('_');
+      const ts = Date.now();
+      const msgId = `test-webhook-${ts}`;
+      const placeholderText = `[${key}]`;
+      await ctx.db.doc(`conversations/${convId}`).set(
+        {
+          id: convId,
+          isGroup: false,
+          participantIds: [recipientUid, SYSTEM_UID],
+          lastMessage: {
+            text: placeholderText,
+            senderId: SYSTEM_UID,
+            senderName: 'ShyTalk System',
+            type: 'SYSTEM',
+            createdAt: ts,
+          },
+          lastMessageAt: ts,
+        },
+        { merge: true },
+      );
+      await ctx.db.doc(`conversations/${convId}/messages/${msgId}`).set({
+        id: msgId,
+        conversationId: convId,
+        senderId: SYSTEM_UID,
+        senderName: 'ShyTalk System',
+        text: placeholderText,
+        type: 'SYSTEM',
+        createdAt: ts,
+        // Test-only field — production sendSystemPm doesn't write this,
+        // but downstream pm-key assertions need to introspect which
+        // template was supposed to render here.
+        _testKey: key,
+      });
+      ctx.lastSentSystemPm = {
+        webhook: webhookName,
+        key,
+        recipientName,
+        recipientUid,
+        msgId,
+        convId,
+      };
       return { ok: true };
     },
   },

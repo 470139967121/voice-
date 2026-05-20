@@ -8094,26 +8094,75 @@ describe('Firestore array-not-contains on any-of-collection assertion', () => {
 });
 
 describe('Received system PM bare assertion', () => {
-  test('"X received the <key> system PM from <sender>" → driver call', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { receivedSystemPm: spy } });
+  // Wake 134 converted from webDriver stub to direct Firestore read.
+  // Reads conversations/<convId>/messages and matches against the
+  // _testKey field W132's webhook-fire writer sets.
+
+  function makeMessagesQueryDb(messages) {
+    return {
+      collection: (path) => ({
+        get: async () => ({
+          forEach: (cb) => {
+            for (const [id, data] of Object.entries(messages[path] || {})) {
+              cb({ id, data: () => data });
+            }
+          },
+        }),
+      }),
+    };
+  }
+
+  test('returns ok when a message with matching _testKey exists', async () => {
+    // Hayato P-06 uniqueId=50000030. Sorted-join: 50000030_SHYTALK_SYSTEM.
+    const convId = '50000030_SHYTALK_SYSTEM';
+    const db = makeMessagesQueryDb({
+      [`conversations/${convId}/messages`]: {
+        m1: { _testKey: 'age-down', type: 'SYSTEM' },
+      },
+    });
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       { kind: 'Given', text: 'Hayato received the age-down system PM from Officia' },
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('Hayato', 'age-down', 'Officia');
   });
 
-  test('driver returns false — fail', async () => {
-    const spy = jest.fn(async () => false);
-    const ctx = makeCtx({ webDriver: { receivedSystemPm: spy } });
+  test('returns ok when text contains the key (fallback when _testKey missing)', async () => {
+    const convId = '50000030_SHYTALK_SYSTEM';
+    const db = makeMessagesQueryDb({
+      [`conversations/${convId}/messages`]: {
+        m1: { type: 'SYSTEM', text: 'You have been age-down adjusted per policy' },
+      },
+    });
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Hayato received the age-down system PM from Officia' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  test('returns fail when no matching message — includes convId in error', async () => {
+    const db = makeMessagesQueryDb({});
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       { kind: 'Given', text: 'Hayato received the age-down system PM from Officia' },
       ctx,
     );
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/age-down/);
+    expect(r.error).toMatch(/50000030_SHYTALK_SYSTEM/);
+  });
+
+  test('unknown recipient → ok:false', async () => {
+    const ctx = makeCtx({ db: makeMessagesQueryDb({}) });
+    const r = await executeStep(
+      { kind: 'Given', text: 'Zephyr received the age-down system PM from Officia' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zephyr/);
   });
 });
 
@@ -8598,9 +8647,25 @@ describe('Retry-same-purchase composite (Wake 30 strip)', () => {
 });
 
 describe('Receipt-mismatch state-seed (j06)', () => {
-  test('"the receipt \\"X\\" is signed for \\"Y\\" but Alice submits productId=\\"Z\\"" → driver state setup', async () => {
-    const spy = jest.fn(async () => undefined);
-    const ctx = makeCtx({ webDriver: { setupReceiptMismatch: spy } });
+  // Wake 133 converted from webDriver stub to direct Firestore write.
+  // Writes the receipt as signed-for the original productId; the
+  // submittedProductId is stashed via `_testSubmittedProductId` field
+  // + ctx.receiptMismatchHint so downstream assertions can verify
+  // both sides of the mismatch.
+
+  function makeWriteRecordingDb() {
+    const writes = [];
+    return {
+      writes,
+      doc: (path) => ({
+        set: async (data) => writes.push({ op: 'set', path, data }),
+      }),
+    };
+  }
+
+  test('writes receipt doc with signedFor productId + ctx.receiptMismatchHint', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       {
         kind: 'Given',
@@ -8609,7 +8674,37 @@ describe('Receipt-mismatch state-seed (j06)', () => {
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('receipt-R2', 'coins-500', 'Alice', 'coins-1000');
+    const receiptWrite = db.writes.find((w) => w.path.startsWith('purchaseReceipts/'));
+    expect(receiptWrite).toBeDefined();
+    expect(receiptWrite.data).toMatchObject({
+      userId: 50000010, // Alice P-02
+      productId: 'coins-500',
+      purchaseToken: 'receipt-R2',
+      platform: 'test-seed-mismatch',
+      verified: true,
+      _testSubmittedProductId: 'coins-1000',
+    });
+    expect(ctx.receiptMismatchHint).toEqual({
+      receipt: 'receipt-R2',
+      signedFor: 'coins-500',
+      submittedProductId: 'coins-1000',
+      submitter: 'Alice',
+    });
+  });
+
+  test('unknown submitter → fail, no writes', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    const r = await executeStep(
+      {
+        kind: 'Given',
+        text: 'the receipt "receipt-X" is signed for "Y" but Zephyr submits productId="Z"',
+      },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zephyr/);
+    expect(db.writes).toHaveLength(0);
   });
 });
 
@@ -8957,20 +9052,48 @@ describe('Types into conversation input', () => {
 });
 
 describe('Past-tense PM state Given', () => {
-  test('"Adam sent a message \\"X\\" to Alice" — state seed (no timestamp)', async () => {
-    const spy = jest.fn(async () => undefined);
-    const ctx = makeCtx({ webDriver: { seedPastMessage: spy } });
+  // Wake 135 converted from webDriver stub to direct Firestore write.
+  // Writes conversation + message docs at sorted-join convId.
+
+  function makeWriteRecordingDb() {
+    const writes = [];
+    return {
+      writes,
+      doc: (path) => ({
+        set: async (data, opts) => writes.push({ op: 'set', path, data, opts }),
+      }),
+    };
+  }
+
+  test('writes conv + message docs (no timestamp)', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       { kind: 'Given', text: 'Adam sent a message "tpyo here" to Alice' },
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('Adam', 'tpyo here', 'Alice', null);
+    // Adam P-01 ephemeral uniqueId=90000001, Alice P-02 uniqueId=50000010
+    // Sorted-join: 50000010_90000001 (digits compared char-by-char)
+    const convId = '50000010_90000001';
+    const convWrite = db.writes.find((w) => w.path === `conversations/${convId}`);
+    expect(convWrite).toBeDefined();
+    expect(convWrite.data.participantIds).toEqual([90000001, 50000010]);
+    const msgWrite = db.writes.find((w) => w.path.startsWith(`conversations/${convId}/messages/`));
+    expect(msgWrite).toBeDefined();
+    expect(msgWrite.data).toMatchObject({
+      text: 'tpyo here',
+      senderId: 90000001,
+      recipientId: 50000010,
+      type: 'TEXT',
+    });
+    expect(ctx.lastSeededMessage).toMatchObject({ convId, sender: 'Adam', recipient: 'Alice' });
   });
 
-  test('"Adam sent a message \\"secret\\" to Alice 30 minutes ago" — timestamp variant', async () => {
-    const spy = jest.fn(async () => undefined);
-    const ctx = makeCtx({ webDriver: { seedPastMessage: spy } });
+  test('minutesAgo variant sets createdAt in the past', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    const before = Date.now();
     const r = await executeStep(
       {
         kind: 'Given',
@@ -8979,7 +9102,20 @@ describe('Past-tense PM state Given', () => {
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('Adam', 'secret', 'Alice', 30);
+    const msgWrite = db.writes.find((w) => w.path.includes('/messages/'));
+    // 30 minutes = 1.8M ms in the past — give a 1-second tolerance for
+    // clock drift between Date.now() calls.
+    expect(msgWrite.data.createdAt).toBeLessThanOrEqual(before - 30 * 60_000 + 1000);
+    expect(msgWrite.data.createdAt).toBeGreaterThanOrEqual(before - 30 * 60_000 - 1000);
+  });
+
+  test('unknown persona → fail, no writes', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    const r = await executeStep({ kind: 'Given', text: 'Zephyr sent a message "x" to Alice' }, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Zephyr/);
+    expect(db.writes).toHaveLength(0);
   });
 });
 
@@ -15446,14 +15582,24 @@ describe('Wake 82 — "<Name> was just age-verified by admin (cohort flipped fro
   });
 });
 
-describe('Wake 82 — "the <name> webhook fires sendSystemPm with key="<X>" recipient=<Y>"', () => {
-  // j18-official-system-pms.feature:28
-  //   When the post-approval webhook fires sendSystemPm with key="age_seg_age_up_welcome_pm" recipient=Adam
-  // Webhook trigger step. Driver fires the named webhook with the
-  // resolved recipient uniqueId.
-  test('captures webhook name, key, recipient', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+describe('"the <name> webhook fires sendSystemPm with key="<X>" recipient=<Y>"', () => {
+  // Wake 132 converted from webDriver stub to direct Firestore write.
+  // Mirrors src/utils/system-pm.js sendSystemPm: writes the conversation
+  // doc + the message doc under conversations/<convId>/messages.
+
+  function makeWriteRecordingDb() {
+    const writes = [];
+    return {
+      writes,
+      doc: (path) => ({
+        set: async (data, opts) => writes.push({ op: 'set', path, data, opts }),
+      }),
+    };
+  }
+
+  test('writes conversation + message docs at sorted-join convId', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       {
         kind: 'When',
@@ -15462,28 +15608,43 @@ describe('Wake 82 — "the <name> webhook fires sendSystemPm with key="<X>" reci
       ctx,
     );
     expect(r.ok).toBe(true);
-    // Adam = P-01 = 90000001
-    expect(spy).toHaveBeenCalledWith('post-approval', 'age_seg_age_up_welcome_pm', 90000001);
+    // Adam P-01 uniqueId=90000001. Sorted-join with SHYTALK_SYSTEM:
+    // "90000001_SHYTALK_SYSTEM" (lex-sort: digits < uppercase letters).
+    const convId = '90000001_SHYTALK_SYSTEM';
+    const convWrite = db.writes.find((w) => w.path === `conversations/${convId}`);
+    expect(convWrite).toBeDefined();
+    expect(convWrite.data.participantIds).toEqual([90000001, 'SHYTALK_SYSTEM']);
+    const msgWrite = db.writes.find((w) => w.path.startsWith(`conversations/${convId}/messages/`));
+    expect(msgWrite).toBeDefined();
+    expect(msgWrite.data).toMatchObject({
+      type: 'SYSTEM',
+      senderId: 'SHYTALK_SYSTEM',
+      text: '[age_seg_age_up_welcome_pm]',
+      _testKey: 'age_seg_age_up_welcome_pm',
+    });
   });
 
-  test('different webhook name + recipient', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
-    const r = await executeStep(
+  test('captures lastSentSystemPm on ctx for downstream recipient assertion', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
+    await executeStep(
       {
         kind: 'When',
         text: 'the rejection webhook fires sendSystemPm with key="age_seg_age_down_admin_pm" recipient=Hayato',
       },
       ctx,
     );
-    expect(r.ok).toBe(true);
-    // Hayato = P-06 = 50000030
-    expect(spy).toHaveBeenCalledWith('rejection', 'age_seg_age_down_admin_pm', 50000030);
+    expect(ctx.lastSentSystemPm).toMatchObject({
+      webhook: 'rejection',
+      key: 'age_seg_age_down_admin_pm',
+      recipientName: 'Hayato',
+      recipientUid: 50000030,
+    });
   });
 
-  test('unknown recipient → fail', async () => {
-    const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+  test('unknown recipient → fail (no writes attempted)', async () => {
+    const db = makeWriteRecordingDb();
+    const ctx = makeCtx({ db });
     const r = await executeStep(
       {
         kind: 'When',
@@ -15493,10 +15654,11 @@ describe('Wake 82 — "the <name> webhook fires sendSystemPm with key="<X>" reci
     );
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/Zzzghost/);
+    expect(db.writes).toHaveLength(0);
   });
 
-  test('no driver → fail', async () => {
-    const ctx = makeCtx();
+  test('no ctx.db → fail', async () => {
+    const ctx = makeCtx({ db: null });
     const r = await executeStep(
       {
         kind: 'When',
@@ -15505,7 +15667,7 @@ describe('Wake 82 — "the <name> webhook fires sendSystemPm with key="<X>" reci
       ctx,
     );
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/fireSystemPmWebhook/);
+    expect(r.error).toMatch(/ctx\.db/);
   });
 });
 
@@ -17202,12 +17364,22 @@ describe('Wake 89 — broad "the <noun> fires sendSystemPm with key="<X>"[ recip
     expect(spy).toHaveBeenCalledWith('test harness', 'totally_made_up_key', 90000001);
   });
 
-  test('does NOT shadow Wake 82 webhook variant', async () => {
-    // The Wake 82 matcher must still fire first for "X webhook fires...".
-    // We verify by ensuring the spy receives the webhook name "post-approval",
-    // not "post-approval webhook".
+  test('does NOT shadow Wake 82 webhook variant (now W132 Firestore-write)', async () => {
+    // The Wake 82 "X webhook fires..." matcher was rewritten in W132 to
+    // write Firestore directly instead of calling a webDriver stub. The
+    // shadow regression-guard now verifies that the W132 path runs (no
+    // spy invocation) AND that the Wake 89 broader matcher (still
+    // spy-based for "broadcast"/"flow") doesn't pre-empt it.
     const spy = jest.fn(async () => true);
-    const ctx = makeCtx({ webDriver: { fireSystemPmWebhook: spy } });
+    const writes = [];
+    const ctx = makeCtx({
+      webDriver: { fireSystemPmWebhook: spy },
+      db: {
+        doc: (path) => ({
+          set: async (data, opts) => writes.push({ op: 'set', path, data, opts }),
+        }),
+      },
+    });
     const r = await executeStep(
       {
         kind: 'When',
@@ -17216,7 +17388,14 @@ describe('Wake 89 — broad "the <noun> fires sendSystemPm with key="<X>"[ recip
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('post-approval', 'age_seg_age_up_welcome_pm', 90000001);
+    // W132 path: writes to Firestore, does NOT call the Wake 89 spy.
+    expect(spy).not.toHaveBeenCalled();
+    expect(writes.some((w) => w.path.startsWith('conversations/'))).toBe(true);
+    expect(ctx.lastSentSystemPm).toMatchObject({
+      webhook: 'post-approval',
+      key: 'age_seg_age_up_welcome_pm',
+      recipientName: 'Adam',
+    });
   });
 
   test('unknown recipient → fail', async () => {
