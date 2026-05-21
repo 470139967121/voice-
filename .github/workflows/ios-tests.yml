@@ -119,7 +119,10 @@ jobs:
 
       - name: Build shared KMP framework for iOS Simulator
         if: steps.check-tests.outputs.has_tests == 'true'
-        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
+        # --max-workers=1 — see deploy-dev.yml's matching step. The KMP
+        # plugin can deadlock on parallel K/N link tasks under macOS
+        # runner memory pressure; serializing is safer than fast.
+        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --max-workers=1
 
       - name: Install CocoaPods
         if: steps.check-tests.outputs.has_tests == 'true'
