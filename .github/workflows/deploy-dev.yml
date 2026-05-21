@@ -38,6 +38,18 @@ permissions:
   contents: write # needed by playwright-tests.yml allure-report (gh-pages deploy)
   actions: read
 
+# Dev deploys must serialize. Parallel dev deploys can race on the
+# London Express VM (scp tarball + pm2 restart), on Firebase App
+# Distribution upload slots, and on TestFlight build-number
+# assignment. cancel-in-progress: false makes queued deploys wait
+# for the running one to complete rather than preempting it — a
+# partial rollback halfway through a multi-step deploy leaves the
+# env in an undefined state. Mirrors deploy-prod.yml's matching
+# block. Pinned by tests/scripts/deploy-dev-concurrency.test.js.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
