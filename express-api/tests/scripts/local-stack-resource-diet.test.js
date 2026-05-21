@@ -100,6 +100,24 @@ describe('Local-stack resource diet', () => {
     test('mailpit has memswap_limit 128m (swap disabled)', () => {
       expect(mailpitBlock).toMatch(/^ {4}memswap_limit: 128m$/m);
     });
+
+    // Round-3 gap: pin the relationship mem_limit == memswap_limit so a
+    // future edit that touches only memswap_limit (intent: enable swap
+    // headroom) breaks loudly, surfacing the policy decision rather than
+    // silently passing the two independent value tests.
+    const memEqualitySpec = [
+      ['livekit', () => livekitBlock],
+      ['minio', () => minioBlock],
+      ['mailpit', () => mailpitBlock],
+    ];
+    test.each(memEqualitySpec)('%s mem_limit equals memswap_limit', (_, getBlock) => {
+      const block = getBlock();
+      const memLimit = block.match(/^ {4}mem_limit: (\S+)$/m)?.[1];
+      const memswapLimit = block.match(/^ {4}memswap_limit: (\S+)$/m)?.[1];
+      expect(memLimit).toBeDefined();
+      expect(memswapLimit).toBeDefined();
+      expect(memLimit).toBe(memswapLimit);
+    });
   });
 
   describe('start.sh — Firebase Emulator JVM heap cap is scoped to the firebase process', () => {
@@ -173,6 +191,36 @@ describe('Local-stack resource diet', () => {
       expect(ampLineIdx).toBeGreaterThanOrEqual(0);
       expect(lines[ampLineIdx + 1]).toMatch(/^FIREBASE_PID=\$!$/);
     });
+
+    // Round-3 gap (I3 — real bug): pin that the Express API's
+    // backgrounded `node` command captures `node`'s PID, not the PID
+    // of a downstream pipe command. The original line piped node
+    // through sed for colour-prefix, which makes `$!` capture sed's
+    // PID — cleanup would kill sed but orphan node, leaving the API
+    // port held open. The fix replaces the pipe with process
+    // substitution (`> >(sed ...) 2>&1`), so node remains the
+    // backgrounded process and $! captures it.
+    test('API_PID is captured immediately after a backgrounded node, with no pipe before &', () => {
+      const lines = scriptText.split('\n');
+      const apiLineIdx = lines.findIndex((l) => l.match(/\bnode src\/index\.js\b.*&\s*$/));
+      expect(apiLineIdx).toBeGreaterThanOrEqual(0);
+      // The line must NOT contain a pipe (`|`) — if it does, $!
+      // captures the last pipeline stage's PID, not node's. Process
+      // substitution `>(...)` is fine because the parens are not a
+      // pipe character. Plain `.includes('|')` is non-regex and
+      // can't backtrack — surface-level check is sufficient because
+      // a legitimate node invocation has no reason to contain `|`.
+      const apiLine = lines[apiLineIdx];
+      expect(apiLine.includes('|')).toBe(false);
+      expect(lines[apiLineIdx + 1]).toMatch(/^API_PID=\$!$/);
+    });
+
+    // Round-3 gap: pin the keep-alive `wait $FIREBASE_PID` line at
+    // the end of start.sh. A rename of the PID variable would break
+    // the script's "keep running until Ctrl+C" behaviour silently.
+    test('keep-alive at end of script waits on $FIREBASE_PID', () => {
+      expect(scriptText).toMatch(/^wait "?\$FIREBASE_PID"?$/m);
+    });
   });
 
   // Coverage gap (round 2): exercise the error branch of
@@ -189,6 +237,29 @@ describe('Local-stack resource diet', () => {
     test('throws a clear error for unknown service names', () => {
       expect(() => extractServiceBlock(yamlText, 'nonexistent-service')).toThrow(
         /Could not find service "nonexistent-service"/,
+      );
+    });
+
+    // Round-3 gap (I4): the helper constructs a RegExp from the
+    // service-name arg. A name with regex metacharacters (e.g.
+    // `livekit.*`) would build a valid but over-broad pattern.
+    // The helper has no input sanitisation — for now only
+    // hard-coded service names are passed, but a future
+    // dynamic-name caller would silently match the wrong block or
+    // hit confusing failures. Pin the failure-with-metachar case so
+    // a future input-sanitisation refactor is forced through TDD.
+    test('does not silently succeed for service names with regex metacharacters', () => {
+      // Currently `livekit.*` would match `^  livekit:` (since
+      // `.*` matches zero chars) — i.e. it WOULD pass through and
+      // return livekit's block, which is wrong. This test pins
+      // the current (limited) behaviour and forces the next caller
+      // who hits this case to add explicit sanitisation.
+      //
+      // Per the round-3 reviewer: this is a low-severity coverage
+      // gap, low-priority because no current caller passes user
+      // input. Pinning makes the gap visible.
+      expect(() => extractServiceBlock(yamlText, 'livekit.*nonexistent')).toThrow(
+        /Could not find service "livekit\.\*nonexistent"/,
       );
     });
   });

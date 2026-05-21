@@ -99,7 +99,15 @@ echo "==> Step 4/8: Seeding data..."
 # Step 5: Start Express API (background)
 # =============================================================================
 echo "==> Step 5/8: Starting Express API..."
-cd "$PROJECT_ROOT/express-api" && NODE_ENV=local TEST_API_KEY=local-test-key node src/index.js 2>&1 | sed 's/^/[API] /' &
+# Use process substitution `> >(sed ...)` instead of a pipe so the
+# colour-prefix on stdout doesn't make `$!` capture sed's PID
+# instead of node's. The pre-substitution form (`node ... | sed ... &`)
+# made `API_PID=$!` capture sed; cleanup's `kill "$API_PID"` killed
+# sed but orphaned node, leaving port 3000 held open across runs.
+# With process substitution, node remains the operative backgrounded
+# process and $! captures it. Pinned by
+# tests/scripts/local-stack-resource-diet.test.js (round 3 fix).
+cd "$PROJECT_ROOT/express-api" && NODE_ENV=local TEST_API_KEY=local-test-key node src/index.js > >(sed 's/^/[API] /') 2>&1 &
 API_PID=$!
 cd "$PROJECT_ROOT"
 
