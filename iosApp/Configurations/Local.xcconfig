@@ -1,0 +1,42 @@
+// iosApp/Configurations/Local.xcconfig
+//
+// Build settings for the iOS local-flavor variant. Sibling of the
+// Android `local` product flavor declared in `app/build.gradle.kts`.
+//
+// This file is the FOUNDATION (Phase 3.1) of a multi-PR build-out
+// per the 2026-05-21 operator directive. It is NOT yet referenced by
+// the Xcode project — the new Debug-Local + Release-Local build
+// configurations that consume these values are added in Phase 3.2.
+//
+// Variable contracts:
+//   BUNDLE_ID_SUFFIX        — `.local` so the app installs alongside
+//                             the dev variant on a single device.
+//                             Applied to PRODUCT_BUNDLE_IDENTIFIER in
+//                             Phase 3.2.
+//   LOCAL_HOST              — Network address the iPhone uses to
+//                             reach the operator's local stack.
+//                             Default `localhost` works on iOS
+//                             Simulator (shares the Mac's network).
+//                             For a physical iPhone, operator MUST
+//                             override to the Mac's local-network IP
+//                             or mDNS hostname at build time:
+//                               xcodebuild -configuration Debug-Local \
+//                                 LOCAL_HOST=Macbook.local …
+//   LOCAL_API_BASE_URL      — Express API URL. Express listens on
+//                             :3000 per local/start.sh Step 5.
+//   LOCAL_LIVEKIT_URL       — LiveKit signalling URL. Container
+//                             exposes :7880 per local/docker-compose.yml.
+//   LOCAL_FIREBASE_PROJECT_ID — `demo-shytalk` matches the
+//                             `--project=demo-shytalk` flag in
+//                             firebase emulators:start. The `demo-`
+//                             prefix is Firebase's emulator-only
+//                             namespace; no real Firebase project
+//                             with that ID exists or can be created.
+//
+// Pinned by: express-api/tests/scripts/ios-local-xcconfig.test.js
+
+BUNDLE_ID_SUFFIX = .local
+LOCAL_HOST = localhost
+LOCAL_API_BASE_URL = http://$(LOCAL_HOST):3000
+LOCAL_LIVEKIT_URL = ws://$(LOCAL_HOST):7880
+LOCAL_FIREBASE_PROJECT_ID = demo-shytalk
