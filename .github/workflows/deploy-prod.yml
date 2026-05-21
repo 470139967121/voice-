@@ -434,6 +434,16 @@ jobs:
           dev-base64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
           prod-base64: ${{ secrets.GOOGLE_SERVICES_PROD_BASE64 }}
 
+      # See deploy-dev.yml's matching step for rationale — ~/.konan is the
+      # only big iOS-relevant cache that setup-gradle doesn't cover.
+      - name: Cache Kotlin/Native (~/.konan)
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+
       - name: Build KMP shared framework for iOS
         run: |
           set -euo pipefail
@@ -744,11 +754,31 @@ jobs:
           dev-base64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
           prod-base64: ${{ secrets.GOOGLE_SERVICES_PROD_BASE64 }}
 
+      # Mirror of deploy-ios-prod's konan cache. ~/.konan isn't covered by
+      # setup-gradle. Sharing the same cache key across all iOS jobs lets
+      # them all hit the same warm cache once any of them has populated it.
+      - name: Cache Kotlin/Native (~/.konan)
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+
       - name: Build KMP shared framework for iOS Simulator
         run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
 
       - name: Install CocoaPods
         run: cd iosApp && pod install
+
+      # Same gradle-daemon-collision prevention as distribute-ios — the
+      # smoke-test xcodebuild invocation also triggers the
+      # `Compile Kotlin Framework` build phase that calls gradle, so the
+      # daemon from `Build KMP shared framework for iOS Simulator` above
+      # must be stopped first. See deploy-dev.yml's matching step for
+      # full forensics.
+      - name: Stop gradle daemon before xcodebuild
+        run: ./gradlew --stop
 
       - name: Build iOS app for simulator
         run: |

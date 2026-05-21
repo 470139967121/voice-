@@ -443,6 +443,23 @@ jobs:
         with:
           dev-base64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
 
+      # Cache Kotlin/Native compiler distribution + platform libs (~/.konan).
+      # actions/setup-gradle (used via setup-jdk-gradle composite) caches
+      # ~/.gradle/caches but NOT ~/.konan, so the K/N compiler and its
+      # platform libs (clang, libffi, kotlin-native-prebuilt-*) are
+      # downloaded fresh on every cold runner — ~500MB-1GB of cold-cache
+      # tax per run. Cache-key is anchored on the Kotlin version in
+      # libs.versions.toml so a kotlin-version bump correctly invalidates.
+      # restore-keys allows partial-match restore on minor differences
+      # so we usually get a warm konan even when the exact key misses.
+      - name: Cache Kotlin/Native (~/.konan)
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+
       - name: Cache KMP shared framework
         id: kmp-cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -481,6 +498,60 @@ jobs:
       # fresh and avoid the collision.
       - name: Stop gradle daemon before xcodebuild
         run: ./gradlew --stop
+
+      # DIAGNOSTIC (2026-05-21): the daemon-stop fix above proved insufficient
+      # — xcodebuild's `Compile Kotlin Framework` build phase still hangs ~39
+      # min in silent (`Script-058557E3273AAA2400C9D062.sh`). Three cheap
+      # probes here narrow the root cause without needing another 50-min
+      # dispatch cycle:
+      #
+      # 1. Verify codesign can sign a dummy file using the temp keychain
+      #    WITHOUT a UI prompt. The silent-hang signature classically points
+      #    at codesign waiting on a "Always Allow" prompt that never comes.
+      #    If this hangs or fails, keychain is the smoking gun.
+      # 2. Print keychain partition list + identity availability so we can
+      #    see what state codesign would have entered.
+      # 3. Modify the gradle invocation inside the Xcode Run Script build
+      #    phase (via sed on the runner — not committed to pbxproj) to add
+      #    --info --stacktrace --no-daemon. If the hang persists, --info
+      #    output will show which task or sub-step is stuck.
+      - name: Diagnostic — codesign sanity + verbose gradle injection
+        timeout-minutes: 5
+        run: |
+          set -x
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo "=== keychains in search list ==="
+          security list-keychains
+          echo "=== default keychain ==="
+          security default-keychain
+          echo "=== identities in temp keychain ==="
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
+          echo "=== codesign sanity probe (writes to /tmp/csprobe) ==="
+          rm -rf /tmp/csprobe && mkdir -p /tmp/csprobe
+          # Use a minimal .app bundle structure so codesign has something
+          # plausible to sign. A bare file would fail validation.
+          mkdir -p /tmp/csprobe/probe.framework/Versions/A
+          echo "test" > /tmp/csprobe/probe.framework/Versions/A/probe
+          ln -s A /tmp/csprobe/probe.framework/Versions/Current
+          ln -s Versions/Current/probe /tmp/csprobe/probe.framework/probe
+          # If this command hangs > 30s OR exits non-zero, keychain is the
+          # root cause. We log the exit code without failing the job so the
+          # rest of the diagnostics (sed below) still apply.
+          set +e
+          /usr/bin/time -p timeout 30 codesign --force --sign "Apple Distribution" \
+              --keychain "$KEYCHAIN_PATH" \
+              /tmp/csprobe/probe.framework 2>&1
+          PROBE_EXIT=$?
+          set -e
+          echo "::notice::codesign sanity probe exit=$PROBE_EXIT (0=success, 124=hung-and-killed-by-timeout, other=signing-error)"
+          echo "=== inject --info --stacktrace --no-daemon into Compile Kotlin Framework script ==="
+          # The build phase's shellScript field in project.pbxproj is what
+          # xcodebuild executes inline. sed-replace on the runner only.
+          PBXPROJ=iosApp/iosApp.xcodeproj/project.pbxproj
+          grep -n "embedAndSignAppleFrameworkForXcode" "$PBXPROJ" | head -5
+          sed -i.bak 's|./gradlew :shared:embedAndSignAppleFrameworkForXcode|./gradlew :shared:embedAndSignAppleFrameworkForXcode --info --stacktrace --no-daemon|g' "$PBXPROJ"
+          grep -n "embedAndSignAppleFrameworkForXcode" "$PBXPROJ" | head -5
+          echo "::notice::Diagnostic injection complete"
 
       # Step-level hang detector: the xcodebuild archive (which transitively
       # runs gradle for K/Native compile + framework embed/sign + IPA export
