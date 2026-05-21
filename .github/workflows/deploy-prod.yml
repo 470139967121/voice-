@@ -447,7 +447,10 @@ jobs:
       - name: Build KMP shared framework for iOS
         run: |
           set -euo pipefail
-          ./gradlew :shared:linkReleaseFrameworkIosArm64
+          # See deploy-dev.yml's matching step — --max-workers=1 avoids the
+          # parallel K/N link deadlock; also pre-build Debug so xcodebuild's
+          # nested gradle call finds it UP-TO-DATE.
+          ./gradlew :shared:linkReleaseFrameworkIosArm64 :shared:linkDebugFrameworkIosArm64 --max-workers=1
 
       - name: Install CocoaPods
         run: |
@@ -766,7 +769,9 @@ jobs:
             konan-${{ runner.os }}-
 
       - name: Build KMP shared framework for iOS Simulator
-        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
+        # --max-workers=1 — see deploy-dev.yml's matching step. Same
+        # parallel-K/N-link deadlock would apply on Sim too.
+        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --max-workers=1
 
       - name: Install CocoaPods
         run: cd iosApp && pod install
