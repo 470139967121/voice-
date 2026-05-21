@@ -177,7 +177,15 @@ echo "  View Allure:      npx allure serve allure-results"
 echo ""
 echo "Press Ctrl+C to stop..."
 
-# Keep running until Ctrl+C
-wait $FIREBASE_PID
+# Keep running until Ctrl+C. The `|| true` is required: this script
+# runs under `set -e` (line 2), and `wait` returns Firebase's exit
+# code on natural Firebase termination. On a Firebase crash (non-zero
+# exit), the unguarded `wait` would abort the shell via set -e BEFORE
+# reaching the cleanup() call below — leaving Docker containers
+# (LiveKit, MinIO, Mailpit) running indefinitely. The existing INT/TERM
+# trap covers Ctrl+C, not set-e-induced exits. `|| true` makes the
+# wait fall through to the cleanup line regardless of Firebase's
+# exit code. Pinned by tests/scripts/local-stack-resource-diet.test.js.
+wait $FIREBASE_PID || true
 echo "Firebase emulators exited."
 cleanup

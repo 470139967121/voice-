@@ -212,14 +212,41 @@ describe('Local-stack resource diet', () => {
       // a legitimate node invocation has no reason to contain `|`.
       const apiLine = lines[apiLineIdx];
       expect(apiLine.includes('|')).toBe(false);
+      // I2 fix (round 4): also pin that process substitution is the
+      // mechanism. Without this, a future edit to `> /dev/null` would
+      // pass the pipe-absence check while discarding all API output —
+      // silently regressing log visibility (the whole reason sed was
+      // there in the first place).
+      expect(apiLine.includes('>(')).toBe(true);
       expect(lines[apiLineIdx + 1]).toMatch(/^API_PID=\$!$/);
     });
 
     // Round-3 gap: pin the keep-alive `wait $FIREBASE_PID` line at
     // the end of start.sh. A rename of the PID variable would break
     // the script's "keep running until Ctrl+C" behaviour silently.
-    test('keep-alive at end of script waits on $FIREBASE_PID', () => {
-      expect(scriptText).toMatch(/^wait "?\$FIREBASE_PID"?$/m);
+    //
+    // Round-4 fix (C1): `|| true` is required. Under `set -e`, an
+    // unguarded `wait` propagates a non-zero exit code from a crashed
+    // Firebase emulator and aborts the shell BEFORE reaching the
+    // cleanup() call below. That leaves Docker containers running.
+    // `|| true` makes the wait fall through to cleanup regardless of
+    // Firebase's exit code.
+    test('keep-alive uses `wait $FIREBASE_PID || true` (guarded against set-e)', () => {
+      expect(scriptText).toMatch(/^wait "?\$FIREBASE_PID"? \|\| true$/m);
+    });
+
+    // Round-4 fix (I1): the keep-alive wait must be positioned AFTER
+    // the "Press Ctrl+C to stop..." banner — without this, a refactor
+    // moving the wait earlier (e.g., to step 3 for readiness) would
+    // pass the line-content test but break the run-until-Ctrl+C
+    // contract by hanging mid-startup before the user-facing banner.
+    test('keep-alive wait is positioned after the Press-Ctrl+C banner', () => {
+      const lines = scriptText.split('\n');
+      const bannerIdx = lines.findIndex((l) => l.includes('Press Ctrl+C'));
+      const waitIdx = lines.findIndex((l) => /^wait "?\$FIREBASE_PID"? \|\| true$/.test(l));
+      expect(bannerIdx).toBeGreaterThanOrEqual(0);
+      expect(waitIdx).toBeGreaterThanOrEqual(0);
+      expect(waitIdx).toBeGreaterThan(bannerIdx);
     });
   });
 
