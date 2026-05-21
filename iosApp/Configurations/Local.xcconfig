@@ -22,16 +22,44 @@
 //                             or mDNS hostname at build time:
 //                               xcodebuild -configuration Debug-Local \
 //                                 LOCAL_HOST=Macbook.local …
+//                             KNOWN GOTCHA — see Phase 3.3 scope note:
+//                             LiveKitBridge.swift's `isAllowedURL`
+//                             allow-list only accepts `localhost` /
+//                             `127.0.0.1` for `ws://`. Overriding to
+//                             an mDNS hostname is rejected at runtime
+//                             until 3.3 extends the allow-list.
 //   LOCAL_API_BASE_URL      — Express API URL. Express listens on
 //                             :3000 per local/start.sh Step 5.
-//   LOCAL_LIVEKIT_URL       — LiveKit signalling URL. Container
-//                             exposes :7880 per local/docker-compose.yml.
-//   LOCAL_FIREBASE_PROJECT_ID — `demo-shytalk` matches the
-//                             `--project=demo-shytalk` flag in
-//                             firebase emulators:start. The `demo-`
-//                             prefix is Firebase's emulator-only
-//                             namespace; no real Firebase project
-//                             with that ID exists or can be created.
+//   LOCAL_LIVEKIT_URL       — LiveKit signalling URL. LiveKit
+//                             container exposes 7880 (signalling)
+//                             plus 7881/7882 (WebRTC media) per
+//                             local/docker-compose.yml. We point at
+//                             7880 only — the SFU advertises the
+//                             media ports back during the signalling
+//                             handshake.
+//   LOCAL_FIREBASE_PROJECT_ID  — `demo-shytalk` matches the
+//                                `--project=demo-shytalk` flag in
+//                                firebase emulators:start. The
+//                                `demo-` prefix is Firebase's
+//                                emulator-only namespace; no real
+//                                Firebase project with that ID can
+//                                exist.
+//   LOCAL_FIREBASE_RTDB_URL — Realtime Database emulator URL.
+//                             Firebase emulator suite exposes RTDB
+//                             on :9000 (firebase.json `database.port`).
+//                             `?ns=demo-shytalk-default-rtdb` query
+//                             string is the namespace selector the
+//                             emulator expects. Sibling of Android's
+//                             `RTDB_URL` in app/build.gradle.kts.
+//
+// xcconfig syntax notes for future maintainers:
+//   - Variable expansion uses `$(VAR)` — NOT `${VAR}` (that's shell).
+//   - `//` is the comment introducer.
+//   - In Phase 3.2 when this is referenced as a baseConfigurationReference,
+//     CocoaPods integration may require an `#include` of the
+//     Pods-iosApp.<config>.xcconfig at the top of THIS file. The
+//     include MUST go above the variable declarations so the Pods
+//     values cascade as the base layer and our values override them.
 //
 // Pinned by: express-api/tests/scripts/ios-local-xcconfig.test.js
 
@@ -40,3 +68,4 @@ LOCAL_HOST = localhost
 LOCAL_API_BASE_URL = http://$(LOCAL_HOST):3000
 LOCAL_LIVEKIT_URL = ws://$(LOCAL_HOST):7880
 LOCAL_FIREBASE_PROJECT_ID = demo-shytalk
+LOCAL_FIREBASE_RTDB_URL = http://$(LOCAL_HOST):9000?ns=demo-shytalk-default-rtdb
