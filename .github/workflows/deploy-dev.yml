@@ -310,6 +310,9 @@ jobs:
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          # See pr-checks.yml's matching env for rationale. The persona
+          # picker on dev variant only appears when this is non-empty.
+          DEV_QA_PERSONAS_PASSWORD: ${{ secrets.DEV_QA_PERSONAS_PASSWORD }}
         run: |
           ./gradlew assembleDevRelease
           mkdir -p dev-release-apk
