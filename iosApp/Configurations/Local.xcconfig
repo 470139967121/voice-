@@ -49,8 +49,20 @@
 //                             on :9000 (firebase.json `database.port`).
 //                             `?ns=demo-shytalk-default-rtdb` query
 //                             string is the namespace selector the
-//                             emulator expects. Sibling of Android's
-//                             `RTDB_URL` in app/build.gradle.kts.
+//                             emulator expects.
+//
+//                             NOTE on iOS-vs-Android divergence: the
+//                             Android Firebase SDK auto-derives the
+//                             namespace from FirebaseOptions, so
+//                             `app/build.gradle.kts`'s Android
+//                             `RTDB_URL` is `http://host:9000` with
+//                             no `?ns=` query. The iOS Firebase SDK
+//                             does NOT auto-derive; pointing it at
+//                             the emulator without an explicit `?ns=`
+//                             selector connects to the wrong default
+//                             namespace. The divergence is in the
+//                             SDKs, not the data — both URLs reach
+//                             the same logical RTDB instance.
 //
 // xcconfig syntax notes for future maintainers:
 //   - Variable expansion uses `$(VAR)` — NOT `${VAR}` (that's shell).

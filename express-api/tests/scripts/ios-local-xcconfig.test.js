@@ -119,4 +119,18 @@ describe('iosApp/Configurations/Local.xcconfig', () => {
     expect(xcconfigText.endsWith('\n')).toBe(true);
     expect(xcconfigText.endsWith('\n\n')).toBe(false);
   });
+
+  // Defensive trip-wire against the most common xcconfig-newbie
+  // mistake: writing `${LOCAL_HOST}` (shell expansion) where
+  // `$(LOCAL_HOST)` (Xcode build-setting expansion) is required.
+  // The shell form is a silent no-op in Xcode — the value becomes
+  // the literal `${LOCAL_HOST}` string rather than being substituted.
+  // No value line should contain the `${…}` shape.
+  test('no value line uses shell-style ${VAR} expansion (xcconfig requires $(VAR))', () => {
+    const valueLines = xcconfigText.split('\n').filter((l) => /^[A-Z_][A-Z0-9_]*\s*=/.test(l));
+    expect(valueLines.length).toBeGreaterThan(0);
+    valueLines.forEach((line) => {
+      expect(line).not.toMatch(/\$\{[A-Z_]/);
+    });
+  });
 });
