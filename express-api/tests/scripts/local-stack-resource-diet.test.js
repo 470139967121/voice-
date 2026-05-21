@@ -131,13 +131,11 @@ describe('Local-stack resource diet', () => {
       expect(scriptText).not.toMatch(/^export JAVA_TOOL_OPTIONS=/m);
     });
 
-    // start.sh has a later `./gradlew` invocation (Step 7). Verify
-    // the firebase emulator launch precedes it, since the env-scoping
-    // depends on order: if gradlew ran first, env-prefix on a later
-    // command can't retroactively scope. Match the operative lines
-    // (the `env ... firebase emulators:start` line and the actual
-    // `cd ... && ./gradlew ...` line) rather than bare substrings,
-    // since both names also appear in comments earlier in the file.
+    // start.sh has a later `./gradlew assembleLocalDebug` invocation
+    // (Step 7). Verify the firebase emulator launch precedes it,
+    // since the env-scoping depends on order. Both names appear in
+    // comments earlier in the file, so we match operative-line
+    // patterns rather than bare substrings.
     test('the env-prefixed firebase launch runs before any gradlew invocation', () => {
       // Operative firebase line: starts with `env ` at column 0.
       const firebaseMatch = scriptText.match(
@@ -146,10 +144,52 @@ describe('Local-stack resource diet', () => {
       // Operative gradlew line: `./gradlew` preceded by whitespace
       // OR `&&` — i.e. actual shell command, not a comment word.
       const gradlewMatch = scriptText.match(/(?:&&|\s)\.\/gradlew\b/);
+      // I1 fix (round 2): both are REQUIRED to exist — without the
+      // gradlew call this whole ordering test is meaningless, and a
+      // PR that removes the gradlew call should fail loudly, not
+      // silently vacuously-pass.
       expect(firebaseMatch).not.toBeNull();
-      if (gradlewMatch !== null) {
-        expect(firebaseMatch.index).toBeLessThan(gradlewMatch.index);
-      }
+      expect(gradlewMatch).not.toBeNull();
+      expect(firebaseMatch.index).toBeLessThan(gradlewMatch.index);
+    });
+
+    // I2 fix (round 2): pin the trailing `&`. Without `&`, the script
+    // blocks at the firebase emulators:start call indefinitely and
+    // never reaches Step 3 onward. `FIREBASE_PID=$!` would capture
+    // the wrong PID (the shell's, not firebase's).
+    test('firebase emulator launch is backgrounded with trailing &', () => {
+      expect(scriptText).toMatch(/^ {2}--export-on-exit=local\/firebase-emulator-data &$/m);
+    });
+
+    // Coverage gap (round 2): pin the FIREBASE_PID=$! capture
+    // immediately after the firebase backgrounded command. A refactor
+    // that moves it or captures the wrong PID would break cleanup
+    // (the trap function relies on FIREBASE_PID being valid).
+    test('FIREBASE_PID is captured on the line immediately after the firebase & command', () => {
+      const lines = scriptText.split('\n');
+      const ampLineIdx = lines.findIndex((l) =>
+        l.match(/^ {2}--export-on-exit=local\/firebase-emulator-data &$/),
+      );
+      expect(ampLineIdx).toBeGreaterThanOrEqual(0);
+      expect(lines[ampLineIdx + 1]).toMatch(/^FIREBASE_PID=\$!$/);
+    });
+  });
+
+  // Coverage gap (round 2): exercise the error branch of
+  // extractServiceBlock so a malformed-yaml or renamed-service
+  // regression surfaces with the intended diagnostic, not a silent
+  // beforeAll crash that takes down every test in the file.
+  describe('extractServiceBlock helper — error branch', () => {
+    let yamlText;
+
+    beforeAll(() => {
+      yamlText = fs.readFileSync(COMPOSE_PATH, 'utf8');
+    });
+
+    test('throws a clear error for unknown service names', () => {
+      expect(() => extractServiceBlock(yamlText, 'nonexistent-service')).toThrow(
+        /Could not find service "nonexistent-service"/,
+      );
     });
   });
 });
