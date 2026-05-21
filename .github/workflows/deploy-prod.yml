@@ -389,10 +389,10 @@ jobs:
     # macos-latest per the no-self-hosted-runners policy. See deploy-dev.yml
     # for full rationale.
     runs-on: macos-latest
-    # Bumped 2026-05-21 from 90 -> 150 to match deploy-dev.yml — cold caches
-    # on GitHub-hosted macos-latest blew through 90 min on the first dev run.
-    # See deploy-dev.yml's distribute-ios timeout comment for full rationale.
-    timeout-minutes: 150
+    # Tuned 2026-05-21 to 100 min. See deploy-dev.yml's distribute-ios
+    # timeout comment for the full reasoning (gradle daemon collision was
+    # the real cause of the apparent slowness, not insufficient minutes).
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -445,7 +445,16 @@ jobs:
           cd iosApp
           pod install
 
+      # Mirror of deploy-dev.yml's pre-xcodebuild daemon stop. See that file
+      # for the full forensic explanation (run 26196249351 hang analysis).
+      # Same gradle-daemon collision pattern would hit prod releases too.
+      - name: Stop gradle daemon before xcodebuild
+        run: ./gradlew --stop
+
+      # Step-level hang detector — see deploy-dev.yml's matching step for
+      # the rationale. 50-min cap catches recurrence cheaply.
       - name: Build and archive iOS app
+        timeout-minutes: 50
         run: |
           set -euo pipefail
           # Read the bumped versionCode/versionName from app/build.gradle.kts

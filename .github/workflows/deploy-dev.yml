@@ -371,16 +371,16 @@ jobs:
     # an 8GB machine. macos-latest (14GB RAM, 3 cores) absorbs the load
     # without taking down a developer laptop.
     runs-on: macos-latest
-    # Bumped 2026-05-21 from 90 -> 150: first macos-latest run (26192253707)
-    # timed out at exactly 90 min while xcodebuild was still actively running.
-    # GitHub-hosted runners have COLD caches every run — gradle wrapper
-    # download + CocoaPods install + Xcode warmup + K/Native compile + pod
-    # install + xcodebuild archive + TestFlight upload accumulate to 90+ min
-    # without persistent state from prior runs. 150 min gives the headroom
-    # the previous "warm self-hosted" assumption no longer provides. The
-    # right longer-term fix is adding gradle + CocoaPods + DerivedData
-    # caching, but the timeout bump is the safe first step.
-    timeout-minutes: 150
+    # Tuned 2026-05-21: was 90 (too tight) -> 150 (revealed real hang at
+    # 1h52m of zero log output) -> 100. The earlier "needs more time"
+    # framing was wrong; the actual problem was a gradle daemon collision
+    # inside xcodebuild's `Compile Kotlin Framework` build phase, fixed
+    # by the explicit `gradle --stop` step below. With that fix + a
+    # step-level timeout on the Build/archive step (the only known hang
+    # site), the outer job envelope can stay tight at 100 min. Normal
+    # case is ~60-80 min on cold-cache macos-latest. 100 is the safety
+    # net for anything unexpected before the step timeouts fire.
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -469,7 +469,29 @@ jobs:
           cd iosApp
           pod install
 
+      # Stop any gradle daemon left running by "Build KMP shared framework for
+      # iOS" before xcodebuild starts. xcodebuild's `Compile Kotlin Framework`
+      # build phase runs `./gradlew :shared:embedAndSignAppleFrameworkForXcode`
+      # from inside a constrained Xcode env (modified TMPDIR, sandboxed PATH);
+      # the new gradle CLI tries to connect to the still-alive daemon from the
+      # earlier explicit gradle step and hangs forever. Forensic evidence
+      # (run 26196249351, job 77076256845): 2 `java` orphan processes at
+      # timeout — the old daemon and the new client both alive after 1h52m
+      # of no log output. Stopping the daemon makes the nested call spawn
+      # fresh and avoid the collision.
+      - name: Stop gradle daemon before xcodebuild
+        run: ./gradlew --stop
+
+      # Step-level hang detector: the xcodebuild archive (which transitively
+      # runs gradle for K/Native compile + framework embed/sign + IPA export
+      # + TestFlight upload) is the only step that's hung on macos-latest so
+      # far. Normal-case duration is ~25-40 min; if it exceeds 50 it's
+      # virtually certainly hung (e.g., daemon collision recurrence, codesign
+      # waiting on keychain, TestFlight upload stuck). Cancelling the step
+      # frees the runner to run cleanup and surfaces a clear "this step
+      # timed out" signal instead of the opaque outer-job timeout.
       - name: Build, archive, and export iOS app
+        timeout-minutes: 50
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
