@@ -284,7 +284,19 @@ jobs:
       (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
     uses: ./.github/workflows/ios-tests.yml
     with:
-      ios: 'none'
+      # Default iOS device for PR runs. Mirror of android-e2e's
+      # `android: '33-phone'` — one device, latest stable iOS, single
+      # form-factor. The job-level `if:` above already gates on
+      # `app_changed` + `skip_ios_e2e`, so this only runs when
+      # iOS-relevant code changes (and not when the PR body has the
+      # `[skip-ios-e2e]` marker).
+      #
+      # Was 'none' until 2026-05-21, which made the matrix expand to
+      # zero devices in ios-tests.yml's resolve-inputs job — the
+      # entire iOS E2E surface was symbolic. Pinned to a specific
+      # device via tests/scripts/pr-checks-ios-gating.test.js to
+      # prevent silent regression back to 'none'.
+      ios: '18.1-iphone'
       parallel: true
       ref: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
