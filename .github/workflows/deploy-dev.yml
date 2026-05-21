@@ -630,6 +630,11 @@ jobs:
         with:
           name: dev-ios-ipa
           path: ${{ runner.temp }}/export/*.ipa
+          # if-no-files-found: error — the upstream step already
+          # validates IPA count via shell glob + exit 1, so this is
+          # defence-in-depth. Without it, an unexpected file-naming
+          # change could silently upload an empty artifact.
+          if-no-files-found: error
           retention-days: 7
 
       - name: Upload to TestFlight
