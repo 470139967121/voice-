@@ -11,16 +11,13 @@
  * Each upload pins:
  *   - name (artifact identifier for `gh run download`)
  *   - path (gradle output dir / runner.temp export dir)
- *   - if-no-files-found: error  (fail loud on empty glob — without
- *     this, the default `warn` produces a successful empty-zip
- *     upload that breaks AFK install silently)
- *   - retention-days: 7 (matched between APK and IPA for consistency)
+ *   - if-no-files-found: error  (fail loud on empty glob)
+ *   - retention-days: 7
  *
- * Implementation: block-extraction helper similar to the Phase 1
- * pattern in `local-stack-resource-diet.test.js` /
- * `pr-checks-ios-gating.test.js`. Anchors each assertion to a
- * specific upload-artifact step block so a comment elsewhere in
- * the YAML mentioning the artifact name can't drift the match.
+ * Implementation: an `extractStep(yaml, stepName)` helper that
+ * matches step header by exact string equality (no regex
+ * backtracking, no anchor-to-comment drift class). All assertions
+ * are scoped to a specific step block.
  */
 
 const fs = require('fs');
@@ -31,67 +28,84 @@ const PR_CHECKS_PATH = path.join(REPO_ROOT, '.github/workflows/pr-checks.yml');
 const DEPLOY_DEV_PATH = path.join(REPO_ROOT, '.github/workflows/deploy-dev.yml');
 
 /**
- * Extract an `actions/upload-artifact` step block by its artifact
- * `name:` value. Returns the YAML text from the `- name: Upload …`
- * step header through the end of that step's `with:` block (i.e.
- * up to the next `      - name:` step header or the next top-level
- * key). Anchors assertions to a single step so they can't drift to
- * another step's `with:` block.
+ * Extract a workflow step's full YAML block by its `- name:` header.
+ *
+ * Walks the file line-by-line, finds the exact `      - name: <stepName>`
+ * header line (6-space indent, step-list level), then captures every
+ * subsequent line until the next `      - name:` step header or the
+ * next top-level YAML key (column 0). Returns the joined block.
+ *
+ * Exact string equality on the header line (not regex) eliminates the
+ * anchor-to-comment-class of bug: a comment elsewhere in the file
+ * containing the step name can't match because comments are prefixed
+ * with `#` and don't equal the literal header string.
  */
-function extractUploadStep(yamlText, artifactName) {
+function extractStep(yamlText, stepName) {
   const lines = yamlText.split('\n');
-  const nameLine = `          name: ${artifactName}`;
-  const startIdx = lines.findIndex((l) => l === nameLine);
+  const stepHeader = `      - name: ${stepName}`;
+  const startIdx = lines.findIndex((l) => l === stepHeader);
   if (startIdx < 0) {
     throw new Error(
-      `Could not find upload-artifact step for name "${artifactName}". ` +
-        'Step was renamed, removed, or indentation changed.',
+      `Could not find step "${stepName}" in workflow file. ` +
+        'Step was renamed, removed, or indentation changed — ' +
+        'update this test to match.',
     );
   }
-  // From the name line, walk back to the step header `- name: …`
-  let headerIdx = startIdx;
-  while (headerIdx > 0 && !lines[headerIdx].match(/^ {6}- name:/)) headerIdx--;
-  // From the name line, walk forward until the next `      - name:`
-  // step header or `^[a-zA-Z]` top-level key.
   let endIdx = startIdx + 1;
   while (endIdx < lines.length) {
-    if (lines[endIdx].match(/^ {6}- name:/)) break;
-    if (lines[endIdx].match(/^[a-zA-Z_]/)) break;
+    // Next step header at the same indent level terminates this block.
+    if (lines[endIdx].startsWith('      - name:')) break;
+    // Top-level YAML key (column 0, non-comment) also terminates.
+    if (lines[endIdx].length > 0 && !lines[endIdx].startsWith(' ')) break;
     endIdx++;
   }
-  return lines.slice(headerIdx, endIdx).join('\n');
+  return lines.slice(startIdx, endIdx).join('\n');
 }
 
 describe('CI artifact surface for AFK install', () => {
   describe('pr-checks.yml — Android local-flavor APK', () => {
     let yamlText;
+    let buildBlock;
     let uploadBlock;
 
     beforeAll(() => {
       yamlText = fs.readFileSync(PR_CHECKS_PATH, 'utf8');
-      uploadBlock = extractUploadStep(yamlText, 'local-debug-apk');
+      buildBlock = extractStep(yamlText, 'Build localDebug APK');
+      uploadBlock = extractStep(yamlText, 'Upload localDebug APK');
     });
 
-    test('runs assembleLocalDebug somewhere in the workflow', () => {
-      expect(yamlText).toMatch(/\bassembleLocalDebug\b/);
+    test('Build localDebug APK step runs assembleLocalDebug', () => {
+      expect(buildBlock).toContain('./gradlew assembleLocalDebug');
     });
 
-    test('upload step uses the local-debug-apk artifact name', () => {
+    test('Build localDebug APK step has no dead env vars (KEYSTORE_PASSWORD, LIVEKIT_URL)', () => {
+      // The `local` flavor hardcodes both values in
+      // app/build.gradle.kts (LIVEKIT_URL as `ws://$localHostAlias:7880`,
+      // KEYSTORE_PASSWORD is only consumed by signingConfigs.release
+      // which the debug build type doesn't reference). Carrying these
+      // env vars over from the dev step would mislead future
+      // maintainers into thinking the local-debug build needs
+      // release-signing credentials.
+      expect(buildBlock).not.toContain('KEYSTORE_PASSWORD');
+      expect(buildBlock).not.toContain('LIVEKIT_URL');
+    });
+
+    test('Upload localDebug APK step uses the local-debug-apk artifact name', () => {
       expect(uploadBlock).toContain('name: local-debug-apk');
     });
 
-    test('path points at the gradle local-debug output dir', () => {
+    test('Upload localDebug APK path points at the gradle local-debug output dir', () => {
       expect(uploadBlock).toContain('path: app/build/outputs/apk/local/debug/*.apk');
     });
 
-    test('if-no-files-found: error (fail loud on empty glob)', () => {
+    test('Upload localDebug APK uses if-no-files-found: error (fail loud on empty glob)', () => {
       // Default `warn` would silently produce an empty zip — gh run
       // download would succeed with an empty dir, breaking AFK
       // install. `error` is the only acceptable value here.
       expect(uploadBlock).toContain('if-no-files-found: error');
     });
 
-    test('retention-days is set (avoids 90-day default accumulation)', () => {
+    test('Upload localDebug APK has retention-days: 7 (matches IPA retention)', () => {
       expect(uploadBlock).toMatch(/^ {10}retention-days: 7$/m);
     });
   });
@@ -102,51 +116,51 @@ describe('CI artifact surface for AFK install', () => {
 
     beforeAll(() => {
       yamlText = fs.readFileSync(DEPLOY_DEV_PATH, 'utf8');
-      uploadBlock = extractUploadStep(yamlText, 'dev-ios-ipa');
+      uploadBlock = extractStep(yamlText, 'Upload IPA as workflow artifact');
     });
 
-    test('upload step uses the dev-ios-ipa artifact name', () => {
+    test('Upload IPA step uses the dev-ios-ipa artifact name', () => {
       expect(uploadBlock).toContain('name: dev-ios-ipa');
     });
 
-    test('path points at the runner.temp export directory', () => {
+    test('Upload IPA path points at the runner.temp export directory', () => {
       // Actions-expression `${{ runner.temp }}` is required here —
       // shell-env `$RUNNER_TEMP` is NOT expanded in the `path:`
       // field of an upload-artifact step.
       expect(uploadBlock).toContain('path: ${{ runner.temp }}/export/*.ipa');
     });
 
-    test('if-no-files-found: error (defence-in-depth for naming changes)', () => {
+    test('Upload IPA uses if-no-files-found: error (defence-in-depth for naming changes)', () => {
       expect(uploadBlock).toContain('if-no-files-found: error');
     });
 
-    test('retention-days is 7 (matches APK retention for consistency)', () => {
+    test('Upload IPA has retention-days: 7 (matches APK retention for consistency)', () => {
       expect(uploadBlock).toMatch(/^ {10}retention-days: 7$/m);
     });
 
-    test('upload step runs BEFORE the TestFlight upload step', () => {
-      // The IPA artifact must be uploaded before the TestFlight
-      // upload step. If the order were reversed, a TestFlight
-      // failure could short-circuit the workflow before the
-      // operator-facing artifact was produced.
-      const uploadStepIdx = yamlText.indexOf('name: dev-ios-ipa');
-      const testflightStepIdx = yamlText.indexOf('Upload to TestFlight');
+    test('Upload IPA step runs BEFORE the Upload to TestFlight step', () => {
+      // Anchor to step headers (unambiguous — appear exactly once),
+      // NOT to artifact name strings (which appear in both comments
+      // and the actual `name:` field and would resolve to the
+      // first occurrence — likely a comment).
+      const uploadStepIdx = yamlText.indexOf('- name: Upload IPA as workflow artifact');
+      const testflightStepIdx = yamlText.indexOf('- name: Upload to TestFlight');
       expect(uploadStepIdx).toBeGreaterThanOrEqual(0);
       expect(testflightStepIdx).toBeGreaterThanOrEqual(0);
       expect(uploadStepIdx).toBeLessThan(testflightStepIdx);
     });
   });
 
-  describe('extractUploadStep helper — error branch', () => {
+  describe('extractStep helper — error branch', () => {
     let yamlText;
 
     beforeAll(() => {
       yamlText = fs.readFileSync(PR_CHECKS_PATH, 'utf8');
     });
 
-    test('throws a clear error for unknown artifact names', () => {
-      expect(() => extractUploadStep(yamlText, 'nonexistent-artifact')).toThrow(
-        /Could not find upload-artifact step for name "nonexistent-artifact"/,
+    test('throws a clear error for unknown step names', () => {
+      expect(() => extractStep(yamlText, 'Nonexistent Step Name')).toThrow(
+        /Could not find step "Nonexistent Step Name"/,
       );
     });
   });
