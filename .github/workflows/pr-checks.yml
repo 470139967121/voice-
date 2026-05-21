@@ -138,6 +138,14 @@ jobs:
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'android' }}
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL || 'wss://placeholder.livekit.cloud' }}
+          # Bake the persona-picker password into the dev APK so journey-based
+          # manual QA on dev variant can sign in as P-02..P-19 personas
+          # without OAuth. Must match the value the express-api provisioner
+          # used to create the dev Firebase Auth accounts (PERSONAS_PASSWORD).
+          # Falls back to empty → picker UI fails closed (BuildVariant.kt's
+          # isPersonaPickerAvailable returns false). See app/build.gradle.kts
+          # line 105 for the buildConfigField wiring.
+          DEV_QA_PERSONAS_PASSWORD: ${{ secrets.DEV_QA_PERSONAS_PASSWORD }}
         run: ./gradlew testDevDebugUnitTest :shared:jvmTest detekt assembleDevRelease jacocoDevDebugUnitTestReport --parallel
 
       - name: Publish unit test report
