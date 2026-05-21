@@ -45,6 +45,15 @@ docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d
 # =============================================================================
 echo "==> Step 2/8: Starting Firebase Emulators..."
 cd "$PROJECT_ROOT"
+# Resource diet 2026-05-21: cap the Firebase emulator JVM heap at 1g.
+# Default heap on macOS is ~4 GB which is overkill for our fixture-sized
+# Firestore + Auth + RTDB data. Capping to 1g frees ~3 GB of headroom on
+# the 8 GB MacBook for browsers-under-test, gradle K/N, and the iOS
+# devicectl tunnel during journey-test cycles. JAVA_TOOL_OPTIONS is
+# honoured by every JVM start in scope — that's intentional: any
+# piggy-backed gradle / firebase-rules-deploy in the same shell gets
+# the same cap. Pinned by tests/scripts/local-stack-resource-diet.test.js.
+export JAVA_TOOL_OPTIONS="-Xmx1g"
 npx firebase emulators:start \
   --project=demo-shytalk \
   --import=local/firebase-emulator-data \
