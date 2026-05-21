@@ -1,24 +1,18 @@
 /**
  * Pins the local-stack memory caps so the 8GB MacBook can run the
- * full local Firebase Emulator + Docker stack + Express + Playwright
- * during journey testing without crossing the OOM threshold.
+ * full local Firebase Emulator + Docker stack during journey testing
+ * without crossing the OOM threshold.
  *
- * Without caps:
- *   - Docker containers default to "use whatever's available"; under
- *     load LiveKit + MinIO + Mailpit can balloon past 2 GB combined
- *   - Firebase Emulator JVM defaults to a ~4 GB heap on macOS
+ * Caps applied (rationale per service in the YAML comments):
+ *   - livekit:        256m  (Go binary)
+ *   - minio:          512m  (S3-like, small fixture data)
+ *   - mailpit:        128m  (in-memory SMTP sink)
+ *   - emulator JVM:   1g    (firestore + auth fixture sizes)
  *
- * Caps applied (rationale per service in the workflow comments):
- *   - livekit:  256m  — small Go server, no media transcoding in tests
- *   - minio:    512m  — S3-like; small fixture data only
- *   - mailpit:  128m  — tiny mail interceptor
- *   - emulator: 1g    — Java; firestore + auth + RTDB in one JVM
- *
- * Total local-stack ceiling: ~1.9 GB. Combined with the ~6 GB
- * baseline (Claude, MCPs, system services, browsers under test) this
- * leaves ~100 MB - 1 GB of headroom on an 8 GB Mac depending on what
- * else is open — sufficient if `feedback-prepush-sonar-no-verify-on-8gb`
- * style measures are also applied.
+ * Implementation: regex assertions on the raw YAML / shell text via
+ * an extract-per-service-block helper that anchors each assertion to
+ * a single block. Avoids the cross-boundary false-positive class
+ * caught by code-review on the first cut of this file.
  */
 
 const fs = require('fs');
@@ -28,63 +22,134 @@ const REPO_ROOT = path.resolve(__dirname, '../../..');
 const COMPOSE_PATH = path.join(REPO_ROOT, 'local/docker-compose.yml');
 const START_SH_PATH = path.join(REPO_ROOT, 'local/start.sh');
 
+/**
+ * Extract a single service's YAML block from docker-compose.yml so
+ * subsequent assertions are scoped to ONE service and can't drift
+ * across boundaries (e.g. asserting livekit's cap by accidentally
+ * matching minio's). Anchored on the `^  <name>:$` line and stops
+ * at the next `^  <word>:$` line.
+ */
+function extractServiceBlock(yamlText, serviceName) {
+  const lines = yamlText.split('\n');
+  const startPattern = new RegExp(`^  ${serviceName}:$`);
+  const nextServicePattern = /^ {2}\w[\w-]*:$/;
+  let inBlock = false;
+  const block = [];
+  for (const line of lines) {
+    if (startPattern.test(line)) {
+      inBlock = true;
+      continue;
+    }
+    if (inBlock) {
+      if (nextServicePattern.test(line)) break;
+      block.push(line);
+    }
+  }
+  if (!inBlock) {
+    throw new Error(
+      `Could not find service "${serviceName}" in ${COMPOSE_PATH}. ` +
+        'Service was renamed or removed — update this test to match.',
+    );
+  }
+  return block.join('\n');
+}
+
 describe('Local-stack resource diet', () => {
-  describe('docker-compose.yml — per-service mem_limit', () => {
+  describe('docker-compose.yml — per-service memory caps', () => {
     let yamlText;
+    let livekitBlock;
+    let minioBlock;
+    let mailpitBlock;
 
     beforeAll(() => {
       yamlText = fs.readFileSync(COMPOSE_PATH, 'utf8');
+      livekitBlock = extractServiceBlock(yamlText, 'livekit');
+      minioBlock = extractServiceBlock(yamlText, 'minio');
+      mailpitBlock = extractServiceBlock(yamlText, 'mailpit');
     });
 
-    test('livekit service has mem_limit 256m', () => {
-      // livekit-server is a Go binary; ~50-100MB steady-state.
-      // 256m caps it under load (peer connections, audio relay)
-      // without strangling the normal path.
-      expect(yamlText).toMatch(/^ {2}livekit:[\s\S]+?mem_limit:\s+256m/m);
+    // Service-body lines under a top-level `  service:` header are
+    // indented with exactly 4 spaces in this file's YAML style. Using
+    // ` {4}` (fixed-width) avoids sonarjs/slow-regex flagging on the
+    // unbounded `\s+` quantifier, and is also more precise.
+
+    // livekit — Go binary, ~50-100MB steady-state; 256m cap is generous
+    // but prevents balloon under voice-room peer-connection spikes.
+    test('livekit has mem_limit 256m', () => {
+      expect(livekitBlock).toMatch(/^ {4}mem_limit: 256m$/m);
     });
 
-    test('minio service has mem_limit 512m', () => {
-      // MinIO is more memory-hungry than livekit because it pages
-      // recent blocks. 512m is generous for the small fixture data
-      // we exercise in tests.
-      expect(yamlText).toMatch(/^ {2}minio:[\s\S]+?mem_limit:\s+512m/m);
+    test('livekit has memswap_limit 256m (swap disabled)', () => {
+      expect(livekitBlock).toMatch(/^ {4}memswap_limit: 256m$/m);
     });
 
-    test('mailpit service has mem_limit 128m', () => {
-      // Mailpit is a tiny in-memory SMTP sink — 128m is plenty.
-      expect(yamlText).toMatch(/^ {2}mailpit:[\s\S]+?mem_limit:\s+128m/m);
+    // minio — pages recent blocks; 512m is generous for fixture sizes.
+    test('minio has mem_limit 512m', () => {
+      expect(minioBlock).toMatch(/^ {4}mem_limit: 512m$/m);
+    });
+
+    test('minio has memswap_limit 512m (swap disabled)', () => {
+      expect(minioBlock).toMatch(/^ {4}memswap_limit: 512m$/m);
+    });
+
+    // mailpit — tiny in-memory SMTP sink, 128m is plenty.
+    test('mailpit has mem_limit 128m', () => {
+      expect(mailpitBlock).toMatch(/^ {4}mem_limit: 128m$/m);
+    });
+
+    test('mailpit has memswap_limit 128m (swap disabled)', () => {
+      expect(mailpitBlock).toMatch(/^ {4}memswap_limit: 128m$/m);
     });
   });
 
-  describe('start.sh — Firebase Emulator JVM heap cap', () => {
+  describe('start.sh — Firebase Emulator JVM heap cap is scoped to the firebase process', () => {
     let scriptText;
 
     beforeAll(() => {
       scriptText = fs.readFileSync(START_SH_PATH, 'utf8');
     });
 
-    test('JAVA_TOOL_OPTIONS sets -Xmx1g for firebase emulators:start', () => {
-      // The Firebase emulator suite runs Firestore + Auth + RTDB
-      // + UI in one JVM. Default heap is ~4 GB on macOS — overkill
-      // for our fixture sizes. Cap at 1g to free ~3 GB of headroom
-      // for browser-under-test + iOS-simulator-replacement work.
-      //
-      // `JAVA_TOOL_OPTIONS` is honoured by every JVM start in the
-      // shell scope, not just firebase's. That's intentional: any
-      // gradle/firebase-rules-deploy work that piggybacks on the
-      // running shell gets the same cap.
-      expect(scriptText).toMatch(/JAVA_TOOL_OPTIONS=.*-Xmx1g/);
+    // The cap is applied via `env VAR=val cmd` prefix so it scopes to
+    // the firebase CLI process only — NOT exported at shell-scope where
+    // it would leak into the later `./gradlew` invocation in Step 7
+    // and starve Kotlin compilation (which needs 2-4 GB heap).
+    test('uses env-prefix scoping, not a shell-scope export', () => {
+      // The operative line must be of the form
+      // `env JAVA_TOOL_OPTIONS="-Xmx1g" npx firebase emulators:start ...`
+      // anchored at line-start to skip comments that reference the
+      // identifier.
+      expect(scriptText).toMatch(/^env JAVA_TOOL_OPTIONS="-Xmx1g" npx firebase emulators:start/m);
     });
 
-    test('JAVA_TOOL_OPTIONS export precedes the emulator launch', () => {
-      // The env var must be in scope BEFORE `firebase emulators:start`
-      // runs — otherwise the spawned JVM uses the default heap. Use
-      // line-index comparison rather than a fragile regex.
-      const exportIdx = scriptText.indexOf('JAVA_TOOL_OPTIONS');
-      const launchIdx = scriptText.indexOf('firebase emulators:start');
-      expect(exportIdx).toBeGreaterThanOrEqual(0);
-      expect(launchIdx).toBeGreaterThanOrEqual(0);
-      expect(exportIdx).toBeLessThan(launchIdx);
+    // Defence-in-depth against C1 recurring: ensure a shell-scope
+    // `export JAVA_TOOL_OPTIONS=...` doesn't sneak back in. The
+    // env-prefix form above is the ONLY acceptable scoping.
+    test('does NOT export JAVA_TOOL_OPTIONS at shell scope (would leak into gradlew)', () => {
+      // Match `export JAVA_TOOL_OPTIONS` anchored at line-start so
+      // comments mentioning the identifier don't false-positive. The
+      // `env` prefix on the operative line doesn't match this pattern.
+      expect(scriptText).not.toMatch(/^export JAVA_TOOL_OPTIONS=/m);
+    });
+
+    // start.sh has a later `./gradlew` invocation (Step 7). Verify
+    // the firebase emulator launch precedes it, since the env-scoping
+    // depends on order: if gradlew ran first, env-prefix on a later
+    // command can't retroactively scope. Match the operative lines
+    // (the `env ... firebase emulators:start` line and the actual
+    // `cd ... && ./gradlew ...` line) rather than bare substrings,
+    // since both names also appear in comments earlier in the file.
+    test('the env-prefixed firebase launch runs before any gradlew invocation', () => {
+      // Operative firebase line: starts with `env ` at column 0.
+      const firebaseMatch = scriptText.match(
+        /^env JAVA_TOOL_OPTIONS=.*npx firebase emulators:start/m,
+      );
+      // Operative gradlew line: `./gradlew` preceded by whitespace
+      // OR `&&` — i.e. actual shell command, not a comment word.
+      const gradlewMatch = scriptText.match(/(?:&&|\s)\.\/gradlew\b/);
+      expect(firebaseMatch).not.toBeNull();
+      if (gradlewMatch !== null) {
+        expect(firebaseMatch.index).toBeLessThan(gradlewMatch.index);
+      }
     });
   });
 });
