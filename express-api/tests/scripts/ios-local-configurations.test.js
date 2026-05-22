@@ -313,6 +313,29 @@ describe('iosApp.xcodeproj — Phase 3.2 Local build configurations', () => {
       expect(iosAppGroupBlock).toContain('/* Configurations */,');
     });
 
+    // Round 3 CI-blocker — CocoaPods rejected `pod install` with:
+    //   "There may only be up to 1 unique SWIFT_VERSION per target"
+    // because the iosApp target had SWIFT_VERSION = 5.0 on Debug
+    // / Release but EMPTY buildSettings (no SWIFT_VERSION) on
+    // Debug-Local / Release-Local. CocoaPods enforces consistency
+    // across all target configs. Fix: clone the Debug/Release
+    // buildSettings when creating Debug-Local/Release-Local so they
+    // share the same SWIFT_VERSION (and other target-level baselines
+    // like IPHONEOS_DEPLOYMENT_TARGET).
+    test('iosApp-target Debug-Local inherits SWIFT_VERSION = "5.0" from Debug', () => {
+      const matches = findBuildConfigurationsByName(pbxproj, 'Debug-Local');
+      const targetLevel = matches.find((m) => !m.block.includes('baseConfigurationReference'));
+      expect(targetLevel).toBeDefined();
+      expect(targetLevel.block).toContain('SWIFT_VERSION = 5.0;');
+    });
+
+    test('iosApp-target Release-Local inherits SWIFT_VERSION = "5.0" from Release', () => {
+      const matches = findBuildConfigurationsByName(pbxproj, 'Release-Local');
+      const targetLevel = matches.find((m) => !m.block.includes('baseConfigurationReference'));
+      expect(targetLevel).toBeDefined();
+      expect(targetLevel.block).toContain('SWIFT_VERSION = 5.0;');
+    });
+
     // PBXFileReference for Local.xcconfig must declare the xcconfig
     // file type so Xcode treats it correctly.
     test('Local.xcconfig PBXFileReference has lastKnownFileType = text.xcconfig', () => {
