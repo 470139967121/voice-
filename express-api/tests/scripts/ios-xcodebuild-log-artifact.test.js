@@ -34,23 +34,56 @@ const IOS_TESTS_YML = path.join(REPO_ROOT, '.github/workflows/ios-tests.yml');
 const UPLOAD_ARTIFACT_SHA = 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
 
 /**
- * Extract a step block from a YAML by its `- name:` header. Returns
- * the slice from the header up to the next 6-space step or job
- * boundary. Uses the same line-anchored approach as sibling test
- * files (extractStep in afk-install-artifacts.test.js).
+ * Extract a workflow step's full YAML block by its `- name:` header.
+ *
+ * Mirror of the canonical helper in afk-install-artifacts.test.js
+ * and ios-tests-build-cache.test.js — kept line-anchored, CRLF-safe,
+ * and ambiguous-name-strict. Round 1 review I-1 required replacing
+ * the prior weaker `extractStepBody` with this canonical version so
+ * a CRLF line ending or duplicate step header can't silently corrupt
+ * the returned block.
+ *
+ * Contract — failure modes:
+ *   - Zero matches → throws "Could not find step …"
+ *   - More than one match → throws "Ambiguous step name …" with line
+ *     numbers
+ *   - Non-6-space-indented input → throws "Could not find step …"
+ *
+ * trimEnd() on both the header match and the terminator loop makes
+ * the helper CRLF-tolerant — `\r` blank lines won't fire the
+ * column-0 guard prematurely; sibling job headers with `\r` won't
+ * be invisible to the regex.
  */
-function extractStepBody(yamlText, stepName) {
+function extractStep(yamlText, stepName) {
+  const lines = yamlText.split('\n');
   const stepHeader = `      - name: ${stepName}`;
-  const startIdx = yamlText.indexOf(stepHeader);
-  if (startIdx < 0) {
-    throw new Error(`Step "${stepName}" not found in YAML.`);
+  const matches = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trimEnd() === stepHeader) matches.push(i);
   }
-  const rest = yamlText.slice(startIdx + stepHeader.length);
-  const nextStepIdx = rest.indexOf('\n      - ');
-  const nextJobKeyIdx = rest.indexOf('\n    outputs:');
-  const candidates = [nextStepIdx, nextJobKeyIdx].filter((i) => i >= 0);
-  const stopAt = candidates.length > 0 ? Math.min(...candidates) : rest.length;
-  return rest.slice(0, stopAt);
+  if (matches.length === 0) {
+    throw new Error(
+      `Could not find step "${stepName}" in workflow file. ` +
+        'Step was renamed, removed, or indentation changed (helper ' +
+        'requires 6-space step indent) — update this test to match.',
+    );
+  }
+  if (matches.length > 1) {
+    throw new Error(
+      `Ambiguous step name "${stepName}": found at lines ${matches
+        .map((i) => i + 1)
+        .join(', ')}. Use a more specific name or scope to a single job.`,
+    );
+  }
+  const startIdx = matches[0];
+  let endIdx = startIdx + 1;
+  while (endIdx < lines.length) {
+    const trimmed = lines[endIdx].trimEnd();
+    if (trimmed.startsWith('      - name:')) break;
+    if (trimmed.length > 0 && !trimmed.startsWith(' ')) break;
+    endIdx++;
+  }
+  return lines.slice(startIdx, endIdx).join('\n');
 }
 
 describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
@@ -62,7 +95,7 @@ describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
 
   describe('Build iOS app for testing — log capture', () => {
     test('Build step pipes xcodebuild output through tee to build/ios-build-logs/', () => {
-      const body = extractStepBody(yamlText, 'Build iOS app for testing');
+      const body = extractStep(yamlText, 'Build iOS app for testing');
       expect(body).toContain('build/ios-build-logs/');
       // The tee target file name pinned so the upload step can
       // glob it. `xcodebuild-build-for-testing.log` matches the
@@ -77,7 +110,7 @@ describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
       // exit through the pipe. Use `xcodebuild build-for-testing`
       // (the specific command) so indexOf doesn't land on the word
       // "xcodebuild" inside the comment block above the run script.
-      const body = extractStepBody(yamlText, 'Build iOS app for testing');
+      const body = extractStep(yamlText, 'Build iOS app for testing');
       const pipefailIdx = body.indexOf('set -o pipefail');
       const xcodebuildCmdIdx = body.indexOf('xcodebuild build-for-testing');
       expect(pipefailIdx).toBeGreaterThanOrEqual(0);
@@ -90,7 +123,7 @@ describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
       // Use the specific command `xcodebuild build-for-testing` so
       // the indexOf doesn't land on the word "xcodebuild" inside
       // the step's comment block.
-      const body = extractStepBody(yamlText, 'Build iOS app for testing');
+      const body = extractStep(yamlText, 'Build iOS app for testing');
       const mkdirIdx = body.indexOf('mkdir -p build/ios-build-logs');
       const xcodebuildCmdIdx = body.indexOf('xcodebuild build-for-testing');
       expect(mkdirIdx).toBeGreaterThanOrEqual(0);
@@ -104,7 +137,7 @@ describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
     });
 
     test('Upload step uses pinned actions/upload-artifact SHA', () => {
-      const body = extractStepBody(yamlText, 'Upload xcodebuild logs');
+      const body = extractStep(yamlText, 'Upload xcodebuild logs');
       expect(body).toContain(UPLOAD_ARTIFACT_SHA);
     });
 
@@ -114,12 +147,24 @@ describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
       // build succeeds — exactly the opposite of when we need it.
       // Plain substring check avoids sonarjs/slow-regex (\s+ would
       // be unbounded). The step uses exactly 8 leading spaces.
-      const body = extractStepBody(yamlText, 'Upload xcodebuild logs');
+      const body = extractStep(yamlText, 'Upload xcodebuild logs');
       expect(body).toContain('\n        if: always()');
     });
 
+    // Round 1 I-2: pin the FULL compound `if` condition. The prior
+    // test asserted `always()` was present but not that the
+    // `has_tests == 'true'` clause was also there. Without the
+    // has_tests guard, a run on a repo with no XCTest targets would
+    // skip the build step entirely, leaving nothing for tee to write,
+    // and `if-no-files-found: error` would fire on an empty zip —
+    // false-positive failure. Pin both halves of the AND.
+    test('Upload step if condition includes has_tests == true guard', () => {
+      const body = extractStep(yamlText, 'Upload xcodebuild logs');
+      expect(body).toContain("if: always() && steps.check-tests.outputs.has_tests == 'true'");
+    });
+
     test('Upload step uses artifact name ios-xcodebuild-logs', () => {
-      const body = extractStepBody(yamlText, 'Upload xcodebuild logs');
+      const body = extractStep(yamlText, 'Upload xcodebuild logs');
       expect(body).toContain('name: ios-xcodebuild-logs');
     });
 
@@ -128,12 +173,12 @@ describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
       // tee never wrote anything (e.g. xcodebuild failed before
       // emitting output). `error` makes the missing-log condition
       // a loud failure.
-      const body = extractStepBody(yamlText, 'Upload xcodebuild logs');
+      const body = extractStep(yamlText, 'Upload xcodebuild logs');
       expect(body).toContain('if-no-files-found: error');
     });
 
     test('Upload step path globs the build/ios-build-logs/ directory', () => {
-      const body = extractStepBody(yamlText, 'Upload xcodebuild logs');
+      const body = extractStep(yamlText, 'Upload xcodebuild logs');
       // Plain substring match avoids sonarjs/slow-regex (\s* is
       // unbounded). YAML uses exactly one space after `path:`.
       expect(body).toContain('path: build/ios-build-logs');
@@ -147,8 +192,52 @@ describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
     });
 
     test('Upload step has retention-days: 7 (matches the existing iOS test-bundle artifact)', () => {
-      const body = extractStepBody(yamlText, 'Upload xcodebuild logs');
+      const body = extractStep(yamlText, 'Upload xcodebuild logs');
       expect(body).toMatch(/retention-days:\s*7/);
+    });
+  });
+
+  // Round 1 I-1: error-branch tests per the canonical extractStep
+  // contract in ios-tests-build-cache.test.js and afk-install-
+  // artifacts.test.js. Ensures this file's copy of the helper
+  // behaves identically under failure modes — unknown step name,
+  // non-6-space indent, CRLF round-trip.
+  describe('extractStep helper — error branches', () => {
+    test('throws a clear error for unknown step names', () => {
+      expect(() => extractStep(yamlText, 'Nonexistent Step Name')).toThrow(
+        /Could not find step "Nonexistent Step Name"/,
+      );
+    });
+
+    test('throws when YAML uses non-6-space step indentation', () => {
+      const fourSpaceIndent = '    - name: Some Step\n      run: echo hi\n';
+      expect(() => extractStep(fourSpaceIndent, 'Some Step')).toThrow(
+        /Could not find step "Some Step"/,
+      );
+    });
+
+    test('handles CRLF line endings without bleed-through', () => {
+      // Same fixture pattern as ios-tests-build-cache.test.js — blank
+      // CRLF line INSIDE the First step body. Without trimEnd on the
+      // terminator's column-0 guard, the `\r` blank line truncates
+      // capture before reaching `if: always()`.
+      const crlf = [
+        'jobs:',
+        '  build:',
+        '    steps:',
+        '      - name: First',
+        '        run: echo a',
+        '',
+        '        if: always()',
+        '      - name: Second',
+        '        run: echo b',
+        '',
+      ].join('\r\n');
+      const block = extractStep(crlf, 'First');
+      expect(block).toContain('run: echo a');
+      expect(block).toContain('if: always()');
+      expect(block).not.toContain('Second');
+      expect(block).not.toContain('echo b');
     });
   });
 });
