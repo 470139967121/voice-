@@ -95,6 +95,7 @@
 		BE254B9C06195293860934D8 /* iosApp.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = iosApp.entitlements; path = iosApp/iosApp.entitlements; sourceTree = SOURCE_ROOT; };
 		D0A4F7B83C8E1F2D5B6A9C01 /* StoreKitBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StoreKitBridge.swift; path = iosApp/StoreKitBridge.swift; sourceTree = SOURCE_ROOT; };
 		D7BC7D9DF72B6567762ADC66 /* ManualQARemoteControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ManualQARemoteControl.swift; path = iosAppUITests/ManualQARemoteControl.swift; sourceTree = "<group>"; };
+		DCA2BF0B8EEF6C0696E649B2 /* Local.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Local.xcconfig; sourceTree = "<group>"; };
 		E28E4DFD9DDDDA95668E5893 /* LiveKitBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveKitBridge.swift; path = iosApp/LiveKitBridge.swift; sourceTree = SOURCE_ROOT; };
 		F6914C8FB414C2D00F27D96C /* StartingScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StartingScreen.swift; path = iosApp/feature/starting/StartingScreen.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -162,6 +163,7 @@
 				A10001002600000000000011 /* PrivacyInfo.xcprivacy */,
 				118DE4D1B78999277946A689 /* AppDelegate.swift */,
 				BE254B9C06195293860934D8 /* iosApp.entitlements */,
+				5E54F07335610E94EF648B1F /* Configurations */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -175,6 +177,15 @@
 				65B784B663097A597F2DC8C6 /* iosAppUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		5E54F07335610E94EF648B1F /* Configurations */ = {
+			isa = PBXGroup;
+			children = (
+				DCA2BF0B8EEF6C0696E649B2 /* Local.xcconfig */,
+			);
+			name = Configurations;
+			path = Configurations;
 			sourceTree = "<group>";
 		};
 		A10005002600000000000001 /* iosAppTests */ = {
@@ -728,6 +739,18 @@
 			};
 			name = Release;
 		};
+		385479B1B10E5455F17F2ACB /* Debug-Local */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = "Debug-Local";
+		};
+		9C42CB3D0291CB25483D5375 /* Release-Local */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = "Release-Local";
+		};
 		A10009002600000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -785,6 +808,20 @@
 			};
 			name = Debug;
 		};
+		B0B52BC3222E6C594C972D3A /* Debug-Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = DCA2BF0B8EEF6C0696E649B2 /* Local.xcconfig */;
+			buildSettings = {
+			};
+			name = "Debug-Local";
+		};
+		EC30098239A66F4B6AB2CC80 /* Release-Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = DCA2BF0B8EEF6C0696E649B2 /* Local.xcconfig */;
+			buildSettings = {
+			};
+			name = "Release-Local";
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -793,6 +830,8 @@
 			buildConfigurations = (
 				058558A0273AAA2400C9D062 /* Debug */,
 				058558A1273AAA2400C9D062 /* Release */,
+				B0B52BC3222E6C594C972D3A /* Debug-Local */,
+				EC30098239A66F4B6AB2CC80 /* Release-Local */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -802,6 +841,8 @@
 			buildConfigurations = (
 				058558A2273AAA2400C9D062 /* Debug */,
 				058558A3273AAA2400C9D062 /* Release */,
+				385479B1B10E5455F17F2ACB /* Debug-Local */,
+				9C42CB3D0291CB25483D5375 /* Release-Local */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
