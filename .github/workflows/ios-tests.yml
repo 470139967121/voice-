@@ -159,8 +159,13 @@ jobs:
       # scripts/ios/add-local-configurations.rb gets exercised in CI
       # — Linux runners running pr-checks's Test Backend job skip
       # this test (no ruby+xcodeproj).
+      #
+      # NO `if:` guard — the step's precondition is "ruby+xcodeproj
+      # available", which is always true on macos-15 after the
+      # Install CocoaPods step. Inheriting the `has_tests` guard
+      # would silently skip this check if XCTest targets are ever
+      # removed (Round 3 I-1 review fix).
       - name: Verify pbxproj-mutation script idempotency
-        if: steps.check-tests.outputs.has_tests == 'true'
         run: |
           cd express-api && \
           npx jest tests/scripts/ios-local-configurations.test.js

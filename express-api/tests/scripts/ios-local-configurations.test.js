@@ -32,9 +32,10 @@ const ADD_SCRIPT = path.join(REPO_ROOT, 'scripts/ios/add-local-configurations.rb
 const IOS_TESTS_YML = path.join(REPO_ROOT, '.github/workflows/ios-tests.yml');
 
 /**
- * Count exact occurrences of a literal line match in the pbxproj.
- * Uses string equality (not regex) so the surrounding whitespace
- * matters — pbxproj uses tab indentation consistently.
+ * Count non-overlapping matches of a `/g`-flagged regex.
+ * String.prototype.match(regex_with_g) returns an array of every
+ * match (or null on zero matches). Used to assert "exactly N
+ * occurrences" of a fixed-form line in the pbxproj.
  */
 function countMatches(text, regex) {
   const matches = text.match(regex);
@@ -453,6 +454,37 @@ describe('iosApp.xcodeproj — Phase 3.2 Local build configurations', () => {
       expect(cocoapodsIdx).toBeGreaterThanOrEqual(0);
       expect(idempotencyIdx).toBeGreaterThanOrEqual(0);
       expect(cocoapodsIdx).toBeLessThan(idempotencyIdx);
+    });
+
+    // Round 3 I-1 — pin the ABSENCE of an `if:` guard on this step.
+    // Sibling steps in this job carry `if: steps.check-tests.outputs
+    // .has_tests == 'true'`. Inheriting that guard would silently
+    // skip the idempotency check the moment XCTest targets are
+    // removed — script's only macOS CI execution path goes dark
+    // with no alarm. This test pins the contract that the step's
+    // precondition is the macOS runner itself (ruby+xcodeproj),
+    // NOT the XCTest surface.
+    test('idempotency step has NO `if:` guard (runs unconditionally on macos-15)', () => {
+      // Extract the step block from its `- name:` header to the next
+      // step header or job boundary. Assert no `if:` line is in
+      // the body. Use a non-greedy [\s\S] up to the next `      - `
+      // (6-space step indent prefix) — the same level as the step
+      // header itself.
+      const stepHeader = '      - name: Verify pbxproj-mutation script idempotency';
+      const startIdx = yamlText.indexOf(stepHeader);
+      expect(startIdx).toBeGreaterThanOrEqual(0);
+      // Find the NEXT `      - ` (next step at the same indent),
+      // or the next `outputs:` job-level key (terminates the steps
+      // array), whichever comes first.
+      const rest = yamlText.slice(startIdx + stepHeader.length);
+      const nextStepIdx = rest.indexOf('\n      - ');
+      const nextJobKeyIdx = rest.indexOf('\n    outputs:');
+      const candidates = [nextStepIdx, nextJobKeyIdx].filter((i) => i >= 0);
+      const stopAt = candidates.length > 0 ? Math.min(...candidates) : rest.length;
+      const stepBody = rest.slice(0, stopAt);
+      // The step body must NOT contain an `if:` at the step's own
+      // indent level (8 spaces — `        if:`).
+      expect(stepBody).not.toMatch(/\n {8}if:/);
     });
   });
 });
