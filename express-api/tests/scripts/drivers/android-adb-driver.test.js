@@ -611,17 +611,46 @@ describe('android-adb-driver — androidIsStillInRoom', () => {
   });
 
   test('substring false-positive guarded — partial-match in unrelated id does NOT match', async () => {
-    // A resource-id like 'something_room_seatGrid_other' has the marker
-    // text as a substring but doesn't have the marker as a proper
-    // resource-id name. The regex's (?:[^"]*:id/)? group requires
-    // either a real :id/ separator or starting at the attribute opener,
-    // so the marker must be the actual name segment after :id/.
+    // Both regex boundaries enforced:
+    //   LEFT: the pattern starts with literal `resource-id="` then
+    //     either `[^"]*:id/` or empty. With empty, the marker must
+    //     be at attribute-start (right after `="`).
+    //   RIGHT: literal `"` follows the marker. `_other"` between
+    //     marker and `"` breaks the match.
     mockExec({
       "'uiautomator' 'dump'": '',
       "'cat' '/sdcard/dump.xml'": '<node resource-id="something_room_seatGrid_other" />',
     });
     const driver = await createAndroidDriver();
     expect(await driver.androidIsStillInRoom('Adam')).toBe(false);
+  });
+
+  test('left-prefix-only false positive — "unrelated_room_seatGrid" does NOT match (Round 1 I-1)', async () => {
+    // Marker at attribute-end (right-quote boundary holds) but with
+    // a leading prefix and no :id/. The optional `[^"]*:id/` group
+    // can't consume `unrelated_` (no `:id/` to consume against), so
+    // it matches empty and the marker is required at attribute-start
+    // — but the attribute starts with `unrelated_`. Mismatch.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="unrelated_room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(false);
+  });
+
+  test('bare resource-id (no package prefix) → true (Round 1 M-1)', async () => {
+    // Some emulator dumps emit `resource-id="room_seatGrid"` without
+    // the `com.shyden.shytalk.local:id/` package prefix (older
+    // uiautomator or non-standard build variants). The optional
+    // `[^"]*:id/` group's empty alternative handles this — pin the
+    // empty-branch behaviour with this test.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="room_seatGrid" bounds="[0,0][100,100]" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(true);
   });
 
   test('persona name is ignored — same dump, different persona yields same result', async () => {
