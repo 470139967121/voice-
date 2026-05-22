@@ -898,3 +898,132 @@ describe('android-adb-driver — androidNavigatesToWarningScreen', () => {
     expect(okB).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidShowsWarningScreenOnRelaunch', () => {
+  // Wake 101 (second variant, manual-qa-runner.js ~line 12268):
+  //   `<Name>'s Android UI shows the warning screen again on next launch`
+  // Semantically distinct from androidNavigatesToWarningScreen
+  // (this is post-relaunch persistence) but mechanically identical:
+  // assert the warning screen is currently visible. Both methods
+  // share the same WARNING_MARKERS via isOnWarningScreen.
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('warning_title present → true (after relaunch)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(true);
+  });
+
+  test('warning_acknowledgeButton present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_acknowledgeButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(true);
+  });
+
+  // Round 1 I-1: independently pin the third WARNING_MARKER from this
+  // method's perspective. Symmetric with the Wake 101 first-variant
+  // suite (PR #728) which tests all three.
+  test('warning_communityStandardsLink present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_communityStandardsLink" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(true);
+  });
+
+  test('no warning markers → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/main_roomsTab" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(false);
+  });
+
+  test('empty dump → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(false);
+  });
+
+  // Round 1 I-2: bare resource-id (no package prefix) coverage from
+  // this method's perspective — symmetric with the first Wake 101
+  // variant's suite.
+  test('bare resource-id (no package prefix) → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(true);
+  });
+
+  // Round 1 I-3: right-boundary false-positive guard — `pre_warning_title_x`
+  // has the marker as a substring but with both left and right
+  // padding. The regex correctly rejects.
+  test('substring false-positive guarded — pre_warning_title_x does NOT match', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="pre_warning_title_x" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(false);
+  });
+
+  // Round 1 P-1: persona name invariance — symmetric with every
+  // other method's suite in this file.
+  test('persona name is ignored — same dump, different persona yields same result', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    const okA = await driver.androidShowsWarningScreenOnRelaunch('Adam');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okB = await driver2.androidShowsWarningScreenOnRelaunch('Bea');
+
+    expect(okA).toBe(true);
+    expect(okB).toBe(true);
+  });
+
+  test('paired with androidNavigatesToWarningScreen — same dump yields same result', async () => {
+    // Both methods route through isOnWarningScreen via the shared
+    // dumpHasAnyMarker helper. Locks the invariant that they remain
+    // synchronised — a future divergence in one without the other
+    // would be a contract violation.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    const navigates = await driver.androidNavigatesToWarningScreen('Adam');
+    const relaunch = await driver.androidShowsWarningScreenOnRelaunch('Adam');
+    expect(navigates).toBe(true);
+    expect(relaunch).toBe(true);
+  });
+});
