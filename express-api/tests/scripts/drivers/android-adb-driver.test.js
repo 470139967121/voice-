@@ -1176,3 +1176,127 @@ describe('android-adb-driver — androidShowsWarningScreenWithReason', () => {
     expect(okB).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidNavigatesToProfileScreen', () => {
+  // Wake 96 matcher — `<Name>'s Android UI navigates to the profile screen`.
+  // Presence assertion via 4 real ProfileScreen.kt testTags:
+  //   profile_displayName (507, 992), profile_walletButton (1146),
+  //   profile_followButton (1179, 1188), profile_messageButton (1198).
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('profile_displayName present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/profile_displayName" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(true);
+  });
+
+  test('profile_walletButton present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/profile_walletButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(true);
+  });
+
+  test('profile_followButton present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/profile_followButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(true);
+  });
+
+  test('profile_messageButton present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/profile_messageButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(true);
+  });
+
+  test('no profile markers → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/main_roomsTab" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(false);
+  });
+
+  test('empty dump → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(false);
+  });
+
+  test('substring false-positive guarded — pre_profile_displayName_x does NOT match', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="pre_profile_displayName_x" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(false);
+  });
+
+  test('right-boundary false-positive guarded — profile_displayName_extra does NOT match', async () => {
+    // Round 1 minor: isolate the right-side padding case from the
+    // both-sides case above. Pins that the closing-quote anchor
+    // alone (no left-prefix help) correctly rejects suffix-padded
+    // tags. Important because the optional `[^"]*:id/` group's
+    // package-qualified form is exercised here too.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/profile_displayName_extra" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(false);
+  });
+
+  test('bare resource-id (no package prefix) → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="profile_displayName" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(true);
+  });
+
+  test('persona name ignored', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/profile_displayName" />',
+    });
+    const driver = await createAndroidDriver();
+    const okA = await driver.androidNavigatesToProfileScreen('Adam');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/profile_displayName" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okB = await driver2.androidNavigatesToProfileScreen('Bea');
+
+    expect(okA).toBe(true);
+    expect(okB).toBe(true);
+  });
+});
