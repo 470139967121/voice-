@@ -347,3 +347,202 @@ describe('android-adb-driver — androidOpensTab', () => {
     expect(navTap[0]).toContain("'2000'");
   });
 });
+
+describe('android-adb-driver — androidShowsBanner', () => {
+  // Wake 97 matcher (manual-qa-runner.js ~line 11646):
+  //   `<Name>'s Android UI shows a "<X>" banner`
+  // The matcher passes (name, bannerText) — driver returns true
+  // if the UI dump contains the banner text as either a text=
+  // or content-desc= attribute value (substring match, with
+  // negative-lookbehind guarding against attribute-name suffix
+  // false-positives like hint-text=). Banners persist on-screen
+  // until dismissed, so a dump scan is sufficient.
+  //
+  // Round 1 review M-3: no fake-timer setup here — the
+  // implementation has no setTimeout. Keeps the describe block
+  // simpler and signals that not every Phase 4 method needs the
+  // tab-tap pattern's settle delay.
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('returns true when banner text appears in a text= attribute', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node text="Connection lost — retrying" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Connection lost');
+
+    expect(ok).toBe(true);
+  });
+
+  test('returns true when banner text appears in a content-desc= attribute', async () => {
+    // Icon-only banners often carry the message in content-desc
+    // (for screen-reader accessibility) rather than text.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node content-desc="You are offline" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'offline');
+
+    expect(ok).toBe(true);
+  });
+
+  test('substring match — banner phrase matches within a longer text', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node text="Warning: your room will close in 5 minutes" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'room will close');
+
+    expect(ok).toBe(true);
+  });
+
+  test('returns false when banner text is absent', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="Welcome to ShyTalk" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Connection lost');
+
+    expect(ok).toBe(false);
+  });
+
+  test('returns false when the UI dump fails (empty)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'anything');
+
+    expect(ok).toBe(false);
+  });
+
+  test('regex-special characters in banner text are escaped correctly', async () => {
+    // A banner containing characters that would have regex meaning
+    // (parentheses, brackets, dots, asterisks) must still match
+    // literally. Without escaping, "Loading (1/3)..." would fail
+    // because `(`, `)`, `.` are regex metachars.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node text="Loading (1/3)... please wait" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Loading (1/3)...');
+
+    expect(ok).toBe(true);
+  });
+
+  test('attribute-suffix guard — error-text= does NOT match (sibling of hint-text=)', async () => {
+    // Round 2 M-2: pin the lookbehind for the other false-positive-
+    // prone attribute names mentioned in the comment. error-text=
+    // is realistic: many EditText/TextInputLayout components emit
+    // their validation error in this attribute.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node error-text="Network down" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Network down');
+
+    expect(ok).toBe(false);
+  });
+
+  test('attribute-suffix guard — sub-text= does NOT match (sibling of hint-text=)', async () => {
+    // Round 2 M-2: third lookbehind regression case named in the
+    // implementation comment.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node sub-text="Tap to retry" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Tap to retry');
+
+    expect(ok).toBe(false);
+  });
+
+  test('whitespace-only banner returns false (M-1: defence-in-depth)', async () => {
+    // Round 2 M-1: defensive guard against scenario authoring bugs
+    // that produce a non-empty but whitespace-only banner string.
+    // The runner regex `[^"]+` prevents this from reaching the
+    // driver via valid Gherkin, but defending in depth keeps the
+    // contract clear if a future matcher relaxes its capture group.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="A short message" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', '   ');
+
+    expect(ok).toBe(false);
+  });
+
+  test('attribute-suffix false-positive guarded — hint-text= does NOT match', async () => {
+    // Round 1 review I-2: without the (?<![\w-]) negative lookbehind,
+    // the regex would match `t-text="Connection lost"` inside
+    // `hint-text="Connection lost"` because the `text` alternation
+    // would match the trailing `text` of `hint-text`. The lookbehind
+    // rejects the match — only top-level `text=` or `content-desc=`
+    // attribute names count. Other false-positive-prone attribute
+    // names in Android XML: sub-text, placeholder-text, error-text.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node hint-text="Connection lost" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Connection lost');
+
+    expect(ok).toBe(false);
+  });
+
+  test('empty banner string returns false (not "match any node with text=")', async () => {
+    // Round 1 review M-2: a scenario asking for `""` banner is an
+    // authoring bug. The prior implementation matched ANY node with
+    // a text= or content-desc= attribute, silently returning true and
+    // masking the scenario error. Explicit early-return guards this.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="Welcome to ShyTalk" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', '');
+
+    expect(ok).toBe(false);
+    // Round 2 P-1: short-circuit verification — empty banner returns
+    // BEFORE the UI dump is fetched. Pinning this means a future
+    // refactor that accidentally moves the guard after the dump
+    // (paying the adb round-trip cost on an empty-banner scenario
+    // authoring bug) is caught.
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
+    expect(dumpCalls.length).toBe(0);
+  });
+
+  test('persona name is ignored — same banner + different persona yields same result', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="Connection lost" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const okA = await driver.androidShowsBanner('Adam', 'Connection lost');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="Connection lost" bounds="[0,100][1080,200]" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okB = await driver2.androidShowsBanner('Bea', 'Connection lost');
+
+    expect(okA).toBe(true);
+    expect(okB).toBe(true);
+  });
+});

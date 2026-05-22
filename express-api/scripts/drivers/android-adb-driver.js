@@ -270,6 +270,44 @@ async function createAndroidDriver({ serial: preferred } = {}) {
 
   driver.androidOpensTab = async (_name, tab) => tapMainNavTab('androidOpensTab', tab);
 
+  // Wake 97 — "<Name>'s Android UI shows a "<X>" banner". Generic
+  // banner-text presence assertion. Banners persist on-screen until
+  // dismissed (unlike toasts), so a single dump scan is sufficient.
+  //
+  // Implementation: dump the UI tree, look for the banner text as
+  // either a `text=` or `content-desc=` attribute value (icon-only
+  // banners often carry the message in content-desc for accessibility).
+  // Substring match — banners frequently contain dynamic suffixes
+  // ("...in 5 minutes", "(retry)"), so an exact-match would be too
+  // strict. The banner-text input is regex-escaped to handle dynamic
+  // characters in the assertion string itself (parens, dots, etc.).
+  //
+  // Round 1 review I-2 fix: the regex uses a `(?<![\w-])` negative
+  // lookbehind before `(?:text|content-desc)=` so attribute names
+  // like `hint-text=`, `sub-text=`, `error-text=` don't false-match
+  // via their `text=` suffix. Only top-level `text=` and
+  // `content-desc=` attributes (preceded by `<node `, whitespace,
+  // or start-of-string — anything not a word char or hyphen) match.
+  //
+  // Round 1 review M-2: empty banner string returns false. A scenario
+  // asking for `""` banner is a scenario authoring error; the prior
+  // behaviour (matching any node with text="..." or content-desc="...")
+  // would silently mask the bug.
+  driver.androidShowsBanner = async (_name, banner) => {
+    // Round 2 M-1: also guard against whitespace-only strings. A
+    // banner of `'   '` would otherwise pass `!banner` and match
+    // any node with 3+ consecutive spaces in its text attribute
+    // — silent false positive. The runner regex requires `[^"]+`
+    // so this isn't reachable from valid Gherkin, but cheap to
+    // guard defensively.
+    if (!banner || !banner.trim()) return false;
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    const escBanner = banner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // eslint-disable-next-line sonarjs/slow-regex
+    return new RegExp(`(?<![\\w-])(?:text|content-desc)="[^"]*${escBanner}[^"]*"`).test(dump);
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
