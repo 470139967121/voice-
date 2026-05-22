@@ -1090,7 +1090,7 @@ describe('android-adb-driver — androidShowsWarningScreenWithReason', () => {
     expect(await driver.androidShowsWarningScreenWithReason('Adam', 'specific reason')).toBe(false);
   });
 
-  test('empty reason string → false', async () => {
+  test('empty reason string → false + no dump call (short-circuit)', async () => {
     mockExec({
       "'uiautomator' 'dump'": '',
       "'cat' '/sdcard/dump.xml'":
@@ -1098,9 +1098,15 @@ describe('android-adb-driver — androidShowsWarningScreenWithReason', () => {
     });
     const driver = await createAndroidDriver();
     expect(await driver.androidShowsWarningScreenWithReason('Adam', '')).toBe(false);
+    // Round 1 I-1: pin the short-circuit invariant. Empty reason
+    // must return false BEFORE the adb dump round-trip — saves a
+    // call that can't change the answer. Matches the equivalent
+    // pin on androidShowsBanner.
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
+    expect(dumpCalls.length).toBe(0);
   });
 
-  test('whitespace-only reason string → false', async () => {
+  test('whitespace-only reason string → false + no dump call (short-circuit)', async () => {
     mockExec({
       "'uiautomator' 'dump'": '',
       "'cat' '/sdcard/dump.xml'":
@@ -1108,6 +1114,9 @@ describe('android-adb-driver — androidShowsWarningScreenWithReason', () => {
     });
     const driver = await createAndroidDriver();
     expect(await driver.androidShowsWarningScreenWithReason('Adam', '   ')).toBe(false);
+    // Round 1 I-1: same short-circuit pin for whitespace-only.
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
+    expect(dumpCalls.length).toBe(0);
   });
 
   test('empty dump → false (cannot confirm either condition)', async () => {
