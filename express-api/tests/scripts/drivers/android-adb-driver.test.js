@@ -1254,6 +1254,21 @@ describe('android-adb-driver — androidNavigatesToProfileScreen', () => {
     expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(false);
   });
 
+  test('right-boundary false-positive guarded — profile_displayName_extra does NOT match', async () => {
+    // Round 1 minor: isolate the right-side padding case from the
+    // both-sides case above. Pins that the closing-quote anchor
+    // alone (no left-prefix help) correctly rejects suffix-padded
+    // tags. Important because the optional `[^"]*:id/` group's
+    // package-qualified form is exercised here too.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/profile_displayName_extra" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToProfileScreen('Adam')).toBe(false);
+  });
+
   test('bare resource-id (no package prefix) → true', async () => {
     mockExec({
       "'uiautomator' 'dump'": '',
