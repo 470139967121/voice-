@@ -46,12 +46,17 @@ class StartingScreenService {
             throw URLError(.badServerResponse)
         }
 
+        // Empty body means "no screens active" — return early. Must
+        // precede JSONSerialization.jsonObject(), which THROWS on
+        // empty data (NSCocoaError 3840) rather than returning nil
+        // for the as? cast to handle. Pinned by
+        // testFetchStartingScreens_emptyData.
+        if data.isEmpty {
+            return [:]
+        }
+
         // Parse: { "screenId": { ...fields } }
         guard let raw = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            // If the response is empty or not a dictionary, return empty
-            if data.isEmpty {
-                return [:]
-            }
             throw URLError(.cannotParseResponse)
         }
 
