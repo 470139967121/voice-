@@ -226,3 +226,112 @@ describe('android-adb-driver — androidNavigatesBackToTab', () => {
     expect(okB).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidOpensTab', () => {
+  // Wake 92 matcher (manual-qa-runner.js ~line 10755):
+  //   `<Name> [P-NN] (cohort) opens the <X> tab on Android`
+  // calls driver.androidOpensTab(name, tab). Mechanically identical
+  // to Wake 100's androidNavigatesBackToTab — both tap the bottom-
+  // nav tab with the given name. Kept as separate methods so
+  // semantically-divergent behaviour (e.g. "open" might one day
+  // launch a full screen, while "navigate back" stays a pure tab
+  // tap) can land on the right method without API churn.
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('rooms tab — taps main_roomsTab via the shared main-nav helper', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_roomsTab', '[0,1900][270,2100]'),
+    });
+    const driver = await createAndroidDriver();
+    const promise = driver.androidOpensTab('Marcus', 'rooms');
+    await jest.advanceTimersByTimeAsync(500);
+    const ok = await promise;
+
+    expect(ok).toBe(true);
+    const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
+    expect(tapCall).toBeDefined();
+    expect(tapCall[0]).toContain("'135'");
+    expect(tapCall[0]).toContain("'2000'");
+  });
+
+  test('home tab — case-insensitive lookup falls through to bare-name candidate', async () => {
+    // The j17-teacher-classroom.feature scenario uses tab name "home",
+    // which doesn't exist in MainScreen.kt (no main_homeTab). Driver
+    // falls through to the bare-name candidate `home`. If the app ever
+    // gains a Home tab with testTag `home` (not `main_homeTab`), this
+    // test stays green.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('home', '[100,500][400,700]'),
+    });
+    const driver = await createAndroidDriver();
+    const promise = driver.androidOpensTab('Marcus', 'home');
+    await jest.advanceTimersByTimeAsync(500);
+    const ok = await promise;
+
+    expect(ok).toBe(true);
+    const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
+    expect(tapCall).toBeDefined();
+    expect(tapCall[0]).toContain("'250'");
+    expect(tapCall[0]).toContain("'600'");
+    // Same candidate iteration as androidNavigatesBackToTab — pinning
+    // count enforces both methods stay on the shared helper.
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
+    expect(dumpCalls.length).toBe(2);
+  });
+
+  test('returns false when no candidate matches', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('unrelated_tag'),
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidOpensTab('Marcus', 'nonexistent');
+
+    expect(ok).toBe(false);
+    const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
+    expect(tapCall).toBeUndefined();
+  });
+
+  test('shared logic with androidNavigatesBackToTab — same dump, same tap centre', async () => {
+    // Both methods route through the same private helper, so given
+    // identical dump + tab input they should produce identical
+    // behaviour. Locks the "they share an implementation" invariant.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_messagesTab', '[300,1900][600,2100]'),
+    });
+    const driver = await createAndroidDriver();
+    const pOpen = driver.androidOpensTab('Marcus', 'messages');
+    await jest.advanceTimersByTimeAsync(500);
+    const openOk = await pOpen;
+    const openTap = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_messagesTab', '[300,1900][600,2100]'),
+    });
+    const driver2 = await createAndroidDriver();
+    const pNav = driver2.androidNavigatesBackToTab('Marcus', 'messages');
+    await jest.advanceTimersByTimeAsync(500);
+    const navOk = await pNav;
+    const navTap = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
+
+    expect(openOk).toBe(true);
+    expect(navOk).toBe(true);
+    // Same tap coordinates: centre of [300,1900][600,2100] = (450, 2000).
+    expect(openTap[0]).toContain("'450'");
+    expect(openTap[0]).toContain("'2000'");
+    expect(navTap[0]).toContain("'450'");
+    expect(navTap[0]).toContain("'2000'");
+  });
+});
