@@ -717,6 +717,21 @@ describe('android-adb-driver — androidIsNoLongerInVoiceRoom', () => {
     expect(await driver.androidIsNoLongerInVoiceRoom('Adam')).toBe(false);
   });
 
+  test('room_backButton present → false (still in room) — Round 1 I-1', async () => {
+    // Round 1 I-1: independently pin all three markers from the
+    // androidIsNoLongerInVoiceRoom side. Without this, a future
+    // refactor that drops room_backButton from the shared marker
+    // list would only fail androidIsStillInRoom's tests, not this
+    // method's — leaving the negative-assertion contract incomplete.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_backButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsNoLongerInVoiceRoom('Adam')).toBe(false);
+  });
+
   test('empty dump → false (CANNOT CONFIRM — defends against false positives)', async () => {
     // An empty dump (driver dump failure or transient state) is
     // ambiguous — the user could be anywhere. The safe answer for
