@@ -346,6 +346,21 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return dumpHasAnyMarker(dump, WARNING_MARKERS);
   }
 
+  // Profile-screen markers (ProfileScreen.kt testTags):
+  //   - profile_displayName (lines 507, 992) — title text
+  //   - profile_walletButton (line 1146)
+  //   - profile_followButton (lines 1179, 1188)
+  //   - profile_messageButton (line 1198)
+  const PROFILE_MARKERS = [
+    'profile_displayName',
+    'profile_walletButton',
+    'profile_followButton',
+    'profile_messageButton',
+  ];
+  function isOnProfileScreen(dump) {
+    return dumpHasAnyMarker(dump, PROFILE_MARKERS);
+  }
+
   // Wake 84 — "<Name>'s Android UI is still in the room".
   driver.androidIsStillInRoom = async (_name) => {
     const dump = await driver.androidUiDump();
@@ -401,6 +416,14 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     const escReason = reason.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // eslint-disable-next-line sonarjs/slow-regex
     return new RegExp(`(?<![\\w-])(?:text|content-desc)="[^"]*${escReason}[^"]*"`).test(dump);
+  };
+
+  // Wake 96 — "<Name>'s Android UI navigates to the profile screen".
+  // Presence assertion via PROFILE_MARKERS.
+  driver.androidNavigatesToProfileScreen = async (_name) => {
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    return isOnProfileScreen(dump);
   };
 
   // Open named screen — launches the local-build app via MainActivity.
