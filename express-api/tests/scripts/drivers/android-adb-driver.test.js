@@ -347,3 +347,117 @@ describe('android-adb-driver — androidOpensTab', () => {
     expect(navTap[0]).toContain("'2000'");
   });
 });
+
+describe('android-adb-driver — androidShowsBanner', () => {
+  // Wake 97 matcher (manual-qa-runner.js ~line 11646):
+  //   `<Name>'s Android UI shows a "<X>" banner`
+  // The matcher passes (name, bannerText) — driver returns true
+  // if the UI dump contains the banner text as either a text=
+  // or content-desc= attribute value (substring match). Banners
+  // typically persist on-screen until dismissed, so a dump scan
+  // is sufficient.
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('returns true when banner text appears in a text= attribute', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node text="Connection lost — retrying" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Connection lost');
+
+    expect(ok).toBe(true);
+  });
+
+  test('returns true when banner text appears in a content-desc= attribute', async () => {
+    // Icon-only banners often carry the message in content-desc
+    // (for screen-reader accessibility) rather than text.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node content-desc="You are offline" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'offline');
+
+    expect(ok).toBe(true);
+  });
+
+  test('substring match — banner phrase matches within a longer text', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node text="Warning: your room will close in 5 minutes" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'room will close');
+
+    expect(ok).toBe(true);
+  });
+
+  test('returns false when banner text is absent', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="Welcome to ShyTalk" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Connection lost');
+
+    expect(ok).toBe(false);
+  });
+
+  test('returns false when the UI dump fails (empty)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'anything');
+
+    expect(ok).toBe(false);
+  });
+
+  test('regex-special characters in banner text are escaped correctly', async () => {
+    // A banner containing characters that would have regex meaning
+    // (parentheses, brackets, dots, asterisks) must still match
+    // literally. Without escaping, "Loading (1/3)..." would fail
+    // because `(`, `)`, `.` are regex metachars.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node text="Loading (1/3)... please wait" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Loading (1/3)...');
+
+    expect(ok).toBe(true);
+  });
+
+  test('persona name is ignored — same banner + different persona yields same result', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="Connection lost" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const okA = await driver.androidShowsBanner('Adam', 'Connection lost');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="Connection lost" bounds="[0,100][1080,200]" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okB = await driver2.androidShowsBanner('Bea', 'Connection lost');
+
+    expect(okA).toBe(true);
+    expect(okB).toBe(true);
+  });
+});

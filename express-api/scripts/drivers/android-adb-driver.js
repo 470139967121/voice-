@@ -270,6 +270,25 @@ async function createAndroidDriver({ serial: preferred } = {}) {
 
   driver.androidOpensTab = async (_name, tab) => tapMainNavTab('androidOpensTab', tab);
 
+  // Wake 97 — "<Name>'s Android UI shows a "<X>" banner". Generic
+  // banner-text presence assertion. Banners persist on-screen until
+  // dismissed (unlike toasts), so a single dump scan is sufficient.
+  //
+  // Implementation: dump the UI tree, look for the banner text as
+  // either a `text=` or `content-desc=` attribute value (icon-only
+  // banners often carry the message in content-desc for accessibility).
+  // Substring match — banners frequently contain dynamic suffixes
+  // ("...in 5 minutes", "(retry)"), so an exact-match would be too
+  // strict. The banner-text input is regex-escaped to handle dynamic
+  // characters in the assertion string itself (parens, dots, etc.).
+  driver.androidShowsBanner = async (_name, banner) => {
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    const escBanner = banner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // eslint-disable-next-line sonarjs/slow-regex
+    return new RegExp(`(?:text|content-desc)="[^"]*${escBanner}[^"]*"`).test(dump);
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
