@@ -4,9 +4,11 @@
 // Android `local` product flavor declared in `app/build.gradle.kts`.
 //
 // This file is the FOUNDATION (Phase 3.1) of a multi-PR build-out
-// per the 2026-05-21 operator directive. It is NOT yet referenced by
-// the Xcode project — the new Debug-Local + Release-Local build
-// configurations that consume these values are added in Phase 3.2.
+// per the 2026-05-21 operator directive. Registered as a project
+// file reference by Phase 3.2 (PR #717) under the iosApp
+// Configurations PBXGroup, and consumed as baseConfigurationReference
+// by the project-level Debug-Local + Release-Local
+// XCBuildConfigurations.
 //
 // Variable contracts:
 //   BUNDLE_ID_SUFFIX        — `.local` so the app installs alongside
