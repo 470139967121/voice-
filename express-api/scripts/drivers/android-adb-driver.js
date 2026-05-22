@@ -281,12 +281,25 @@ async function createAndroidDriver({ serial: preferred } = {}) {
   // ("...in 5 minutes", "(retry)"), so an exact-match would be too
   // strict. The banner-text input is regex-escaped to handle dynamic
   // characters in the assertion string itself (parens, dots, etc.).
+  //
+  // Round 1 review I-2 fix: the regex uses a `(?<![\w-])` negative
+  // lookbehind before `(?:text|content-desc)=` so attribute names
+  // like `hint-text=`, `sub-text=`, `error-text=` don't false-match
+  // via their `text=` suffix. Only top-level `text=` and
+  // `content-desc=` attributes (preceded by `<node `, whitespace,
+  // or start-of-string — anything not a word char or hyphen) match.
+  //
+  // Round 1 review M-2: empty banner string returns false. A scenario
+  // asking for `""` banner is a scenario authoring error; the prior
+  // behaviour (matching any node with text="..." or content-desc="...")
+  // would silently mask the bug.
   driver.androidShowsBanner = async (_name, banner) => {
+    if (!banner) return false;
     const dump = await driver.androidUiDump();
     if (!dump) return false;
     const escBanner = banner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // eslint-disable-next-line sonarjs/slow-regex
-    return new RegExp(`(?:text|content-desc)="[^"]*${escBanner}[^"]*"`).test(dump);
+    return new RegExp(`(?<![\\w-])(?:text|content-desc)="[^"]*${escBanner}[^"]*"`).test(dump);
   };
 
   // Open named screen — launches the local-build app via MainActivity.

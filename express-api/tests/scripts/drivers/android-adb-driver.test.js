@@ -353,16 +353,17 @@ describe('android-adb-driver — androidShowsBanner', () => {
   //   `<Name>'s Android UI shows a "<X>" banner`
   // The matcher passes (name, bannerText) — driver returns true
   // if the UI dump contains the banner text as either a text=
-  // or content-desc= attribute value (substring match). Banners
-  // typically persist on-screen until dismissed, so a dump scan
-  // is sufficient.
+  // or content-desc= attribute value (substring match, with
+  // negative-lookbehind guarding against attribute-name suffix
+  // false-positives like hint-text=). Banners persist on-screen
+  // until dismissed, so a dump scan is sufficient.
+  //
+  // Round 1 review M-3: no fake-timer setup here — the
+  // implementation has no setTimeout. Keeps the describe block
+  // simpler and signals that not every Phase 4 method needs the
+  // tab-tap pattern's settle delay.
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   test('returns true when banner text appears in a text= attribute', async () => {
@@ -439,6 +440,39 @@ describe('android-adb-driver — androidShowsBanner', () => {
     const ok = await driver.androidShowsBanner('Adam', 'Loading (1/3)...');
 
     expect(ok).toBe(true);
+  });
+
+  test('attribute-suffix false-positive guarded — hint-text= does NOT match', async () => {
+    // Round 1 review I-2: without the (?<![\w-]) negative lookbehind,
+    // the regex would match `t-text="Connection lost"` inside
+    // `hint-text="Connection lost"` because the `text` alternation
+    // would match the trailing `text` of `hint-text`. The lookbehind
+    // rejects the match — only top-level `text=` or `content-desc=`
+    // attribute names count. Other false-positive-prone attribute
+    // names in Android XML: sub-text, placeholder-text, error-text.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node hint-text="Connection lost" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Connection lost');
+
+    expect(ok).toBe(false);
+  });
+
+  test('empty banner string returns false (not "match any node with text=")', async () => {
+    // Round 1 review M-2: a scenario asking for `""` banner is an
+    // authoring bug. The prior implementation matched ANY node with
+    // a text= or content-desc= attribute, silently returning true and
+    // masking the scenario error. Explicit early-return guards this.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node text="Welcome to ShyTalk" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', '');
+
+    expect(ok).toBe(false);
   });
 
   test('persona name is ignored — same banner + different persona yields same result', async () => {
