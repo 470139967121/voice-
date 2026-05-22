@@ -796,3 +796,105 @@ describe('android-adb-driver — androidIsNoLongerInVoiceRoom', () => {
     expect(okB).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidNavigatesToWarningScreen', () => {
+  // Wake 101 matcher (manual-qa-runner.js ~line 12240):
+  //   `<Name>'s Android UI navigates to the warning screen`
+  // Returns true if any of the WarningScreen.kt testTags is in
+  // the UI dump. Grounded markers:
+  //   warning_title (WarningScreen.kt:82)
+  //   warning_communityStandardsLink (WarningScreen.kt:112)
+  //   warning_acknowledgeButton (WarningScreen.kt:123)
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('warning_title present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToWarningScreen('Adam')).toBe(true);
+  });
+
+  test('warning_communityStandardsLink present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_communityStandardsLink" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToWarningScreen('Adam')).toBe(true);
+  });
+
+  test('warning_acknowledgeButton present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_acknowledgeButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToWarningScreen('Adam')).toBe(true);
+  });
+
+  test('no warning markers → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/main_roomsTab" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToWarningScreen('Adam')).toBe(false);
+  });
+
+  test('empty dump → false (cannot confirm)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToWarningScreen('Adam')).toBe(false);
+  });
+
+  test('substring false-positive guarded — pre_warning_title does NOT match', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="pre_warning_title_x" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToWarningScreen('Adam')).toBe(false);
+  });
+
+  test('bare resource-id (no package prefix) → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToWarningScreen('Adam')).toBe(true);
+  });
+
+  test('persona name is ignored — same dump, different persona yields same result', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    const okA = await driver.androidNavigatesToWarningScreen('Adam');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okB = await driver2.androidNavigatesToWarningScreen('Bea');
+
+    expect(okA).toBe(true);
+    expect(okB).toBe(true);
+  });
+});

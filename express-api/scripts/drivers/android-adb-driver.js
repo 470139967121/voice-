@@ -342,6 +342,24 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return !isInRoomScreen(dump);
   };
 
+  // Wake 101 — "<Name>'s Android UI navigates to the warning screen".
+  // Presence assertion for WarningScreen.kt's testTags:
+  //   - warning_title (WarningScreen.kt:82) — title text
+  //   - warning_communityStandardsLink (WarningScreen.kt:112)
+  //   - warning_acknowledgeButton (WarningScreen.kt:123)
+  // Any one is sufficient — first match wins.
+  driver.androidNavigatesToWarningScreen = async (_name) => {
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    const markers = [
+      'warning_title',
+      'warning_communityStandardsLink',
+      'warning_acknowledgeButton',
+    ];
+    // eslint-disable-next-line sonarjs/slow-regex
+    return markers.some((m) => new RegExp(`resource-id="(?:[^"]*:id/)?${m}"`).test(dump));
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
