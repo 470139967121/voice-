@@ -464,19 +464,38 @@ describe('iosApp.xcodeproj — Phase 3.2 Local build configurations', () => {
       expect(yamlText).toMatch(/npx jest tests\/scripts\/ios-local-configurations\.test\.js/);
     });
 
-    test('idempotency step runs AFTER Install CocoaPods (xcodeproj gem availability)', () => {
-      // The xcodeproj gem is a transitive dep of CocoaPods. Running
-      // the script before `pod install` would fail with "cannot load
-      // such file -- xcodeproj" on a fresh macos-15 runner. Anchor
-      // on the full 6-space step header (not substring) so a comment
-      // can't satisfy the assertion.
+    test('idempotency step runs BEFORE Install CocoaPods (pod install mutates pbxproj)', () => {
+      // pod install adds baseConfigurationReference entries to
+      // target-level configs (including Debug-Local/Release-Local),
+      // which violates the Phase 3.2 contract that target-level
+      // Local configs have NO base reference. Running the test AFTER
+      // pod install reads the mutated state and asserts against the
+      // wrong invariants. The test must run on the committed pbxproj
+      // state, which means BEFORE pod install. xcodeproj gem is
+      // installed explicitly via `gem install` in the test step.
+      // Anchor on the full 6-space step header (not substring) so a
+      // comment can't satisfy the assertion.
       const cocoapodsIdx = yamlText.indexOf('      - name: Install CocoaPods');
       const idempotencyIdx = yamlText.indexOf(
         '      - name: Verify pbxproj-mutation script idempotency',
       );
       expect(cocoapodsIdx).toBeGreaterThanOrEqual(0);
       expect(idempotencyIdx).toBeGreaterThanOrEqual(0);
-      expect(cocoapodsIdx).toBeLessThan(idempotencyIdx);
+      expect(idempotencyIdx).toBeLessThan(cocoapodsIdx);
+    });
+
+    test('idempotency step explicitly installs xcodeproj gem (no pod-install dependency)', () => {
+      // Since the step runs BEFORE Install CocoaPods, the xcodeproj
+      // gem is not yet available as a transitive dep. The step must
+      // explicitly `gem install xcodeproj` to make `ruby -rxcodeproj`
+      // succeed.
+      const stepHeader = '      - name: Verify pbxproj-mutation script idempotency';
+      const startIdx = yamlText.indexOf(stepHeader);
+      const rest = yamlText.slice(startIdx);
+      const nextStepIdx = rest.indexOf('\n      - ', stepHeader.length);
+      const stepBody = nextStepIdx > 0 ? rest.slice(0, nextStepIdx) : rest;
+      expect(stepBody).toContain('gem install');
+      expect(stepBody).toContain('xcodeproj');
     });
 
     // Round 3 I-1 — pin the ABSENCE of an `if:` guard on this step.

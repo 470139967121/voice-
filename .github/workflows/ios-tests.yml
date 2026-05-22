@@ -146,29 +146,34 @@ jobs:
         # runner memory pressure; serializing is safer than fast.
         run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --max-workers=1
 
+      # Phase 3.2 pbxproj-mutation idempotency check. MUST run BEFORE
+      # `Install CocoaPods` — `pod install` rewrites the pbxproj by
+      # adding baseConfigurationReference entries for Pods-iosApp.*
+      # xcconfigs onto every target-level config (including
+      # Debug-Local/Release-Local). My Phase 3.2 contract asserts
+      # those target-level Local configs have NO base reference
+      # (Phase 3.4 scope). Running this test AFTER pod install reads
+      # the mutated state and fails those assertions.
+      #
+      # Explicit `gem install xcodeproj` because we're now BEFORE
+      # pod install (which would otherwise pull xcodeproj as a
+      # transitive dep). The runner ships with Ruby; gem install is
+      # ~5s.
+      #
+      # NO `if:` guard — the step's precondition is "ruby+xcodeproj
+      # available", which is true on macos-15 after the explicit
+      # gem install below. Inheriting the `has_tests` guard would
+      # silently skip this check if XCTest targets are ever removed
+      # (Round 3 I-1 review fix).
+      - name: Verify pbxproj-mutation script idempotency
+        run: |
+          gem install --user-install xcodeproj
+          cd express-api && \
+          npx jest tests/scripts/ios-local-configurations.test.js
+
       - name: Install CocoaPods
         if: steps.check-tests.outputs.has_tests == 'true'
         run: cd iosApp && pod install
-
-      # Phase 3.2 pbxproj-mutation idempotency check. The xcodeproj
-      # gem is installed by CocoaPods (transitive dep of `pod` itself)
-      # so it is guaranteed available after the Install CocoaPods
-      # step. Runs the JS test that invokes the ruby script
-      # end-to-end and asserts structural identity post-run. This is
-      # the only place the live execution path of
-      # scripts/ios/add-local-configurations.rb gets exercised in CI
-      # — Linux runners running pr-checks's Test Backend job skip
-      # this test (no ruby+xcodeproj).
-      #
-      # NO `if:` guard — the step's precondition is "ruby+xcodeproj
-      # available", which is always true on macos-15 after the
-      # Install CocoaPods step. Inheriting the `has_tests` guard
-      # would silently skip this check if XCTest targets are ever
-      # removed (Round 3 I-1 review fix).
-      - name: Verify pbxproj-mutation script idempotency
-        run: |
-          cd express-api && \
-          npx jest tests/scripts/ios-local-configurations.test.js
 
       - name: Build iOS app for testing
         if: steps.check-tests.outputs.has_tests == 'true'
