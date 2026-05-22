@@ -97,7 +97,7 @@ jobs:
     # Bumped 2026-05-22 from 30 → 60. PR #714 was the first iOS-touching
     # PR after PR #708 enabled iOS E2E gating; its build-ios run
     # cancelled at exactly 30:00. Cold K/N compile alone takes 24-29
-    # min on macos-latest; with pod install + xcodebuild build-for-testing
+    # min on macos-15; with pod install + xcodebuild build-for-testing
     # on top, 30 is below the floor. 60 gives ~15 min headroom over the
     # observed worst case. Pinned by
     # tests/scripts/ios-tests-build-cache.test.js.
