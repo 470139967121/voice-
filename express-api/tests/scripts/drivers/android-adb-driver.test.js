@@ -898,3 +898,71 @@ describe('android-adb-driver — androidNavigatesToWarningScreen', () => {
     expect(okB).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidShowsWarningScreenOnRelaunch', () => {
+  // Wake 101 (second variant, manual-qa-runner.js ~line 12268):
+  //   `<Name>'s Android UI shows the warning screen again on next launch`
+  // Semantically distinct from androidNavigatesToWarningScreen
+  // (this is post-relaunch persistence) but mechanically identical:
+  // assert the warning screen is currently visible. Both methods
+  // share the same WARNING_MARKERS via isOnWarningScreen.
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('warning_title present → true (after relaunch)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(true);
+  });
+
+  test('warning_acknowledgeButton present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_acknowledgeButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(true);
+  });
+
+  test('no warning markers → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/main_roomsTab" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(false);
+  });
+
+  test('empty dump → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenOnRelaunch('Adam')).toBe(false);
+  });
+
+  test('paired with androidNavigatesToWarningScreen — same dump yields same result', async () => {
+    // Both methods route through isOnWarningScreen via the shared
+    // dumpHasAnyMarker helper. Locks the invariant that they remain
+    // synchronised — a future divergence in one without the other
+    // would be a contract violation.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    const navigates = await driver.androidNavigatesToWarningScreen('Adam');
+    const relaunch = await driver.androidShowsWarningScreenOnRelaunch('Adam');
+    expect(navigates).toBe(true);
+    expect(relaunch).toBe(true);
+  });
+});

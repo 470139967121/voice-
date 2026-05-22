@@ -308,20 +308,42 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return new RegExp(`(?<![\\w-])(?:text|content-desc)="[^"]*${escBanner}[^"]*"`).test(dump);
   };
 
-  // Room-screen presence detection. Returns true iff any of the
-  // room-screen markers (grounded to real Compose testTags) appears
-  // in the dump:
+  // Generic "does the UI dump contain ANY of these resource-id
+  // testTags?" predicate. Handles both the package-qualified form
+  // (`resource-id="com.shyden.shytalk.local:id/<tag>"`) and the
+  // bare form (`resource-id="<tag>"`). First match wins.
+  //
+  // Shared by every screen-presence assertion (room, warning, profile,
+  // etc.). Centralising the regex means CRLF/quote/anchor concerns
+  // live in one place and Phase 4 methods that follow can just pass
+  // a marker list.
+  function dumpHasAnyMarker(dump, markers) {
+    // eslint-disable-next-line sonarjs/slow-regex
+    return markers.some((m) => new RegExp(`resource-id="(?:[^"]*:id/)?${m}"`).test(dump));
+  }
+
+  // Room-screen markers (grounded to real Compose testTags):
   //   - room_seatGrid (RoomScreen.kt:718) — central body component
   //   - room_roomName (RoomToolbar.kt:60) — toolbar title
   //   - room_backButton (RoomToolbar.kt:84) — toolbar back button
-  // Any one is sufficient. Listing multiple defends against partial-
-  // render race conditions (e.g. toolbar drawn but seat grid still
-  // loading). Shared by androidIsStillInRoom (Wake 84) and
-  // androidIsNoLongerInVoiceRoom (Wake 105).
+  // Listing multiple defends against partial-render race conditions
+  // (e.g. toolbar drawn but seat grid still loading).
+  const ROOM_MARKERS = ['room_seatGrid', 'room_roomName', 'room_backButton'];
   function isInRoomScreen(dump) {
-    const markers = ['room_seatGrid', 'room_roomName', 'room_backButton'];
-    // eslint-disable-next-line sonarjs/slow-regex
-    return markers.some((m) => new RegExp(`resource-id="(?:[^"]*:id/)?${m}"`).test(dump));
+    return dumpHasAnyMarker(dump, ROOM_MARKERS);
+  }
+
+  // Warning-screen markers (WarningScreen.kt testTags):
+  //   - warning_title (line 82)
+  //   - warning_communityStandardsLink (line 112)
+  //   - warning_acknowledgeButton (line 123)
+  const WARNING_MARKERS = [
+    'warning_title',
+    'warning_communityStandardsLink',
+    'warning_acknowledgeButton',
+  ];
+  function isOnWarningScreen(dump) {
+    return dumpHasAnyMarker(dump, WARNING_MARKERS);
   }
 
   // Wake 84 — "<Name>'s Android UI is still in the room".
@@ -342,22 +364,24 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return !isInRoomScreen(dump);
   };
 
-  // Wake 101 — "<Name>'s Android UI navigates to the warning screen".
-  // Presence assertion for WarningScreen.kt's testTags:
-  //   - warning_title (WarningScreen.kt:82) — title text
-  //   - warning_communityStandardsLink (WarningScreen.kt:112)
-  //   - warning_acknowledgeButton (WarningScreen.kt:123)
-  // Any one is sufficient — first match wins.
+  // Wake 101 (first variant) — "<Name>'s Android UI navigates to the
+  // warning screen". Presence assertion via WARNING_MARKERS.
   driver.androidNavigatesToWarningScreen = async (_name) => {
     const dump = await driver.androidUiDump();
     if (!dump) return false;
-    const markers = [
-      'warning_title',
-      'warning_communityStandardsLink',
-      'warning_acknowledgeButton',
-    ];
-    // eslint-disable-next-line sonarjs/slow-regex
-    return markers.some((m) => new RegExp(`resource-id="(?:[^"]*:id/)?${m}"`).test(dump));
+    return isOnWarningScreen(dump);
+  };
+
+  // Wake 101 (second variant) — "<Name>'s Android UI shows the
+  // warning screen again on next launch". Semantically distinct
+  // from navigates-to (this is post-relaunch persistence), but
+  // mechanically identical: assert the warning screen is currently
+  // visible. Both methods share isOnWarningScreen via the marker
+  // helper so the testTag contract stays in one place.
+  driver.androidShowsWarningScreenOnRelaunch = async (_name) => {
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    return isOnWarningScreen(dump);
   };
 
   // Open named screen — launches the local-build app via MainActivity.
