@@ -308,25 +308,38 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return new RegExp(`(?<![\\w-])(?:text|content-desc)="[^"]*${escBanner}[^"]*"`).test(dump);
   };
 
-  // Wake 84 — "<Name>'s Android UI is still in the room". Returns
-  // true if any of the room-screen markers appears in the UI dump.
-  // The persona name is a logging hint (matcher convention); only
-  // the dump scan determines the answer.
-  //
-  // Markers (grounded to real Compose testTags):
+  // Room-screen presence detection. Returns true iff any of the
+  // room-screen markers (grounded to real Compose testTags) appears
+  // in the dump:
   //   - room_seatGrid (RoomScreen.kt:718) — central body component
   //   - room_roomName (RoomToolbar.kt:60) — toolbar title
   //   - room_backButton (RoomToolbar.kt:84) — toolbar back button
-  // Any one is sufficient evidence the user is on the room screen.
-  // Listing multiple defends against partial-render race conditions
-  // (e.g. toolbar drawn but seat grid still loading) — first match
-  // wins.
-  driver.androidIsStillInRoom = async (_name) => {
-    const dump = await driver.androidUiDump();
-    if (!dump) return false;
+  // Any one is sufficient. Listing multiple defends against partial-
+  // render race conditions (e.g. toolbar drawn but seat grid still
+  // loading). Shared by androidIsStillInRoom (Wake 84) and
+  // androidIsNoLongerInVoiceRoom (Wake 105).
+  function isInRoomScreen(dump) {
     const markers = ['room_seatGrid', 'room_roomName', 'room_backButton'];
     // eslint-disable-next-line sonarjs/slow-regex
     return markers.some((m) => new RegExp(`resource-id="(?:[^"]*:id/)?${m}"`).test(dump));
+  }
+
+  // Wake 84 — "<Name>'s Android UI is still in the room".
+  driver.androidIsStillInRoom = async (_name) => {
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    return isInRoomScreen(dump);
+  };
+
+  // Wake 105 — "<Name>'s Android UI is no longer in the voice room".
+  // Inverse of androidIsStillInRoom. CRITICALLY: returns false (not
+  // true) when the dump is empty — an empty dump means "can't
+  // confirm", not "confirmed gone". Otherwise a dump failure would
+  // incorrectly assert the user has left the room.
+  driver.androidIsNoLongerInVoiceRoom = async (_name) => {
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    return !isInRoomScreen(dump);
   };
 
   // Open named screen — launches the local-build app via MainActivity.
