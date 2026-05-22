@@ -246,12 +246,7 @@ async function createAndroidDriver({ serial: preferred } = {}) {
   // First match wins.
   driver.androidNavigatesBackToTab = async (_name, tab) => {
     const lowered = tab.toLowerCase();
-    const candidates = [
-      `main_${lowered}Tab`,
-      lowered,
-      `tab_${lowered}`,
-      `bottomNav_${lowered}`,
-    ];
+    const candidates = [`main_${lowered}Tab`, lowered, `tab_${lowered}`, `bottomNav_${lowered}`];
     for (const candidate of candidates) {
       if (await driver.androidTapByTag(candidate)) {
         // Brief settle so the tab content can draw before subsequent

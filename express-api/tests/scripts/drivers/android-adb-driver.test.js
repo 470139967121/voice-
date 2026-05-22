@@ -176,9 +176,7 @@ describe('android-adb-driver — androidNavigatesBackToTab', () => {
     // dump calls = 1 for the first-tried `main_settingsTab` (regex
     // miss) + 1 for the bare `settings` candidate (hit). Documents
     // intent so a future short-circuit refactor is caught.
-    const dumpCalls = execSync.mock.calls.filter((c) =>
-      c[0].includes("'uiautomator' 'dump'"),
-    );
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
     expect(dumpCalls.length).toBe(2);
   });
 
@@ -200,9 +198,7 @@ describe('android-adb-driver — androidNavigatesBackToTab', () => {
     // × 2 commands each = 8 calls per command type. Counting dump calls
     // catches a future short-circuit refactor that bails after 1 or 2
     // candidates.
-    const dumpCalls = execSync.mock.calls.filter((c) =>
-      c[0].includes("'uiautomator' 'dump'"),
-    );
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
     expect(dumpCalls.length).toBe(4);
   });
 
