@@ -229,11 +229,14 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     }
   };
 
-  // Tap a bottom-nav tab by name. The matcher (manual-qa-runner.js
-  // ~line 12035, Wake 100: "<Name>'s Android UI navigates back to the
-  // <tab> tab") passes the persona name as the first argument (logging
-  // convention) and the tab identifier as the second. Only the tab arg
-  // affects behaviour.
+  // Shared main-nav tab tapper used by both androidNavigatesBackToTab
+  // (Wake 100, "<Name>'s Android UI navigates back to the <tab> tab")
+  // and androidOpensTab (Wake 92, "<Name> [P-NN] (cohort) opens the
+  // <tab> tab on Android"). Mechanically identical — both matchers
+  // map to "tap the bottom-nav tab with the given name" — but kept
+  // as separate driver methods so future divergence (e.g. "open" may
+  // one day launch a full activity while "navigate back" stays a pure
+  // tap) doesn't need API churn.
   //
   // Candidate testTag forms tried in order:
   //   1. `main_<lowered>Tab` — the ACTUAL pattern in
@@ -244,7 +247,7 @@ async function createAndroidDriver({ serial: preferred } = {}) {
   //   2-4. Generic fallbacks for any future surface that doesn't
   //      follow the main-nav convention.
   // First match wins.
-  driver.androidNavigatesBackToTab = async (_name, tab) => {
+  async function tapMainNavTab(label, tab) {
     const lowered = tab.toLowerCase();
     const candidates = [`main_${lowered}Tab`, lowered, `tab_${lowered}`, `bottomNav_${lowered}`];
     for (const candidate of candidates) {
@@ -257,10 +260,15 @@ async function createAndroidDriver({ serial: preferred } = {}) {
       }
     }
     console.error(
-      `[android-driver] androidNavigatesBackToTab(${tab}) — no testTag matched any of ${candidates.join(', ')}`,
+      `[android-driver] ${label}(${tab}) — no testTag matched any of ${candidates.join(', ')}`,
     );
     return false;
-  };
+  }
+
+  driver.androidNavigatesBackToTab = async (_name, tab) =>
+    tapMainNavTab('androidNavigatesBackToTab', tab);
+
+  driver.androidOpensTab = async (_name, tab) => tapMainNavTab('androidOpensTab', tab);
 
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
