@@ -675,3 +675,124 @@ describe('android-adb-driver — androidIsStillInRoom', () => {
     expect(okB).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidIsNoLongerInVoiceRoom', () => {
+  // Wake 105 matcher (manual-qa-runner.js ~line 12893):
+  //   `<Name>'s Android UI is no longer in the voice room`
+  // Returns true if NONE of the room-screen markers appears in the
+  // dump. Critically: empty dump returns FALSE (not true) — can't
+  // confirm the user has left without evidence.
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('no room markers in dump → true (user has left)', async () => {
+    // Dump shows home-screen markers, no room.kt markers.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/roomList_emptyState" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsNoLongerInVoiceRoom('Adam')).toBe(true);
+  });
+
+  test('room_seatGrid present → false (still in room)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsNoLongerInVoiceRoom('Adam')).toBe(false);
+  });
+
+  test('room_roomName present → false (still in room)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_roomName" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsNoLongerInVoiceRoom('Adam')).toBe(false);
+  });
+
+  test('room_backButton present → false (still in room) — Round 1 I-1', async () => {
+    // Round 1 I-1: independently pin all three markers from the
+    // androidIsNoLongerInVoiceRoom side. Without this, a future
+    // refactor that drops room_backButton from the shared marker
+    // list would only fail androidIsStillInRoom's tests, not this
+    // method's — leaving the negative-assertion contract incomplete.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_backButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsNoLongerInVoiceRoom('Adam')).toBe(false);
+  });
+
+  test('empty dump → false (CANNOT CONFIRM — defends against false positives)', async () => {
+    // An empty dump (driver dump failure or transient state) is
+    // ambiguous — the user could be anywhere. The safe answer for
+    // 'no longer in room' is FALSE: we cannot confirm departure.
+    // This pairs with androidIsStillInRoom also returning false on
+    // empty dump — both methods err on the side of "can't confirm".
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsNoLongerInVoiceRoom('Adam')).toBe(false);
+  });
+
+  test('paired with androidIsStillInRoom — both false on empty dump (not opposites)', async () => {
+    // Both methods return FALSE when the dump is empty. This is
+    // intentional — the answer to both 'still in room' and 'no
+    // longer in room' is 'unknown' rather than asymmetric default.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(false);
+    expect(await driver.androidIsNoLongerInVoiceRoom('Adam')).toBe(false);
+  });
+
+  test('paired with androidIsStillInRoom — opposite values on populated dump', async () => {
+    // On a non-empty dump, the two methods MUST return opposite
+    // values via the shared isInRoomScreen helper.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    const stillIn = await driver.androidIsStillInRoom('Adam');
+    const noLonger = await driver.androidIsNoLongerInVoiceRoom('Adam');
+    expect(stillIn).toBe(true);
+    expect(noLonger).toBe(false);
+  });
+
+  test('persona name is ignored — same dump, different persona yields same result', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/roomList_emptyState" />',
+    });
+    const driver = await createAndroidDriver();
+    const okA = await driver.androidIsNoLongerInVoiceRoom('Adam');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/roomList_emptyState" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okB = await driver2.androidIsNoLongerInVoiceRoom('Bea');
+
+    expect(okA).toBe(true);
+    expect(okB).toBe(true);
+  });
+});
