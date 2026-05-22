@@ -46,12 +46,16 @@ class StartingScreenService {
             throw URLError(.badServerResponse)
         }
 
-        // Empty body means "no screens active" — return early. Must
-        // precede JSONSerialization.jsonObject(), which THROWS on
-        // empty data (NSCocoaError 3840) rather than returning nil
-        // for the as? cast to handle. Pinned by
-        // testFetchStartingScreens_emptyData.
-        if data.isEmpty {
+        // No-content body means "no screens active" — return early.
+        // Covers zero bytes, whitespace-only, and newline-only bodies.
+        // Must precede JSONSerialization.jsonObject(), which THROWS
+        // on any of these (NSCocoaError 3840) rather than returning
+        // nil for the as? cast to handle. Pinned by
+        // testFetchStartingScreens_emptyData,
+        // testFetchStartingScreens_whitespaceOnlyBody, and
+        // testFetchStartingScreens_newlineOnlyBody.
+        if let str = String(data: data, encoding: .utf8),
+           str.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return [:]
         }
 
