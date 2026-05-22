@@ -172,6 +172,14 @@ describe('android-adb-driver — androidNavigatesBackToTab', () => {
     // Centre of [100,500][400,700] = (250, 600).
     expect(tapCall[0]).toContain("'250'");
     expect(tapCall[0]).toContain("'600'");
+    // Round 2 M-1: explicitly assert the fallthrough mechanic — 2
+    // dump calls = 1 for the first-tried `main_settingsTab` (regex
+    // miss) + 1 for the bare `settings` candidate (hit). Documents
+    // intent so a future short-circuit refactor is caught.
+    const dumpCalls = execSync.mock.calls.filter((c) =>
+      c[0].includes("'uiautomator' 'dump'"),
+    );
+    expect(dumpCalls.length).toBe(2);
   });
 
   test('returns false when no candidate matches', async () => {
@@ -185,6 +193,17 @@ describe('android-adb-driver — androidNavigatesBackToTab', () => {
     expect(ok).toBe(false);
     const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
     expect(tapCall).toBeUndefined();
+    // Round 2 M-2: the driver must try ALL 4 candidates before
+    // giving up — main_nonexistentTab, nonexistent, tab_nonexistent,
+    // bottomNav_nonexistent. Each candidate triggers one
+    // androidUiDump (which is `uiautomator dump` + `cat`). 4 candidates
+    // × 2 commands each = 8 calls per command type. Counting dump calls
+    // catches a future short-circuit refactor that bails after 1 or 2
+    // candidates.
+    const dumpCalls = execSync.mock.calls.filter((c) =>
+      c[0].includes("'uiautomator' 'dump'"),
+    );
+    expect(dumpCalls.length).toBe(4);
   });
 
   test('ignores the first arg (persona name) — same dump + different persona yields same result', async () => {
