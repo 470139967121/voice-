@@ -202,6 +202,16 @@ describe('ios-tests.yml — xcodebuild log capture + artifact upload', () => {
   // artifacts.test.js. Ensures this file's copy of the helper
   // behaves identically under failure modes — unknown step name,
   // non-6-space indent, CRLF round-trip.
+  //
+  // Ambiguous-name throw not exercised here because none of THIS
+  // file's tests call extractStep with a name that duplicates in
+  // ios-tests.yml. Note: ios-tests.yml DOES contain a duplicate
+  // step name today (`Select Xcode 26.3` appears in both build-ios
+  // and test-ios jobs from PR #718), so any future test in THIS
+  // file that calls extractStep with that name would correctly
+  // throw "Ambiguous step name" — that path is canonically tested
+  // in afk-install-artifacts.test.js against deploy-dev.yml's
+  // duplicate "Install dependencies" step.
   describe('extractStep helper — error branches', () => {
     test('throws a clear error for unknown step names', () => {
       expect(() => extractStep(yamlText, 'Nonexistent Step Name')).toThrow(
