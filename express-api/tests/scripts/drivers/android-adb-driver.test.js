@@ -546,3 +546,103 @@ describe('android-adb-driver — androidShowsBanner', () => {
     expect(okB).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidIsStillInRoom', () => {
+  // Wake 84 matcher (manual-qa-runner.js ~line 9433):
+  //   `<Name>'s Android UI is still in the room`
+  // Returns true if any of the room-screen markers appears in the
+  // UI dump. Markers grounded to real Compose testTags:
+  //   shared/.../feature/room/RoomScreen.kt:718 (room_seatGrid)
+  //   shared/.../feature/room/components/RoomToolbar.kt:60 (room_roomName)
+  //   shared/.../feature/room/components/RoomToolbar.kt:84 (room_backButton)
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('room_seatGrid present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" bounds="[0,200][1080,1200]" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(true);
+  });
+
+  test('room_roomName present → true (toolbar marker)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_roomName" bounds="[100,50][800,150]" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(true);
+  });
+
+  test('room_backButton present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_backButton" bounds="[0,50][100,150]" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(true);
+  });
+
+  test('returns false when none of the room markers are present', async () => {
+    // User left the room — dump shows home-screen markers (roomList_emptyState
+    // from HomeScreen.kt) instead of room ones.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/roomList_emptyState" bounds="[0,200][1080,1200]" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(false);
+  });
+
+  test('returns false when UI dump is empty (driver failure)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(false);
+  });
+
+  test('substring false-positive guarded — partial-match in unrelated id does NOT match', async () => {
+    // A resource-id like 'something_room_seatGrid_other' has the marker
+    // text as a substring but doesn't have the marker as a proper
+    // resource-id name. The regex's (?:[^"]*:id/)? group requires
+    // either a real :id/ separator or starting at the attribute opener,
+    // so the marker must be the actual name segment after :id/.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="something_room_seatGrid_other" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidIsStillInRoom('Adam')).toBe(false);
+  });
+
+  test('persona name is ignored — same dump, different persona yields same result', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    const okA = await driver.androidIsStillInRoom('Adam');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okB = await driver2.androidIsStillInRoom('Bea');
+
+    expect(okA).toBe(true);
+    expect(okB).toBe(true);
+  });
+});
