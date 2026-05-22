@@ -295,14 +295,16 @@ describe('ios-tests.yml — build-ios job cold-cache survival', () => {
       );
     });
 
-    // Round 4 I-1: pin CRLF-tolerance on header equality AND on the
-    // terminator. Two siblings under the same job, CRLF endings.
-    // Without trimEnd on the terminator, the second `- name:` line
-    // (`      - name: Second\r`) would not match `      - name:` via
-    // startsWith — actually it would, since startsWith ignores the
-    // trailing `\r`. The real terminator risk for extractStep is the
-    // column-0 guard tripping on `\r` blank lines. Use a blank line
-    // between two siblings to exercise that path.
+    // Round 5 I-1: the prior fixture placed the blank line BETWEEN
+    // siblings, where premature termination at `\r` happened to land
+    // exactly on the boundary — all assertions passed even without
+    // trimEnd, so the test couldn't detect a regression. The fix is
+    // to place the blank line INSIDE the First step's body. Without
+    // trimEnd, the column-0 guard fires on the `\r` blank line and
+    // the loop breaks BEFORE capturing `if: always()` — the
+    // `toContain('if: always()')` assertion then fails. With trimEnd,
+    // the blank line trims to '' (length 0, falsy column-0 guard),
+    // the loop continues, and the full step body is captured.
     test('extractStep handles CRLF line endings without bleed-through', () => {
       const crlf = [
         'jobs:',
@@ -310,13 +312,17 @@ describe('ios-tests.yml — build-ios job cold-cache survival', () => {
         '    steps:',
         '      - name: First',
         '        run: echo a',
-        '', // blank line inside the job body
+        '', // blank CRLF line INSIDE First's body
+        '        if: always()',
         '      - name: Second',
         '        run: echo b',
         '',
       ].join('\r\n');
       const block = extractStep(crlf, 'First');
       expect(block).toContain('run: echo a');
+      // Without trimEnd, this fails — the blank `\r` line fires the
+      // column-0 guard, terminating capture before `if: always()`.
+      expect(block).toContain('if: always()');
       expect(block).not.toContain('Second');
       expect(block).not.toContain('echo b');
     });
