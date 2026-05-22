@@ -299,12 +299,24 @@ describe('android-adb-driver — androidOpensTab', () => {
     expect(ok).toBe(false);
     const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
     expect(tapCall).toBeUndefined();
+    // Round 1 I-1: same 4-candidate-exhaustion pin as the
+    // androidNavigatesBackToTab no-match test. Catches a future
+    // short-circuit refactor that bails after 1 or 2 candidates
+    // on androidOpensTab specifically (the shared helper's
+    // exhaustion is observable from both call sites).
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
+    expect(dumpCalls.length).toBe(4);
   });
 
   test('shared logic with androidNavigatesBackToTab — same dump, same tap centre', async () => {
-    // Both methods route through the same private helper, so given
-    // identical dump + tab input they should produce identical
-    // behaviour. Locks the "they share an implementation" invariant.
+    // Given identical dump XML and tab name, both methods produce
+    // identical tap coordinates. Structural delegation (both call
+    // the private `tapMainNavTab` helper) is verified by code
+    // review — the helper is a private closure inaccessible to
+    // external duplication. Round 1 I-2: prior comment overclaimed
+    // this test "locks the share-an-implementation invariant" — it
+    // doesn't (a copy-paste duplication would still pass). The
+    // structural lock is the helper being private.
     mockExec({
       "'uiautomator' 'dump'": '',
       "'cat' '/sdcard/dump.xml'": dumpWithId('main_messagesTab', '[300,1900][600,2100]'),
