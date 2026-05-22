@@ -294,7 +294,13 @@ async function createAndroidDriver({ serial: preferred } = {}) {
   // behaviour (matching any node with text="..." or content-desc="...")
   // would silently mask the bug.
   driver.androidShowsBanner = async (_name, banner) => {
-    if (!banner) return false;
+    // Round 2 M-1: also guard against whitespace-only strings. A
+    // banner of `'   '` would otherwise pass `!banner` and match
+    // any node with 3+ consecutive spaces in its text attribute
+    // — silent false positive. The runner regex requires `[^"]+`
+    // so this isn't reachable from valid Gherkin, but cheap to
+    // guard defensively.
+    if (!banner || !banner.trim()) return false;
     const dump = await driver.androidUiDump();
     if (!dump) return false;
     const escBanner = banner.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

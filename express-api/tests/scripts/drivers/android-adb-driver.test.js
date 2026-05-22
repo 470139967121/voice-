@@ -442,6 +442,51 @@ describe('android-adb-driver — androidShowsBanner', () => {
     expect(ok).toBe(true);
   });
 
+  test('attribute-suffix guard — error-text= does NOT match (sibling of hint-text=)', async () => {
+    // Round 2 M-2: pin the lookbehind for the other false-positive-
+    // prone attribute names mentioned in the comment. error-text=
+    // is realistic: many EditText/TextInputLayout components emit
+    // their validation error in this attribute.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node error-text="Network down" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Network down');
+
+    expect(ok).toBe(false);
+  });
+
+  test('attribute-suffix guard — sub-text= does NOT match (sibling of hint-text=)', async () => {
+    // Round 2 M-2: third lookbehind regression case named in the
+    // implementation comment.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node sub-text="Tap to retry" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', 'Tap to retry');
+
+    expect(ok).toBe(false);
+  });
+
+  test('whitespace-only banner returns false (M-1: defence-in-depth)', async () => {
+    // Round 2 M-1: defensive guard against scenario authoring bugs
+    // that produce a non-empty but whitespace-only banner string.
+    // The runner regex `[^"]+` prevents this from reaching the
+    // driver via valid Gherkin, but defending in depth keeps the
+    // contract clear if a future matcher relaxes its capture group.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node text="A short message" bounds="[0,100][1080,200]" />',
+    });
+    const driver = await createAndroidDriver();
+    const ok = await driver.androidShowsBanner('Adam', '   ');
+
+    expect(ok).toBe(false);
+  });
+
   test('attribute-suffix false-positive guarded — hint-text= does NOT match', async () => {
     // Round 1 review I-2: without the (?<![\w-]) negative lookbehind,
     // the regex would match `t-text="Connection lost"` inside
@@ -473,6 +518,13 @@ describe('android-adb-driver — androidShowsBanner', () => {
     const ok = await driver.androidShowsBanner('Adam', '');
 
     expect(ok).toBe(false);
+    // Round 2 P-1: short-circuit verification — empty banner returns
+    // BEFORE the UI dump is fetched. Pinning this means a future
+    // refactor that accidentally moves the guard after the dump
+    // (paying the adb round-trip cost on an empty-banner scenario
+    // authoring bug) is caught.
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
+    expect(dumpCalls.length).toBe(0);
   });
 
   test('persona name is ignored — same banner + different persona yields same result', async () => {
