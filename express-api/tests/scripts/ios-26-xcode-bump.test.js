@@ -88,6 +88,43 @@ describe('ios-tests.yml — iOS 26.2 + Xcode 26.3 bump', () => {
       expect(matches).not.toBeNull();
       expect(matches.length).toBeGreaterThanOrEqual(2);
     });
+
+    // Round 1 I-2: the build-ios body test above used indexOf which
+    // only inspects the FIRST occurrence. The test-ios occurrence's
+    // body content is unverified by that test. Find the SECOND
+    // occurrence explicitly and assert its body too — without this,
+    // a refactor that removes `sudo xcode-select ...` from the
+    // test-ios step body (but leaves the step header) silently
+    // breaks iOS 26.2 sim creation.
+    test('test-ios Select Xcode step body has sudo xcode-select with Xcode 26.3 path', () => {
+      const stepHeader = '      - name: Select Xcode 26.3';
+      const firstIdx = yamlText.indexOf(stepHeader);
+      expect(firstIdx).toBeGreaterThanOrEqual(0);
+      const secondIdx = yamlText.indexOf(stepHeader, firstIdx + 1);
+      expect(secondIdx).toBeGreaterThan(firstIdx);
+      const rest = yamlText.slice(secondIdx);
+      const nextStepIdx = rest.indexOf('\n      - ', stepHeader.length);
+      const stepBody = nextStepIdx > 0 ? rest.slice(0, nextStepIdx) : rest;
+      expect(stepBody).toContain('sudo xcode-select');
+      expect(stepBody).toContain(XCODE_PATH);
+    });
+
+    // Round 1 I-1: ordering of the test-ios Xcode-select step
+    // relative to `Download iOS test bundle` is unprotected by the
+    // build-ios ordering test (which only knows about `Build shared
+    // KMP framework`). A refactor that swaps these two steps in
+    // test-ios would silently break iOS 26.2 sim resolution because
+    // simctl wouldn't see the 26.x runtime catalog when called by
+    // subsequent steps.
+    test('Select Xcode step in test-ios runs BEFORE Download iOS test bundle', () => {
+      const stepHeader = '      - name: Select Xcode 26.3';
+      const firstIdx = yamlText.indexOf(stepHeader);
+      const secondIdx = yamlText.indexOf(stepHeader, firstIdx + 1);
+      const downloadIdx = yamlText.indexOf('      - name: Download iOS test bundle');
+      expect(secondIdx).toBeGreaterThan(0);
+      expect(downloadIdx).toBeGreaterThan(0);
+      expect(secondIdx).toBeLessThan(downloadIdx);
+    });
   });
 });
 
