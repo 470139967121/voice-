@@ -150,6 +150,21 @@ jobs:
         if: steps.check-tests.outputs.has_tests == 'true'
         run: cd iosApp && pod install
 
+      # Phase 3.2 pbxproj-mutation idempotency check. The xcodeproj
+      # gem is installed by CocoaPods (transitive dep of `pod` itself)
+      # so it is guaranteed available after the Install CocoaPods
+      # step. Runs the JS test that invokes the ruby script
+      # end-to-end and asserts structural identity post-run. This is
+      # the only place the live execution path of
+      # scripts/ios/add-local-configurations.rb gets exercised in CI
+      # — Linux runners running pr-checks's Test Backend job skip
+      # this test (no ruby+xcodeproj).
+      - name: Verify pbxproj-mutation script idempotency
+        if: steps.check-tests.outputs.has_tests == 'true'
+        run: |
+          cd express-api && \
+          npx jest tests/scripts/ios-local-configurations.test.js
+
       - name: Build iOS app for testing
         if: steps.check-tests.outputs.has_tests == 'true'
         run: |

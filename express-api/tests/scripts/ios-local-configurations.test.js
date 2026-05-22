@@ -29,6 +29,7 @@ const { execFileSync } = require('child_process');
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const PBXPROJ = path.join(REPO_ROOT, 'iosApp/iosApp.xcodeproj/project.pbxproj');
 const ADD_SCRIPT = path.join(REPO_ROOT, 'scripts/ios/add-local-configurations.rb');
+const IOS_TESTS_YML = path.join(REPO_ROOT, '.github/workflows/ios-tests.yml');
 
 /**
  * Count exact occurrences of a literal line match in the pbxproj.
@@ -139,20 +140,25 @@ function extractConfigurationList(pbxproj, uuid) {
     throw new Error('XCConfigurationList section markers not found in pbxproj.');
   }
   const section = pbxproj.slice(sectionStart, sectionEnd);
-  const blockStart = section.indexOf(`\t\t${uuid} `);
-  if (blockStart < 0) {
+  // Round 2 M-1: line-anchor with leading `\n` for defense-in-depth
+  // consistency with extractGroupBlock. Safe today (XCConfigurationList
+  // UUIDs are referenced as `buildConfigurationList = <UUID>` which
+  // doesn't substring-match `\t\t<UUID>`) but the anchor costs nothing.
+  const marker = `\n\t\t${uuid} `;
+  const markerIdx = section.indexOf(marker);
+  if (markerIdx < 0) {
     throw new Error(`XCConfigurationList ${uuid} not found.`);
   }
-  // Ensure uniqueness — second occurrence within section is a bug.
-  const secondStart = section.indexOf(`\t\t${uuid} `, blockStart + 1);
-  if (secondStart >= 0) {
+  const blockStart = markerIdx + 1;
+  const secondIdx = section.indexOf(marker, markerIdx + 1);
+  if (secondIdx >= 0) {
     throw new Error(`XCConfigurationList ${uuid} appears more than once.`);
   }
-  const blockEnd = section.indexOf('\t\t};', blockStart);
+  const blockEnd = section.indexOf('\n\t\t};', blockStart);
   if (blockEnd < 0) {
     throw new Error(`XCConfigurationList ${uuid} block has no closing };`);
   }
-  return section.slice(blockStart, blockEnd + '\t\t};'.length);
+  return section.slice(blockStart, blockEnd + '\n\t\t};'.length);
 }
 
 describe('iosApp.xcodeproj — Phase 3.2 Local build configurations', () => {
@@ -344,23 +350,26 @@ describe('iosApp.xcodeproj — Phase 3.2 Local build configurations', () => {
       expect(scriptText).toContain('Local.xcconfig');
     });
 
-    // Round 1 Gap 6 — REAL idempotency test. The header-comment scan
-    // above only checks documentation. This actually invokes the
-    // script against the working-tree pbxproj (which already contains
-    // the Local configs after the script ran once) and asserts:
-    //   (1) the script exits 0
-    //   (2) the pbxproj is byte-identical before and after
-    //   (3) stdout contains the expected 5 "(no-op)" messages
-    // Untested branches lines 67-71 / 79-82 / 101-105 of the script
-    // are now exercised end-to-end on every test run.
+    // Round 1 Gap 6 / Round 2 I-1 — STRUCTURAL idempotency test.
+    // Earlier byte-equality was too strict: Phase 3.4 (CocoaPods)
+    // will rewrite the pbxproj through Xcode's plist serialiser, and
+    // a subsequent xcodeproj-gem save uses a different formatter —
+    // making byte-equality a false-positive failure across the 3.4
+    // boundary. Structural identity (counts of the configurations,
+    // file refs, and base references) is the robust contract.
     //
-    // Safe to mutate the working-tree pbxproj because the contract
-    // is "no change" — if the script ever stops being idempotent the
-    // pbxproj diff itself becomes the failure signal.
-    test('script is byte-idempotent — re-running on a populated pbxproj produces zero diff', () => {
-      // Skip if ruby/xcodeproj-gem not installed (some CI shards run
-      // JS tests on slimmer images). The macOS-15 runners that run
-      // the iOS jobs have it; Linux runners may not.
+    // The test:
+    //   (1) invokes the script via execFileSync
+    //   (2) asserts exit 0
+    //   (3) asserts stdout contains the 5 "(no-op)" lines
+    //   (4) re-reads pbxproj and asserts structural invariants
+    //       are unchanged from before (Debug-Local count, Release-
+    //       Local count, Local.xcconfig file-ref UUID stable)
+    //
+    // Skips gracefully if ruby+xcodeproj-gem unavailable (Linux CI).
+    // On macOS CI this runs and exercises the script's no-op paths
+    // (script lines 67-71, 79-82, 101-105) end-to-end.
+    test('script is structurally idempotent — re-run preserves all configurations and file refs', () => {
       try {
         // eslint-disable-next-line sonarjs/no-os-command-from-path
         execFileSync('ruby', ['-rxcodeproj', '-e', 'true'], { stdio: 'pipe' });
@@ -369,18 +378,19 @@ describe('iosApp.xcodeproj — Phase 3.2 Local build configurations', () => {
         return;
       }
 
-      const before = fs.readFileSync(PBXPROJ);
+      const beforeStr = fs.readFileSync(PBXPROJ, 'utf8');
+      const beforeDebugCount = countMatches(beforeStr, /\n\t{3}name = "Debug-Local";/g);
+      const beforeReleaseCount = countMatches(beforeStr, /\n\t{3}name = "Release-Local";/g);
+      const beforeBaseRefCount = countMatches(beforeStr, / \/\* Local\.xcconfig \*\//g);
+      const beforeXcconfigUuid = findFileReferenceUuid(beforeStr, 'Local.xcconfig');
+
       // eslint-disable-next-line sonarjs/no-os-command-from-path
       const stdout = execFileSync('ruby', [ADD_SCRIPT], {
         cwd: REPO_ROOT,
         encoding: 'utf8',
       });
-      const after = fs.readFileSync(PBXPROJ);
 
-      // (2) byte-identical
-      expect(after.equals(before)).toBe(true);
-
-      // (3) the 5 no-op lines
+      // (3) the 5 no-op stdout messages
       expect(stdout).toContain('PBXFileReference already present: Local.xcconfig (no-op)');
       expect(stdout).toContain(
         'Project-level XCBuildConfiguration already present: Debug-Local (no-op)',
@@ -394,6 +404,55 @@ describe('iosApp.xcodeproj — Phase 3.2 Local build configurations', () => {
       expect(stdout).toContain(
         'iosApp-target XCBuildConfiguration already present: Release-Local (no-op)',
       );
+
+      // (4) structural invariants unchanged
+      const afterStr = fs.readFileSync(PBXPROJ, 'utf8');
+      expect(countMatches(afterStr, /\n\t{3}name = "Debug-Local";/g)).toBe(beforeDebugCount);
+      expect(countMatches(afterStr, /\n\t{3}name = "Release-Local";/g)).toBe(beforeReleaseCount);
+      expect(countMatches(afterStr, / \/\* Local\.xcconfig \*\//g)).toBe(beforeBaseRefCount);
+      expect(findFileReferenceUuid(afterStr, 'Local.xcconfig')).toBe(beforeXcconfigUuid);
+    });
+  });
+
+  // Round 2 I-2 — pin the CI integration. The idempotency execution
+  // test above skips on Linux runners (no ruby+xcodeproj), so without
+  // a macOS CI step actually running it we get zero coverage of the
+  // live script path. ios-tests.yml's build-ios job (macos-15, has
+  // ruby+xcodeproj via CocoaPods) is the right place. This test
+  // pins that wiring so a future workflow edit that drops the step
+  // (or moves it before Install CocoaPods, breaking the xcodeproj-
+  // gem availability) fails loud.
+  describe('CI integration in ios-tests.yml (Round 2 I-2)', () => {
+    let yamlText;
+
+    beforeAll(() => {
+      yamlText = fs.readFileSync(IOS_TESTS_YML, 'utf8');
+    });
+
+    test('build-ios job has a "Verify pbxproj-mutation script idempotency" step', () => {
+      expect(yamlText).toContain('      - name: Verify pbxproj-mutation script idempotency');
+    });
+
+    test('idempotency step runs the specific Jest file', () => {
+      // The step must invoke jest scoped to this test file (not the
+      // full suite), so build-ios doesn't pay the cost of every
+      // unrelated express-api test on every PR.
+      expect(yamlText).toMatch(/npx jest tests\/scripts\/ios-local-configurations\.test\.js/);
+    });
+
+    test('idempotency step runs AFTER Install CocoaPods (xcodeproj gem availability)', () => {
+      // The xcodeproj gem is a transitive dep of CocoaPods. Running
+      // the script before `pod install` would fail with "cannot load
+      // such file -- xcodeproj" on a fresh macos-15 runner. Anchor
+      // on the full 6-space step header (not substring) so a comment
+      // can't satisfy the assertion.
+      const cocoapodsIdx = yamlText.indexOf('      - name: Install CocoaPods');
+      const idempotencyIdx = yamlText.indexOf(
+        '      - name: Verify pbxproj-mutation script idempotency',
+      );
+      expect(cocoapodsIdx).toBeGreaterThanOrEqual(0);
+      expect(idempotencyIdx).toBeGreaterThanOrEqual(0);
+      expect(cocoapodsIdx).toBeLessThan(idempotencyIdx);
     });
   });
 });
