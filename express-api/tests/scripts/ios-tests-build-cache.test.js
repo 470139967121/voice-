@@ -83,8 +83,12 @@ function extractStep(yamlText, stepName) {
   const startIdx = matches[0];
   let endIdx = startIdx + 1;
   while (endIdx < lines.length) {
-    if (lines[endIdx].startsWith('      - name:')) break;
-    if (lines[endIdx].length > 0 && !lines[endIdx].startsWith(' ')) break;
+    // Round 4 I-1: trimEnd() makes the terminator CRLF-safe. A blank
+    // CRLF line is `\r` — length 1, doesn't start with a space — and
+    // would otherwise falsely fire the "top-level key" guard below.
+    const trimmed = lines[endIdx].trimEnd();
+    if (trimmed.startsWith('      - name:')) break;
+    if (trimmed.length > 0 && !trimmed.startsWith(' ')) break;
     endIdx++;
   }
   return lines.slice(startIdx, endIdx).join('\n');
@@ -151,16 +155,21 @@ function extractJob(yamlText, jobName) {
   const startIdx = matches[0];
   let endIdx = startIdx + 1;
   while (endIdx < lines.length) {
+    // Round 4 I-1: trimEnd() makes both checks CRLF-safe. The regex
+    // anchor `:$` does NOT match before a literal `\r` (only before
+    // `\n` or end-of-string), and a blank CRLF line is `\r` (length 1)
+    // which would falsely fire the column-0 guard. trimEnd handles
+    // both. Same pattern as extractStep above.
+    const trimmed = lines[endIdx].trimEnd();
     // Terminator: exactly 2 leading spaces, then a letter/underscore,
-    // then word chars, then a colon, then end-of-line. This matches
-    // sibling job headers (`  test-ios:`, `  ios-summary:`) but NOT
-    // job-body keys at 4-space indent (`    name:`, `    outputs:`),
-    // because 4-space lines have a space at position 2 which fails
-    // the [a-zA-Z_] character class. Verified by the
-    // "captures the full build-ios job block including outputs:"
-    // test in this file.
-    if (/^ {2}[a-zA-Z_][\w-]*:$/.test(lines[endIdx])) break;
-    if (lines[endIdx].length > 0 && !lines[endIdx].startsWith(' ')) break;
+    // then word chars, then a colon, then end-of-line. Matches sibling
+    // job headers (`  test-ios:`, `  ios-summary:`) but NOT job-body
+    // keys at 4-space indent (`    name:`, `    outputs:`), because
+    // 4-space lines have a space at position 2 which fails the
+    // [a-zA-Z_] character class. Verified by the "captures the full
+    // build-ios job block including outputs:" test in this file.
+    if (/^ {2}[a-zA-Z_][\w-]*:$/.test(trimmed)) break;
+    if (trimmed.length > 0 && !trimmed.startsWith(' ')) break;
     endIdx++;
   }
   return lines.slice(startIdx, endIdx).join('\n');
@@ -285,6 +294,32 @@ describe('ios-tests.yml — build-ios job cold-cache survival', () => {
         /Could not find step "Some Step"/,
       );
     });
+
+    // Round 4 I-1: pin CRLF-tolerance on header equality AND on the
+    // terminator. Two siblings under the same job, CRLF endings.
+    // Without trimEnd on the terminator, the second `- name:` line
+    // (`      - name: Second\r`) would not match `      - name:` via
+    // startsWith — actually it would, since startsWith ignores the
+    // trailing `\r`. The real terminator risk for extractStep is the
+    // column-0 guard tripping on `\r` blank lines. Use a blank line
+    // between two siblings to exercise that path.
+    test('extractStep handles CRLF line endings without bleed-through', () => {
+      const crlf = [
+        'jobs:',
+        '  build:',
+        '    steps:',
+        '      - name: First',
+        '        run: echo a',
+        '', // blank line inside the job body
+        '      - name: Second',
+        '        run: echo b',
+        '',
+      ].join('\r\n');
+      const block = extractStep(crlf, 'First');
+      expect(block).toContain('run: echo a');
+      expect(block).not.toContain('Second');
+      expect(block).not.toContain('echo b');
+    });
   });
 
   // Round 3 I-2 rebuttal: the reviewer claimed extractJob would
@@ -340,6 +375,28 @@ describe('ios-tests.yml — build-ios job cold-cache survival', () => {
       expect(() => extractJob(duplicateYaml, 'build')).toThrow(
         /Ambiguous job name "build": found at lines/,
       );
+    });
+
+    // Round 4 I-1: pin CRLF-tolerance on the terminator path. Without
+    // trimEnd on the regex test (line 162) the sibling `  other:\r`
+    // header would not match `^ {2}[a-zA-Z_][\w-]*:$` (the `$` anchor
+    // doesn't match before `\r`), so extractJob would return from
+    // `  build:` to end-of-file and the `not.toContain('  other:')`
+    // assertion would silently fail to catch bleed-through.
+    test('extractJob terminates correctly with CRLF line endings', () => {
+      const crlfYaml = [
+        'name: Foo',
+        'jobs:',
+        '  build:',
+        '    runs-on: ubuntu-latest',
+        '  other:',
+        '    runs-on: ubuntu-latest',
+        '',
+      ].join('\r\n');
+      const block = extractJob(crlfYaml, 'build');
+      expect(block).toContain('  build:');
+      expect(block).toContain('runs-on: ubuntu-latest');
+      expect(block).not.toContain('  other:');
     });
   });
 });
