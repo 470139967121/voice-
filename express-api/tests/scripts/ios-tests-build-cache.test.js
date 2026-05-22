@@ -63,7 +63,8 @@ function extractStep(yamlText, stepName) {
   const stepHeader = `      - name: ${stepName}`;
   const matches = [];
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i] === stepHeader) matches.push(i);
+    // Round 3 M-1: trimEnd() for CRLF safety, see extractJob.
+    if (lines[i].trimEnd() === stepHeader) matches.push(i);
   }
   if (matches.length === 0) {
     throw new Error(
@@ -96,7 +97,9 @@ function extractStep(yamlText, stepName) {
  *
  * Contract — failure modes:
  *   - No `jobs:` section in the file → throws (defends against
- *     accidental call against a non-workflow YAML)
+ *     accidental calls against YAML that lacks a top-level `jobs:`
+ *     section — covers both non-workflow YAMLs and partial workflow
+ *     stubs missing the jobs declaration)
  *   - Zero matches → throws "Could not find job …"
  *   - More than one match → throws "Ambiguous job name …" — symmetric
  *     with extractStep, so the helpers behave the same way under
@@ -117,7 +120,10 @@ function extractStep(yamlText, stepName) {
  */
 function extractJob(yamlText, jobName) {
   const lines = yamlText.split('\n');
-  const jobsSectionIdx = lines.findIndex((l) => l === 'jobs:');
+  // Round 3 M-1: trimEnd() handles CRLF line endings — if a Windows
+  // contributor with core.autocrlf=true commits the file, `jobs:\r`
+  // would never equal `jobs:`. trimEnd is safe on LF (no-op).
+  const jobsSectionIdx = lines.findIndex((l) => l.trimEnd() === 'jobs:');
   if (jobsSectionIdx < 0) {
     throw new Error(
       `Could not find "jobs:" section in workflow file. ` +
@@ -127,7 +133,7 @@ function extractJob(yamlText, jobName) {
   const jobHeader = `  ${jobName}:`;
   const matches = [];
   for (let i = jobsSectionIdx + 1; i < lines.length; i++) {
-    if (lines[i] === jobHeader) matches.push(i);
+    if (lines[i].trimEnd() === jobHeader) matches.push(i);
   }
   if (matches.length === 0) {
     throw new Error(
@@ -139,12 +145,20 @@ function extractJob(yamlText, jobName) {
     throw new Error(
       `Ambiguous job name "${jobName}": found at lines ${matches
         .map((i) => i + 1)
-        .join(', ')}. Job names must be unique within a workflow.`,
+        .join(', ')}. Rename one occurrence — job names must be unique within a workflow.`,
     );
   }
   const startIdx = matches[0];
   let endIdx = startIdx + 1;
   while (endIdx < lines.length) {
+    // Terminator: exactly 2 leading spaces, then a letter/underscore,
+    // then word chars, then a colon, then end-of-line. This matches
+    // sibling job headers (`  test-ios:`, `  ios-summary:`) but NOT
+    // job-body keys at 4-space indent (`    name:`, `    outputs:`),
+    // because 4-space lines have a space at position 2 which fails
+    // the [a-zA-Z_] character class. Verified by the
+    // "captures the full build-ios job block including outputs:"
+    // test in this file.
     if (/^ {2}[a-zA-Z_][\w-]*:$/.test(lines[endIdx])) break;
     if (lines[endIdx].length > 0 && !lines[endIdx].startsWith(' ')) break;
     endIdx++;
@@ -212,17 +226,24 @@ describe('ios-tests.yml — build-ios job cold-cache survival', () => {
     expect(restoreKeysIdx).toBeGreaterThanOrEqual(0);
     expect(lines[restoreKeysIdx + 1]).toContain('konan-${{ runner.os }}-');
 
-    // Round 2 I-2 fix: defence-in-depth — assert EVERY line in the
-    // step that mentions `konan-` carries the `${{ runner.os }}`
+    // Round 2 I-2 + Round 3 I-1: defence-in-depth — assert EVERY line
+    // in the step that mentions `konan-` carries the `${{ runner.os }}`
     // scope. Guards a future PR that adds a second restore-key entry
     // with a bare `konan-` prefix (which the prior single-line check
     // would silently miss). The `restore-keys:` literal itself is
     // excluded — it's the keyword, not a cache key value.
-    lines.forEach((line) => {
-      if (line.includes('konan-') && !line.includes('restore-keys:')) {
-        expect(line).toContain('${{ runner.os }}');
-      }
-    });
+    //
+    // Filter-into-violations pattern (not forEach + nested expect):
+    // when a forEach-with-expect fails, Jest reports only the offending
+    // value with no line context. By collecting violations into an
+    // array and asserting empty, the failure message shows the full
+    // list of offending lines, which is actionable without rerunning
+    // the test in a debugger.
+    const violations = lines.filter(
+      (l) =>
+        l.includes('konan-') && !l.includes('restore-keys:') && !l.includes('${{ runner.os }}'),
+    );
+    expect(violations).toEqual([]);
   });
 
   // I-1 fix: anchor `indexOf` on the FULL 6-space prefix step header
@@ -264,6 +285,23 @@ describe('ios-tests.yml — build-ios job cold-cache survival', () => {
         /Could not find step "Some Step"/,
       );
     });
+  });
+
+  // Round 3 I-2 rebuttal: the reviewer claimed extractJob would
+  // prematurely terminate at the `outputs:` declaration in the
+  // build-ios job. That's incorrect: `outputs:` inside a job body is
+  // 4-space-indented (siblings of `name:`, `runs-on:`, `steps:`),
+  // not 2-space. The terminator regex requires EXACTLY 2 leading
+  // spaces followed by a letter — 4-space lines have a space at
+  // column 2, which fails the [a-zA-Z_] class. This test pins that
+  // invariant so a future regex "simplification" that broadens the
+  // match (e.g. `^ {2,}[a-zA-Z_]`) would be caught.
+  test('extractJob captures the full build-ios block including its outputs declaration', () => {
+    expect(buildIosJob).toContain('    outputs:');
+    expect(buildIosJob).toContain('has_tests: ${{ steps.check-tests.outputs.has_tests }}');
+    // And it does NOT bleed into the next sibling job.
+    expect(buildIosJob).not.toContain('  test-ios:');
+    expect(buildIosJob).not.toContain('name: "iOS E2E');
   });
 
   // Round 2 I-1 fix: parity with extractStep — without these tests, a
