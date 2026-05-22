@@ -94,7 +94,14 @@ jobs:
     needs: [resolve-inputs]
     if: always() && needs.resolve-inputs.result == 'success' && needs.resolve-inputs.outputs.run_ios == 'true'
     runs-on: macos-15
-    timeout-minutes: 30
+    # Bumped 2026-05-22 from 30 → 60. PR #714 was the first iOS-touching
+    # PR after PR #708 enabled iOS E2E gating; its build-ios run
+    # cancelled at exactly 30:00. Cold K/N compile alone takes 24-29
+    # min on macos-15; with pod install + xcodebuild build-for-testing
+    # on top, 30 is below the floor. 60 gives ~15 min headroom over the
+    # observed worst case. Pinned by
+    # tests/scripts/ios-tests-build-cache.test.js.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -106,6 +113,21 @@ jobs:
         with:
           dev-base64: ${{ secrets.GOOGLE_SERVICES_DEV_BASE64 }}
           include-local: 'true'
+
+      # Mirror of deploy-dev.yml's `~/.konan` cache step (added by
+      # PR #690). Without this, every iOS E2E run on a fresh macos-15
+      # VM re-downloads the Kotlin/Native toolchain (~hundreds of MB)
+      # — a few minutes that compound on top of the K/N compile.
+      # Cache key uses the gradle versions-catalog hash so a Kotlin
+      # version bump correctly invalidates; restore-keys provide
+      # partial warmth on bumps.
+      - name: Cache Kotlin/Native (~/.konan)
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
 
       - name: Check for iOS test targets
         id: check-tests
