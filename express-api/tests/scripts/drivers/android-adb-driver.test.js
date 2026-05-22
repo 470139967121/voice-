@@ -478,8 +478,7 @@ describe('android-adb-driver — androidShowsBanner', () => {
     // contract clear if a future matcher relaxes its capture group.
     mockExec({
       "'uiautomator' 'dump'": '',
-      "'cat' '/sdcard/dump.xml'":
-        '<node text="A short message" bounds="[0,100][1080,200]" />',
+      "'cat' '/sdcard/dump.xml'": '<node text="A short message" bounds="[0,100][1080,200]" />',
     });
     const driver = await createAndroidDriver();
     const ok = await driver.androidShowsBanner('Adam', '   ');
