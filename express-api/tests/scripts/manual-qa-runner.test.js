@@ -20004,6 +20004,35 @@ describe('Wake 100 — `<Name>\'s <Plat> UI navigates back to the "<X>" tab`', (
     expect(r.ok).toBe(true);
     expect(spy).toHaveBeenCalledWith('Alice', 'rooms');
   });
+
+  // Added 2026-05-22 with PR #723. The Android dispatch path
+  // (manual-qa-runner.js line ~12043) was untested — only iOS Sim
+  // and Web variants had coverage. Phase 4 PR #1 implemented the
+  // androidNavigatesBackToTab driver method, so the dispatch needs
+  // its own unit test to guard against the matcher routing breaking.
+  test('Android variant', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidNavigatesBackToTab: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Adam\'s Android UI navigates back to the "rooms" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Adam', 'rooms');
+  });
+
+  test('Android driver returns false → step fails with descriptive error', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidNavigatesBackToTab: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Adam\'s Android UI navigates back to the "rooms" tab' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('Adam');
+    expect(r.error).toContain('Android');
+    expect(r.error).toContain('rooms');
+  });
 });
 
 describe("Wake 100 — `<Name>'s <Plat> UI shows the <noun> in the thread[ with <suffix>]`", () => {

@@ -10,13 +10,24 @@
  * Pattern (for future Phase 4 PRs to mirror):
  *   - jest.mock('child_process') with mockImplementation returning
  *     fixtures for `adb devices` + `cat /sdcard/dump.xml`
+ *   - jest.useFakeTimers() so the driver's settle setTimeout(s) don't
+ *     pay real wall-clock seconds (Round 1 review I-2 fix)
  *   - Build the driver via createAndroidDriver({ serial: 'emulator-5554' })
- *   - Call the new driver method
+ *   - Call the new driver method (with jest.advanceTimersByTimeAsync
+ *     if it awaits a settle delay)
  *   - Assert returned value + the exact `adb ... input tap X Y`
  *     coordinates were issued (centre of the dumped element)
  *
  * Tests run on Linux CI (no real device needed) — execSync is mocked
  * end-to-end, no spawn ever reaches the system shell.
+ *
+ * Mock fixture grounding: resource-ids in the mock XML use the SAME
+ * Compose testTags that exist in
+ *   shared/src/commonMain/kotlin/com/shyden/shytalk/feature/main/MainScreen.kt
+ * (main_roomsTab / main_messagesTab / main_profileTab). A self-
+ * referential mock (where the test fabricates an id that happens to
+ * match whatever candidate the driver tries) proves nothing about
+ * real-device behaviour. Round 1 review C-2 fix.
  */
 
 jest.mock('child_process');
@@ -30,9 +41,9 @@ const { createAndroidDriver } = require(
 );
 
 /**
- * Build a mock execSync responder driven by a simple cmd → output
- * map. The default responder returns '' (empty stdout) which is
- * the typical "command succeeded silently" adb behaviour.
+ * Build a mock execSync responder driven by a cmd-substring → output
+ * map. Each `pattern` is matched against the full shell-quoted
+ * command string `adb()` produces ('adb' '-s' '<serial>' 'shell' '...').
  */
 function mockExec(responses = {}) {
   execSync.mockImplementation((cmd) => {
@@ -47,44 +58,60 @@ function mockExec(responses = {}) {
   });
 }
 
+/**
+ * Helper: build a dump-XML response with one node carrying the
+ * given resource-id + bounds. Defaults to the package-qualified
+ * form Android Compose UIs produce.
+ */
+function dumpWithId(resourceId, bounds = '[0,1900][270,2100]') {
+  return `<node resource-id="com.shyden.shytalk.local:id/${resourceId}" bounds="${bounds}" />`;
+}
+
 describe('android-adb-driver — androidNavigatesBackToTab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Round 1 review I-2: fake timers so the driver's 500ms settle
+    // doesn't pay real wall-clock time. With 4 success-path tests
+    // each waiting 500ms, real timers would add 2 seconds per run —
+    // compounds badly across the ~29 remaining Phase 4 PRs.
+    jest.useFakeTimers();
   });
 
-  test('taps the bottom-nav tab when the bare-tab-name tag matches', async () => {
-    // Wake 100 matcher: `Adam's Android UI navigates back to the "feed" tab`.
-    // Conventional Compose testTag in this codebase is the bare tab name
-    // (e.g. `feed`, `discovery`, `inbox`, `me`). Bounds picked so the
-    // expected centre is (135, 2000).
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  // Round 1 review C-1 + C-2: tests grounded to the REAL Compose
+  // testTags in MainScreen.kt — main_roomsTab, main_messagesTab,
+  // main_profileTab. These are the only three real tabs the matcher
+  // would ever be called with via Wake 100.
+  test('rooms tab — matches real main_roomsTab testTag', async () => {
     mockExec({
       "'uiautomator' 'dump'": '',
-      "'cat' '/sdcard/dump.xml'":
-        '<node resource-id="com.shyden.shytalk.local:id/feed" bounds="[0,1900][270,2100]" />',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_roomsTab', '[0,1900][270,2100]'),
     });
-
     const driver = await createAndroidDriver();
-    const ok = await driver.androidNavigatesBackToTab('Adam', 'feed');
+    const promise = driver.androidNavigatesBackToTab('Adam', 'rooms');
+    await jest.advanceTimersByTimeAsync(500);
+    const ok = await promise;
 
     expect(ok).toBe(true);
     const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
     expect(tapCall).toBeDefined();
+    // Centre of [0,1900][270,2100] = (135, 2000).
     expect(tapCall[0]).toContain("'135'");
     expect(tapCall[0]).toContain("'2000'");
   });
 
-  test('falls through to the `tab_<name>` candidate when bare-name has no match', async () => {
-    // First candidate (bare `discovery`) has no resource-id match; second
-    // candidate `tab_discovery` matches. Driver should iterate, find the
-    // second, tap it, return true.
+  test('messages tab — matches real main_messagesTab testTag', async () => {
     mockExec({
       "'uiautomator' 'dump'": '',
-      "'cat' '/sdcard/dump.xml'":
-        '<node resource-id="com.shyden.shytalk.local:id/tab_discovery" bounds="[300,1900][600,2100]" />',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_messagesTab', '[300,1900][600,2100]'),
     });
-
     const driver = await createAndroidDriver();
-    const ok = await driver.androidNavigatesBackToTab('Adam', 'discovery');
+    const promise = driver.androidNavigatesBackToTab('Adam', 'messages');
+    await jest.advanceTimersByTimeAsync(500);
+    const ok = await promise;
 
     expect(ok).toBe(true);
     const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
@@ -93,26 +120,65 @@ describe('android-adb-driver — androidNavigatesBackToTab', () => {
     expect(tapCall[0]).toContain("'2000'");
   });
 
-  test('case-insensitive match — tab name in test passed as "Feed" still finds id/feed', async () => {
+  test('profile tab — matches real main_profileTab testTag', async () => {
     mockExec({
       "'uiautomator' 'dump'": '',
-      "'cat' '/sdcard/dump.xml'":
-        '<node resource-id="com.shyden.shytalk.local:id/feed" bounds="[0,1900][270,2100]" />',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_profileTab', '[600,1900][900,2100]'),
     });
-
     const driver = await createAndroidDriver();
-    const ok = await driver.androidNavigatesBackToTab('Adam', 'Feed');
+    const promise = driver.androidNavigatesBackToTab('Adam', 'profile');
+    await jest.advanceTimersByTimeAsync(500);
+    const ok = await promise;
 
     expect(ok).toBe(true);
+    const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
+    expect(tapCall).toBeDefined();
+    expect(tapCall[0]).toContain("'750'");
+    expect(tapCall[0]).toContain("'2000'");
+  });
+
+  test('case-insensitive — "Rooms" still resolves main_roomsTab', async () => {
+    // The matcher's regex captures the literal tab name from the
+    // feature file, which is conventionally lowercase but should
+    // tolerate accidental capitalisation in scenarios.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_roomsTab'),
+    });
+    const driver = await createAndroidDriver();
+    const promise = driver.androidNavigatesBackToTab('Adam', 'Rooms');
+    await jest.advanceTimersByTimeAsync(500);
+    const ok = await promise;
+
+    expect(ok).toBe(true);
+  });
+
+  test('falls through to the bare-name candidate when main_<name>Tab has no match', async () => {
+    // Future surfaces (non-main-nav, e.g. settings sub-tabs) may
+    // use bare lowercased testTags. The driver tries main_<name>Tab
+    // first; on no-match, tries bare name, etc.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('settings', '[100,500][400,700]'),
+    });
+    const driver = await createAndroidDriver();
+    const promise = driver.androidNavigatesBackToTab('Adam', 'settings');
+    await jest.advanceTimersByTimeAsync(500);
+    const ok = await promise;
+
+    expect(ok).toBe(true);
+    const tapCall = execSync.mock.calls.find((c) => c[0].includes("'input' 'tap'"));
+    expect(tapCall).toBeDefined();
+    // Centre of [100,500][400,700] = (250, 600).
+    expect(tapCall[0]).toContain("'250'");
+    expect(tapCall[0]).toContain("'600'");
   });
 
   test('returns false when no candidate matches', async () => {
     mockExec({
       "'uiautomator' 'dump'": '',
-      // Dump has no matching resource-id for any of the candidate forms.
-      "'cat' '/sdcard/dump.xml'": '<node resource-id="com.shyden.shytalk.local:id/unrelated" />',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('unrelated_tag'),
     });
-
     const driver = await createAndroidDriver();
     const ok = await driver.androidNavigatesBackToTab('Adam', 'nonexistent');
 
@@ -121,28 +187,25 @@ describe('android-adb-driver — androidNavigatesBackToTab', () => {
     expect(tapCall).toBeUndefined();
   });
 
-  test('ignores the first arg (persona name) — the matcher passes it but it does not affect behaviour', async () => {
-    // The matcher convention passes the persona name as the first
-    // argument for logging/correlation. The actual tap logic only
-    // depends on the `tab` arg. Same dump, different persona name.
+  test('ignores the first arg (persona name) — same dump + different persona yields same result', async () => {
     mockExec({
       "'uiautomator' 'dump'": '',
-      "'cat' '/sdcard/dump.xml'":
-        '<node resource-id="com.shyden.shytalk.local:id/inbox" bounds="[600,1900][900,2100]" />',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_roomsTab', '[0,1900][270,2100]'),
     });
-
     const driver = await createAndroidDriver();
-    const okA = await driver.androidNavigatesBackToTab('Adam', 'inbox');
+    const pA = driver.androidNavigatesBackToTab('Adam', 'rooms');
+    await jest.advanceTimersByTimeAsync(500);
+    const okA = await pA;
 
     jest.clearAllMocks();
     mockExec({
       "'uiautomator' 'dump'": '',
-      "'cat' '/sdcard/dump.xml'":
-        '<node resource-id="com.shyden.shytalk.local:id/inbox" bounds="[600,1900][900,2100]" />',
+      "'cat' '/sdcard/dump.xml'": dumpWithId('main_roomsTab', '[0,1900][270,2100]'),
     });
-
     const driver2 = await createAndroidDriver();
-    const okB = await driver2.androidNavigatesBackToTab('Bea', 'inbox');
+    const pB = driver2.androidNavigatesBackToTab('Bea', 'rooms');
+    await jest.advanceTimersByTimeAsync(500);
+    const okB = await pB;
 
     expect(okA).toBe(true);
     expect(okB).toBe(true);

@@ -119,7 +119,6 @@ const ANDROID_METHOD_NAMES = [
   'androidShowsWelcomePmInLanguage',
   'androidSubmitStarFeedback',
   'androidTapFromSurface',
-  'androidDisablesInput',
   // From cycle-10 failure histogram:
   'androidOpenScreen',
   'androidTapByTag',
@@ -236,14 +235,23 @@ async function createAndroidDriver({ serial: preferred } = {}) {
   // convention) and the tab identifier as the second. Only the tab arg
   // affects behaviour.
   //
-  // Tries a small set of conventional Compose testTag forms because
-  // the ShyTalk Android codebase uses different patterns in different
-  // surfaces (bare lowercased name for most tabs; `tab_<name>` prefix
-  // in older code). Trying multiple is cheaper than maintaining a
-  // central testTag registry, and the first match wins.
+  // Candidate testTag forms tried in order:
+  //   1. `main_<lowered>Tab` — the ACTUAL pattern in
+  //      shared/src/commonMain/kotlin/.../feature/main/MainScreen.kt
+  //      lines 102/127/134: `main_roomsTab`, `main_messagesTab`,
+  //      `main_profileTab`. This MUST be first — the others are
+  //      fallbacks only.
+  //   2-4. Generic fallbacks for any future surface that doesn't
+  //      follow the main-nav convention.
+  // First match wins.
   driver.androidNavigatesBackToTab = async (_name, tab) => {
     const lowered = tab.toLowerCase();
-    const candidates = [lowered, `tab_${lowered}`, `bottomNav_${lowered}`];
+    const candidates = [
+      `main_${lowered}Tab`,
+      lowered,
+      `tab_${lowered}`,
+      `bottomNav_${lowered}`,
+    ];
     for (const candidate of candidates) {
       if (await driver.androidTapByTag(candidate)) {
         // Brief settle so the tab content can draw before subsequent
