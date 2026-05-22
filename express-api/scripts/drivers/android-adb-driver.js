@@ -230,6 +230,35 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     }
   };
 
+  // Tap a bottom-nav tab by name. The matcher (manual-qa-runner.js
+  // ~line 12035, Wake 100: "<Name>'s Android UI navigates back to the
+  // <tab> tab") passes the persona name as the first argument (logging
+  // convention) and the tab identifier as the second. Only the tab arg
+  // affects behaviour.
+  //
+  // Tries a small set of conventional Compose testTag forms because
+  // the ShyTalk Android codebase uses different patterns in different
+  // surfaces (bare lowercased name for most tabs; `tab_<name>` prefix
+  // in older code). Trying multiple is cheaper than maintaining a
+  // central testTag registry, and the first match wins.
+  driver.androidNavigatesBackToTab = async (_name, tab) => {
+    const lowered = tab.toLowerCase();
+    const candidates = [lowered, `tab_${lowered}`, `bottomNav_${lowered}`];
+    for (const candidate of candidates) {
+      if (await driver.androidTapByTag(candidate)) {
+        // Brief settle so the tab content can draw before subsequent
+        // dump/tap calls. Mirrors androidOpenScreen's 1.5s wait but
+        // shorter — tabs swap in-place without a full activity launch.
+        await new Promise((r) => setTimeout(r, 500));
+        return true;
+      }
+    }
+    console.error(
+      `[android-driver] androidNavigatesBackToTab(${tab}) — no testTag matched any of ${candidates.join(', ')}`,
+    );
+    return false;
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
