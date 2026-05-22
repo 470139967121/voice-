@@ -1027,3 +1027,152 @@ describe('android-adb-driver — androidShowsWarningScreenOnRelaunch', () => {
     expect(relaunch).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidShowsWarningScreenWithReason', () => {
+  // Wake 102 matcher (manual-qa-runner.js ~line 12542):
+  //   `<Name>'s Android UI shows the warning screen with reason "<X>"`
+  // Two-step assertion: (1) warning screen is visible, (2) reason
+  // text appears in a text= or content-desc= attribute. Both must
+  // hold.
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('warning screen + reason text both present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />' +
+        '<node text="You sent offensive messages" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenWithReason('Adam', 'offensive messages')).toBe(
+      true,
+    );
+  });
+
+  test('reason in content-desc= attribute → true (accessibility-only message)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />' +
+        '<node content-desc="Account suspended for harassment" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(
+      await driver.androidShowsWarningScreenWithReason('Adam', 'suspended for harassment'),
+    ).toBe(true);
+  });
+
+  test('reason text present but no warning screen → false (gate fails)', async () => {
+    // The reason text appears in a non-warning UI (e.g. home toast).
+    // Both conditions must hold; reason alone is insufficient.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/main_roomsTab" />' +
+        '<node text="You sent offensive messages" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenWithReason('Adam', 'offensive messages')).toBe(
+      false,
+    );
+  });
+
+  test('warning screen present but no reason text → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />' +
+        '<node text="Generic warning text" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenWithReason('Adam', 'specific reason')).toBe(false);
+  });
+
+  test('empty reason string → false + no dump call (short-circuit)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenWithReason('Adam', '')).toBe(false);
+    // Round 1 I-1: pin the short-circuit invariant. Empty reason
+    // must return false BEFORE the adb dump round-trip — saves a
+    // call that can't change the answer. Matches the equivalent
+    // pin on androidShowsBanner.
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
+    expect(dumpCalls.length).toBe(0);
+  });
+
+  test('whitespace-only reason string → false + no dump call (short-circuit)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenWithReason('Adam', '   ')).toBe(false);
+    // Round 1 I-1: same short-circuit pin for whitespace-only.
+    const dumpCalls = execSync.mock.calls.filter((c) => c[0].includes("'uiautomator' 'dump'"));
+    expect(dumpCalls.length).toBe(0);
+  });
+
+  test('empty dump → false (cannot confirm either condition)', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenWithReason('Adam', 'anything')).toBe(false);
+  });
+
+  test('regex-special characters in reason text escaped correctly', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />' +
+        '<node text="Severity (1/3) — temporary ban" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenWithReason('Adam', 'Severity (1/3)')).toBe(true);
+  });
+
+  test('attribute-suffix false-positive guarded — hint-text= does NOT match the reason', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />' +
+        '<node hint-text="You sent offensive messages" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidShowsWarningScreenWithReason('Adam', 'offensive messages')).toBe(
+      false,
+    );
+  });
+
+  test('persona name ignored — same dump, different persona yields same result', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />' +
+        '<node text="You sent offensive messages" />',
+    });
+    const driver = await createAndroidDriver();
+    const okA = await driver.androidShowsWarningScreenWithReason('Adam', 'offensive messages');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/warning_title" />' +
+        '<node text="You sent offensive messages" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okB = await driver2.androidShowsWarningScreenWithReason('Bea', 'offensive messages');
+
+    expect(okA).toBe(true);
+    expect(okB).toBe(true);
+  });
+});

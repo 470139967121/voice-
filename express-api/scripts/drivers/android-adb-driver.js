@@ -384,6 +384,25 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return isOnWarningScreen(dump);
   };
 
+  // Wake 102 — `<Name>'s Android UI shows the warning screen with
+  // reason "<X>"`. j11 — punished user sees moderation reason.
+  // TWO assertions in one method:
+  //   1. The warning screen is currently visible (isOnWarningScreen)
+  //   2. The reason text appears in some text= or content-desc=
+  //      attribute (substring match, same shape as androidShowsBanner).
+  // Both must hold. Reason is regex-escaped so dynamic chars (parens,
+  // dots, ellipsis) match literally. Empty/whitespace-only reason
+  // short-circuits to false.
+  driver.androidShowsWarningScreenWithReason = async (_name, reason) => {
+    if (!reason || !reason.trim()) return false;
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    if (!isOnWarningScreen(dump)) return false;
+    const escReason = reason.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // eslint-disable-next-line sonarjs/slow-regex
+    return new RegExp(`(?<![\\w-])(?:text|content-desc)="[^"]*${escReason}[^"]*"`).test(dump);
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
