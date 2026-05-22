@@ -1300,3 +1300,205 @@ describe('android-adb-driver — androidNavigatesToProfileScreen', () => {
     expect(okB).toBe(true);
   });
 });
+
+describe('android-adb-driver — androidNavigatesToRoomScreen', () => {
+  // Wake 99 matcher — `<Name>'s Android UI navigates to the room
+  // screen <suffix>`. j09 — 2 corpus rows with descriptive suffixes:
+  //   - "with host seat occupied"
+  //   - "as a non-seated participant"
+  // The suffix is scenario-reader metadata, NOT UI text — substring-
+  // matching it into the dump would always fail (it never appears in
+  // text=/content-desc= attributes). Driver asserts ROOM_MARKERS
+  // presence only; suffix is accepted-and-ignored. Same 3 markers as
+  // androidIsStillInRoom: room_seatGrid (RoomScreen.kt:718),
+  // room_roomName (RoomToolbar.kt:60), room_backButton
+  // (RoomToolbar.kt:84).
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('room_seatGrid present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(true);
+  });
+
+  test('room_roomName present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_roomName" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(true);
+  });
+
+  test('room_backButton present → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_backButton" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(true);
+  });
+
+  test('no room markers → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/main_roomsTab" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(
+      false,
+    );
+  });
+
+  test('empty dump → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(
+      false,
+    );
+  });
+
+  test('left-boundary false-positive guarded — pre_room_seatGrid_x does NOT match', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="pre_room_seatGrid_x" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(
+      false,
+    );
+  });
+
+  test('right-boundary false-positive guarded — room_seatGrid_extra does NOT match', async () => {
+    // Pins that the closing-quote anchor alone (no left-prefix help)
+    // correctly rejects suffix-padded tags. Package-qualified form is
+    // exercised here too — the `[^"]*:id/` optional group must not
+    // swallow the boundary.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid_extra" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(
+      false,
+    );
+  });
+
+  test('bare resource-id (no package prefix) → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(true);
+  });
+
+  test('non-seated-participant suffix also accepted with same marker', async () => {
+    // Pins that the suffix is ignored for assertion purposes — both
+    // j09 corpus suffixes return identical results given the same
+    // dump. If a future PR adds suffix-aware refinement (e.g. assert
+    // host seat is occupied only when suffix says so), this test will
+    // need updating to reflect the new contract.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Alice', 'as a non-seated participant')).toBe(
+      true,
+    );
+  });
+
+  test('persona name ignored', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    const okTheo = await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okAlice = await driver2.androidNavigatesToRoomScreen('Alice', 'with host seat occupied');
+
+    expect(okTheo).toBe(true);
+    expect(okAlice).toBe(true);
+  });
+
+  test('empty suffix tolerated — does not throw, marker-only assertion holds', async () => {
+    // Defensive: even though the runner regex requires a non-empty
+    // suffix (`(.+)$`), pin that an accidentally-empty suffix doesn't
+    // crash the driver. Matches the foundation policy that the suffix
+    // is ignored for assertion.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', '')).toBe(true);
+  });
+
+  test('package-qualified left-boundary guarded — :id/pre_room_seatGrid does NOT match', async () => {
+    // Round 1 I-2: the bare-form left-boundary case is pinned above
+    // (`pre_room_seatGrid_x`). This pins the package-qualified
+    // analogue — `com.shyden.shytalk.local:id/pre_room_seatGrid` —
+    // which exercises a different code path through the regex: the
+    // optional `(?:[^"]*:id/)?` group consumes the package prefix
+    // up through `:id/`, leaving `pre_room_seatGrid` to be matched
+    // against the marker literal `room_seatGrid`. That match must
+    // fail (it does — the marker is not a prefix-substring match;
+    // it must be the FIRST chars after `:id/`).
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/pre_room_seatGrid" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(
+      false,
+    );
+  });
+
+  test('uiautomator dump throws → false (not undefined)', async () => {
+    // Round 1 I-1: `androidUiDump` wraps the `uiautomator dump` and
+    // `cat /sdcard/dump.xml` adb shell calls in a try/catch that
+    // returns `''` on rejection. The driver method's `if (!dump)
+    // return false` guard then fires. Without this test, if the
+    // catch is ever refactored to re-throw or to return null, the
+    // method silently returns `undefined` — and `executeStep` would
+    // treat that as falsy-truthy ambiguously. Pin the contract:
+    // a thrown adb call still yields a clean `false`.
+    execSync.mockImplementation((cmd) => {
+      if (cmd === 'adb devices') return 'List of devices attached\nemulator-5554\tdevice\n';
+      if (cmd.includes("'uiautomator' 'dump'")) {
+        throw new Error('adb: device offline');
+      }
+      return '';
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidNavigatesToRoomScreen('Theo', 'with host seat occupied')).toBe(
+      false,
+    );
+  });
+});
