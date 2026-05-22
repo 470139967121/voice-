@@ -308,6 +308,27 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return new RegExp(`(?<![\\w-])(?:text|content-desc)="[^"]*${escBanner}[^"]*"`).test(dump);
   };
 
+  // Wake 84 — "<Name>'s Android UI is still in the room". Returns
+  // true if any of the room-screen markers appears in the UI dump.
+  // The persona name is a logging hint (matcher convention); only
+  // the dump scan determines the answer.
+  //
+  // Markers (grounded to real Compose testTags):
+  //   - room_seatGrid (RoomScreen.kt:718) — central body component
+  //   - room_roomName (RoomToolbar.kt:60) — toolbar title
+  //   - room_backButton (RoomToolbar.kt:84) — toolbar back button
+  // Any one is sufficient evidence the user is on the room screen.
+  // Listing multiple defends against partial-render race conditions
+  // (e.g. toolbar drawn but seat grid still loading) — first match
+  // wins.
+  driver.androidIsStillInRoom = async (_name) => {
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    const markers = ['room_seatGrid', 'room_roomName', 'room_backButton'];
+    // eslint-disable-next-line sonarjs/slow-regex
+    return markers.some((m) => new RegExp(`resource-id="(?:[^"]*:id/)?${m}"`).test(dump));
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
