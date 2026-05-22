@@ -119,7 +119,6 @@ const ANDROID_METHOD_NAMES = [
   'androidShowsWelcomePmInLanguage',
   'androidSubmitStarFeedback',
   'androidTapFromSurface',
-  'androidDisablesInput',
   // From cycle-10 failure histogram:
   'androidOpenScreen',
   'androidTapByTag',
@@ -228,6 +227,39 @@ async function createAndroidDriver({ serial: preferred } = {}) {
       console.error(`[android-driver] androidTapByTag(${tag}) failed: ${e.message}`);
       return false;
     }
+  };
+
+  // Tap a bottom-nav tab by name. The matcher (manual-qa-runner.js
+  // ~line 12035, Wake 100: "<Name>'s Android UI navigates back to the
+  // <tab> tab") passes the persona name as the first argument (logging
+  // convention) and the tab identifier as the second. Only the tab arg
+  // affects behaviour.
+  //
+  // Candidate testTag forms tried in order:
+  //   1. `main_<lowered>Tab` — the ACTUAL pattern in
+  //      shared/src/commonMain/kotlin/.../feature/main/MainScreen.kt
+  //      lines 102/127/134: `main_roomsTab`, `main_messagesTab`,
+  //      `main_profileTab`. This MUST be first — the others are
+  //      fallbacks only.
+  //   2-4. Generic fallbacks for any future surface that doesn't
+  //      follow the main-nav convention.
+  // First match wins.
+  driver.androidNavigatesBackToTab = async (_name, tab) => {
+    const lowered = tab.toLowerCase();
+    const candidates = [`main_${lowered}Tab`, lowered, `tab_${lowered}`, `bottomNav_${lowered}`];
+    for (const candidate of candidates) {
+      if (await driver.androidTapByTag(candidate)) {
+        // Brief settle so the tab content can draw before subsequent
+        // dump/tap calls. Mirrors androidOpenScreen's 1.5s wait but
+        // shorter — tabs swap in-place without a full activity launch.
+        await new Promise((r) => setTimeout(r, 500));
+        return true;
+      }
+    }
+    console.error(
+      `[android-driver] androidNavigatesBackToTab(${tab}) — no testTag matched any of ${candidates.join(', ')}`,
+    );
+    return false;
   };
 
   // Open named screen — launches the local-build app via MainActivity.
