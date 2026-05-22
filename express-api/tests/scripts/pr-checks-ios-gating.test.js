@@ -75,7 +75,12 @@ describe('pr-checks.yml — ios-e2e job gating', () => {
     // Pin the specific choice so future changes are deliberate. If
     // matrix policy changes (e.g. add iPad or older iOS by default),
     // update this assertion at the same time.
-    expect(iosE2eBlock).toMatch(/\bios:\s+'18\.1-iphone'/);
+    //
+    // Bumped 2026-05-22 from `18.1-iphone` to `26.2-iphone` (the
+    // latest iOS runtime pre-installed on macos-15 via Xcode 26.3).
+    // See tests/scripts/ios-26-xcode-bump.test.js for the
+    // co-required Xcode 26.3 selection in ios-tests.yml.
+    expect(iosE2eBlock).toMatch(/\bios:\s+'26\.2-iphone'/);
   });
 
   test('job-level if-gate matches android-e2e symmetric pattern (app_changed + skip-marker)', () => {

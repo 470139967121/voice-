@@ -66,6 +66,7 @@ jobs:
               { 'ios-version': '17.5', 'form-factor': 'ipad', simulator: 'iPad Air (M2)' },
               { 'ios-version': '18.1', 'form-factor': 'iphone', simulator: 'iPhone 16' },
               { 'ios-version': '18.1', 'form-factor': 'ipad', simulator: 'iPad Air (M3)' },
+              { 'ios-version': '26.2', 'form-factor': 'iphone', simulator: 'iPhone 17' },
             ];
 
             const ios = '${{ inputs.ios }}' || 'all';
@@ -106,6 +107,19 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ needs.resolve-inputs.outputs.ref }}
+
+      # The macos-15 runner image ships with BOTH Xcode 16.x (default)
+      # and Xcode 26.x pre-installed. The default `xcode-select`
+      # points at 16.4, which caps iOS testing at 18.5. iOS 26.2 (the
+      # latest simulator runtime) is only available inside Xcode 26.x.
+      # Switching to Xcode 26.3 at the START of build-ios means the
+      # produced .xctest bundle and KMP framework are built against
+      # the latest SDK — backward-compatible to iOS 16.0 deployment
+      # target, but ready for iOS 26.2 simulators in test-ios.
+      - name: Select Xcode 26.3
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app
+          xcodebuild -version
 
       - uses: ./.github/actions/setup-jdk-gradle
 
@@ -211,6 +225,15 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ needs.resolve-inputs.outputs.ref }}
+
+      # Match the build-ios Xcode selection. xcrun simctl uses the
+      # ACTIVE Xcode's runtime catalog — without selecting 26.3 here,
+      # iOS 26.2 simulators are invisible to `simctl list runtimes`
+      # and `simctl create` for the matrix's 26.2 entry would fail.
+      - name: Select Xcode 26.3
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app
+          xcodebuild -version
 
       - name: Download iOS test bundle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8

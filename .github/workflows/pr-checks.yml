@@ -325,7 +325,13 @@ jobs:
       # entire iOS E2E surface was symbolic. Pinned to a specific
       # device via tests/scripts/pr-checks-ios-gating.test.js to
       # prevent silent regression back to 'none'.
-      ios: '18.1-iphone'
+      #
+      # Bumped 2026-05-22 from `18.1-iphone` to `26.2-iphone` to
+      # exercise the LATEST iOS runtime the macos-15 runner ships
+      # pre-installed (via Xcode 26.3). Older versions remain
+      # available via workflow_dispatch with `ios: 'all'`. Pinned by
+      # tests/scripts/ios-26-xcode-bump.test.js.
+      ios: '26.2-iphone'
       parallel: true
       ref: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
