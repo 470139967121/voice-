@@ -727,6 +727,75 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return tagRx.test(dump);
   };
 
+  // Two matchers (Wake 32-ish) delegate to this method:
+  //   `<P> on Android searches "<X>" in <screen>` → screen-scoped
+  //   `<P> on Android types "<X>" into the search field` → active-screen (null)
+  //
+  // First action method in the cluster — instead of asserting state,
+  // it performs a TAP + INPUT TEXT sequence. The runner doesn't
+  // inspect the return value (always wraps in ok: true), but the
+  // driver returns boolean for direct testability and for future
+  // runner refactors that might surface failures.
+  //
+  // Foundation strategy: SEARCH_FIELD_TAGS map from canonical screen
+  // name to Compose testTag. Currently one entry. Null screen falls
+  // back to the same tag (active-screen typically means "the
+  // currently visible search surface", which today is the new-
+  // message composer).
+  //
+  // Text encoding: adb's `shell input text` splits on spaces by
+  // default (each arg becomes a separate command). The standard
+  // workaround is to encode spaces as `%s`. Non-space chars pass
+  // through literally — no shell interpretation because adb()
+  // single-quotes every arg.
+  const SEARCH_FIELD_TAGS = { messages: 'newMessage_searchField' };
+  const DEFAULT_SEARCH_FIELD_TAG = 'newMessage_searchField';
+  driver.androidSearchIn = async (screen, text) => {
+    // `typeof text !== 'string'` rejects null and undefined too
+    // (typeof null === 'object'; typeof undefined === 'undefined').
+    if (typeof text !== 'string' || !text.trim()) return false;
+    // `!screen` matches null, undefined, and the empty string — all
+    // route to the default field. Empty-string screen is unreachable
+    // from valid Gherkin (matcher requires `\w+`), but the broad
+    // check is defensive.
+    const tag = !screen
+      ? DEFAULT_SEARCH_FIELD_TAG
+      : SEARCH_FIELD_TAGS[String(screen).trim().toLowerCase()];
+    if (!tag) return false;
+    const tapped = await driver.androidTapByTag(tag);
+    if (!tapped) return false;
+    try {
+      // Round 1 C-1: text is the first USER-CONTROLLED free-form
+      // string reaching adb() in the cluster. Prior methods passed
+      // only known-safe values (numeric coords, alphanumeric tags).
+      // adb() wraps each arg in single quotes; a single quote in
+      // `text` (e.g. "O'Brien", "can't") would produce unbalanced
+      // quotes and shell misparse.
+      //
+      // POSIX escape: replace ' with '\'' (close quote + escaped
+      // literal quote + reopen quote). Inside the surrounding
+      // single quotes that adb() adds, this round-trips correctly —
+      // the device receives the literal text.
+      //
+      // KNOWN LIMITATION (Round 1 I-1): the literal sequence `%s` in
+      // `text` is indistinguishable from an encoded space on the
+      // device side — adb's `input text` decodes `%s` as a literal
+      // space and has no `%%`-style escape. Searching for a string
+      // containing `%s` will yield spaces at those positions. Not
+      // fixable without a different keyboard-driver primitive
+      // (e.g. uiautomator setText via UI Automator API) — separate PR.
+      const quoteEscaped = text.replace(/'/g, "'\\''");
+      const spaceEncoded = quoteEscaped.replace(/ /g, '%s');
+      adb(['shell', 'input', 'text', spaceEncoded]);
+      return true;
+    } catch (e) {
+      console.error(
+        `[android-driver] androidSearchIn(${screen}, ${text}) input failed: ${e.message}`,
+      );
+      return false;
+    }
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
