@@ -834,6 +834,52 @@ async function createAndroidDriver({ serial: preferred } = {}) {
     return [...collected];
   };
 
+  // Composite matcher Wake 86-ish — "<P1> on <plat1> and <P2> on
+  // <plat2> both join the event room". Each platform's driver
+  // receives just the persona name and joins whatever room is
+  // currently visible (the journey orchestrator ensures only the
+  // event room is in the list at this point).
+  //
+  // Foundation strategy: tap the FIRST `roomList_roomCard_*` node
+  // found in the current uiautomator dump. This is the cluster's
+  // first method using a PARAMETERISED testTag prefix-match
+  // (vs. exact-match for INPUT_TAGS / TABLE_TAGS lookups). The
+  // `[^"]*` wildcard suffix matches any room-id (Firestore-style
+  // alphanumeric+hyphens) attached by HomeScreen.kt:155.
+  //
+  // If no room card is visible (empty rooms tab, or actor on a
+  // different tab), returns false — the journey author gets a
+  // clear FAIL.
+  driver.androidJoinEventRoom = async (_name) => {
+    const dump = await driver.androidUiDump();
+    if (!dump) return false;
+    // Round 1 I-1 refactor: use the TWO-STEP extraction pattern
+    // established by androidShowsMicIconAs (line 502),
+    // androidShowsBalanceViaListener (line 559), and
+    // androidReplacesFollowButton (line 596). This is
+    // ORDER-INDEPENDENT (handles bounds before or after resource-id
+    // in the same tag) and structurally cannot match a child
+    // node's bounds when the parent lacks them — `[^>]*` stays
+    // within the opening tag, then bounds is scanned from the
+    // captured tag string only. Sets the reference template for
+    // subsequent parameterised-testTag methods in this cluster.
+    //
+    // Diverges from androidTapByTag (line 218) which still uses
+    // the older `[^<]*?` pattern. That method works correctly
+    // because uiautomator emits bounds AFTER resource-id (verified
+    // standard order), but the two-step is the stricter
+    // foundation for the rest of the cluster.
+    // eslint-disable-next-line sonarjs/slow-regex
+    const tagRx = /<node[^>]*resource-id="(?:[^"]*:id\/)?roomList_roomCard_[^"]*"[^>]*\/?>/;
+    const tagMatch = dump.match(tagRx);
+    if (!tagMatch) return false;
+    const boundsMatch = tagMatch[0].match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+    if (!boundsMatch) return false;
+    const cx = Math.round((Number(boundsMatch[1]) + Number(boundsMatch[3])) / 2);
+    const cy = Math.round((Number(boundsMatch[2]) + Number(boundsMatch[4])) / 2);
+    return await driver.androidTap(cx, cy);
+  };
+
   // Open named screen — launches the local-build app via MainActivity.
   // The app's AndroidManifest does NOT declare a `shytalk://` scheme
   // (only HTTPS auth deep-links per app/src/main/AndroidManifest.xml).
