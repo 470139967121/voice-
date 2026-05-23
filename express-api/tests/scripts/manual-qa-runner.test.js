@@ -17409,6 +17409,101 @@ describe('Wake 88 — "<Name> on <Plat> opens <Other>\'s profile from the <X>"',
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/Yuki|profile|room/);
   });
+
+  test('iOS Sim driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: "Yuki on iOS Sim opens Bao's profile from the room" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosOpenProfileFrom/);
+  });
+
+  test('Android driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidOpenProfileFrom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Adam on Android opens Officia's profile from the PM" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Officia|profile|PM/);
+  });
+
+  test('Android driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: "Adam on Android opens Officia's profile from the PM" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidOpenProfileFrom/);
+  });
+
+  // Web branch — routes to ctx.webDriver.webOpenProfileFrom
+  test('Web matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webOpenProfileFrom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Alice on Web opens Bob's profile from the inbox" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Bob', 'inbox');
+  });
+
+  test('Web driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webOpenProfileFrom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Alice on Web opens Bob's profile from the inbox" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Bob|profile|inbox/);
+  });
+
+  test('Web driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: "Alice on Web opens Bob's profile from the inbox" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    // Tightened (PR #768 R1): assert the error names the CORRECT
+    // driver object (`ctx.webDriver`, NOT `ctx.uiDriver`) — the
+    // matcher dispatches on `platform.startsWith('Web')` and the
+    // error message must reflect the actual driver path the
+    // developer should provide.
+    expect(r.error).toMatch(/ctx\.webDriver\.webOpenProfileFrom/);
+  });
+
+  // Web Chromium + Web Safari platform tokens (PR #768 R1) — the
+  // matcher pattern at scripts/manual-qa-runner.js:10106 explicitly
+  // lists "Web Chromium" and "Web Safari" as platform alternatives.
+  // Pin that both tokens route to webOpenProfileFrom via webDriver.
+  test('Web Chromium matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webOpenProfileFrom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Alice on Web Chromium opens Bob's profile from the inbox" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Bob', 'inbox');
+  });
+
+  test('Web Safari matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webOpenProfileFrom: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Alice on Web Safari opens Bob's profile from the inbox" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'Bob', 'inbox');
+  });
 });
 
 describe('Wake 88 — "the <topic> (broadcast|flow) fires sendSystemPm with key="<X>" recipient=<Other>"', () => {
