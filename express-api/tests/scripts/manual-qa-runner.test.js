@@ -9871,7 +9871,12 @@ describe('Approve seat request composite', () => {
       ctx,
     );
     expect(r.ok).toBe(true);
-    expect(spy).toHaveBeenCalledWith('Ines');
+    // Updated PR #766: driver contract is now `(host, requester)` to
+    // match Wake 86's canonical "approves" phrasing. Previously
+    // asserted the requester only — the host was dropped on the
+    // floor, which would mask a regression when per-requester
+    // approval lands.
+    expect(spy).toHaveBeenCalledWith('Theo', 'Ines');
   });
 });
 
@@ -16737,6 +16742,73 @@ describe('Wake 86 — "<Name> on <Plat> approves <Other>\'s seat request"', () =
     );
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/androidApproveSeatRequest/);
+  });
+
+  // Android driver returns false → fail
+  test('Android driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidApproveSeatRequest: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Bao on Android approves Yuki's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Yuki|seat request/i);
+  });
+
+  // iOS Sim driver returns false → fail + no-driver → fail
+  test('iOS Sim driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosApproveSeatRequest: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Selma on iOS Sim approves Alice's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Alice|seat request/i);
+  });
+
+  test('iOS Sim no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: "Selma on iOS Sim approves Alice's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosApproveSeatRequest/);
+  });
+
+  // Web branch — routes to ctx.webDriver.webApproveSeatRequest
+  test('Web matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ webDriver: { webApproveSeatRequest: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Bao on Web approves Yuki's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Bao', 'Yuki');
+  });
+
+  test('Web driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ webDriver: { webApproveSeatRequest: spy } });
+    const r = await executeStep(
+      { kind: 'When', text: "Bao on Web approves Yuki's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/Yuki|seat request/i);
+  });
+
+  test('Web no driver → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'When', text: "Bao on Web approves Yuki's seat request" },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webApproveSeatRequest/);
   });
 });
 
