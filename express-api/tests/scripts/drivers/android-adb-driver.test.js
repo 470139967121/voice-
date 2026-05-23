@@ -2921,3 +2921,364 @@ describe('android-adb-driver — androidReplacesFollowButton', () => {
     expect(await driver.androidReplacesFollowButton('Theo', 'Follow')).toBe(false);
   });
 });
+
+describe('android-adb-driver — androidDisablesInput', () => {
+  // Wake 89 matcher — `<Name>'s Android UI disables the <X> input`
+  // (j11:50). Parameterised input-control state assertion: future
+  // matchers like "disables the comment input" / "gift input" reuse
+  // this matcher without needing a new one. Driver receives
+  // `(name, inputName)` where inputName is the bare control name
+  // ("chat", "comment", "gift", etc.).
+  //
+  // Implementation strategy:
+  //   1. Map inputName → Compose testTag via INPUT_TAGS table.
+  //      Currently only "chat" → "room_chatInput" is grounded
+  //      (ChatPanel.kt:273). Unmapped names return false until a
+  //      future Compose change lands the missing testTag.
+  //   2. Capture the input's node tag via the standard two-step
+  //      extraction (PR #734 pattern).
+  //   3. Scan within the captured tag for `enabled="false"` —
+  //      uiautomator's standard disabled-state attribute.
+  //
+  // The `enabled="false"` literal needs no escaping (no regex chars).
+  // The closing `"` anchors the right side, so `enabled="falsey"` or
+  // similar invented values wouldn't false-match.
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('chat input with enabled="false" → true', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(true);
+  });
+
+  test('chat input with enabled="true" → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="true" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('chat input with no enabled attribute → false (defensive)', async () => {
+    // uiautomator always emits enabled, but pin the contract that
+    // absence-of-attribute is treated as "not confirmed disabled"
+    // (returns false). This is the conservative interpretation —
+    // we cannot assert disablement without evidence.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('unmapped input name "comment" → false (no testTag mapping yet)', async () => {
+    // Only "chat" → "room_chatInput" is mapped today. Future
+    // Compose work would add "comment", "gift", etc. tags. Pin
+    // that unmapped names return false NOW so a journey-test
+    // author writing "disables the comment input" gets a clear
+    // FAIL instead of a silent pass against an unrelated node.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'comment')).toBe(false);
+  });
+
+  test('input testTag missing from dump → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/main_roomsTab" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    // enabled="false" is on a non-chat node — must not false-positive
+    // from a stray attribute elsewhere in the dump.
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('empty dump → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('empty inputName arg → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', '')).toBe(false);
+  });
+
+  test('whitespace-only inputName arg → false', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', '   ')).toBe(false);
+  });
+
+  test('case-insensitive inputName — "CHAT" maps to chat', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'CHAT')).toBe(true);
+  });
+
+  test('bare resource-id (no package prefix) → true when disabled', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(true);
+  });
+
+  test('left-boundary false-positive guarded — pre_room_chatInput_x does NOT match', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="pre_room_chatInput_x" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('right-boundary false-positive guarded — room_chatInput_extra does NOT match', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput_extra" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('package-qualified left-boundary guarded — :id/pre_room_chatInput does NOT match', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/pre_room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('bare left-boundary without suffix — pre_room_chatInput does NOT match', async () => {
+    // Same pre-emptive pin as PR #736 R2 — explicit pin that a bare
+    // `pre_room_chatInput` (no `_x` suffix, no package prefix) is
+    // correctly rejected. Closes the "regex anchoring" mental-
+    // simulation gap proactively.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'": '<node resource-id="pre_room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('attribute-order tolerance — enabled before resource-id → true', async () => {
+    // uiautomator attribute order is not contractually fixed; pin
+    // that the impl finds the node regardless of where `enabled`
+    // appears within the tag.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node enabled="false" resource-id="com.shyden.shytalk.local:id/room_chatInput" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(true);
+  });
+
+  test('uiautomator dump throws → false (not undefined)', async () => {
+    execSync.mockImplementation((cmd) => {
+      if (cmd === 'adb devices') return 'List of devices attached\nemulator-5554\tdevice\n';
+      if (cmd.includes("'uiautomator' 'dump'")) {
+        throw new Error('adb: device offline');
+      }
+      return '';
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('persona name ignored', async () => {
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    const okTheo = await driver.androidDisablesInput('Theo', 'chat');
+
+    jest.clearAllMocks();
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver2 = await createAndroidDriver();
+    const okAlice = await driver2.androidDisablesInput('Alice', 'chat');
+
+    expect(okTheo).toBe(true);
+    expect(okAlice).toBe(true);
+  });
+
+  test('multiple inputs in dump — only chat node is consulted', async () => {
+    // Pins that the impl isolates to the chat input's node. A
+    // hypothetical future scenario could have multiple input
+    // controls visible (chat + comment) — only the named one's
+    // state is checked. Here we have a non-chat node disabled
+    // and the chat node enabled — assertion must return false.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/some_other_input" enabled="false" />' +
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="true" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('first-match contract pinned — two room_chatInput nodes, first wins', async () => {
+    // Same first-match contract as the prior method PRs. First
+    // node enabled, second disabled. Assertion for "is disabled"
+    // returns false because the first (winning) match has
+    // enabled="true".
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="true" />' +
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('enabled="falsey" does NOT match (closing quote anchors right boundary)', async () => {
+    // Defends against future regex changes that might soften the
+    // enabled="false" literal to a substring scan. The closing `"`
+    // requires the value to be exactly "false", so a hypothetical
+    // `enabled="falsey"` does not match.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="falsey" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('non-self-closing tag form — open-tag <node ...>...</node> still detected', async () => {
+    // Round 1 I-1: real uiautomator XML emits both self-closing
+    // (`<node ... />`) and non-self-closing (`<node ...>...</node>`)
+    // forms. The tagRx's `\/?>` handles both. Pin the open-tag form
+    // explicitly — production handles it via the optional `/` in the
+    // tail, but the test makes the contract self-evident and would
+    // catch a future regex simplification (e.g. `\/>` only).
+    //
+    // Round 2 I-2 clarification: tagRx uses `[^>]*` which stops at
+    // the first `>`. This is safe because uiautomator XML never
+    // emits a literal `>` inside an attribute value (the spec
+    // escapes them as `&gt;`). So `[^>]*` reliably bounds at the
+    // outer node's opening-tag terminator, and `tagMatch[0]`
+    // captures only that opening tag. Child nodes after the `>`
+    // are excluded — which is intentional (see PR #736 R1 I-1
+    // discussion of child-carried values).
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false"><node text="ignored-child" /></node>',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(true);
+  });
+
+  test('compound-attribute left-boundary guard — pre-enabled="false" does NOT match', async () => {
+    // Round 1 I-2: bare `/enabled="false"/` substring scan would
+    // false-positive against any compound attribute ending in
+    // `enabled` — e.g. a hypothetical hyphenated form like
+    // `pre-enabled="false"`. The lookbehind `(?<![\w-])` blocks the
+    // hyphen and word-char prefixes, mirroring androidShowsBanner's
+    // text= attribute guard.
+    //
+    // In current uiautomator vocabulary the standard `enabled` is
+    // the only `enabled`-ending attribute, but this pin defends
+    // against future surface growth.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" pre-enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('compound-attribute left-boundary guard — chatEnabled="false" does NOT match', async () => {
+    // Symmetric to the hyphen pin: word-char prefix is also blocked
+    // by the `(?<![\w-])` lookbehind. The `t` before `Enabled` would
+    // pass an exact-case regex (since the test searches lowercase
+    // `enabled`), so the actual collision risk is on camelCase
+    // attributes with a trailing lowercase form. Pinned for
+    // completeness — pin `chatenabled` (lowercase prefix).
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" chatenabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', 'chat')).toBe(false);
+  });
+
+  test('null inputName arg → false', async () => {
+    // Round 2 I-1: the guard `if (!inputName || !inputName.trim())`
+    // correctly short-circuits on null and undefined. Pin both
+    // explicitly so a future refactor changing the guard to
+    // `inputName.length === 0` (which would crash on null) is
+    // caught immediately. Empty-string and whitespace-only pins
+    // are already in place above; this completes the null-safety
+    // matrix that prior PRs established (#728 banner, #730
+    // reason).
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', null)).toBe(false);
+  });
+
+  test('undefined inputName arg → false', async () => {
+    // Round 2 I-1 (companion to the null pin above). Pins that
+    // omitting the arg (which would pass `undefined` positionally)
+    // does not crash the driver.
+    mockExec({
+      "'uiautomator' 'dump'": '',
+      "'cat' '/sdcard/dump.xml'":
+        '<node resource-id="com.shyden.shytalk.local:id/room_chatInput" enabled="false" />',
+    });
+    const driver = await createAndroidDriver();
+    expect(await driver.androidDisablesInput('Theo', undefined)).toBe(false);
+  });
+});
