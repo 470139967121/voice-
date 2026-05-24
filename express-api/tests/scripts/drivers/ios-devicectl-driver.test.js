@@ -4141,6 +4141,298 @@ describe('ios-devicectl-driver — iosShowsFrozenBanner', () => {
   });
 });
 
+describe('ios-devicectl-driver — iosShowsGiftFromSender', () => {
+  // Wake 99 — `<Name>'s <Plat> UI shows a "<X>" gift from <Other>`.
+  // Triple composition: giftWall_grid + giftId + sender, both with
+  // symmetric word-boundary protection across label/name/value attrs.
+  function driverWithDump(xml) {
+    return createIosDriver({ udid: 'X' }).then((d) => {
+      d.iosUiDump = async () => xml;
+      return d;
+    });
+  }
+
+  const FULL_DUMP =
+    '<XCUIElementTypeOther identifier="giftWall_grid">' +
+    '<XCUIElementTypeStaticText label="rose" name="rose" />' +
+    '<XCUIElementTypeStaticText label="Adam" name="Adam" />' +
+    '</XCUIElementTypeOther>';
+
+  test('all 3 conditions met → true', async () => {
+    const driver = await driverWithDump(FULL_DUMP);
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(true);
+  });
+
+  test('wall absent → false', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeStaticText label="rose" /><XCUIElementTypeStaticText label="Adam" />',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('giftId absent → false', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid"><XCUIElementTypeStaticText label="Adam" /></XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('sender absent → false', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid"><XCUIElementTypeStaticText label="rose" /></XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('empty dump → false', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('giftId "rose" does NOT match "roses" (suffix collision)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="roses" /><XCUIElementTypeStaticText label="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('giftId "rose" does NOT match "wildrose" (prefix collision)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="wildrose" /><XCUIElementTypeStaticText label="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('sender "Adam" does NOT match "Adams" (suffix collision)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="rose" /><XCUIElementTypeStaticText label="Adams" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('sender "Adam" does NOT match "AdamSmith" (prefix collision)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="rose" />' +
+        '<XCUIElementTypeStaticText label="AdamSmith" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  // Hyphen-boundary discipline (the `-` in `[\w-]` lookaround).
+  test('giftId "rose" does NOT match "rose-gold" (hyphen suffix collision)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="rose-gold" />' +
+        '<XCUIElementTypeStaticText label="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('sender "Adam" does NOT match "Adam-Berg" (hyphen suffix collision)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="rose" />' +
+        '<XCUIElementTypeStaticText label="Adam-Berg" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('giftId "v1.2" matches literal dot in label', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="v1.2 special" />' +
+        '<XCUIElementTypeStaticText label="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'v1.2', 'Adam')).toBe(true);
+  });
+
+  test('giftId "v1.2" does NOT match label "v1X2" (regex-escape protects dot)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="v1X2" /><XCUIElementTypeStaticText label="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'v1.2', 'Adam')).toBe(false);
+  });
+
+  test('accessibilityLabel= does NOT contribute (compound attr guard)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText accessibilityLabel="rose" />' +
+        '<XCUIElementTypeStaticText accessibilityLabel="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(false);
+  });
+
+  test('giftId on label + sender on name → true', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="rose" />' +
+        '<XCUIElementTypeStaticText name="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(true);
+  });
+
+  // value= attribute branch (XCUITest emits value= for controls like
+  // text fields and steppers; the alternation must cover it).
+  test('giftId on value= → true', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText value="rose" />' +
+        '<XCUIElementTypeStaticText label="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(true);
+  });
+
+  test('sender on value= → true', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="rose" />' +
+        '<XCUIElementTypeStaticText value="Adam" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(true);
+  });
+
+  // Same-node case: both in one label.
+  test('giftId and sender both in same label → true', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="Adam sent rose today" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).toBe(true);
+  });
+
+  // Sender regex-escape (parity with giftId v1.2 coverage).
+  test('sender "User.42" matches literal dot in label', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="rose" />' +
+        '<XCUIElementTypeStaticText label="User.42" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'User.42')).toBe(true);
+  });
+
+  test('sender "User.42" does NOT match "UserX42" (escape protects dot)', async () => {
+    const driver = await driverWithDump(
+      '<XCUIElementTypeOther identifier="giftWall_grid">' +
+        '<XCUIElementTypeStaticText label="rose" />' +
+        '<XCUIElementTypeStaticText label="UserX42" />' +
+        '</XCUIElementTypeOther>',
+    );
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', 'User.42')).toBe(false);
+  });
+
+  // Input rejection with isolation.
+  test('null giftId → false, iosUiDump not called', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('must not be called');
+    };
+    expect(await driver.iosShowsGiftFromSender('Alice', null, 'Adam')).toBe(false);
+  });
+
+  test('undefined giftId → false, iosUiDump not called', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('must not be called');
+    };
+    expect(await driver.iosShowsGiftFromSender('Alice', undefined, 'Adam')).toBe(false);
+  });
+
+  test('empty giftId → false, iosUiDump not called', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('must not be called');
+    };
+    expect(await driver.iosShowsGiftFromSender('Alice', '', 'Adam')).toBe(false);
+  });
+
+  test('whitespace giftId → false, iosUiDump not called', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('must not be called');
+    };
+    expect(await driver.iosShowsGiftFromSender('Alice', '   ', 'Adam')).toBe(false);
+  });
+
+  test('null sender → false, iosUiDump not called', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('must not be called');
+    };
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', null)).toBe(false);
+  });
+
+  test('undefined sender → false, iosUiDump not called', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('must not be called');
+    };
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', undefined)).toBe(false);
+  });
+
+  test('empty sender → false, iosUiDump not called', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('must not be called');
+    };
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', '')).toBe(false);
+  });
+
+  test('whitespace sender → false, iosUiDump not called', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('must not be called');
+    };
+    expect(await driver.iosShowsGiftFromSender('Alice', 'rose', '   ')).toBe(false);
+  });
+
+  test('null recipient → still evaluates', async () => {
+    const driver = await driverWithDump(FULL_DUMP);
+    expect(await driver.iosShowsGiftFromSender(null, 'rose', 'Adam')).toBe(true);
+  });
+
+  test('undefined recipient → still evaluates', async () => {
+    const driver = await driverWithDump(FULL_DUMP);
+    expect(await driver.iosShowsGiftFromSender(undefined, 'rose', 'Adam')).toBe(true);
+  });
+
+  test('empty recipient → still evaluates', async () => {
+    const driver = await driverWithDump(FULL_DUMP);
+    expect(await driver.iosShowsGiftFromSender('', 'rose', 'Adam')).toBe(true);
+  });
+
+  test('whitespace recipient → still evaluates', async () => {
+    const driver = await driverWithDump(FULL_DUMP);
+    expect(await driver.iosShowsGiftFromSender('   ', 'rose', 'Adam')).toBe(true);
+  });
+
+  test('iosUiDump throws → rejects', async () => {
+    const driver = await createIosDriver({ udid: 'X' });
+    driver.iosUiDump = async () => {
+      throw new Error('WDA lost');
+    };
+    await expect(driver.iosShowsGiftFromSender('Alice', 'rose', 'Adam')).rejects.toThrow();
+  });
+});
+
 describe('ios-devicectl-driver — stub call-arity tolerance', () => {
   // Stubs accept any number of args (0, 1, 2, 3, 4). Pin this so a
   // future refactor that adds arg-validation to the stub loop doesn't

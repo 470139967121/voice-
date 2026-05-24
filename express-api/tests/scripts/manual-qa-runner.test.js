@@ -22121,7 +22121,87 @@ describe('Wake 99 — `<Name>\'s <Plat> UI shows a "<X>" gift from <Other>`', ()
       ctx,
     );
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/Alice|crown|Bob/);
+    // Tightened (PR #823 R1): require both gift + sender names in
+    // the error so a degraded message that mentions only one would
+    // fail the test.
+    expect(r.error).toMatch(/crown/);
+    expect(r.error).toMatch(/Bob/);
+  });
+
+  test('Web driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Web UI shows a "rose" gift from Adam' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/webShowsGiftFromSender/);
+  });
+
+  test('Android matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { androidShowsGiftFromSender: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Android UI shows a "rose" gift from Adam' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Alice', 'rose', 'Adam');
+  });
+
+  test('Android driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { androidShowsGiftFromSender: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Android UI shows a "crown" gift from Bob' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/crown/);
+    expect(r.error).toMatch(/Bob/);
+  });
+
+  test('Android driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Alice\'s Android UI shows a "rose" gift from Adam' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/androidShowsGiftFromSender/);
+  });
+
+  test('iOS Sim matching → ok', async () => {
+    const spy = jest.fn(async () => true);
+    const ctx = makeCtx({ uiDriver: { iosShowsGiftFromSender: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Nora\'s iOS Sim UI shows a "rose" gift from Adam' },
+      ctx,
+    );
+    expect(r.ok).toBe(true);
+    expect(spy).toHaveBeenCalledWith('Nora', 'rose', 'Adam');
+  });
+
+  test('iOS Sim driver returns false → fail', async () => {
+    const spy = jest.fn(async () => false);
+    const ctx = makeCtx({ uiDriver: { iosShowsGiftFromSender: spy } });
+    const r = await executeStep(
+      { kind: 'Then', text: 'Nora\'s iOS Sim UI shows a "crown" gift from Bob' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/crown/);
+    expect(r.error).toMatch(/Bob/);
+  });
+
+  test('iOS Sim driver missing → fail', async () => {
+    const ctx = makeCtx();
+    const r = await executeStep(
+      { kind: 'Then', text: 'Nora\'s iOS Sim UI shows a "rose" gift from Adam' },
+      ctx,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/iosShowsGiftFromSender/);
   });
 });
 
