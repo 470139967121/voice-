@@ -430,6 +430,20 @@ async function createIosDriver({ udid: preferred } = {}) {
     return tagRx.test(dump);
   };
 
+  // Wake 88 — `<Name> on <Plat> opens <Other>'s profile from the <X>`
+  // (j17:71, j18:49). Mirrors Android sibling. Foundation: presence-check
+  // on `profile_*` identifier PREFIX. All 3 args (_actor, _target,
+  // _source) accepted-and-ignored at foundation tier; the source surface
+  // (room|PM|inbox|...) tells the driver which entry point to use once
+  // per-element testTags ship.
+  driver.iosOpenProfileFrom = async (_actor, _target, _source) => {
+    const dump = await driver.iosUiDump();
+    if (!dump) return false;
+    // eslint-disable-next-line sonarjs/slow-regex
+    const tagRx = /<XCUIElementType\w+[^>]*\bidentifier="profile_[^"]*"[^>]*\/?>/;
+    return tagRx.test(dump);
+  };
+
   const IOS_INPUT_TAGS = { chat: 'room_chatInput' };
   driver.iosDisablesInput = async (_name, inputName) => {
     if (!inputName || !inputName.trim()) return false;
