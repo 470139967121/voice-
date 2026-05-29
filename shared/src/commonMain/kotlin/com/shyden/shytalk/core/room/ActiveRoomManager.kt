@@ -503,7 +503,20 @@ class ActiveRoomManager(
                                         logD(TAG, "presenceMonitor: owner absent → setOwnerAway")
                                         roomRepository.setOwnerAway(roomId)
                                     } else {
-                                        roomRepository.removeDisconnectedUser(roomId, userId)
+                                        val removeResult = roomRepository.removeDisconnectedUser(roomId, userId)
+                                        if (removeResult is Resource.Error) {
+                                            // 409 (CLOSED room) is a known race: the room closed between
+                                            // the presence-monitor's grace-window tick and this call.
+                                            // logW (not logE) keeps Sentry clean while giving the
+                                            // presence-monitor a diagnostic — pre-PR G this was silent
+                                            // fire-and-forget, so the monitor would loop on the same
+                                            // disconnected user every grace-tick with no signal.
+                                            logW(
+                                                TAG,
+                                                "removeDisconnectedUser failed for $userId: ${removeResult.message}",
+                                                removeResult.exception,
+                                            )
+                                        }
                                     }
                                     graceTimers.remove(userId)
                                     emitDisconnectedIds()

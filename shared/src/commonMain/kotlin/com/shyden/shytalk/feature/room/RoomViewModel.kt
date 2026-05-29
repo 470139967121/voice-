@@ -1196,7 +1196,14 @@ class RoomViewModel(
 
             // Only mute, never unmute — only the user themselves can unmute
             if (seat.isMuted) return@launch
-            roomRepository.toggleMute(roomId, seatIndex, true)
+            val result = roomRepository.toggleMute(roomId, seatIndex, true)
+            if (result is Resource.Error) {
+                // 409 (CLOSED room) + 403 (role mismatch race) are known user-
+                // driven races, not system errors — use logW to keep Sentry
+                // free of false-positive error events. Matches the auto-rejoin
+                // / owner-self-heal logW pattern elsewhere in this file.
+                logW(TAG, "forceMuteUser failed: ${result.message}", result.exception)
+            }
         }
     }
 
@@ -1244,7 +1251,16 @@ class RoomViewModel(
             val targetName = targetUser?.displayName ?: "A user"
             val displayReason = reason.ifBlank { "No reason given" }
 
-            roomRepository.kickUser(roomId, targetUserId, seatIndex, kickerName, displayReason)
+            val kickResult = roomRepository.kickUser(roomId, targetUserId, seatIndex, kickerName, displayReason)
+            if (kickResult is Resource.Error) {
+                // 409 (CLOSED room) is a user-driven race, not a system error
+                // — logW keeps Sentry clean. The early return suppresses the
+                // cascading sendSystemMessage call: posting "$targetName was
+                // kicked" against a room where the kick was rejected would
+                // confuse every observer with a fake announcement.
+                logW(TAG, "kickUser failed: ${kickResult.message}", kickResult.exception)
+                return@launch
+            }
             messageRepository.sendSystemMessage(roomId, "$targetName was kicked")
         }
     }
@@ -1253,7 +1269,13 @@ class RoomViewModel(
         viewModelScope.launch {
             val room = _uiState.value.room ?: return@launch
             if (_uiState.value.currentUserId != room.ownerId) return@launch
-            roomRepository.addHost(roomId, userId)
+            val result = roomRepository.addHost(roomId, userId)
+            if (result is Resource.Error) {
+                // 409 (CLOSED room) is a user-driven race, not a system error
+                // — logW keeps Sentry clean while still giving Sentry/logcat
+                // visibility into the failed promotion attempt.
+                logW(TAG, "addHost failed: ${result.message}", result.exception)
+            }
         }
     }
 
