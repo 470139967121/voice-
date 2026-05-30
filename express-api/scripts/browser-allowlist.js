@@ -28,6 +28,9 @@ const MOBILE_BROWSERS = [
   'mobile-samsung-android',
   'mobile-edge-android',
   'mobile-safari-ios',
+  'mobile-chrome-ios',
+  'mobile-firefox-ios',
+  'mobile-edge-ios',
 ];
 
 const SUPPORTED_BROWSERS = [...DESKTOP_BROWSERS, ...MOBILE_BROWSERS];
