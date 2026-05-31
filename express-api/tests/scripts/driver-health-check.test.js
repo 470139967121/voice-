@@ -615,6 +615,178 @@ describe('runHealthCheck — phase timing breakdown (gap C5)', () => {
     expect(r.cells[0].closeMs).toBeUndefined();
   });
 
+  test('peakRssBytes records process RSS during cell (gap C4)', async () => {
+    // Inject deterministic processStats so the value is pinned exactly.
+    // Default would use process.memoryUsage() — varies by environment.
+    let i = 0;
+    const samples = [
+      { rss: 100_000_000 }, // baseline / sample at cell start
+      { rss: 150_000_000 }, // after bootstrap
+      { rss: 180_000_000 }, // after close (peak)
+    ];
+    const driver = makeFakeDriver();
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryReturning(driver) },
+      processStats: () => samples[i++],
+    });
+    expect(r.cells[0].peakRssBytes).toBe(180_000_000);
+  });
+
+  test('peakRssBytes is undefined on no-factory path (no phase ran)', async () => {
+    const r = await runHealthCheck({
+      browsers: ['unknown-cell'],
+      factories: {},
+    });
+    expect(r.cells[0].outcome).toBe('fail');
+    expect(r.cells[0].peakRssBytes).toBeUndefined();
+  });
+
+  test('peakRssBytes recorded even on bootstrap failure (sampled before failure)', async () => {
+    let i = 0;
+    const samples = [{ rss: 100_000_000 }, { rss: 130_000_000 }];
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryThrowing(new Error('boom')) },
+      processStats: () => samples[i++],
+    });
+    expect(r.cells[0].outcome).toBe('fail');
+    expect(typeof r.cells[0].peakRssBytes).toBe('number');
+  });
+
+  test('peakRssBytes defaults to process.memoryUsage when processStats not injected', async () => {
+    // Real-process default — value varies but must be a positive number
+    // matching the live process RSS (typically 50MB+ for Jest+Node).
+    const driver = makeFakeDriver();
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryReturning(driver) },
+    });
+    expect(typeof r.cells[0].peakRssBytes).toBe('number');
+    expect(r.cells[0].peakRssBytes).toBeGreaterThan(0);
+  });
+
+  test('peakRssBytes captures smoke-phase peak even when close frees memory', async () => {
+    // Smoke-phase sampling: the smoke method may allocate buffers
+    // (screenshot, DOM dump) that close() frees. Without an after-
+    // smoke sample, that peak would be invisible. Tick sequence:
+    //   cell-start: 100M
+    //   after-bootstrap: 110M
+    //   after-smoke: 250M  ← THE PEAK (would be invisible without I1 fix)
+    //   after-close (final): 80M  (driver freed buffers)
+    let i = 0;
+    const samples = [
+      { rss: 100_000_000 },
+      { rss: 110_000_000 },
+      { rss: 250_000_000 },
+      { rss: 80_000_000 },
+    ];
+    const driver = makeFakeDriver();
+    driver.webUiDump = jest.fn(async () => 'big-dump');
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryReturning(driver) },
+      smokeMethod: 'webUiDump',
+      processStats: () => samples[i++],
+    });
+    expect(r.cells[0].peakRssBytes).toBe(250_000_000);
+  });
+
+  test('peakRssBytes undefined when processStats consistently throws', async () => {
+    // Best-effort sampling: try/catch silently swallows processStats
+    // errors. If EVERY sample throws, peakRssBytes stays undefined.
+    // Documented contract — pin so future "improvement" that tries
+    // to fall back to a sentinel value (e.g. 0) surfaces here.
+    const driver = makeFakeDriver();
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryReturning(driver) },
+      processStats: () => {
+        throw new Error('memoryUsage failed');
+      },
+    });
+    expect(r.cells[0].outcome).toBe('ok');
+    expect(r.cells[0].peakRssBytes).toBeUndefined();
+  });
+
+  test('peakRssBytes undefined when processStats returns null', async () => {
+    // Guard `if (stats && typeof stats.rss === 'number')` skips
+    // null returns. Pin: this is intentional silent-skip behavior.
+    const driver = makeFakeDriver();
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryReturning(driver) },
+      processStats: () => null,
+    });
+    expect(r.cells[0].peakRssBytes).toBeUndefined();
+  });
+
+  test('peakRssBytes undefined when processStats returns object without rss', async () => {
+    // Same guard, no `rss` field. Some Node profiling tools return
+    // partial memory objects; pin the defensive behaviour.
+    const driver = makeFakeDriver();
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryReturning(driver) },
+      processStats: () => ({ heapUsed: 50_000_000 }), // no rss
+    });
+    expect(r.cells[0].peakRssBytes).toBeUndefined();
+  });
+
+  test('peakRssBytes undefined when processStats returns rss as non-number', async () => {
+    // typeof check on rss specifically. NaN, null, string all skip.
+    const driver = makeFakeDriver();
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryReturning(driver) },
+      processStats: () => ({ rss: 'not-a-number' }),
+    });
+    expect(r.cells[0].peakRssBytes).toBeUndefined();
+  });
+
+  test('peakRssBytes = 0 when processStats consistently returns { rss: 0 }', async () => {
+    // Lazy-init path: `cellPeakRssBytes === undefined` branch sets it
+    // to 0 on the first sample; subsequent 0-returns don't lower it.
+    // 0 is a valid number — must not be confused with "didn't sample".
+    const driver = makeFakeDriver();
+    const r = await runHealthCheck({
+      browsers: ['chromium'],
+      factories: { chromium: makeFactoryReturning(driver) },
+      processStats: () => ({ rss: 0 }),
+    });
+    expect(r.cells[0].peakRssBytes).toBe(0);
+  });
+
+  test('peakRssBytes per-cell — independent samples for each cell', async () => {
+    // Verify per-cell scoping: cell A's peak is independent of cell B's.
+    // Inject samples such that cell A's peak is lower than cell B's
+    // peak, then assert each cell's peakRssBytes reflects its own
+    // sample window.
+    let i = 0;
+    const samples = [
+      // cell A: start=100M, bootstrap=110M, close=120M (peak 120M)
+      { rss: 100_000_000 },
+      { rss: 110_000_000 },
+      { rss: 120_000_000 },
+      // cell B: start=200M, bootstrap=250M, close=300M (peak 300M)
+      { rss: 200_000_000 },
+      { rss: 250_000_000 },
+      { rss: 300_000_000 },
+    ];
+    const driverA = makeFakeDriver();
+    const driverB = makeFakeDriver();
+    const r = await runHealthCheck({
+      browsers: ['a', 'b'],
+      factories: {
+        a: makeFactoryReturning(driverA),
+        b: makeFactoryReturning(driverB),
+      },
+      processStats: () => samples[i++],
+    });
+    expect(r.cells[0].peakRssBytes).toBe(120_000_000);
+    expect(r.cells[1].peakRssBytes).toBe(300_000_000);
+  });
+
   test('phase sum exactly equals durationMs with injected deterministic nowMs', async () => {
     // Structural invariant via injected clock — zero tolerance, no
     // flakiness from real-clock jitter. Tick sequence (smoke-method
