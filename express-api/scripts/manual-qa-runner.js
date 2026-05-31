@@ -15453,6 +15453,12 @@ function formatUsage() {
     '  --bail <n>                Stop the matrix after <n> failures (timeouts',
     '                              count as failures, skips do not). 0 = no bail.',
     '                              --bail 1 is equivalent in effect to --fail-fast.',
+    '  --retry <n>               In-run per-cell retry on fail/timeout (default 0).',
+    '                              Up to n retries → n+1 total attempts. Pass or',
+    '                              skip break out immediately. fail-fast / --bail',
+    '                              count FINAL failures only (recovered cells do',
+    '                              not increment the gate). Distinct from',
+    '                              --retry-failed (cross-run replay).',
     '  --check-drivers           Diagnostic — verify each driver bootstraps',
     '  --smoke                   Like --check-drivers but ALSO invokes one real',
     '                              driver method (webUiDump) per cell to verify',
@@ -15541,6 +15547,47 @@ function formatListJson(target) {
     supported: SUPPORTED_BROWSERS,
     targets: TARGET_BROWSER_ALLOWLIST,
   });
+}
+
+// stripPerCellFlags — remove matrix-level flags from argv so per-cell
+// subprocesses don't recurse into their own matrix dispatch or
+// report-writing. Boolean flags (--matrix) consume no token; value-
+// bearing flags consume the following token too.
+//
+// Extracted from main() so the strip behavior is unit-testable
+// without spawning subprocesses. The Set of strip flags lives here
+// alongside the helper as a single source of truth.
+const PER_CELL_STRIP_FLAGS = new Set([
+  '--matrix',
+  '--report-dir',
+  '--report-format',
+  '--report-output',
+  '--retry-failed',
+  '--filter',
+  '--retry',
+]);
+// Subset of PER_CELL_STRIP_FLAGS that consume the NEXT token as a
+// value. Every flag in PER_CELL_STRIP_FLAGS that is NOT in this set
+// is treated as boolean (no value token).
+const PER_CELL_VALUE_FLAGS = new Set([
+  '--report-dir',
+  '--report-format',
+  '--report-output',
+  '--retry-failed',
+  '--filter',
+  '--retry',
+]);
+function stripPerCellFlags(sourceArgv) {
+  const baseArgv = [];
+  for (let i = 0; i < sourceArgv.length; i++) {
+    const a = sourceArgv[i];
+    if (PER_CELL_STRIP_FLAGS.has(a)) {
+      if (PER_CELL_VALUE_FLAGS.has(a)) i++;
+      continue;
+    }
+    baseArgv.push(a);
+  }
+  return baseArgv;
 }
 
 // buildDriverFactories — single source of truth for the cell-slug → factory
@@ -15687,7 +15734,10 @@ async function main() {
     else if (flat[i] === '--matrix') opts.matrix = true;
     else if (flat[i] === '--fail-fast') opts.failFast = true;
     else if (flat[i] === '--bail') opts.bailAfter = parseInt(flat[++i], 10);
-    else if (flat[i] === '--check-drivers') opts.checkDrivers = true;
+    else if (flat[i] === '--retry') {
+      opts._retryRaw = flat[++i];
+      opts.retry = parseInt(opts._retryRaw, 10);
+    } else if (flat[i] === '--check-drivers') opts.checkDrivers = true;
     else if (flat[i] === '--smoke') opts.smoke = true;
     else if (flat[i] === '--report-dir') opts.reportDir = flat[++i];
     else if (flat[i] === '--report-format') opts.reportFormat = flat[++i];
@@ -15768,6 +15818,13 @@ async function main() {
   // floored to 0.
   if (opts.bailAfter !== undefined && (!Number.isFinite(opts.bailAfter) || opts.bailAfter < 0)) {
     console.error(`--bail must be a non-negative integer. Got "${opts.bailAfter}".`);
+    process.exit(2);
+  }
+  // --retry validation: 0 (off) or positive integer. Negative / NaN /
+  // floats rejected so operators get a clean error instead of a silent
+  // retry=0 fallback that hides typos.
+  if (opts.retry !== undefined && (!Number.isInteger(opts.retry) || opts.retry < 0)) {
+    console.error(`--retry must be a non-negative integer. Got "${opts._retryRaw}".`);
     process.exit(2);
   }
   opts.target = opts.target || 'dev';
@@ -15899,26 +15956,7 @@ async function main() {
     // not try to read the report file (they're just running a single
     // browser).
     // Last --browser wins in the parse loop.
-    const stripFlags = new Set([
-      '--matrix',
-      '--report-dir',
-      '--report-format',
-      '--report-output',
-      '--retry-failed',
-      '--filter',
-    ]);
-    const baseArgv = [];
-    const sourceArgv = process.argv.slice(2);
-    for (let i = 0; i < sourceArgv.length; i++) {
-      const a = sourceArgv[i];
-      if (stripFlags.has(a)) {
-        // --matrix is a boolean; the other strip flags take a value,
-        // skip it too.
-        if (a !== '--matrix') i++;
-        continue;
-      }
-      baseArgv.push(a);
-    }
+    const baseArgv = stripPerCellFlags(process.argv.slice(2));
 
     // When --report-dir is set, mkdir-p the dir up front so the per-cell
     // writes don't race on creation.
@@ -15932,6 +15970,7 @@ async function main() {
       browsers: allowed,
       failFast: opts.failFast === true,
       bailAfter: opts.bailAfter > 0 ? opts.bailAfter : 0,
+      retry: opts.retry > 0 ? opts.retry : 0,
       onCellStart: ({ browser }) => console.log(`[matrix] → dispatching ${browser}`),
       onCellEnd: (cell) =>
         console.log(`[matrix] ← ${cell.browser}: ${cell.outcome} (${cell.durationMs}ms)`),
@@ -16253,6 +16292,9 @@ module.exports = {
   formatDryRunJson,
   applyFilter,
   buildDriverFactories,
+  stripPerCellFlags,
+  PER_CELL_STRIP_FLAGS,
+  PER_CELL_VALUE_FLAGS,
   TARGETS,
 };
 
