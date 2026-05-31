@@ -550,3 +550,78 @@ describe('createMobileChromeAndroidDriver', () => {
     await expect(driver.close()).resolves.toBeUndefined();
   });
 });
+
+// takeScreenshot — behavioral delegation (gap C3, reviewer I-NEW-1) ──
+
+describe('createMobileChromeAndroidDriver — takeScreenshot delegation', () => {
+  const helper = require(
+    path.join(REPO_ROOT, 'express-api/scripts/drivers/driver-screenshot-helper'),
+  );
+
+  test('routes to takeScreenshotForPages with the populated pages Map + slug', async () => {
+    const spy = jest
+      .spyOn(helper, 'takeScreenshotForPages')
+      .mockResolvedValue(['/mock/chrome-android.png']);
+    try {
+      const execFileSync = makeExecFileSyncMock({
+        devicesOutput: 'List of devices attached\nABC\tdevice\n',
+      });
+      const pages = makePagesByPersona(['Alice', 'Bob']);
+      const playwrightImpl = makePlaywrightConnectOverCDPMock(pages);
+      const driver = await createMobileChromeAndroidDriver({
+        execFileSync,
+        playwrightImpl,
+        pickPort: async () => 9333,
+      });
+      // Populate the pages Map through public API.
+      await driver.webRefreshRoomsList('Alice');
+      await driver.webRefreshRoomsList('Bob');
+
+      const result = await driver.takeScreenshot('/tmp/chrome-android-out');
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      const [pagesArg, outputDirArg, slugArg] = spy.mock.calls[0];
+      expect(outputDirArg).toBe('/tmp/chrome-android-out');
+      expect(slugArg).toBe('mobile-chrome-android');
+      // Identity pin: pagesArg must be the SAME Map the driver populated.
+      expect(pagesArg instanceof Map).toBe(true);
+      expect(pagesArg.size).toBe(2);
+      expect(pagesArg.has('Alice')).toBe(true);
+      expect(pagesArg.has('Bob')).toBe(true);
+      expect(result).toEqual(['/mock/chrome-android.png']);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('takeScreenshot before any webRefreshRoomsList → forwards empty pages Map, returns []', async () => {
+    // Reviewer round-3 I-2 — pre-bootstrap case parallel to the
+    // webkit-ios null-sessionId test. driver.takeScreenshot must not
+    // crash if invoked before any persona page is populated; it should
+    // forward an EMPTY pages Map and pass through whatever the helper
+    // returns (which is `[]` for an empty Map per the helper's tested
+    // contract).
+    const spy = jest.spyOn(helper, 'takeScreenshotForPages').mockResolvedValue([]);
+    try {
+      const execFileSync = makeExecFileSyncMock({
+        devicesOutput: 'List of devices attached\nABC\tdevice\n',
+      });
+      const pages = makePagesByPersona(['Alice']);
+      const playwrightImpl = makePlaywrightConnectOverCDPMock(pages);
+      const driver = await createMobileChromeAndroidDriver({
+        execFileSync,
+        playwrightImpl,
+        pickPort: async () => 9333,
+      });
+      // NB: no webRefreshRoomsList call — pages Map is still empty.
+      const result = await driver.takeScreenshot('/tmp/empty-out');
+      expect(result).toEqual([]);
+      expect(spy).toHaveBeenCalledTimes(1);
+      const [pagesArg] = spy.mock.calls[0];
+      expect(pagesArg instanceof Map).toBe(true);
+      expect(pagesArg.size).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

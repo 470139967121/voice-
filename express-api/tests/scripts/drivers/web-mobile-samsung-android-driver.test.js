@@ -314,3 +314,66 @@ describe('createMobileSamsungAndroidDriver', () => {
     await expect(driver.close()).resolves.toBeUndefined();
   });
 });
+
+// takeScreenshot — behavioral delegation (gap C3, reviewer I-NEW-1) ──
+
+describe('createMobileSamsungAndroidDriver — takeScreenshot delegation', () => {
+  const helper = require(
+    path.join(REPO_ROOT, 'express-api/scripts/drivers/driver-screenshot-helper'),
+  );
+
+  test('routes to takeScreenshotForPages with populated pages Map + slug', async () => {
+    const spy = jest
+      .spyOn(helper, 'takeScreenshotForPages')
+      .mockResolvedValue(['/mock/samsung.png']);
+    try {
+      const execFileSync = makeExecFileSyncMock();
+      const pages = makePages(['Alice', 'Bob']);
+      const playwrightImpl = makePlaywrightMock(pages);
+      const driver = await createMobileSamsungAndroidDriver({
+        execFileSync,
+        playwrightImpl,
+        pickPort: async () => 9555,
+      });
+      await driver.webRefreshRoomsList('Alice');
+      await driver.webRefreshRoomsList('Bob');
+
+      const result = await driver.takeScreenshot('/tmp/samsung-out');
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      const [pagesArg, outputDirArg, slugArg] = spy.mock.calls[0];
+      expect(outputDirArg).toBe('/tmp/samsung-out');
+      expect(slugArg).toBe('mobile-samsung-android');
+      expect(pagesArg instanceof Map).toBe(true);
+      expect(pagesArg.size).toBe(2);
+      expect(pagesArg.has('Alice')).toBe(true);
+      expect(pagesArg.has('Bob')).toBe(true);
+      expect(result).toEqual(['/mock/samsung.png']);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('takeScreenshot before any webRefreshRoomsList → forwards empty pages Map, returns []', async () => {
+    // Reviewer round-3 I-2 — pre-bootstrap case.
+    const spy = jest.spyOn(helper, 'takeScreenshotForPages').mockResolvedValue([]);
+    try {
+      const execFileSync = makeExecFileSyncMock();
+      const pages = makePages(['Alice']);
+      const playwrightImpl = makePlaywrightMock(pages);
+      const driver = await createMobileSamsungAndroidDriver({
+        execFileSync,
+        playwrightImpl,
+        pickPort: async () => 9555,
+      });
+      const result = await driver.takeScreenshot('/tmp/empty-out');
+      expect(result).toEqual([]);
+      expect(spy).toHaveBeenCalledTimes(1);
+      const [pagesArg] = spy.mock.calls[0];
+      expect(pagesArg instanceof Map).toBe(true);
+      expect(pagesArg.size).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

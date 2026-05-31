@@ -14819,12 +14819,32 @@ async function runFeatureFile(filePath, ctx) {
         error: failed.result.error,
         code: failed.result.code || null,
       });
-      scenarioReports.push({
+      // Capture per-scenario failure screenshots (gap C3) BEFORE
+      // driver.close() tears down the browser. Best-effort: a screenshot
+      // failure must NEVER change the test outcome — the cell already
+      // failed; we're just preserving artifacts.
+      //
+      // Per-failure subdir keeps multi-failure feature files from
+      // overwriting each other's PNGs: `<reportDir>/scenario-<N>/`
+      // where N is the failure ordinal (matches findings[N]).
+      let screenshotPaths = [];
+      if (ctx.reportDir && ctx.webDriver && typeof ctx.webDriver.takeScreenshot === 'function') {
+        try {
+          const scenarioDir = path.join(ctx.reportDir, `scenario-${findings.length - 1}`);
+          const raw = (await ctx.webDriver.takeScreenshot(scenarioDir)) || [];
+          screenshotPaths = raw.filter(Boolean);
+        } catch (_e) {
+          /* swallow — screenshot capture is diagnostic, not test outcome */
+        }
+      }
+      const failReport = {
         file: fileName,
         scenario: scenario.name,
         status: 'fail',
         failedStep: failed.step.text,
-      });
+      };
+      if (screenshotPaths.length > 0) failReport.screenshots = screenshotPaths;
+      scenarioReports.push(failReport);
     } else {
       scenarioReports.push({
         file: fileName,
@@ -16330,6 +16350,10 @@ async function main() {
     uiDriver,
     liveKitDriver,
     testerDriver,
+    // reportDir attached for per-scenario-failure screenshot capture
+    // (gap C3). runFeatureFile calls webDriver.takeScreenshot(reportDir)
+    // when a scenario fails AND reportDir is set, BEFORE driver.close().
+    reportDir: opts.reportDir || null,
     _driverCleanup: driverCleanup,
   };
 
