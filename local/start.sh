@@ -6,6 +6,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 API_PID=""
 FIREBASE_PID=""
+SERVE_PID=""
 
 cleanup() {
   echo ""
@@ -18,14 +19,21 @@ cleanup() {
     wait "$API_PID" 2>/dev/null || true
   fi
 
-  # 2. Stop Firebase Emulators (graceful -- exports data)
+  # 2. Stop web-app serve (port 8888)
+  if [ -n "$SERVE_PID" ] && kill -0 "$SERVE_PID" 2>/dev/null; then
+    echo "Stopping web-app serve..."
+    kill "$SERVE_PID" 2>/dev/null || true
+    wait "$SERVE_PID" 2>/dev/null || true
+  fi
+
+  # 3. Stop Firebase Emulators (graceful -- exports data)
   if [ -n "$FIREBASE_PID" ] && kill -0 "$FIREBASE_PID" 2>/dev/null; then
     echo "Stopping Firebase Emulators (exporting data)..."
     kill "$FIREBASE_PID" 2>/dev/null || true
     wait "$FIREBASE_PID" 2>/dev/null || true
   fi
 
-  # 3. Stop Docker containers
+  # 4. Stop Docker containers
   echo "Stopping Docker containers..."
   docker compose -f "$SCRIPT_DIR/docker-compose.yml" down 2>/dev/null || true
 
@@ -96,6 +104,32 @@ echo "==> Step 4/8: Seeding data..."
 (cd "$PROJECT_ROOT/express-api" && NODE_PATH=./node_modules node ../local/seed.js)
 
 # =============================================================================
+# Step 4b: Provision journey-runner test personas (P-02..P-19)
+# =============================================================================
+# local/seed.js only creates 2 users (admin + 1 regular). The manual-qa
+# journey runner requires 17 personas (P-02..P-19, the cast for j01..j19).
+# Without this step, every persona-driven scenario fails with "Firebase
+# sign-in failed: 400 INVALID_PASSWORD" -- ~170 findings on the first
+# matrix cycle on 2026-06-01 traced to this gap.
+#
+# Uses the existing `seed-personas-local.js` wrapper (NOT a direct call
+# to provision-test-personas.js). The wrapper bridges the 20-char-floor
+# vs the local-flavor app's baked credential ("localdev123" per
+# app/build.gradle.kts:141). Calling the provisioner directly with a
+# 20-char synthetic value would leave the app and emulator using
+# different passwords -- the picker would still fail INVALID_PASSWORD,
+# just on a different surface.
+#
+# --env-file=.env.local (Node 20.6+) sets NODE_ENV=local before the
+# script's require() chain, so src/utils/firebase points firebase-admin
+# at the emulator (project demo-shytalk) and skips any
+# GOOGLE_APPLICATION_CREDENTIALS the operator may have set for dev work.
+echo "==> Step 4b/8: Provisioning journey-runner personas..."
+(cd "$PROJECT_ROOT/express-api" && \
+  NODE_PATH=./node_modules \
+  node --env-file=.env.local scripts/seed-personas-local.js)
+
+# =============================================================================
 # Step 5: Start Express API (background)
 # =============================================================================
 echo "==> Step 5/8: Starting Express API..."
@@ -125,6 +159,46 @@ until curl -s http://localhost:3000/api/health > /dev/null 2>&1; do
   fi
 done
 echo "  Express API ready."
+
+# =============================================================================
+# Step 6b: Serve static web app on port 8888 (background)
+# =============================================================================
+# manual-qa-runner.js defaults to webBase=http://localhost:8888 for the
+# local target. Without this serve, every desktop browser cell in the
+# matrix fails webUiDump with ECONNREFUSED. Self-discovered 2026-06-01
+# when the first matrix cycle's 4 desktop cells all failed smoke.
+#
+# Pinned at 8888 (not 8080) to match manual-qa-runner.js's default.
+# local/test-playwright.sh now also relies on this serve rather than
+# starting its own redundant one on 8080.
+#
+# `serve` is pinned as a root devDependency so `npx serve` resolves
+# deterministically (no registry fetch needed on a fresh clone).
+echo "==> Step 6b/8: Serving static web app on localhost:8888..."
+npx serve public --no-clipboard -l 8888 > >(sed 's/^/[WEB] /') 2>&1 &
+SERVE_PID=$!
+
+# Readiness probe -- mirrors Step 6's wait-for-API pattern. Without
+# this, a port-8888 conflict (leftover serve from a prior run) lets
+# Step 7's Gradle build run for 2-3min while the browser cells will
+# still fail webUiDump. The kill-0 inner check fails fast when the
+# serve dies at startup, sparing the operator the full 30s wait.
+echo "  Waiting for web serve (localhost:8888)..."
+MAX_WAIT=30; WAITED=0
+until curl -s http://localhost:8888 > /dev/null 2>&1; do
+  if ! kill -0 "$SERVE_PID" 2>/dev/null; then
+    echo "ERROR: npx serve died -- check [WEB] log lines (port 8888 in use?)"
+    cleanup
+    exit 1
+  fi
+  sleep 1; WAITED=$((WAITED+1))
+  if [ $WAITED -ge $MAX_WAIT ]; then
+    echo "ERROR: Web serve did not start within ${MAX_WAIT}s"
+    cleanup
+    exit 1
+  fi
+done
+echo "  Web serve ready."
 
 # =============================================================================
 # Step 7: Build Android APK

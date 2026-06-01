@@ -21,6 +21,8 @@ const path = require('path');
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const COMPOSE_PATH = path.join(REPO_ROOT, 'local/docker-compose.yml');
 const START_SH_PATH = path.join(REPO_ROOT, 'local/start.sh');
+const ROOT_PACKAGE_PATH = path.join(REPO_ROOT, 'package.json');
+const ROOT_LOCKFILE_PATH = path.join(REPO_ROOT, 'package-lock.json');
 
 /**
  * Extract a single service's YAML block from docker-compose.yml so
@@ -247,6 +249,191 @@ describe('Local-stack resource diet', () => {
       expect(bannerIdx).toBeGreaterThanOrEqual(0);
       expect(waitIdx).toBeGreaterThanOrEqual(0);
       expect(waitIdx).toBeGreaterThan(bannerIdx);
+    });
+  });
+
+  describe('start.sh — provision test personas after seed data', () => {
+    let scriptText;
+
+    beforeAll(() => {
+      scriptText = fs.readFileSync(START_SH_PATH, 'utf8');
+    });
+
+    // Gap #71: local/seed.js only creates 2 users (admin + 1 regular)
+    // but the journey-test runner requires 17 personas (P-02..P-19).
+    // Without integration, every journey run hits "Firebase sign-in
+    // failed: 400 INVALID_PASSWORD" for ~170 scenarios.
+    //
+    // Uses the existing seed-personas-local.js wrapper, NOT a direct
+    // provision-test-personas.js call. The wrapper supplies the local
+    // emulator password ("localdev123" -- matches the app's baked
+    // DEV_QA_PERSONAS_PASSWORD per app/build.gradle.kts:141) instead
+    // of the 20+ char floor the dev provisioner enforces. Calling
+    // the provisioner directly would create a mismatch with the app,
+    // shifting INVALID_PASSWORD failures from runner cells to picker
+    // cells -- caught by code-reviewer agent on PR #947 round 1.
+    test('invokes seed-personas-local.js after seed.js', () => {
+      expect(scriptText).toMatch(/node[^\n]*scripts\/seed-personas-local\.js/m);
+    });
+
+    // Position pin: seed-personas-local MUST come after seed (seed
+    // creates the baseline Firestore docs; persona seeding adds
+    // persona-specific structure on top). Reversing the order would
+    // break the social graph (followingIds reference uniqueIds that
+    // seed.js writes).
+    test('seed-personas-local step runs AFTER seed.js', () => {
+      const lines = scriptText.split('\n');
+      const seedIdx = lines.findIndex((l) => /local\/seed\.js/.test(l));
+      const provIdx = lines.findIndex((l) => /scripts\/seed-personas-local\.js/.test(l));
+      expect(seedIdx).toBeGreaterThanOrEqual(0);
+      expect(provIdx).toBeGreaterThanOrEqual(0);
+      expect(provIdx).toBeGreaterThan(seedIdx);
+    });
+
+    // Position pin: persona-seeding MUST come BEFORE Express API
+    // startup so personas exist when any first-launch journey scenario
+    // hits the API. Otherwise a fresh run race-conditions the
+    // personas being available.
+    test('seed-personas-local step runs BEFORE Express API startup', () => {
+      const lines = scriptText.split('\n');
+      const provIdx = lines.findIndex((l) => /scripts\/seed-personas-local\.js/.test(l));
+      const apiIdx = lines.findIndex((l) => /node src\/index\.js/.test(l));
+      expect(provIdx).toBeGreaterThanOrEqual(0);
+      expect(apiIdx).toBeGreaterThanOrEqual(0);
+      expect(provIdx).toBeLessThan(apiIdx);
+    });
+
+    // --env-file=.env.local (Node 20.6+) sets NODE_ENV=local before
+    // the script's require() chain. This makes src/utils/firebase
+    // point firebase-admin at the emulator (project demo-shytalk)
+    // instead of honoring any GOOGLE_APPLICATION_CREDENTIALS the
+    // operator may have set for dev work. Without it, a stray dev
+    // SA path would route the persona writes at real shytalk-dev --
+    // the assertSafeProject guard inside the wrapper would catch
+    // most cases but is operator-dependent. Caught by reviewer on
+    // round 1 (Critical C2).
+    test('invokes seed-personas-local with --env-file=.env.local', () => {
+      expect(scriptText).toMatch(
+        /node[^\n]*--env-file=\.env\.local[^\n]*scripts\/seed-personas-local\.js/m,
+      );
+    });
+  });
+
+  describe('start.sh — serve web app on port 8888 for journey runner', () => {
+    let scriptText;
+
+    beforeAll(() => {
+      scriptText = fs.readFileSync(START_SH_PATH, 'utf8');
+    });
+
+    // Gap #65: manual-qa-runner.js defaults to webBase localhost:8888
+    // for the local target, but no script serves the static web app
+    // there. Without this step, every desktop browser cell in the
+    // matrix fails its smoke test ("webUiDump failed: ECONNREFUSED").
+    // start.sh must launch `npx serve public -l 8888` in the background.
+    test('launches npx serve public on port 8888', () => {
+      // The operative line must be `npx serve public -l 8888` at line-
+      // start, with a trailing `&` (backgrounded) so the script
+      // continues to subsequent steps.
+      expect(scriptText).toMatch(/^npx serve public[^\n]*-l 8888[^\n]*&\s*$/m);
+    });
+
+    // SERVE_PID capture must follow the backgrounded npx serve so
+    // cleanup() can kill it. Mirrors the FIREBASE_PID / API_PID pattern.
+    test('captures SERVE_PID immediately after the backgrounded serve', () => {
+      const lines = scriptText.split('\n');
+      const serveIdx = lines.findIndex((l) => /^npx serve public[^\n]*-l 8888[^\n]*&\s*$/.test(l));
+      expect(serveIdx).toBeGreaterThanOrEqual(0);
+      expect(lines[serveIdx + 1]).toMatch(/^SERVE_PID=\$!$/);
+    });
+
+    // cleanup() must kill SERVE_PID alongside API_PID and FIREBASE_PID
+    // so a Ctrl+C doesn't leak the serve process across runs (port 8888
+    // would stay held). Anchor to the cleanup function body so a
+    // future refactor moving the kill-block outside cleanup() trips
+    // this test (Important I2 from reviewer round 1).
+    test('cleanup() kills SERVE_PID (anchored to function body)', () => {
+      const cleanupBody = scriptText.match(/^cleanup\(\) \{([\s\S]*?)^\}/m);
+      expect(cleanupBody).not.toBeNull();
+      const body = cleanupBody[1];
+      expect(body).toMatch(/kill -0 "?\$SERVE_PID"?/);
+      expect(body).toMatch(/kill "?\$SERVE_PID"?/);
+    });
+
+    // Wait-for-port-8888 readiness probe (Critical C3 from reviewer
+    // round 1). Without this, a port conflict on 8888 (leftover serve
+    // from a prior run, or another local web server) silently leaves
+    // the SERVE_PID capture pointing at a dead PID. Step 7's 2-3min
+    // Gradle build then runs for the full duration while the browser
+    // cells will still fail webUiDump with ECONNREFUSED -- exactly
+    // the gap this PR aims to close. Wait-pattern mirrors Step 6's
+    // wait-for-API; kill -0 inner check fails fast on serve death.
+    test('waits for port 8888 readiness with kill-0 fail-fast', () => {
+      // The probe is a `curl -s http://localhost:8888` polled until
+      // a response OR until SERVE_PID dies OR until MAX_WAIT seconds.
+      // Match the curl probe + the kill -0 inner check on SERVE_PID.
+      expect(scriptText).toMatch(/curl -s http:\/\/localhost:8888/);
+      // The kill -0 check must reference SERVE_PID inside the until
+      // loop body, which means it appears AFTER the curl probe AND
+      // BEFORE the "Web serve ready" success log. Using a non-greedy
+      // multi-line match between those two anchors.
+      const probeBlock = scriptText.match(/curl -s http:\/\/localhost:8888[\s\S]*?Web serve ready/);
+      expect(probeBlock).not.toBeNull();
+      expect(probeBlock[0]).toMatch(/kill -0 "?\$SERVE_PID"?/);
+    });
+
+    // Position: serve must come AFTER Express API ready (Step 6) but
+    // BEFORE the keep-alive banner. This way the serve is ready by the
+    // time the banner prints and the operator can hit the URLs listed
+    // in the banner.
+    test('serve step runs after Express API ready', () => {
+      const lines = scriptText.split('\n');
+      const apiReadyIdx = lines.findIndex((l) => l.includes('Express API ready'));
+      const serveIdx = lines.findIndex((l) => /^npx serve public[^\n]*-l 8888[^\n]*&\s*$/.test(l));
+      expect(apiReadyIdx).toBeGreaterThanOrEqual(0);
+      expect(serveIdx).toBeGreaterThanOrEqual(0);
+      expect(serveIdx).toBeGreaterThan(apiReadyIdx);
+    });
+  });
+
+  // Round 2 coverage gap (Important I1-NEW from reviewer): when a root
+  // devDependency is added/bumped in package.json, the matching
+  // package-lock.json entry must be regenerated. Round 1 added
+  // `"serve": "^14.2.4"` to package.json but didn't run `npm install`,
+  // leaving the lockfile stale. CI uses `npm ci` (lockfile-strict)
+  // across 6 workflows and would have broken with `EUSAGE Missing:
+  // serve@^14.2.4 from lock file`. This pin catches the next
+  // recurrence pre-merge.
+  describe('package-lock.json must list every root devDependency', () => {
+    let pkg;
+    let lock;
+
+    beforeAll(() => {
+      pkg = JSON.parse(fs.readFileSync(ROOT_PACKAGE_PATH, 'utf8'));
+      lock = JSON.parse(fs.readFileSync(ROOT_LOCKFILE_PATH, 'utf8'));
+    });
+
+    test('every devDependency in package.json has an entry in package-lock.json', () => {
+      const devDeps = Object.keys(pkg.devDependencies || {});
+      // npm v7+ lockfile shape: each installed dep appears as
+      // `lock.packages["node_modules/<name>"]` (or nested for
+      // workspace deps; the root devDeps are flat).
+      const missing = devDeps.filter((name) => !lock.packages[`node_modules/${name}`]);
+      // Surface the offending names so a future drift makes the
+      // failure self-diagnosing.
+      expect(missing).toEqual([]);
+    });
+
+    // Defence-in-depth: the lockfile's `name` and `version` should
+    // match `package.json` for the root entry itself. If a manual
+    // edit to either file forgets to align them, CI's `npm ci` would
+    // still install — but downstream tools that read either file
+    // would diverge.
+    test('lockfile root entry matches package.json name + version', () => {
+      const rootEntry = lock.packages[''] || {};
+      // package.json:2 is "name": "shytalk" and no version (private).
+      // Lockfile mirrors that.
+      expect(rootEntry.name).toBe(pkg.name);
     });
   });
 
