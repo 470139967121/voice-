@@ -62,6 +62,13 @@ const CONFIRM_PHRASE = 'RESET EVERYTHING';
 let step = 0;
 let executing = false;
 let soundMuted = false;
+// Cleared on the next macrotask after a step transition so the visible
+// "Step 2 of 3 / last warning" screen can't be skipped by a rapid
+// double-tap at step 1. Without it, two queued clicks both enter the
+// handler synchronously, click 1 advances step 1→2 and returns,
+// click 2 reads step === 2 and advances to step 3 — bypassing the
+// "last warning" UI without changing the typing-gate security.
+let nuclearStepLock = false;
 
 // ── Web Audio: warning beep (confirmation steps) ──────────────────
 
@@ -247,6 +254,17 @@ async function handleNuclearProceed() {
   const proceedBtn = document.getElementById('nuclear-proceed');
   const confirmInput = document.getElementById('nuclear-confirm-input');
 
+  // Re-entrancy guard: blocks a queued second click after step 2
+  // disables the button for input gating, AND after step 3 disables
+  // the button before awaiting executeNuclearReset.
+  if (proceedBtn.disabled) return;
+  // Step-transition lock: prevents step 1→2 double-tap from skipping
+  // the "last warning" screen by burning click 2 in the same
+  // macrotask as click 1. Cleared on next tick.
+  if (nuclearStepLock) return;
+  nuclearStepLock = true;
+  setTimeout(() => { nuclearStepLock = false; }, 0);
+
   if (step === 1) {
     step = 2;
     document.getElementById('nuclear-step-label').textContent = 'Step 2 of 3';
@@ -269,7 +287,16 @@ async function handleNuclearProceed() {
   }
   if (step === 3) {
     if (confirmInput.value !== CONFIRM_PHRASE) return;
-    await executeNuclearReset();
+    // Disable BEFORE the await so a queued second click hits the
+    // guard above. `finally` re-enables for retry on error; the
+    // success path destroys the dialog (proceedBtn becomes hidden),
+    // making the re-enable a harmless no-op.
+    proceedBtn.disabled = true;
+    try {
+      await executeNuclearReset();
+    } finally {
+      proceedBtn.disabled = false;
+    }
   }
 }
 

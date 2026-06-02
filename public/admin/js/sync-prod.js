@@ -70,6 +70,10 @@ const SYNC_PHRASE = 'SYNC';
 let syncStep = 0;
 let syncExecuting = false;
 let syncMuted = false;
+// See nuclear-reset.js for rationale. Step-transition lock cleared on
+// next macrotask; blocks step 1→2 double-tap from skipping the "this
+// will overwrite everything" warning screen.
+let syncStepLock = false;
 
 // ── Web Audio: digital pulse (confirmation steps) ─────────────────
 
@@ -202,6 +206,16 @@ async function handleSyncProceed() {
   const proceedBtn = document.getElementById('sync-proceed');
   const confirmInput = document.getElementById('sync-confirm-input');
 
+  // Re-entrancy guard: blocks a queued second click after step 2
+  // disables the button for input gating, AND after step 3 disables
+  // the button before awaiting executeSyncFromProd.
+  if (proceedBtn.disabled) return;
+  // Step-transition lock: blocks step 1→2 double-tap from skipping
+  // the "this will overwrite everything" warning. Cleared next tick.
+  if (syncStepLock) return;
+  syncStepLock = true;
+  setTimeout(() => { syncStepLock = false; }, 0);
+
   if (syncStep === 1) {
     syncStep = 2;
     document.getElementById('sync-step-label').textContent = 'Step 2 of 3';
@@ -231,7 +245,16 @@ async function handleSyncProceed() {
   }
   if (syncStep === 3) {
     if (confirmInput.value !== SYNC_PHRASE) return;
-    await executeSyncFromProd();
+    // Disable BEFORE the await so a queued second click hits the
+    // guard above. `finally` re-enables for retry on error; the
+    // success path destroys the dialog (proceedBtn becomes hidden),
+    // making the re-enable a harmless no-op.
+    proceedBtn.disabled = true;
+    try {
+      await executeSyncFromProd();
+    } finally {
+      proceedBtn.disabled = false;
+    }
   }
 }
 

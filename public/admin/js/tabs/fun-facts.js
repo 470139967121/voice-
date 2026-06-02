@@ -181,13 +181,17 @@ function renderList() {
     deleteBtn.style.cssText =
       'padding:6px 14px;background:var(--danger);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;';
     deleteBtn.addEventListener('click', async () => {
+      if (deleteBtn.disabled) return;
       if (!confirm('Delete this fun fact? This cannot be undone.')) return;
+      deleteBtn.disabled = true;
       try {
         await apiCall('DELETE', `/api/admin/fun-facts/${f.id}`);
         showToast('Fun fact deleted');
         await loadFunFacts();
       } catch (err) {
         showToast('Delete failed: ' + err.message, 'error');
+      } finally {
+        deleteBtn.disabled = false;
       }
     });
     actions.appendChild(deleteBtn);
@@ -214,13 +218,14 @@ function closeDialog() {
 }
 
 async function saveDialog() {
+  const saveBtnEl = document.getElementById('funfact-dialog-save');
+  if (saveBtnEl.disabled) return;
   const text = textInput.value.trim();
   if (!text) {
     showToast('Fact text is required', 'error');
     return;
   }
 
-  const saveBtnEl = document.getElementById('funfact-dialog-save');
   saveBtnEl.disabled = true;
   saveBtnEl.textContent = 'Saving...';
 
