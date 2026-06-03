@@ -65,6 +65,14 @@ const { queryDocs } = require('../../src/utils/firestore-helpers');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // jest.clearAllMocks() clears CALL HISTORY but not mockImplementation
+  // overrides. The queryDocs-backed error-path tests below use
+  // queryDocs.mockImplementation(...) to route rejections by collection
+  // path; without this re-stamp, the routing predicate would leak into
+  // any subsequent test that doesn't explicitly override queryDocs.
+  // Symmetric with the existing mockCollectionGet / mockCollectionGroupGet
+  // / mockCollectionGroupCommentsGet / db.collection re-stamps below.
+  queryDocs.mockResolvedValue([]);
   mockCollectionGet.mockResolvedValue({ docs: [], empty: true });
   // Default: no votes for the user — tests that exercise the votes path
   // override with mockCollectionGroupGet.mockResolvedValueOnce(...).
@@ -357,10 +365,7 @@ describe('buildDataExport', () => {
 
     // conversations succeed, then rooms fail, rest succeed
     const { db } = require('../../src/utils/firebase');
-    let collCallCount = 0;
     db.collection.mockImplementation((path) => {
-      collCallCount++;
-      expect(collCallCount).toBeGreaterThan(0);
       const chain = {
         where: jest.fn().mockImplementation(() => chain),
         orderBy: jest.fn().mockImplementation(() => chain),
@@ -382,6 +387,8 @@ describe('buildDataExport', () => {
       'Failed to query rooms',
       expect.objectContaining({ uniqueId: '10000001' }),
     );
+    expect(result.partial).toBe(true);
+    expect(result.failedSections).toContain('rooms');
   });
 
   test('handles reports query error gracefully', async () => {
@@ -414,6 +421,8 @@ describe('buildDataExport', () => {
       'Failed to query reports',
       expect.objectContaining({ uniqueId: '10000001' }),
     );
+    expect(result.partial).toBe(true);
+    expect(result.failedSections).toContain('reports');
   });
 
   test('handles appeals query error gracefully', async () => {
@@ -446,6 +455,8 @@ describe('buildDataExport', () => {
       'Failed to query appeals',
       expect.objectContaining({ uniqueId: '10000001' }),
     );
+    expect(result.partial).toBe(true);
+    expect(result.failedSections).toContain('appeals');
   });
 
   test('handles identity query error gracefully', async () => {
@@ -478,6 +489,8 @@ describe('buildDataExport', () => {
       'Failed to query identity',
       expect.objectContaining({ uniqueId: '10000001' }),
     );
+    expect(result.partial).toBe(true);
+    expect(result.failedSections).toContain('identity');
   });
 
   test('handles deviceBindings query error gracefully', async () => {
@@ -544,6 +557,8 @@ describe('buildDataExport', () => {
       'Failed to query suggestions',
       expect.objectContaining({ uniqueId: '10000001' }),
     );
+    expect(result.partial).toBe(true);
+    expect(result.failedSections).toContain('suggestions');
   });
 
   test('handles notifications query error gracefully', async () => {
@@ -576,6 +591,64 @@ describe('buildDataExport', () => {
       'Failed to query notifications',
       expect.objectContaining({ uniqueId: '10000001' }),
     );
+    expect(result.partial).toBe(true);
+    expect(result.failedSections).toContain('notifications');
+  });
+
+  // ─── queryDocs-backed sections: backpack, giftWall, transactions, warnings
+  // The seven error-path tests above all route the failure via path-keyed
+  // `db.collection.mockImplementation`. The four sections below take a
+  // different code path: they call `queryDocs(db.collection(...))`, and
+  // `queryDocs` is mocked separately (line 53-55) — so a path predicate
+  // on db.collection alone never fires for them. Each test below stamps
+  // the collection mock to attach `_path` to the returned chain, then
+  // routes `queryDocs.mockImplementation` by `ref._path` so exactly one
+  // section's queryDocs call rejects while the other three resolve. The
+  // partial-failure contract (recordFailure → partial=true →
+  // failedSections.contains) is the GDPR Article 20 compliance pin and
+  // is asserted symmetrically with the seven chain-backed tests above.
+  describe.each([
+    ['backpack', 'users/10000001/backpack', 'Backpack permission denied'],
+    ['giftWall', 'users/10000001/giftWall', 'GiftWall permission denied'],
+    ['transactions', 'users/10000001/transactions', 'Transactions permission denied'],
+    ['warnings', 'users/10000001/warnings', 'Warnings permission denied'],
+  ])('handles %s queryDocs error gracefully', (section, collectionPath, errorMessage) => {
+    test('records failure and propagates partial-export state', async () => {
+      mockDocGet.mockResolvedValue({
+        exists: true,
+        data: () => testUser,
+      });
+
+      const { db } = require('../../src/utils/firebase');
+      db.collection.mockImplementation((path) => {
+        const chain = {
+          _path: path,
+          where: jest.fn().mockImplementation(() => chain),
+          orderBy: jest.fn().mockImplementation(() => chain),
+          limit: jest.fn().mockImplementation(() => chain),
+          get: mockCollectionGet,
+        };
+        return chain;
+      });
+      queryDocs.mockImplementation((ref) => {
+        if (ref && ref._path === collectionPath) {
+          return Promise.reject(new Error(errorMessage));
+        }
+        return Promise.resolve([]);
+      });
+
+      const result = await buildDataExport('10000001');
+      expect(result.buffer).toBeInstanceOf(Buffer);
+
+      const log = require('../../src/utils/log');
+      expect(log.error).toHaveBeenCalledWith(
+        'data-export',
+        `Failed to query ${section}`,
+        expect.objectContaining({ uniqueId: '10000001' }),
+      );
+      expect(result.partial).toBe(true);
+      expect(result.failedSections).toContain(section);
+    });
   });
 
   // --- Suggestion votes scanning --------------------------------------------
@@ -920,6 +993,8 @@ describe('buildDataExport', () => {
       'Failed to query conversations',
       expect.objectContaining({ uniqueId: '10000001' }),
     );
+    expect(result.partial).toBe(true);
+    expect(result.failedSections).toContain('conversations');
   });
 
   // ─── Partial-failure contract (Phase 2A finding #4) ─────────────────
@@ -1265,6 +1340,183 @@ describe('buildDataExport', () => {
       expect(result.suggestionId).toBe('sug-real');
       expect(result.voterId).toBe(10000001);
       expect(result.direction).toBe('up');
+    });
+  });
+
+  // ─── Remaining GDPR-section mapper contracts ────────────────────────
+  // Eight section mappers from buildDataExport that PR #975 didn't reach
+  // (PR #975 only extracted the two collection-group suggestion mappers
+  // above). Same testability tactic: each one exported as a named
+  // module-level constant so its spread-order invariant + payload shape
+  // can be pinned directly against production code, without decoding the
+  // level-9-compressed ZIP buffer (no unzip lib is on the project's dep
+  // tree, see top-of-file rationale on `collectSuggestionScopedEntries`).
+  describe('remaining GDPR-section mappers', () => {
+    const {
+      _roomOwnedMapper,
+      _reportFiledMapper,
+      _appealMapper,
+      _identityEntryMapper,
+      _deviceBindingMapper,
+      _submittedSuggestionMapper,
+      _notificationMapper,
+      _userMessageMapper,
+    } = require('../../src/utils/data-export-builder');
+
+    // Seven of the eight share the single-arg shape
+    //   (d) => ({ ...d.data(), id: d.id })
+    // A regression that flips the spread order on ANY of them breaks GDPR
+    // export attribution — the exported entry would carry a payload-supplied
+    // id that does not match its real storage location, leaving the user
+    // unable to correlate the export with audit/moderation records that
+    // reference the true id.
+    describe.each([
+      ['rooms-owned', _roomOwnedMapper],
+      ['reports-filed', _reportFiledMapper],
+      ['appeals', _appealMapper],
+      ['identity-entries', _identityEntryMapper],
+      ['device-bindings', _deviceBindingMapper],
+      ['submitted-suggestions', _submittedSuggestionMapper],
+      ['notifications', _notificationMapper],
+    ])('%s mapper', (_section, mapper) => {
+      test('spreads payload first, then writes trusted id last (key-order + value pin)', () => {
+        const fakeDoc = {
+          id: 'real-doc-id',
+          data: () => ({ foo: 'bar', count: 7, nested: { x: 1 } }),
+        };
+        const result = mapper(fakeDoc);
+        // Value pin: each payload field passes through and id is set.
+        expect(result).toEqual({
+          foo: 'bar',
+          count: 7,
+          nested: { x: 1 },
+          id: 'real-doc-id',
+        });
+        // Key-order pin: ES2020 guarantees string-key insertion order on
+        // Object.keys / Object.entries / JSON.stringify. A regression
+        // flipping the spread order (`{ id: d.id, ...d.data() }`) would
+        // put 'id' FIRST, not last; toEqual above performs structural
+        // equality and would not catch the order change on its own.
+        // The "trusted id wins" test below is the load-bearing privacy
+        // pin (it catches the value-override symptom), but this pin
+        // catches the order regression even when no payload `id` is
+        // present to trigger the override — strictly narrower failure.
+        expect(Object.keys(result)).toEqual(['foo', 'count', 'nested', 'id']);
+      });
+
+      test('trusted id wins over rogue id in payload (privacy invariant)', () => {
+        // Adversarial payload: tries to claim a different doc identity.
+        // The mapper must override with the trusted ref id from d.id —
+        // otherwise an attacker who can write to this collection could
+        // misattribute their entry to appear as a different doc in
+        // someone else's GDPR export.
+        const fakeDoc = {
+          id: 'real-doc-id',
+          data: () => ({
+            id: 'rogue-spoofed-id',
+            foo: 'bar',
+          }),
+        };
+        const result = mapper(fakeDoc);
+        expect(result.id).toBe('real-doc-id');
+        expect(result.foo).toBe('bar');
+      });
+
+      test('undefined data() spreads to empty — pure ECMAScript object-spread semantics', () => {
+        // Sanity-pin that the export resolved to a function before the
+        // shape assertion — without this, a missing module.exports line
+        // (typo, accidental deletion) would let `mapper` be undefined,
+        // and `expect(undefined(...))` would surface a confusing
+        // "undefined is not a function" failure instead of the
+        // straightforward "mapper export missing" signal.
+        expect(typeof mapper).toBe('function');
+        // Production reality: Firestore Admin SDK's `doc.data()` only
+        // returns undefined for docs that don't exist, and QuerySnapshot
+        // .docs only includes existing docs — so this case cannot occur
+        // in production. The pin protects against a future defensive
+        // refactor (e.g. `?? {}`, a `throw if !data` guard) that would
+        // silently change the mapper's contract; the surrounding
+        // buildDataExport tests assume a pure spread. Object-spread on
+        // undefined is a no-op per ECMAScript (unlike iterable spread on
+        // arrays which throws), so the mapper produces a payload-less
+        // entry with only its trusted reference fields.
+        const fakeDoc = { id: 'irrelevant', data: () => undefined };
+        expect(mapper(fakeDoc)).toEqual({ id: 'irrelevant' });
+      });
+    });
+
+    // ─── User-message mapper: two trusted fields (conversationId + id) ──
+    // Unlike the other seven, this mapper carries TWO trusted identifiers —
+    // the parent-conversation id and the message-doc id. Both must beat any
+    // same-named field a malicious sender (or future schema migration)
+    // could embed in their own message payload, otherwise the exported
+    // message could appear in the wrong conversation or carry a spoofed
+    // doc id — either break user-side correlation against moderation
+    // and audit refs.
+    describe('user-message mapper (two trusted fields)', () => {
+      test('spreads payload first, then writes trusted conversationId + id last (key-order + value pin)', () => {
+        const conv = { id: 'conv-real' };
+        const m = {
+          id: 'msg-real',
+          data: () => ({
+            senderId: '10000001',
+            text: 'hello',
+            createdAt: 1700000000000,
+          }),
+        };
+        const result = _userMessageMapper(conv, m);
+        // Value pin.
+        expect(result).toEqual({
+          senderId: '10000001',
+          text: 'hello',
+          createdAt: 1700000000000,
+          conversationId: 'conv-real',
+          id: 'msg-real',
+        });
+        // Key-order pin — see single-arg mapper test for the full
+        // rationale; same protection against a flipped spread order.
+        expect(Object.keys(result)).toEqual([
+          'senderId',
+          'text',
+          'createdAt',
+          'conversationId',
+          'id',
+        ]);
+      });
+
+      test('trusted conversationId AND id win over rogue payload fields (privacy invariant)', () => {
+        const conv = { id: 'conv-real' };
+        const m = {
+          id: 'msg-real',
+          data: () => ({
+            conversationId: 'rogue-conv',
+            id: 'rogue-msg',
+            senderId: '10000001',
+            text: 'attempted misattribution',
+          }),
+        };
+        const result = _userMessageMapper(conv, m);
+        expect(result.conversationId).toBe('conv-real');
+        expect(result.id).toBe('msg-real');
+        expect(result.senderId).toBe('10000001');
+        expect(result.text).toBe('attempted misattribution');
+      });
+
+      test('undefined data() spreads to empty — pure ECMAScript object-spread semantics', () => {
+        // Mirror of the single-arg mappers' shape pin: typeof guard
+        // catches a missing export, then the assertion pins the
+        // payload-less {trusted-fields-only} entry that object-spread
+        // on undefined produces. Same impossible-in-production caveat
+        // applies — Firestore Admin's QuerySnapshot.docs cannot yield
+        // a doc whose data() is undefined.
+        expect(typeof _userMessageMapper).toBe('function');
+        const conv = { id: 'conv-real' };
+        const m = { id: 'msg-real', data: () => undefined };
+        expect(_userMessageMapper(conv, m)).toEqual({
+          conversationId: 'conv-real',
+          id: 'msg-real',
+        });
+      });
     });
   });
 });
