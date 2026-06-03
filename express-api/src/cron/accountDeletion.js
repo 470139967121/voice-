@@ -215,6 +215,163 @@ async function cleanupReportsAndAppeals(uniqueId) {
   }
 }
 
+/**
+ * Step 6b: Suggestions-content cleanup (GDPR right-to-erasure cascade).
+ *
+ * The original hardDeleteAccount sequence omitted the suggestions footprint
+ * entirely, leaving deleted users still identifiable across the corpus via
+ * submitterUid / voterId / authorUid. This step closes that gap:
+ *
+ *   1. Anonymise own suggestions (preserve community value, redact identity)
+ *   2. Delete own votes via collectionGroup + decrement parent voteCount
+ *   3. Anonymise own comments via collectionGroup (preserve thread structure)
+ *   4. Delete subscription preferences doc
+ *   5. Delete inbox notifications
+ *
+ * Each sub-step is independently try/wrapped so a single failure does not
+ * abort the wider cron. Defensive parent-id check on collectionGroup hits
+ * future-proofs against unrelated `votes` / `comments` subcollections.
+ *
+ * Uses an anonymous sentinel of `submitterUid: 0` (no real user has uniqueId
+ * 0 — the floor is ≥1, with Officia=1) plus an explicit `submitterDeleted`
+ * flag so read-side code can distinguish anonymisation from a legitimate
+ * never-existed user.
+ */
+async function cleanupSuggestionsContent(uniqueId) {
+  const numericUid = Number(uniqueId);
+  const ANON = { uid: 0, deletedAt: now() };
+
+  try {
+    const sugSnap = await db
+      .collection('suggestions')
+      .where('submitterUid', '==', numericUid)
+      .get();
+    if (sugSnap.docs && sugSnap.docs.length > 0) {
+      let batch = db.batch();
+      let count = 0;
+      for (const doc of sugSnap.docs) {
+        batch.update(doc.ref, {
+          submitterUid: ANON.uid,
+          submitterDeleted: true,
+          submitterDeletedAt: ANON.deletedAt,
+        });
+        count++;
+        if (count === 500) {
+          await batch.commit();
+          batch = db.batch();
+          count = 0;
+        }
+      }
+      if (count > 0) await batch.commit();
+    }
+  } catch (err) {
+    log.error('cron', 'Failed to anonymise own suggestions', {
+      uniqueId,
+      error: err.message,
+    });
+  }
+
+  try {
+    const votesSnap = await db.collectionGroup('votes').where('voterId', '==', numericUid).get();
+    let batch = db.batch();
+    let count = 0;
+    for (const voteDoc of votesSnap.docs || []) {
+      const suggestionRef = voteDoc.ref.parent?.parent;
+      if (!suggestionRef || suggestionRef.parent?.id !== 'suggestions') continue;
+      const vote = voteDoc.data().vote;
+      const delta = vote === 'up' ? -1 : vote === 'down' ? 1 : 0;
+      batch.delete(voteDoc.ref);
+      if (delta !== 0) {
+        batch.update(suggestionRef, { voteCount: FieldValue.increment(delta) });
+      }
+      count++;
+      if (count >= 250) {
+        await batch.commit();
+        batch = db.batch();
+        count = 0;
+      }
+    }
+    if (count > 0) await batch.commit();
+  } catch (err) {
+    log.error('cron', 'Failed to delete suggestion votes', {
+      uniqueId,
+      error: err.message,
+    });
+  }
+
+  try {
+    const commentsSnap = await db
+      .collectionGroup('comments')
+      .where('authorUid', '==', numericUid)
+      .get();
+    let batch = db.batch();
+    let count = 0;
+    for (const commentDoc of commentsSnap.docs || []) {
+      const suggestionRef = commentDoc.ref.parent?.parent;
+      if (!suggestionRef || suggestionRef.parent?.id !== 'suggestions') continue;
+      batch.update(commentDoc.ref, {
+        authorUid: ANON.uid,
+        authorDeleted: true,
+        authorDeletedAt: ANON.deletedAt,
+        text: '[Comment from deleted user]',
+      });
+      count++;
+      if (count === 500) {
+        await batch.commit();
+        batch = db.batch();
+        count = 0;
+      }
+    }
+    if (count > 0) await batch.commit();
+  } catch (err) {
+    log.error('cron', 'Failed to anonymise suggestion comments', {
+      uniqueId,
+      error: err.message,
+    });
+  }
+
+  try {
+    await db.doc(`subscriptions/${uniqueId}`).delete();
+  } catch (err) {
+    log.error('cron', 'Failed to delete subscription preferences', {
+      uniqueId,
+      error: err.message,
+    });
+  }
+
+  try {
+    // Notifications today set both `uid` and `recipientUid` to the same value
+    // on every write path. Querying both fields and deduplicating by ref makes
+    // erasure forward-safe: if a future path writes only `recipientUid`, that
+    // record still gets deleted instead of silently surviving the cascade.
+    const [byUid, byRecipient] = await Promise.all([
+      db.collection('notifications').where('uid', '==', numericUid).get(),
+      db.collection('notifications').where('recipientUid', '==', numericUid).get(),
+    ]);
+    const seen = new Set();
+    let batch = db.batch();
+    let count = 0;
+    for (const notifDoc of [...(byUid.docs || []), ...(byRecipient.docs || [])]) {
+      const path = notifDoc.ref.path;
+      if (seen.has(path)) continue;
+      seen.add(path);
+      batch.delete(notifDoc.ref);
+      count++;
+      if (count === 500) {
+        await batch.commit();
+        batch = db.batch();
+        count = 0;
+      }
+    }
+    if (count > 0) await batch.commit();
+  } catch (err) {
+    log.error('cron', 'Failed to delete notification inbox', {
+      uniqueId,
+      error: err.message,
+    });
+  }
+}
+
 /** Step 7: Auth-related cleanup */
 async function cleanupAuthData(user, uniqueId) {
   try {
@@ -329,6 +486,7 @@ async function hardDeleteAccount(userDoc) {
   await cleanupFollowerFollowing(uniqueId);
   await cleanupGiftRankings(uniqueId);
   await cleanupReportsAndAppeals(uniqueId);
+  await cleanupSuggestionsContent(uniqueId);
   await cleanupAuthData(user, uniqueId);
   await deleteUserDocAndSubcollections(uniqueId);
   await softDeleteIdentityMap(user, uniqueId);
@@ -354,6 +512,11 @@ async function hardDeleteAccount(userDoc) {
       'r2',
       'reports',
       'appeals',
+      'suggestions',
+      'votes',
+      'comments',
+      'subscriptions',
+      'notifications',
       'auth',
       'identity',
       'deviceBindings',
