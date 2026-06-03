@@ -622,6 +622,46 @@ describe('POST /api/user/:uniqueId/unsuspend --- validation', () => {
     expect(res.body.error).toMatch(/not found/i);
   });
 
+  it('should return alreadyUnsuspended without writing when isSuspended is false', async () => {
+    const { db } = require('../../src/utils/firebase');
+
+    mockDocGet.mockResolvedValue({
+      exists: true,
+      id: '42',
+      data: () => ({
+        isSuspended: false,
+        displayName: 'Clean User',
+      }),
+    });
+
+    const res = await request(app).post('/api/user/42/unsuspend');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, alreadyUnsuspended: true });
+
+    // Confirm the route returned BEFORE any write side effects fired.
+    // Without the early-return guard, a defensive beforeAll calling
+    // unsuspend on a clean user would emit a spurious PM, write a
+    // phantom UNSUSPEND audit log entry, run liftAutoAppliedBans, and
+    // invalidate the suspension cache — polluting state for the suite.
+    // Pin every side-effect channel explicitly so a future refactor
+    // that moves any of them above the guard is caught.
+    expect(mockDocUpdate).not.toHaveBeenCalled();
+    // audit log writes use `db.doc('adminAuditLog/...').set(...)` →
+    // mockDocSet (not mockDocUpdate); the guard must suppress this too.
+    expect(mockDocSet).not.toHaveBeenCalled();
+    // liftAutoAppliedBans queries `bans` via `db.collection`; on the
+    // early-return path it must never execute.
+    expect(db.collection).not.toHaveBeenCalled();
+    // System PM ("Your suspension has been lifted") would surprise the
+    // already-unsuspended user.
+    const { sendSystemPm } = require('../../src/utils/system-pm');
+    expect(sendSystemPm).not.toHaveBeenCalled();
+    // Cache invalidation is only meaningful when the suspension state
+    // actually changed — pin its absence on the no-op path.
+    const { clearSuspensionCache } = require('../../src/middleware/auth');
+    expect(clearSuspensionCache).not.toHaveBeenCalled();
+  });
+
   it('should restore pre-suspension profile data on unsuspend', async () => {
     const { db } = require('../../src/utils/firebase');
 

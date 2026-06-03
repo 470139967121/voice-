@@ -37,6 +37,24 @@ async function selectFirstReportCard(page: Page): Promise<void> {
 test.describe('Admin Keyboard Shortcuts', () => {
   test.describe.configure({ mode: 'serial' });
 
+  // Defensive isolation: alphabetically-earlier files that touch
+  // suspension state — admin-appeals.spec.ts (suspends in beforeAll
+  // for the appeal seed) AND admin-cross-tab.spec.ts (suspends in
+  // test 1's report-warned-resolution flow) — both have afterAll
+  // unsuspend hooks (PR #968), but each wraps the call in a
+  // try/console.warn catch. A silent failure leaves the user
+  // suspended; the Enter-search test at line ~183 then asserts
+  // `displayName === 'e2e-...-u'` but reads `Suspended Account`. Per
+  // [[feedback-test-isolation-no-leaks]]: belt-and-braces beforeAll
+  // restore is the cheap fix. Server-side idempotency guard
+  // (admin-users.js:1245) returns early when already unsuspended, so
+  // this fires no PM and writes no audit entry on a clean run. Same
+  // pattern as admin-users-moderation.spec.ts:31.
+  test.beforeAll(async ({ testData }) => {
+    const uid = String(testData.user.uniqueId);
+    await testData.api.post(`/api/user/${uid}/unsuspend`, {});
+  });
+
   test.beforeEach(async ({ page, browserName }) => {
     // Keyboard shortcuts are desktop-only — skip on mobile viewports
     const projectName = test.info().project.name;
