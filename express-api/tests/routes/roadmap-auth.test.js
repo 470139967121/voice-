@@ -219,6 +219,7 @@ describe('GET /api/roadmap/me', () => {
     });
     const app = createApp();
     const res = await request(app).get('/api/roadmap/me').expect(200);
+    expect(res.body).not.toHaveProperty('isSuspended');
     expect(res.body).not.toHaveProperty('suspensionReason');
   });
 
@@ -333,7 +334,10 @@ describe('GET /api/roadmap/me', () => {
     expect(typeof res.body.displayName).toBe('string');
   });
 
-  test('response time under 500ms for cached users', async () => {
+  // Pin the request-shape invariant: the direct-uniqueId path makes one
+  // users-doc read and skips the identityMap query. A regression that always
+  // ran the fallback would double the Firestore RPC count per authed request.
+  test('direct-uniqueId path makes exactly one users-doc read and skips identityMap', async () => {
     mockDocGet.mockImplementation((path) => {
       if (path && path.includes('users/')) {
         return Promise.resolve(makeUserDoc(1001));
@@ -341,10 +345,9 @@ describe('GET /api/roadmap/me', () => {
       return Promise.resolve({ exists: false });
     });
     const app = createApp();
-    const start = Date.now();
     await request(app).get('/api/roadmap/me').expect(200);
-    const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(500);
+    expect(mockDocGet).toHaveBeenCalledTimes(1);
+    expect(mockCollectionGet).not.toHaveBeenCalled();
   });
 
   test('multiple rapid requests return same data (idempotent)', async () => {
@@ -412,9 +415,11 @@ describe('GET /api/roadmap/me', () => {
     });
     const app = createApp({ uid: 'firebase-uid-multi', uniqueId: null });
     const res = await request(app).get('/api/roadmap/me').expect(200);
-    // Should pick the first matched entry
-    expect(res.body.displayName).toBeDefined();
-    expect([3001, 3002]).toContain(res.body.uniqueId);
+    // The route loops idSnap.docs in iteration order and `break`s on the
+    // first existing user doc — pin the determinism (first entry: 3001).
+    // A regression that picked a different entry would otherwise pass.
+    expect(res.body.uniqueId).toBe(3001);
+    expect(res.body.displayName).toBe('FirstEntry');
   });
 
   test('identityMap with unlinked entry (unlinked: true) skipped', async () => {
@@ -431,20 +436,27 @@ describe('GET /api/roadmap/me', () => {
         },
       ],
     });
+    // Both user docs EXIST with distinguishable displayNames so the
+    // assertion truly pins "unlinked entry skipped". A regression that
+    // failed to skip would resolve to 4001 first and return UnlinkedUser
+    // instead of LinkedUser.
     mockDocGet.mockImplementation((path) => {
+      if (path && path.includes('users/4001')) {
+        return Promise.resolve(makeUserDoc(4001, { displayName: 'UnlinkedUser' }));
+      }
       if (path && path.includes('users/4002')) {
         return Promise.resolve(makeUserDoc(4002, { displayName: 'LinkedUser' }));
       }
       return Promise.resolve({ exists: false });
     });
     const app = createApp({ uid: 'uid-unlinked', uniqueId: null });
-    const res = await request(app).get('/api/roadmap/me');
-    // Should skip the unlinked entry and use the linked one, or 404 if not handled
-    if (res.status === 200) {
-      expect(res.body.uniqueId).toBe(4002);
-    } else {
-      expect(res.status).toBe(404);
-    }
+    const res = await request(app).get('/api/roadmap/me').expect(200);
+    expect(res.body.uniqueId).toBe(4002);
+    expect(res.body.displayName).toBe('LinkedUser');
+    // Closes the "fetch all, pick last" regression: a route that fetched
+    // users/4001 anyway would pass the toBe(4002) above but fail here.
+    expect(mockDocGet).not.toHaveBeenCalledWith('users/4001');
+    expect(mockDocGet).toHaveBeenCalledWith('users/4002');
   });
 
   // ─── New tests: type safety ────────────────────────────────────
@@ -533,6 +545,99 @@ describe('GET /api/roadmap/me', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// GET /api/roadmap/me — spread-order safety (identity invariant)
+// ═══════════════════════════════════════════════════════════════
+//
+// Pins the spread-order contract `{ ...userDoc.data(), uniqueId: <trusted> }`
+// on both auth paths. A rogue `uniqueId` field in the user doc payload (from
+// schema drift, admin-tool write, or rule drift) must not override the
+// trusted authenticated value — that is the strongest identity-spoofing
+// shape on an authenticated endpoint.
+
+describe('GET /api/roadmap/me — spread-order safety (identity invariant)', () => {
+  test('direct uniqueId path: payload uniqueId cannot override authenticated uniqueId', async () => {
+    mockDocGet.mockImplementation((path) => {
+      if (path && path.includes('users/1001')) {
+        // Adversarial: user doc payload tries to claim a different identity.
+        return Promise.resolve({
+          exists: true,
+          data: () => ({
+            uniqueId: 9999,
+            displayName: 'AuthenticatedUser',
+            avatarUrl: 'https://example.com/a.png',
+            profilePhotoUrl: 'https://example.com/p.png',
+          }),
+        });
+      }
+      return Promise.resolve({ exists: false });
+    });
+    const app = createApp({ uid: 'firebase-uid-1', uniqueId: 1001 });
+    const res = await request(app).get('/api/roadmap/me').expect(200);
+    expect(res.body.uniqueId).toBe(1001);
+    expect(res.body.displayName).toBe('AuthenticatedUser');
+  });
+
+  test('identityMap fallback path: payload uniqueId cannot override identityMap-resolved uniqueId', async () => {
+    mockCollectionGet.mockResolvedValue({
+      empty: false,
+      docs: [
+        {
+          id: 'google:linked@gmail.com',
+          data: () => ({ uniqueId: 2002, firebaseUid: 'firebase-uid-fallback' }),
+        },
+      ],
+    });
+    mockDocGet.mockImplementation((path) => {
+      if (path && path.includes('users/2002')) {
+        // Adversarial: user doc payload tries to claim a different identity.
+        return Promise.resolve({
+          exists: true,
+          data: () => ({
+            uniqueId: 9999,
+            displayName: 'FallbackUser',
+            avatarUrl: 'https://example.com/a.png',
+            profilePhotoUrl: 'https://example.com/p.png',
+          }),
+        });
+      }
+      return Promise.resolve({ exists: false });
+    });
+    const app = createApp({ uid: 'firebase-uid-fallback', uniqueId: null });
+    const res = await request(app).get('/api/roadmap/me').expect(200);
+    expect(res.body.uniqueId).toBe(2002);
+    expect(res.body.displayName).toBe('FallbackUser');
+  });
+
+  // Type-shape parity between the two auth paths: the direct path coerces
+  // `req.auth.uniqueId` to Number via `Number(...)`; the fallback must do
+  // the same so legacy identityMap docs that store the FK as a string don't
+  // produce a string `uniqueId` in the response. Without the coercion, a
+  // single API contract leaks two different runtime types for the same
+  // field, depending on which auth path resolved the request.
+  test('identityMap fallback path: string uniqueId in identityMap is coerced to number in response', async () => {
+    mockCollectionGet.mockResolvedValue({
+      empty: false,
+      docs: [
+        {
+          id: 'google:legacy@gmail.com',
+          data: () => ({ uniqueId: '5005', firebaseUid: 'firebase-uid-legacy' }),
+        },
+      ],
+    });
+    mockDocGet.mockImplementation((path) => {
+      if (path && path.includes('users/5005')) {
+        return Promise.resolve(makeUserDoc(5005, { displayName: 'LegacyString' }));
+      }
+      return Promise.resolve({ exists: false });
+    });
+    const app = createApp({ uid: 'firebase-uid-legacy', uniqueId: null });
+    const res = await request(app).get('/api/roadmap/me').expect(200);
+    expect(typeof res.body.uniqueId).toBe('number');
+    expect(res.body.uniqueId).toBe(5005);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
 // GET /api/roadmap/me — Auth edge cases
 // ═══════════════════════════════════════════════════════════════
 
@@ -570,21 +675,38 @@ describe('GET /api/roadmap/me — Auth edge cases', () => {
     expect(res.status).toBe(401);
   });
 
-  test('auth with uid but no uniqueId still attempts identity lookup', async () => {
+  test('auth with uid but no uniqueId falls through identityMap and returns 404 when empty', async () => {
     mockCollectionGet.mockResolvedValue({ empty: true, docs: [] });
     mockDocGet.mockResolvedValue({ exists: false });
     const app = createApp({ uid: 'uid-no-unique', uniqueId: null });
     const res = await request(app).get('/api/roadmap/me');
-    // Should either find via identityMap or return 404 — not crash
-    expect([200, 404]).toContain(res.status);
+    // requireAuth passes (uid is truthy), direct path skipped (uniqueId null
+    // is falsy), identityMap fallback finds nothing → deterministic 404. Pin
+    // exact status, not a disjunctive [200, 404] that would also accept
+    // a successful resolution that shouldn't happen against this mock.
+    expect(res.status).toBe(404);
   });
 
-  test('auth with empty string uid returns 404 (no user found)', async () => {
+  // requireAuth's `!req.auth.uniqueId` treats 0 like null/undefined — with a
+  // truthy uid, the guard does NOT fire and the route falls through to the
+  // identityMap path. Pin that contract so a future "tighten the guard"
+  // refactor (e.g. switching to `== null`) doesn't change the response shape.
+  test('uniqueId of 0 with truthy uid falls through to identityMap (returns 404 when empty)', async () => {
+    mockCollectionGet.mockResolvedValue({ empty: true, docs: [] });
+    mockDocGet.mockResolvedValue({ exists: false });
+    const app = createApp({ uid: 'uid-zero', uniqueId: 0 });
+    const res = await request(app).get('/api/roadmap/me');
+    expect(res.status).toBe(404);
+  });
+
+  test('auth with empty string uid returns 401 (requireAuth rejects falsy uid)', async () => {
     mockDocGet.mockResolvedValue({ exists: false });
     mockCollectionGet.mockResolvedValue({ empty: true, docs: [] });
     const app = createApp({ uid: '', uniqueId: null });
     const res = await request(app).get('/api/roadmap/me');
-    expect([401, 404]).toContain(res.status);
+    // Empty string is falsy, so requireAuth's `!req.auth.uid && !req.auth.uniqueId`
+    // guard fires deterministically — pin 401, not a disjunctive [401, 404].
+    expect(res.status).toBe(401);
   });
 });
 
