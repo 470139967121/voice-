@@ -14,13 +14,6 @@
  *                                             by .github/workflows/
  *                                             cron-account-deletion.yml.
  *
- * POST /api/system/sweep-bans               — requires Bearer auth.
- *                                             Synchronously runs
- *                                             expireBans() — every-15-min
- *                                             sweep scheduled by
- *                                             .github/workflows/
- *                                             cron-expire-bans.yml.
- *
  * POST /api/system/dispatch-notifications   — requires Bearer auth.
  *                                             Synchronously runs
  *                                             dispatchNotifications() —
@@ -55,7 +48,6 @@ const router = require('express').Router();
 const log = require('../utils/log');
 const serverHealth = require('../cron/serverHealth');
 const accountDeletion = require('../cron/accountDeletion');
-const expireBans = require('../cron/expireBans');
 const dispatchNotifications = require('../cron/notification-dispatch');
 const staleRooms = require('../cron/staleRooms');
 const alertManager = require('../utils/alertManagerInstance');
@@ -104,16 +96,14 @@ function getSweepTimeoutMs() {
  * mutation to production callers. Per the operator's
  * `[[feedback-test-isolation-no-leaks]]` directive.
  *
- * The factory is the "three similar lines" refactor of PRs #989, #990,
- * and this PR — by the time we have three sweep endpoints with
- * identical wrapping logic, the abstraction pays for itself in: (a)
- * one place to audit auth / timeout / error-handling semantics; (b)
- * the in-flight independence test only needs to assert per-endpoint
- * flag closure; (c) future sweep endpoints (e.g. PR #6's voice-room
- * scrap once RTDB onDisconnect lands) get the same defenses for free.
+ * Covers the three active sweep endpoints — sweep-account-deletions,
+ * dispatch-notifications, and sweep-stale-rooms — with one place to
+ * audit auth / timeout / error-handling semantics, and an in-flight
+ * independence test that only needs to assert per-endpoint flag
+ * closure. New sweep endpoints get the same defenses for free.
  *
  * @param {string} name short identifier used in log messages, e.g.
- *   'sweep-bans', 'sweep-account-deletions'.
+ *   'sweep-account-deletions', 'sweep-stale-rooms'.
  * @param {() => Promise<unknown>} sweepFn the underlying worker that
  *   does the actual sweep — typically a function from src/cron/*.
  * @returns Express handler.
@@ -160,7 +150,6 @@ function createSweepHandler(name, sweepFn) {
 }
 
 const sweepAccountDeletions = createSweepHandler('sweep-account-deletions', accountDeletion);
-const sweepBans = createSweepHandler('sweep-bans', expireBans);
 const dispatchNotificationsHandler = createSweepHandler(
   'dispatch-notifications',
   dispatchNotifications,
@@ -168,7 +157,6 @@ const dispatchNotificationsHandler = createSweepHandler(
 const sweepStaleRooms = createSweepHandler('sweep-stale-rooms', staleRooms);
 
 router.post('/system/sweep-account-deletions', requireSystemAuth, sweepAccountDeletions);
-router.post('/system/sweep-bans', requireSystemAuth, sweepBans);
 router.post('/system/dispatch-notifications', requireSystemAuth, dispatchNotificationsHandler);
 router.post('/system/sweep-stale-rooms', requireSystemAuth, sweepStaleRooms);
 
@@ -178,7 +166,6 @@ router.post('/system/sweep-stale-rooms', requireSystemAuth, sweepStaleRooms);
 if (process.env.NODE_ENV === 'test') {
   router._resetInFlightForTesting = () => {
     sweepAccountDeletions._reset();
-    sweepBans._reset();
     dispatchNotificationsHandler._reset();
     sweepStaleRooms._reset();
   };
