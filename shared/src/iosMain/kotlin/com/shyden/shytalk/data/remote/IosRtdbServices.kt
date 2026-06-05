@@ -8,15 +8,18 @@ import dev.gitlive.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
 
 private const val TAG = "RtdbServices"
@@ -79,7 +82,20 @@ class IosPresenceServiceImpl(
     private val database: FirebaseDatabase,
 ) : PresenceService {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // @Volatile (via @kotlin.concurrent.Volatile per CLAUDE.md's KMP iOS
+    // compatibility rules) on state fields read by the reconnect-listener
+    // coroutine on Dispatchers.Default and written by caller-thread
+    // setPresence/removePresence/armOwnerLeftSignal/cancelOwnerLeftSignal.
+    // Without these, plain-var visibility across threads is not guaranteed
+    // on Kotlin/Native. Android's analogous service uses Dispatchers.Main.
+    // immediate so all access is single-threaded; iOS uses Default for
+    // the Firebase write-path, which makes cross-thread reads of these
+    // fields possible.
+    @kotlin.concurrent.Volatile
     private var currentRoomId: String? = null
+
+    @kotlin.concurrent.Volatile
     private var currentUserId: String? = null
 
     // Cron-elim A2 — owner-left signal state. Separate from currentRoomId
@@ -87,8 +103,16 @@ class IosPresenceServiceImpl(
     // owners arm the signal; cancelOwnerLeftSignal guards internally on
     // currentOwnerRoomId so the unconditional call from removePresence is
     // safe when no signal is armed.
+    @kotlin.concurrent.Volatile
     private var currentOwnerRoomId: String? = null
+
+    @kotlin.concurrent.Volatile
     private var currentOwnerFirebaseUid: String? = null
+
+    // Cron-elim A2 followup — connected-listener Job for the
+    // .info/connected reconnect re-arm path. Cancelled in removePresence
+    // and replaced when setPresence is called for a different room.
+    private var connectedJob: Job? = null
 
     private val _roomEvents = MutableSharedFlow<RoomEvent>(extraBufferCapacity = 10)
 
@@ -98,20 +122,13 @@ class IosPresenceServiceImpl(
         roomId: String,
         userId: String,
     ) {
-        // Cron-elim A2 gap: unlike Android RtdbPresenceService.setPresence
-        // (lines 81-102) which registers a .info/connected listener that
-        // re-arms BOTH presence AND the owner-left signal on RTDB
-        // reconnect blips, iOS has no such listener. Transient mobile-
-        // network drops (WiFi↔cellular handoffs, brief underground
-        // transit) on iOS-owned rooms will: fire the onDisconnect signal
-        // → server orchestrator processes → TOCTOU re-check sees owner
-        // re-present (owner just reconnected) → NOOP → signal cleared.
-        // The TOCTOU re-check mitigates correctness; the cost is one
-        // round-trip of spurious server work per reconnect blip. Adding
-        // the .info/connected listener requires also extending iOS
-        // basic-presence reconnect handling and is queued as a
-        // standalone follow-up (Task #9) per the architect blueprint
-        // scoping A2 to arm/cancel + isUserPresent.
+        // Cancel any prior connected-listener (re-entry for a different
+        // room). Setting currentRoomId/UserId BEFORE the listener
+        // launches means a stale fire from the old listener (between
+        // cancel-call and actual cancellation) would see mismatched
+        // state and skip — matches the Android safety pattern.
+        connectedJob?.cancel()
+
         currentRoomId = roomId
         currentUserId = userId
         scope.launch {
@@ -125,6 +142,59 @@ class IosPresenceServiceImpl(
                 logW(TAG, "setPresence failed: ${e.message}")
             }
         }
+
+        // Cron-elim A2 followup3 — RTDB reconnect re-arm listener.
+        // Mirrors the Android RtdbPresenceService.setPresence
+        // .info/connected pattern. On RTDB reconnect after a transient
+        // network blip the onDisconnect may have already fired,
+        // removing the presence entry AND the owner-left signal entry.
+        // Re-establish both (gated by currentRoomId/UserId match so a
+        // stale listener for a now-replaced room is a no-op).
+        //
+        // .retry { e -> e !is CancellationException } re-subscribes the
+        // Flow on any non-cancellation error (RTDB connection reset,
+        // transient Firebase IPC failure, etc), giving the listener the
+        // same resilience that Android's persistent addValueEventListener
+        // gets for free. Cancellation propagates normally so
+        // connectedJob.cancel() still terminates the coroutine.
+        connectedJob =
+            scope.launch {
+                database
+                    .reference(".info/connected")
+                    .valueEvents
+                    .retry { e -> e !is CancellationException }
+                    .collect { snapshot ->
+                        val connected = snapshot.value<Boolean?>() ?: false
+                        if (!connected ||
+                            currentRoomId != roomId ||
+                            currentUserId != userId
+                        ) {
+                            return@collect
+                        }
+                        try {
+                            val presenceRef =
+                                database.reference("rooms/$roomId/presence/$userId")
+                            presenceRef.setValue(currentTimeMillis())
+                            presenceRef.onDisconnect().removeValue()
+                            val ownerFuid = currentOwnerFirebaseUid
+                            if (currentOwnerRoomId == roomId && ownerFuid != null) {
+                                val ownerLeftRef =
+                                    database.reference("ownerLeft/$roomId")
+                                ownerLeftRef.onDisconnect().cancel()
+                                ownerLeftRef.setValue(ownerFuid)
+                                ownerLeftRef.onDisconnect().setValue(ownerFuid)
+                            }
+                            logD(TAG, "reconnect re-armed room=$roomId")
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // Individual re-arm failure shouldn't kill the
+                            // listener — next reconnect tick gets another
+                            // try. Log + continue collecting.
+                            logW(TAG, "reconnect re-arm inner failed: ${e.message}")
+                        }
+                    }
+            }
     }
 
     override fun removePresence() {
@@ -134,6 +204,12 @@ class IosPresenceServiceImpl(
         // when no signal is armed (non-owners, post-cancel re-call, etc).
         // Mirrors the Android RtdbPresenceService.removePresence pattern.
         cancelOwnerLeftSignal()
+
+        // Cron-elim A2 followup3 — cancel the .info/connected listener
+        // so a reconnect after removePresence doesn't re-establish
+        // presence for a room the user has already left.
+        connectedJob?.cancel()
+        connectedJob = null
 
         val roomId = currentRoomId ?: return
         val userId = currentUserId ?: return
