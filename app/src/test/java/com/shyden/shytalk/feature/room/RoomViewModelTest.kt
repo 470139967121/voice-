@@ -31,6 +31,7 @@ import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -5214,4 +5215,245 @@ class RoomViewModelTest {
             // uiState should remain without a kick-sourced error (no error propagation by design)
             assertFalse(viewModel.uiState.value.wasKicked)
         }
+
+    // region cron-elim A1 — owner-left signal wiring
+
+    @Test
+    fun `ownerReturn arms owner-left signal with currentFirebaseUid not currentUserId`() =
+        roomTest {
+            // Cron-elim A1 — the architect explicitly noted (cron-elim A0
+            // discovery, PR #1001) that two identity namespaces exist for
+            // every user. The RTDB ownerLeft rule forces auth.uid namespace
+            // (`newData.val() === auth.uid`), so the signal value MUST be
+            // currentFirebaseUid (Firebase Auth uid), NOT currentUserId
+            // (Firestore uniqueId). Pin the namespace-correct call here so
+            // a future refactor that swaps the two would trip this test.
+            val testFirebaseUid = "firebase-uid-12345"
+            every { authRepository.currentFirebaseUid } returns testFirebaseUid
+            coEvery { roomRepository.setOwnerReturned(any(), any()) } returns Resource.Success(Unit)
+
+            emitRoomAsOwner(
+                TestData.createTestRoom(
+                    ownerId = currentUserId,
+                    state = RoomState.OWNER_AWAY,
+                    ownerLeftAt = System.currentTimeMillis() - 1_000,
+                ),
+            )
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // handleFirstJoin auto-triggers ownerReturn when state is
+            // OWNER_AWAY — clear the mock call count so the verify below
+            // tests the EXPLICIT viewModel.ownerReturn() path in isolation.
+            // Without this, the verify would pass on the auto-fire alone
+            // and a broken explicit-call path would slip through.
+            io.mockk.clearMocks(presenceService, answers = false)
+
+            viewModel.ownerReturn()
+            advanceUntilIdle()
+
+            // 3rd arg is the firebaseUid; assert exact value (not just any())
+            // to defend against position-swap or null-fallback regressions.
+            verify(exactly = 1) { presenceService.armOwnerLeftSignal("room-1", testFirebaseUid) }
+            // Negative-pin sanity: the two identity values are distinct in
+            // tests so a swap is observable, not vacuous.
+            assertTrue(currentUserId != testFirebaseUid)
+        }
+
+    @Test
+    fun `ownerReturn does NOT arm owner-left signal when currentFirebaseUid is null`() =
+        roomTest {
+            // Defensive: an authenticated owner SHOULD always have a non-null
+            // firebaseUid (currentFirebaseUid returns auth.currentUser.uid),
+            // but defend in case of a transient auth-state hole. The
+            // maybeArmOwnerLeftSignal helper bails out instead of writing
+            // an empty-string entry (which the rule would reject anyway via
+            // the strict-when-present clause, but no point arming a guaranteed-
+            // reject signal — wastes an RTDB round trip).
+            every { authRepository.currentFirebaseUid } returns null
+            coEvery { roomRepository.setOwnerReturned(any(), any()) } returns Resource.Success(Unit)
+
+            emitRoomAsOwner(
+                TestData.createTestRoom(
+                    ownerId = currentUserId,
+                    state = RoomState.OWNER_AWAY,
+                    ownerLeftAt = System.currentTimeMillis() - 1_000,
+                ),
+            )
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // Clear auto-triggered call counts before the explicit test.
+            // The null-firebaseUid guard MUST apply on the explicit path —
+            // not just on the auto-trigger path — so isolate the call.
+            io.mockk.clearMocks(presenceService, answers = false)
+
+            viewModel.ownerReturn()
+            advanceUntilIdle()
+
+            verify(exactly = 0) { presenceService.armOwnerLeftSignal(any(), any()) }
+        }
+
+    @Test
+    fun `ownerReturn does NOT arm owner-left signal when currentFirebaseUid is empty string`() =
+        roomTest {
+            // Empty string is treated identically to null at the helper
+            // boundary — the rule-layer would technically accept it (lenient
+            // default fires when field equals "" which won't equal auth.uid)
+            // but more importantly the orchestrator's fast-path requires a
+            // non-empty string. Sending "" guarantees a wasted round trip
+            // followed by a rejected signal. Cleaner to short-circuit at the
+            // client.
+            every { authRepository.currentFirebaseUid } returns ""
+            coEvery { roomRepository.setOwnerReturned(any(), any()) } returns Resource.Success(Unit)
+
+            emitRoomAsOwner(
+                TestData.createTestRoom(
+                    ownerId = currentUserId,
+                    state = RoomState.OWNER_AWAY,
+                    ownerLeftAt = System.currentTimeMillis() - 1_000,
+                ),
+            )
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // Clear before explicit ownerReturn — same reason as the null
+            // test: pin the explicit-call guard, not the auto-fire guard.
+            io.mockk.clearMocks(presenceService, answers = false)
+
+            viewModel.ownerReturn()
+            advanceUntilIdle()
+
+            verify(exactly = 0) { presenceService.armOwnerLeftSignal(any(), any()) }
+        }
+
+    @Test
+    fun `ownerReturn re-establishes presence BEFORE arming owner-left signal`() =
+        roomTest {
+            // Ordering matters: setPresence registers the connected-listener
+            // that re-arms the owner-left signal on RTDB reconnect blips
+            // (see RtdbPresenceService line 71+). If arm fired before
+            // setPresence, the reconnect-re-arm path wouldn't be wired and a
+            // disconnect-during-arm window would lose the signal silently.
+            every { authRepository.currentFirebaseUid } returns "firebase-uid-12345"
+            coEvery { roomRepository.setOwnerReturned(any(), any()) } returns Resource.Success(Unit)
+
+            emitRoomAsOwner(
+                TestData.createTestRoom(
+                    ownerId = currentUserId,
+                    state = RoomState.OWNER_AWAY,
+                    ownerLeftAt = System.currentTimeMillis() - 1_000,
+                ),
+            )
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // Clear before explicit ownerReturn — the verifyOrder below
+            // tests the ordering of the EXPLICIT call's two operations.
+            io.mockk.clearMocks(presenceService, answers = false)
+
+            viewModel.ownerReturn()
+            advanceUntilIdle()
+
+            verifyOrder {
+                presenceService.setPresence("room-1", currentUserId)
+                presenceService.armOwnerLeftSignal("room-1", "firebase-uid-12345")
+            }
+        }
+
+    @Test
+    fun `owner first-join arms owner-left signal via handleFirstJoin path`() =
+        roomTest {
+            // Cron-elim A1 — coverage for site 941 (joinRoom → handleFirstJoin).
+            // This is the primary production flow for an owner: room created,
+            // owner becomes participant, RoomViewModel observes the room and
+            // calls handleFirstJoin → joinRoom → setPresence + arm. Without
+            // this test, the only arm-covered path was ownerReturn — a
+            // refactor that broke the first-join arm would ship undetected.
+            val testFirebaseUid = "firebase-uid-12345"
+            every { authRepository.currentFirebaseUid } returns testFirebaseUid
+
+            // Default emitRoomAsOwner: ACTIVE state, owner in participantIds.
+            // Natural flow triggers handleFirstJoin (not ownerReturn).
+            emitRoomAsOwner()
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            verify { presenceService.armOwnerLeftSignal("room-1", testFirebaseUid) }
+        }
+
+    @Test
+    fun `owner first-join does NOT arm with empty firebaseUid (defensive helper guard)`() =
+        roomTest {
+            // Defensive coverage: the maybeArmOwnerLeftSignal helper guard
+            // must apply at the joinRoom site (941), not just at ownerReturn.
+            // If the guard were inline-only at one site, a future inlining
+            // refactor that copied an unguarded version into the other sites
+            // would slip through.
+            every { authRepository.currentFirebaseUid } returns ""
+            emitRoomAsOwner()
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            verify(exactly = 0) { presenceService.armOwnerLeftSignal(any(), any()) }
+        }
+
+    @Test
+    fun `non-owner does NOT arm owner-left signal (guard at maybeArmOwnerLeftSignal)`() =
+        roomTest {
+            // The maybeArmOwnerLeftSignal helper short-circuits when
+            // room.ownerId != userId. Without this guard, every participant
+            // would write to ownerLeft/{roomId} — the rule would reject
+            // the writes (it requires auth.uid match, and the orchestrator
+            // would reject as writer-not-owner), but spamming RTDB with
+            // guaranteed-reject writes is wasteful. Pin the client-side
+            // guard so a refactor that drops it surfaces here, not at
+            // production load.
+            every { authRepository.currentFirebaseUid } returns "firebase-uid-12345"
+            // Note: ownerReturn() early-returns when room.ownerId != userId
+            // (line 1453), so we can't use ownerReturn() to test the
+            // helper's non-owner guard. Instead, observe the participant-
+            // join path — emit a room where currentUser is a participant
+            // but NOT the owner.
+            emitRoomAsAttendee()
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // setPresence fires for the attendee join. The maybeArmOwnerLeftSignal
+            // guard should bail out without arming.
+            verify { presenceService.setPresence(any(), any()) }
+            verify(exactly = 0) { presenceService.armOwnerLeftSignal(any(), any()) }
+        }
+
+    @Test
+    fun `disconnectFromRoom calls removePresence which auto-cancels owner-left signal`() =
+        roomTest {
+            // The auto-cancel cascade — cancelOwnerLeftSignal lives inside
+            // removePresence (RtdbPresenceService cron-elim A1 change) so
+            // every removePresence callsite (5+ in ActiveRoomManager) gets
+            // owner-left cancel for free without per-callsite churn.
+            // This test asserts the ViewModel-side wiring delegates to
+            // removePresence (and not an explicit cancelOwnerLeftSignal,
+            // which would be a double-cancel — harmless but uglier).
+            every { authRepository.currentFirebaseUid } returns "firebase-uid-12345"
+            emitRoomAsOwner()
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // Trigger a disconnect path via room-closed (one of the
+            // disconnectFromRoom paths — handleRoomClosed at line 410).
+            roomFlow.value =
+                TestData.createTestRoom(
+                    ownerId = currentUserId,
+                    state = RoomState.CLOSED,
+                )
+            advanceUntilIdle()
+
+            verify { presenceService.removePresence() }
+            // We do NOT also call cancelOwnerLeftSignal directly — that
+            // would be a double-cancel. Pin the delegation contract.
+            verify(exactly = 0) { presenceService.cancelOwnerLeftSignal() }
+        }
+
+    // endregion
 }
