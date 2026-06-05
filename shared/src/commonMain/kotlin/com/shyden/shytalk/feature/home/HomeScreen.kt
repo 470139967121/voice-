@@ -35,6 +35,9 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.shyden.shytalk.core.model.Banner
 import com.shyden.shytalk.core.model.ChatRoom
+import com.shyden.shytalk.core.push.PushPermissionState
+import com.shyden.shytalk.core.push.PushPermissionStore
+import com.shyden.shytalk.core.ui.PushPermissionDeniedBanner
 import com.shyden.shytalk.resources.*
 import com.shyden.shytalk.resources.Res
 import org.jetbrains.compose.resources.stringResource
@@ -85,6 +88,18 @@ fun RoomListContent(
             }
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
+                // Push-permission denial banner — closes AppDelegate.swift:38's
+                // TODO(v2). Shown when the OS reports the permission as DENIED
+                // (user has actively denied OR Focus/DnD/parental-control has
+                // blocked it). State comes through HomeUiState (folded from
+                // PushPermissionStore by HomeViewModel) to keep the MVVM
+                // boundary intact; the tap action still defers to the store
+                // because the bridge is the actual platform-side actor.
+                if (uiState.pushPermissionState == PushPermissionState.DENIED) {
+                    PushPermissionDeniedBanner(
+                        onOpenSettings = { PushPermissionStore.openSystemSettings() },
+                    )
+                }
                 if (uiState.banners.isNotEmpty()) {
                     BannerCarousel(
                         banners =
