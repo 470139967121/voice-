@@ -214,7 +214,7 @@ class RtdbPresenceService(
     ): Boolean =
         try {
             val snapshot = db.getReference("rooms/$roomId/presence/$userId").get().await()
-            snapshot.exists() && snapshot.getValue(Boolean::class.java) == true
+            snapshotIndicatesPresent(snapshot)
         } catch (e: Exception) {
             Log.w(TAG, "isUserPresent check failed: ${e.message}")
             false
@@ -309,3 +309,17 @@ class RtdbPresenceService(
         }
     }
 }
+
+/**
+ * Translates an RTDB DataSnapshot into a "user is present" Boolean.
+ *
+ * Pre-cron-elim-A2-followup2 (PR #1005), this was inline as
+ *   snapshot.exists() && snapshot.getValue(Boolean::class.java) == true
+ * which broke for iOS-written presence nodes (Long timestamp instead of
+ * Boolean true) — see PR #1005's commit message for the production
+ * impact. Extracted as an internal top-level helper for direct unit-
+ * test coverage of the cross-platform regression — see
+ * `PresenceServiceTest.kt`. The helper is type-agnostic by design;
+ * snapshot.exists is true iff the path has any non-null value.
+ */
+internal fun snapshotIndicatesPresent(snapshot: DataSnapshot): Boolean = snapshot.exists()
