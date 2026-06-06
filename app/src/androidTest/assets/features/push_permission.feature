@@ -46,3 +46,36 @@ Feature: Push permission denial UX
     When I tap the element with tag "pushDeniedBanner"
     Then I should see the element with tag "pushDeniedBanner"
     And the system settings deeplink should be invoked
+
+  # ── OS-facts → state mapping (PR-B2b: integration coverage for #1015) ──
+  # These exercise the END-TO-END mapping from raw OS facts (enabled flag,
+  # SDK version, hasAsked sentinel) through `refreshPushPermissionState` →
+  # `PushPermissionStore.updateState` → HomeViewModel.collect → uiState →
+  # banner. The mapping function itself is unit-tested in
+  # `shared/src/androidHostTest/.../AndroidPushPermissionTest`; this layer
+  # adds the integration assertion that the banner UX reflects the mapping
+  # result correctly across SDK paths.
+  #
+  # NOT covered at the BDD layer: `enabled=true + SDK>=33 + hasAsked=false`.
+  # At the banner layer the outcome is identical to the next scenario
+  # (Pre-Tiramisu enabled → AUTHORIZED → no banner). The unique side
+  # effect of this tuple is `shouldBackfillSentinel→true→markAsked()`,
+  # which `seedPushPermissionStateForTesting` deliberately passes as a
+  # no-op (its `markAsked` callback is empty). Backfill behaviour is
+  # covered by `AndroidPushPermissionTest` at the unit layer.
+
+  Scenario: Pre-Tiramisu Android with notifications disabled → banner visible
+    Given OS notifications enabled is "false" on Android SDK 32 with hasAsked "true"
+    Then I should see the element with tag "pushDeniedBanner"
+
+  Scenario: Pre-Tiramisu Android with notifications enabled → banner hidden
+    Given OS notifications enabled is "true" on Android SDK 32 with hasAsked "false"
+    Then I should not see the element with tag "pushDeniedBanner"
+
+  Scenario: Tiramisu+ Android first launch (not yet asked) → banner hidden (NOT_DETERMINED)
+    Given OS notifications enabled is "false" on Android SDK 34 with hasAsked "false"
+    Then I should not see the element with tag "pushDeniedBanner"
+
+  Scenario: Tiramisu+ Android post-denial (already asked) → banner visible
+    Given OS notifications enabled is "false" on Android SDK 34 with hasAsked "true"
+    Then I should see the element with tag "pushDeniedBanner"
