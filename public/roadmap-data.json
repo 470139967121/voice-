@@ -1,21 +1,12 @@
 {
   "_meta": {
     "epicCount": 1,
-    "generatedAt": "2026-06-09T10:15:46.815Z",
+    "generatedAt": "2026-06-09T22:00:41.882Z",
     "generatedFrom": ".project/stories/",
     "schemaVersion": 2,
     "shyCount": 2
   },
   "currentlyWorkingOn": [
-    {
-      "description": null,
-      "epicId": "EPIC-0001",
-      "i18n": {},
-      "name": "Full bidirectional sync — SHY `.md` files → `public/roadmap-data.json` auto-regen + GitHub Project board link on the public roadmap page",
-      "prUrl": "https://github.com/Shyden-Ltd/ShyTalk/pull/1044",
-      "shyId": "SHY-0038",
-      "status": "In Progress"
-    },
     {
       "description": null,
       "i18n": {},
@@ -24,7 +15,7 @@
       "status": "In Progress"
     }
   ],
-  "lastUpdated": "2026-06-09T10:15:46.815Z",
+  "lastUpdated": "2026-06-09T22:00:41.882Z",
   "phases": [
     {
       "features": [
@@ -3617,7 +3608,7 @@
           "name": "Full bidirectional sync — SHY `.md` files → `public/roadmap-data.json` auto-regen + GitHub Project board link on the public roadmap page",
           "prUrl": "https://github.com/Shyden-Ltd/ShyTalk/pull/1044",
           "shyId": "SHY-0038",
-          "status": "In Progress"
+          "status": "Done"
         }
       ],
       "progress": {
