@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "epicCount": 1,
-    "generatedAt": "2026-06-10T08:36:27.500Z",
+    "epicCount": 2,
+    "generatedAt": "2026-06-10T09:13:30.871Z",
     "generatedFrom": ".project/stories/",
     "schemaVersion": 2,
-    "shyCount": 3
+    "shyCount": 4
   },
   "currentlyWorkingOn": [
     {
@@ -15,7 +15,7 @@
       "status": "In Progress"
     }
   ],
-  "lastUpdated": "2026-06-10T08:36:27.500Z",
+  "lastUpdated": "2026-06-10T09:13:30.871Z",
   "phases": [
     {
       "features": [
@@ -3617,6 +3617,14 @@
           "prUrl": "https://github.com/Shyden-Ltd/ShyTalk/pull/1117",
           "shyId": "SHY-0061",
           "status": "Done"
+        },
+        {
+          "description": null,
+          "epicId": "EPIC-0002",
+          "i18n": {},
+          "name": "Roadmap renderer — lazy item translations + gated GitHub story links",
+          "shyId": "SHY-0073",
+          "status": "Draft"
         }
       ],
       "progress": {
