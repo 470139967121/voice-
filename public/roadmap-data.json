@@ -1,7 +1,7 @@
 {
   "_meta": {
     "epicCount": 2,
-    "generatedAt": "2026-06-10T09:13:30.871Z",
+    "generatedAt": "2026-06-10T13:12:01.532Z",
     "generatedFrom": ".project/stories/",
     "schemaVersion": 2,
     "shyCount": 4
@@ -12,10 +12,20 @@
       "i18n": {},
       "name": "Age-gating per feature — replace single 13+ signup gate with tiered per-feature age thresholds",
       "shyId": "SHY-0060",
+      "slug": "age-gating-per-feature",
+      "status": "In Progress"
+    },
+    {
+      "description": null,
+      "epicId": "EPIC-0002",
+      "i18n": {},
+      "name": "Roadmap renderer — lazy item translations + gated GitHub story links",
+      "shyId": "SHY-0073",
+      "slug": "renderer-lazy-i18n-and-gated-story-links",
       "status": "In Progress"
     }
   ],
-  "lastUpdated": "2026-06-10T09:13:30.871Z",
+  "lastUpdated": "2026-06-10T13:12:01.532Z",
   "phases": [
     {
       "features": [
@@ -685,6 +695,7 @@
           "i18n": {},
           "name": "Age-gating per feature — replace single 13+ signup gate with tiered per-feature age thresholds",
           "shyId": "SHY-0060",
+          "slug": "age-gating-per-feature",
           "status": "In Progress"
         }
       ],
@@ -3608,6 +3619,7 @@
           "name": "Full bidirectional sync — SHY `.md` files → `public/roadmap-data.json` auto-regen + GitHub Project board link on the public roadmap page",
           "prUrl": "https://github.com/Shyden-Ltd/ShyTalk/pull/1044",
           "shyId": "SHY-0038",
+          "slug": "public-roadmap-gh-project-link",
           "status": "Done"
         },
         {
@@ -3616,6 +3628,7 @@
           "name": "Roadmap renderer reads SHY-derived `phases[].items[]` with shyId badges",
           "prUrl": "https://github.com/Shyden-Ltd/ShyTalk/pull/1117",
           "shyId": "SHY-0061",
+          "slug": "renderer-reads-shy-items",
           "status": "Done"
         },
         {
@@ -3624,7 +3637,8 @@
           "i18n": {},
           "name": "Roadmap renderer — lazy item translations + gated GitHub story links",
           "shyId": "SHY-0073",
-          "status": "Draft"
+          "slug": "renderer-lazy-i18n-and-gated-story-links",
+          "status": "In Progress"
         }
       ],
       "progress": {
