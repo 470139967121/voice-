@@ -1,10 +1,10 @@
 {
   "_meta": {
     "epicCount": 1,
-    "generatedAt": "2026-06-09T22:00:41.882Z",
+    "generatedAt": "2026-06-10T01:22:28.444Z",
     "generatedFrom": ".project/stories/",
     "schemaVersion": 2,
-    "shyCount": 2
+    "shyCount": 3
   },
   "currentlyWorkingOn": [
     {
@@ -13,9 +13,16 @@
       "name": "Age-gating per feature — replace single 13+ signup gate with tiered per-feature age thresholds",
       "shyId": "SHY-0060",
       "status": "In Progress"
+    },
+    {
+      "description": null,
+      "i18n": {},
+      "name": "Roadmap renderer reads SHY-derived `phases[].items[]` with shyId badges",
+      "shyId": "SHY-0061",
+      "status": "In Progress"
     }
   ],
-  "lastUpdated": "2026-06-09T22:00:41.882Z",
+  "lastUpdated": "2026-06-10T01:22:28.444Z",
   "phases": [
     {
       "features": [
@@ -3609,6 +3616,13 @@
           "prUrl": "https://github.com/Shyden-Ltd/ShyTalk/pull/1044",
           "shyId": "SHY-0038",
           "status": "Done"
+        },
+        {
+          "description": null,
+          "i18n": {},
+          "name": "Roadmap renderer reads SHY-derived `phases[].items[]` with shyId badges",
+          "shyId": "SHY-0061",
+          "status": "In Progress"
         }
       ],
       "progress": {
