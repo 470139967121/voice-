@@ -1,31 +1,13 @@
 {
   "_meta": {
     "epicCount": 2,
-    "generatedAt": "2026-06-10T13:12:01.532Z",
+    "generatedAt": "2026-06-11T17:57:45.472Z",
     "generatedFrom": ".project/stories/",
     "schemaVersion": 2,
     "shyCount": 4
   },
-  "currentlyWorkingOn": [
-    {
-      "description": null,
-      "i18n": {},
-      "name": "Age-gating per feature — replace single 13+ signup gate with tiered per-feature age thresholds",
-      "shyId": "SHY-0060",
-      "slug": "age-gating-per-feature",
-      "status": "In Progress"
-    },
-    {
-      "description": null,
-      "epicId": "EPIC-0002",
-      "i18n": {},
-      "name": "Roadmap renderer — lazy item translations + gated GitHub story links",
-      "shyId": "SHY-0073",
-      "slug": "renderer-lazy-i18n-and-gated-story-links",
-      "status": "In Progress"
-    }
-  ],
-  "lastUpdated": "2026-06-10T13:12:01.532Z",
+  "currentlyWorkingOn": [],
+  "lastUpdated": "2026-06-11T17:57:45.472Z",
   "phases": [
     {
       "features": [
@@ -696,7 +678,7 @@
           "name": "Age-gating per feature — replace single 13+ signup gate with tiered per-feature age thresholds",
           "shyId": "SHY-0060",
           "slug": "age-gating-per-feature",
-          "status": "In Progress"
+          "status": "Draft"
         }
       ],
       "progress": {
@@ -3636,9 +3618,10 @@
           "epicId": "EPIC-0002",
           "i18n": {},
           "name": "Roadmap renderer — lazy item translations + gated GitHub story links",
+          "prUrl": "https://github.com/Shyden-Ltd/ShyTalk/pull/1133",
           "shyId": "SHY-0073",
           "slug": "renderer-lazy-i18n-and-gated-story-links",
-          "status": "In Progress"
+          "status": "Done"
         }
       ],
       "progress": {
