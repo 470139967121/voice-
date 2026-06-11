@@ -460,5 +460,17 @@
     "contentId": "DI_lADOEOcG584BZ_lNzgKnEOM",
     "issueNumber": 0,
     "itemId": "PVTI_lADOEOcG584BZ_lNzgvd0Y0"
+  },
+  "SHY-0082": {
+    "backing": "DRAFT",
+    "contentId": "DI_lADOEOcG584BZ_lNzgKnFB8",
+    "issueNumber": 0,
+    "itemId": "PVTI_lADOEOcG584BZ_lNzgveKmk"
+  },
+  "SHY-0083": {
+    "backing": "DRAFT",
+    "contentId": "DI_lADOEOcG584BZ_lNzgKnFCE",
+    "issueNumber": 0,
+    "itemId": "PVTI_lADOEOcG584BZ_lNzgveKnU"
   }
 }
