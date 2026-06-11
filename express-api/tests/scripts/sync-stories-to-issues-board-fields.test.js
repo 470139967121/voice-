@@ -2021,6 +2021,66 @@ describe('SHY-0079: board-items.json sidecar overlay heals stale Projects v2 rea
   });
 });
 
+// ============================================================== SHY-0080 ARG_MAX
+
+describe('SHY-0080: items-map merges are ARG_MAX-safe (stdin, not --argjson) (mock-gh)', () => {
+  test('REGRESSION: a board whose draft bodies exceed ARG_MAX still produces a COMPLETE map (no re-create)', () => {
+    // The defect: the map carries full ~64K draft bodies; merging it via
+    // `jq --argjson` overflowed the kernel argv limit (~2MB), jq failed, the
+    // map silently emptied, and every draft was re-created. We build an items
+    // API response of ~40 drafts × ~64K body (~2.6MB > ARG_MAX) including one
+    // asserted story; with the stdin fix the map populates → the asserted
+    // story is FOUND → ZERO addProjectV2DraftIssue. Pre-fix: overflow → empty
+    // map → it would be re-created.
+    const mock = makePatternMockGh();
+    const storiesDir = tempDir('stories80-');
+    const asserted = makeStory(storiesDir, { id: 'SHY-9050', status: 'Draft', type: 'feature' });
+    const bigBody = `Big draft.\n\n${'X'.repeat(64000)}\n`;
+    const nodes = [
+      // The asserted story, present on the board with a body big enough to
+      // contribute to the overflow.
+      draftNode(
+        'SHY-9050',
+        'IT_9050',
+        'DI_9050',
+        `${bigBody}${existingBody(asserted.content, 'SHY-9050-fixture-story', 'Draft')}`,
+      ),
+      // 39 filler drafts to push the combined map past ARG_MAX.
+      ...Array.from({ length: 39 }, (_, i) => {
+        const id = `SHY-95${String(i + 10).padStart(2, '0')}`;
+        return draftNode(id, `IT_${id}`, `DI_${id}`, bigBody);
+      }),
+    ];
+    const items = itemsResponse(nodes);
+    expect(items.length).toBeGreaterThan(2_000_000); // > typical ARG_MAX
+    writeRules(mock.dir, createPathRules(mock.dir, { items }));
+    const r = runScript(['--all'], baseEnv(mock.ghPath, storiesDir));
+    expect(r.code).toBe(0);
+    const lines = readRecording(mock.recording);
+    // The map populated → SHY-9050 was found → NOT re-created.
+    expect(lines.filter((l) => l.includes('addProjectV2DraftIssue'))).toEqual([]);
+    // Exactly one items query (single page) was issued and parsed (not retried
+    // as empty).
+    expect(lines.filter((l) => l.includes('items(first: 100'))).toHaveLength(1);
+  });
+
+  test('structural: the map merges pipe via `jq -s` and never pass the map through --argjson', () => {
+    const src = fs.readFileSync(SCRIPT, 'utf-8');
+    // All THREE map merges use the stdin form: pagination, overlay merge,
+    // and the fill-count (the last uses `jq -s` without -c — scalar output).
+    expect(src).toMatch(/printf '%s\\n%s\\n' "\$ITEMS_MAP_JSON" "\$page_map" \| jq -c -s/);
+    expect(src).toMatch(/printf '%s\\n%s\\n' "\$sidecar" "\$ITEMS_MAP_JSON" \| jq -c -s/);
+    // Fill-count: stdin `jq -s` over the two slurped objects (its printf is on
+    // a line-continuation, so pin its distinctive jq body, which proves stdin).
+    expect(src).toMatch(/jq -s '\(\(\.\[0\] \| keys\) - \(\.\[1\] \| keys\)\)/);
+    // No --argjson is fed ANY body-laden operand (map / page_map / sidecar) —
+    // the overflow source. Variable-name-agnostic on the value side.
+    expect(src).not.toMatch(/--argjson \w+ "\$ITEMS_MAP_JSON"/);
+    expect(src).not.toMatch(/--argjson \w+ "\$page_map"/);
+    expect(src).not.toMatch(/--argjson \w+ "\$sidecar"/);
+  });
+});
+
 // ============================================================== workflow YAML (Layer 2)
 
 describe('SHY-0074: workflow YAML pins', () => {
