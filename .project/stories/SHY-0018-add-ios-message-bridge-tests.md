@@ -40,6 +40,8 @@ P1 Tier-3 coverage. Closes the iOS data-layer + push-platform-bridge coverage ga
 
 ## Acceptance Criteria
 
+> **⚠️ No-Stubs supersession** ([[feedback-no-stubs-mocks-fakes-real-only]], operator 2026-06-13): the `FakeFirestore` / `FakePushAPI` / "fake Firestore snapshots" named in the AC / BDD / Risks below is a now-banned in-process test double. The `### Pre-Merge Testing Protocol` subsection + the `## Notes` No-Stubs entry govern — drive the iOS data-layer repos against the **real Firestore emulator (real snapshots) + real push path on the local stack**, OR await the flagged 🔴 operator decision on the foundational fake harness. Do NOT implement `FakeFirestore`/`FakePushAPI` as written.
+
 ### Happy path
 
 **Repository tests (G015)**:
@@ -190,6 +192,20 @@ P1 Tier-3 coverage. Closes the iOS data-layer + push-platform-bridge coverage ga
 2. Re-run → GREEN.
 3. Sonar coverage ≥85%.
 
+### Pre-Merge Testing Protocol (per `CLAUDE.md` § Pre-Merge Testing Protocol)
+
+**Not `*.md`-only** (adds 5 iOS test files + may fix `iosMain` repos / push bridge) → the FULL gauntlet applies. Closes the iOS data-layer + push-bridge parity gap; the spec's "iOS simulator" smoke is UPGRADED to a **real iPhone** (protocol forbids simulator for the app-level gauntlet).
+
+**Frameworks exercised (RED→GREEN before any production fix):**
+- ✅ **Kotlin/JVM unit (or iOS K/N test)** — the 5 test files (`IosMessage` / `IosSeatRequest` / `IosEconomyGift` / `IosSmallRepositories` / `IosPushBridge`) with FakeFirestore + FakePushAPI (`./gradlew :shared:jvmTest --tests "*Ios*"` or `iosX64Test`); snapshot transforms, null-safety, error propagation, FCM token, deep-link allow-list, permission-state reporting; the story's primary RED→GREEN.
+- ✅ **detekt + ktlint + iOS shared compile-check** — `./gradlew :shared:compileKotlinIosArm64`.
+- ✅ **Android instrumented BDD + Manual-QA journey matrix** — DM send (incl. ModerationFilter block), seat-request, gift, and a push deep-link walked on a **real iPhone** (the surfaces these repos/bridge back) AND a **real Android device** for the push-permission parity contract.
+- ⬜ **Web E2E / integration / eslint / Express Jest** — N/A; apps run the regression corpus as the net.
+- ✅ **SonarCloud** — coverage gate (≥85% across all 5 files, per AC).
+
+**LOCAL gauntlet:** the 5 unit suites green → DM/seat/gift/push-deep-link journeys on real iPhone + real Android (push-permission parity) → impact-selected each loop, full corpus at the pre-push gate. Any failure → fix TDD → restart the whole local gauntlet.
+**DEV gauntlet:** redeploy the unmerged branch via Deploy-To-Dev `ref`; real iPhone + real Android; web = Chrome only. Restart from LOCAL on failure. **Judgment-merge** only when production-ready with zero doubt — the deep-link allow-list is a security boundary.
+
 ## Out of Scope
 
 - **Refactoring repository interfaces** — only tests.
@@ -217,12 +233,13 @@ P1 Tier-3 coverage. Closes the iOS data-layer + push-platform-bridge coverage ga
 - [ ] Any surfaced bugs fixed.
 - [ ] Sonar coverage ≥85%.
 - [ ] Parity test cases pass on both Android and iOS.
-- [ ] Reviewer ZERO findings.
-- [ ] Per-type Done gate (`bug` → auto-merge + dev smoke on iOS simulator).
-- [ ] PR merged.
+- [ ] **Pre-Merge Testing Protocol satisfied** (`CLAUDE.md` § Pre-Merge Testing Protocol): the 5 unit suites green + DM/seat/gift/push-deep-link journeys green on **real iPhone + real Android** (push-permission parity; NOT a simulator — supersedes the old "iOS simulator" smoke) → `code-reviewer` 100% clean → push → CI green by name → DEV gauntlet green → **judgment-merge** (zero doubt; NO auto-merge).
+- [ ] `released_in: vX.Y.Z` set after the release cut.
 - [ ] `status: Done`; `pr:` populated; bug catalogue in Notes.
 
 ## Notes (running log)
 
 - 2026-06-07 ~21:25 BST — Refined under SHY-0032. Tier 3 iOS coverage; closes the iOS data-layer + push-bridge gap.
 - 2026-06-07 — Skeleton from `convert-roadmap-to-stories.sh` PR-bundle `PR-F2` (G015, G030).
+- 2026-06-12 ~23:58 BST — **Embedded the Pre-Merge Testing Protocol** ([[SHY-0091]] pass): iOS data-layer + push-bridge parity → 5 unit suites + DM/seat/gift/push-deep-link journeys on real iPhone + real Android. UPGRADED "iOS simulator" → **real iPhone**. DoD auto-merge → judgment-merge. Pickup-fitness: no dupes/stale found.
+- 2026-06-13 ~02:00 BST — **No-Stubs flag (self-review-surfaced, beyond the reviewer's spot-check)** ([[feedback-no-stubs-mocks-fakes-real-only]]): AC/Test-Plan name `FakeFirestore` + `FakePushAPI` + "fake Firestore snapshots" — new in-process doubles the rule bans. Real path: drive the iOS data-layer repos against the REAL Firestore emulator (real snapshots) + real push path on the local stack. The Risk's own "Real FirebaseFirestoreException can't be constructed in tests" is the 🚩 genuinely-hard case → induce the real Firestore error via the emulator (real `PERMISSION_DENIED` etc.) or escalate, never a mocked exception. Same foundational-fake class as [[SHY-0010]] (🔴 operator-decision item, SHY-0091 handoff); AC/BDD prose superseded by the No-Stubs banner atop `## Acceptance Criteria` — NOT re-architected here.

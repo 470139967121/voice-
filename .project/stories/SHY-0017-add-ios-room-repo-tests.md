@@ -35,6 +35,8 @@ P1 Tier-3 coverage. Cross-platform parity with Android's existing tests.
 
 ## Acceptance Criteria
 
+> **⚠️ No-Stubs supersession** ([[feedback-no-stubs-mocks-fakes-real-only]], operator 2026-06-13): the `FakeHttpClient` / Ktor `MockEngine` named in the AC / BDD / Risks below is a now-banned in-process test double. The `### Pre-Merge Testing Protocol` subsection + the `## Notes` No-Stubs entry govern — drive `IosRoomRepositoryImpl` against the **real local backend (real HTTP) on the emulator stack** and induce real error statuses, OR await the flagged 🔴 operator decision on the foundational fake harness. Do NOT implement `FakeHttpClient`/`MockEngine` as written.
+
 ### Happy path
 
 - [ ] Test file `shared/src/iosTest/kotlin/com/shyden/shytalk/data/repository/IosRoomRepositoryImplTest.kt` exists (OR `shared/src/commonTest/.../IosRoomRepositoryImplTest.kt` if iOS-specific source set isn't set up).
@@ -153,6 +155,20 @@ P1 Tier-3 coverage. Cross-platform parity with Android's existing tests.
 2. Re-run → GREEN.
 3. Sonar coverage ≥85%.
 
+### Pre-Merge Testing Protocol (per `CLAUDE.md` § Pre-Merge Testing Protocol)
+
+**Not `*.md`-only** (adds iOS repo tests + may fix `iosMain` error-mapping) → the FULL gauntlet applies. This restores **iOS↔Android parity** on the room-mutation data layer; the spec's "iOS simulator" smoke is UPGRADED to a **real iPhone** journey (protocol forbids simulator for the app-level gauntlet).
+
+**Frameworks exercised (RED→GREEN before any production fix):**
+- ✅ **Kotlin/JVM unit (or iOS K/N test)** — `IosRoomRepositoryImplTest` with Ktor `MockEngine` / FakeHttpClient (`./gradlew :shared:jvmTest --tests "*IosRoomRepository*"` or `iosX64Test`); every error-mapping path (net-fail / 401 / 403 / 404 / 409 / 429 / 5xx / malformed); the story's primary RED→GREEN.
+- ✅ **detekt + ktlint + iOS shared compile-check** — `./gradlew :shared:compileKotlinIosArm64` (the iosMain impl must compile + pass static analysis).
+- ✅ **Android instrumented BDD + Manual-QA journey matrix** — voice-room mutation flows (join / leave / takeSeat / kick) walked on a **real iPhone** (the surface this repo backs) AND a **real Android device** to confirm the cross-platform error-UX parity this story restores.
+- ⬜ **Web E2E / integration / eslint / Express Jest** — N/A (no web/API change; the Express endpoints are assumed-existing per [[SHY-0004]]); apps run the regression corpus as the net.
+- ✅ **SonarCloud** — coverage gate (≥85% on the impl, per AC).
+
+**LOCAL gauntlet:** the repo unit suite green (all error paths) → room-mutation journeys on real iPhone + real Android (error-UX parity) → impact-selected each loop, full corpus at the pre-push gate. Any failure → fix TDD → restart the whole local gauntlet.
+**DEV gauntlet:** redeploy the unmerged branch via Deploy-To-Dev `ref`; real iPhone + real Android; web = Chrome only. Restart from LOCAL on failure. **Judgment-merge** only when production-ready with zero doubt.
+
 ## Out of Scope
 
 - **Refactoring the repository interface** — only iOS impl tests.
@@ -177,12 +193,13 @@ P1 Tier-3 coverage. Cross-platform parity with Android's existing tests.
 - [ ] Test file exists; ≥20 cases pass.
 - [ ] Any surfaced bugs fixed.
 - [ ] Sonar coverage ≥85%.
-- [ ] Reviewer ZERO findings.
-- [ ] Per-type Done gate (`bug` → auto-merge + dev smoke on iOS simulator).
-- [ ] PR merged.
+- [ ] **Pre-Merge Testing Protocol satisfied** (`CLAUDE.md` § Pre-Merge Testing Protocol): repo unit suite green (all error paths) + room-mutation journeys green on **real iPhone + real Android** (error-UX parity; NOT a simulator — supersedes the old "iOS simulator" smoke) → `code-reviewer` 100% clean → push → CI green by name → DEV gauntlet green → **judgment-merge** (zero doubt; NO auto-merge).
+- [ ] `released_in: vX.Y.Z` set after the release cut.
 - [ ] `status: Done`; `pr:` populated; bug catalogue in Notes.
 
 ## Notes (running log)
 
 - 2026-06-07 ~21:18 BST — Refined under SHY-0032. Tier 3 iOS parity coverage.
 - 2026-06-07 — Skeleton from `convert-roadmap-to-stories.sh` PR-bundle `PR-F1` (G014).
+- 2026-06-12 ~23:58 BST — **Embedded the Pre-Merge Testing Protocol** ([[SHY-0091]] pass): iOS room-repo parity → unit suite (all error-mapping paths) + room-mutation journeys on real iPhone + real Android. UPGRADED the spec's "iOS simulator" smoke to a **real iPhone** (protocol forbids simulator for app-level gauntlet). DoD auto-merge → judgment-merge. Pickup-fitness: no dupes/stale found.
+- 2026-06-13 ~02:00 BST — **No-Stubs flag (self-review-surfaced, beyond the reviewer's spot-check)** ([[feedback-no-stubs-mocks-fakes-real-only]]): AC/Test-Plan name `FakeHttpClient` + Ktor `MockEngine` for `IosRoomRepositoryImpl` HTTP dispatch/error-mapping — new in-process doubles the rule bans. Real path: drive the repo against the REAL local backend (real HTTP) on the emulator stack; induce real error statuses where deterministic (real 403 unauthorized / real 409 conflict / real net-fail), 🚩 escalate the genuinely-hard ones (429 / 5xx / malformed) to the operator gate rather than mock. Same foundational-fake class as [[SHY-0010]] (🔴 operator-decision item, SHY-0091 handoff); AC/BDD prose superseded by the No-Stubs banner atop `## Acceptance Criteria` — NOT re-architected here (opportunistic, no big-bang).

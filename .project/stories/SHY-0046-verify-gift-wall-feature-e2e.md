@@ -25,6 +25,8 @@ This is a verification + targeted extension SHY, not a from-scratch authoring ta
 
 ## Acceptance Criteria
 
+> **⚠️ No-Stubs supersession** ([[feedback-no-stubs-mocks-fakes-real-only]], operator 2026-06-13): the `FakeGiftRepository` / `loading-controlled-fake` named in the AC / BDD / Risks below is a now-banned in-process test double. The `### Pre-Merge Testing Protocol` subsection + the `## Notes` No-Stubs scrub govern — populated/empty states use **real emulator-seeded personas**; loading-state is the escape-hatch case (real throttle or operator decision). Do NOT implement `FakeGiftRepository` as written.
+
 ### Happy path
 
 - [ ] Read `gift_wall.feature` + `GiftWallScreen.kt` + any associated step definitions; produce a state-coverage matrix in this SHY's `## Notes` (3 rows × 2 cols: state × covered?).
@@ -108,6 +110,20 @@ This is a verification + targeted extension SHY, not a from-scratch authoring ta
 
 **Coverage gate:** 3 scenarios + 3 test tags verified by Cucumber + Espresso assertions.
 
+### Pre-Merge Testing Protocol (per `CLAUDE.md` § Pre-Merge Testing Protocol)
+
+**Not `*.md`-only** (adds BDD scenarios + test tags to the shared `GiftWallScreen.kt` + a fake repository) → the FULL gauntlet applies. The gift-wall is an **Android app** surface (no web/iOS UI equivalent yet), so the real-Android BDD run is the headline.
+
+**Frameworks exercised (RED→GREEN):**
+- ✅ **Android instrumented BDD** (`connectedDevDebugAndroidTest -Pcucumber.filter.tags='@gift-wall'`) — the 3 state scenarios (loading/populated/empty) on a **real Android device**; the story's primary RED→GREEN.
+- ✅ **Kotlin/JVM unit** — any `FakeGiftRepository` controlled-state logic gets a unit test; `GiftWallScreen` state mapping if non-trivial.
+- ✅ **detekt** + **ktlint** — the `GiftWallScreen.kt` test-tag additions + fake repository.
+- ✅ **iOS shared compile-check** (`:shared:compileKotlinIosArm64`) — `GiftWallScreen.kt` lives in commonMain, so the test-tag edit MUST still compile for iOS even though iOS XCUITest UI parity is deferred to a dedicated follow-up SHY.
+- ⬜ **Web Playwright / Express Jest** — N/A (no gift-wall web or server change); web + iOS journeys run as the REGRESSION net.
+
+**LOCAL gauntlet:** the 3 `@gift-wall` scenarios green on a **real Android device**, driven by REAL data in the local Firebase emulator stack — NO `FakeGiftRepository` (per `CLAUDE.md` § No Stubs / Mocks / Fakes — Real Only): a real persona seeded with 5 gifts (populated) and a real zero-gift persona (empty); `onIdle()` post-animation. **Loading-state** is the one genuinely-hard case (a real emulator answers near-instantly, so there is no observable loading frame) → per the No-Stubs escape hatch, induce it for real (a real network throttle / a large real fixture) OR escalate to the operator — do NOT reintroduce a fake delay. Impact-selected regression each loop, full corpus on real Android + real iPhone + all browsers at the pre-push gate. Any failure → fix TDD → restart.
+**DEV gauntlet:** redeploy the unmerged branch via Deploy-To-Dev `ref`; re-run the `@gift-wall` BDD on the real Android device + apps regression on real iPhone, web on Chrome. Restart from LOCAL on failure. **Judgment-merge** only when production-ready with zero doubt.
+
 ## Out of Scope
 
 - Refactoring `GiftWallScreen.kt` itself beyond test-tag additions.
@@ -134,9 +150,12 @@ This is a verification + targeted extension SHY, not a from-scratch authoring ta
 - [ ] State-coverage matrix audit done + recorded in Notes.
 - [ ] Missing scenarios added + test tags added.
 - [ ] BDD runs pass.
-- [ ] Reviewer ZERO findings.
+- [ ] **Pre-Merge Testing Protocol satisfied** (`CLAUDE.md` § Pre-Merge Testing Protocol): the 3 `@gift-wall` state scenarios green on a real Android device + `:shared:compileKotlinIosArm64` clean (iOS compile parity) + detekt/ktlint clean → full regression net green on real Android + real iPhone + all browsers → `code-reviewer` 100% clean → push → CI green by name → DEV gauntlet green (Chrome web) → **judgment-merge** (zero doubt; NO auto-merge).
+- [ ] `released_in: vX.Y.Z` set after the release cut.
 - [ ] `status: Done`; `pr:` populated.
 
 ## Notes (running log)
 
 - 2026-06-08 ~13:08 BST — Spec created by SHY-0036 batch fill. Source: zero-gap roadmap line 48 (G018). Reserved ID SHY-0046.
+- 2026-06-13 ~00:08 BST — **Embedded the Pre-Merge Testing Protocol** ([[SHY-0091]] pass): Android-app gift-wall state coverage → real-device BDD headline (3 states), with the shared `GiftWallScreen.kt` test-tag edit gated on `:shared:compileKotlinIosArm64` so iOS commonMain still compiles. DoD gains protocol-satisfied + judgment-merge. Pickup-fitness: AC current; the iOS-XCUITest carve-out stays a separate follow-up SHY (not folded into this XS audit) — no stale cross-refs.
+- 2026-06-13 ~00:34 BST — **No-Stubs scrub** ([[feedback-no-stubs-mocks-fakes-real-only]]): the original approach used `FakeGiftRepository` with a controlled loading delay — now banned. Populated/empty states convert cleanly to REAL data seeded in the local Firestore emulator for a real persona. Loading-state flagged for the escape hatch (real throttle or operator decision — never a fake delay). The older AC/BDD/Risks prose still names the fake; this Test-Plan/Notes directive supersedes it (the pickup-fitness gate re-validates at implementation). **OPERATOR FLAG:** the Android instrumented BDD harness is fake-based by design (`ResetFakesRule` + fake repositories across ~235 scenarios) — a wholesale migration to the real local stack is a big-bang needing your direction; per the rule's "opportunistic, no big-bang" scope I applied real-first to THIS ticket's new scenarios and flagged the suite-wide question for your return.
