@@ -562,5 +562,23 @@
     "contentId": "I_kwDORJ_E_s8AAAABFh3p7Q",
     "issueNumber": 1436,
     "itemId": "PVTI_lADOEOcG584BZ_lNzgvzHmA"
+  },
+  "SHY-0102": {
+    "backing": "ISSUE",
+    "contentId": "I_kwDORJ_E_s8AAAABFl42yA",
+    "issueNumber": 1440,
+    "itemId": "PVTI_lADOEOcG584BZ_lNzgv2aJc"
+  },
+  "SHY-0103": {
+    "backing": "ISSUE",
+    "contentId": "I_kwDORJ_E_s8AAAABFl44EQ",
+    "issueNumber": 1441,
+    "itemId": "PVTI_lADOEOcG584BZ_lNzgv2aKE"
+  },
+  "SHY-0104": {
+    "backing": "ISSUE",
+    "contentId": "I_kwDORJ_E_s8AAAABFl45nA",
+    "issueNumber": 1442,
+    "itemId": "PVTI_lADOEOcG584BZ_lNzgv2aLM"
   }
 }
