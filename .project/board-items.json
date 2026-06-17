@@ -682,5 +682,17 @@
     "contentId": "I_kwDORJ_E_s8AAAABFxbn4A",
     "issueNumber": 1464,
     "itemId": "PVTI_lADOEOcG584BZ_lNzgwBFhI"
+  },
+  "SHY-0125": {
+    "backing": "ISSUE",
+    "contentId": "I_kwDORJ_E_s8AAAABF0SbaA",
+    "issueNumber": 1470,
+    "itemId": "PVTI_lADOEOcG584BZ_lNzgwDwN0"
+  },
+  "SHY-0126": {
+    "backing": "ISSUE",
+    "contentId": "I_kwDORJ_E_s8AAAABF0Sd1Q",
+    "issueNumber": 1471,
+    "itemId": "PVTI_lADOEOcG584BZ_lNzgwDwPc"
   }
 }
