@@ -111,7 +111,7 @@ android {
             //   adb reverse tcp:9000 tcp:9000   (Firebase RTDB emulator)
             // This tunnels the device's localhost to the laptop's localhost.
             val localHostAlias = (project.findProperty("localHost") as String?) ?: "10.0.2.2"
-            buildConfigField("String", "API_BASE_URL", "\"http://$localHostAlias:3000\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://3000-iu5zpk4ekco0gpwrekaul-67377888.sg1.manus.computer\"")
             buildConfigField("String", "WORKER_URL", "\"http://$localHostAlias:3000\"")
             buildConfigField("String", "LIVEKIT_SERVER_URL", "\"ws://$localHostAlias:7880\"")
             buildConfigField("String", "RTDB_URL", "\"http://$localHostAlias:9000\"")
