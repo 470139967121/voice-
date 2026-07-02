@@ -110,21 +110,15 @@ android {
             //   adb reverse tcp:7880 tcp:7880   (LiveKit)
             //   adb reverse tcp:9000 tcp:9000   (Firebase RTDB emulator)
             // This tunnels the device's localhost to the laptop's localhost.
-            val localHostAlias = (project.findProperty("localHost") as String?) ?: "10.0.2.2"
+            // Using real LiveKit Cloud server and Firebase for production-like testing
             buildConfigField("String", "API_BASE_URL", "\"https://3000-iu5zpk4ekco0gpwrekaul-67377888.sg1.manus.computer\"")
-            buildConfigField("String", "WORKER_URL", "\"http://$localHostAlias:3000\"")
-            buildConfigField("String", "LIVEKIT_SERVER_URL", "\"ws://$localHostAlias:7880\"")
-            buildConfigField("String", "RTDB_URL", "\"http://$localHostAlias:9000\"")
-            buildConfigField("String", "LOCAL_HOST", "\"$localHostAlias\"")
-            buildConfigField("String", "EMAIL_LINK_DOMAIN", "\"localhost\"")
-            // Local flavour talks to Firebase emulators which don't have a
-            // real Google OAuth web client. Empty string here coerces to
-            // null in `BuildVariant.googleWebClientId` (per the
-            // `takeIf { it.isNotEmpty() }` guard), and SignInScreen hides
-            // the Google button when `BuildVariant.isGoogleSignInAvailable`
-            // is false. Was `"placeholder-local"` — that produced a cryptic
-            // Google framework error when tapped on local builds.
-            buildConfigField("String", "WEB_CLIENT_ID", "\"\"")
+            buildConfigField("String", "WORKER_URL", "\"https://3000-iu5zpk4ekco0gpwrekaul-67377888.sg1.manus.computer\"")
+            buildConfigField("String", "LIVEKIT_SERVER_URL", "\"wss://mymediaserver77-9odvi2kr.livekit.cloud\"")
+            buildConfigField("String", "RTDB_URL", "\"https://shytalk-dev-default-rtdb.europe-west1.firebasedatabase.app\"")
+            buildConfigField("String", "LOCAL_HOST", "\"\"")
+            buildConfigField("String", "EMAIL_LINK_DOMAIN", "\"shytalk.local\"")
+            // Enable real Google Sign-In for local builds
+            buildConfigField("String", "WEB_CLIENT_ID", "\"881846974606-kv99pjv92i6me0emb2j3uacbhnqqvfj4.apps.googleusercontent.com\"")
             buildConfigField("Boolean", "BYPASS_DEVICE_CHECKS", "true")
             // Local flavor — emulator gate disabled (same rationale as dev:
             // tests + manual QA need to run on the Android emulator against
