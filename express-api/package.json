@@ -35,11 +35,11 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^9.0.1",
     "otplib": "^13.4.0",
-    "sharp": "^0.35.2"
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@firebase/rules-unit-testing": "^5.0.1",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-sonarjs": "^4.0.3",
